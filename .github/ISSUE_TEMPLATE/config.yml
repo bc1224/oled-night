@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Ideas and questions
+    url: https://github.com/bc1224/oled-night/discussions
+    about: Feature ideas and general questions

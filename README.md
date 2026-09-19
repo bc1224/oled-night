@@ -15,7 +15,9 @@ Free and open-source Chrome extension · readable text · images untouched · pe
 ![Before and after OLED Night on an email inbox](store/images/screenshot-1-before-after.png)
 
 ## Why
-On an OLED screen, true black means the pixels are off. I wanted every site that dark, including the many sites with no dark mode of their own. Existing dark modes either left everything grey or broke pages: unreadable text, white boxes and gradients, blank chart fills, a white flash on every load, and lag in busy apps. OLED Night fixes those one real site at a time, and a test suite that runs the real extension keeps them fixed.
+I've got an OLED monitor, and I wanted every site to be black. Not dark grey. Actually black, so the pixels are off.
+
+Every dark mode extension I tried either left everything grey, or made sites dark and broke them: text I couldn't read, random white boxes, weird white gradients around chat boxes, charts turning into blank white shapes, Amazon photos turning into black squares. Some even made Gmail and ChatGPT lag. So I made my own. Every time a site broke, I fixed it and added a test so it stays fixed.
 
 ## Features
 - **True `#000` black backgrounds.** Cards and panels keep a subtle lift so layouts stay readable.
@@ -29,7 +31,9 @@ On an OLED screen, true black means the pixels are off. I wanted every site that
 - **Private.** No servers, no analytics, no tracking. See the [privacy policy](store/PRIVACY.md).
 
 ## Install
-Download [`oled-night.zip`](https://github.com/bc1224/oled-night/releases/latest/download/oled-night.zip), unzip it into a folder you'll keep, open `chrome://extensions`, turn on **Developer mode**, and click **Load unpacked** on that folder. Full steps, including Edge and updating, are in [INSTALL.md](INSTALL.md). A Chrome Web Store listing is coming.
+Download [`oled-night.zip`](https://github.com/bc1224/oled-night/releases/latest/download/oled-night.zip), unzip it into a folder you'll keep, open `chrome://extensions`, turn on **Developer mode**, and click **Load unpacked** on that folder. Full steps, including Edge and updating, are in [INSTALL.md](INSTALL.md). To hear about new versions, click **Watch → Custom → Releases** at the top of this page.
+
+**Want Chrome itself black too?** The extension darkens websites, but only a theme can change Chrome's own window. Grab [`oled-night-theme.zip`](https://github.com/bc1224/oled-night/releases/latest/download/oled-night-theme.zip) and load it the same way. See [theme/README.md](theme/README.md).
 
 ## Using it
 Click the toolbar icon on any site:
@@ -63,11 +67,11 @@ OLED Night doesn't run one filter over the whole page. It works out a color for 
 No build step. Load the folder with **Load unpacked**, then:
 ```
 for t in tests/*.test.js; do node "$t"; done   # unit tests
-node tests/e2e/run.mjs                          # real extension in headless Chrome, 43 checks
-node tools/package.mjs                          # dist/oled-night-<version>.zip
-node tools/store-assets.mjs                     # Web Store screenshots
+node tests/e2e/run.mjs                          # real extension in headless Chrome, 46 checks
+node tools/package.mjs                          # dist/ zips for the extension and the theme
+node tools/store-assets.mjs                     # screenshots for the README and website
 ```
-See [CONTRIBUTING.md](CONTRIBUTING.md). Web Store submission notes are in [store/LISTING.md](store/LISTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 [MIT](LICENSE)

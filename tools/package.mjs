@@ -29,39 +29,46 @@ const unused = readdirSync(root).filter((f) => f.endsWith(".js") && statSync(joi
 if (unused.length) console.warn(`Not packaged (not referenced): ${unused.join(", ")}`);
 
 // Minimal zip writer (deflate), so packaging needs nothing beyond Node.
-const entries = [];
-const chunks = [];
-let offset = 0;
-const dosTime = 0, dosDate = (2026 - 1980) << 9 | 1 << 5 | 1; // fixed timestamp: identical input -> identical zip
-for (const file of RUNTIME) {
-  const data = readFileSync(join(root, file));
-  const packed = deflateRawSync(data, { level: 9 });
-  const name = Buffer.from(file.replace(/\\/g, "/"));
-  const crc = crc32(data);
-  const header = Buffer.alloc(30);
-  header.writeUInt32LE(0x04034b50, 0); header.writeUInt16LE(20, 4); header.writeUInt16LE(0, 6); header.writeUInt16LE(8, 8);
-  header.writeUInt16LE(dosTime, 10); header.writeUInt16LE(dosDate, 12); header.writeUInt32LE(crc, 14);
-  header.writeUInt32LE(packed.length, 18); header.writeUInt32LE(data.length, 22); header.writeUInt16LE(name.length, 26); header.writeUInt16LE(0, 28);
-  chunks.push(header, name, packed);
-  entries.push({ name, crc, packed: packed.length, size: data.length, offset });
-  offset += header.length + name.length + packed.length;
+function writeZip(baseDir, files, out) {
+  const entries = [];
+  const chunks = [];
+  let offset = 0;
+  const dosTime = 0, dosDate = (2026 - 1980) << 9 | 1 << 5 | 1; // fixed timestamp: identical input -> identical zip
+  for (const file of files) {
+    const data = readFileSync(join(baseDir, file));
+    const packed = deflateRawSync(data, { level: 9 });
+    const name = Buffer.from(file.replace(/\\/g, "/"));
+    const crc = crc32(data);
+    const header = Buffer.alloc(30);
+    header.writeUInt32LE(0x04034b50, 0); header.writeUInt16LE(20, 4); header.writeUInt16LE(0, 6); header.writeUInt16LE(8, 8);
+    header.writeUInt16LE(dosTime, 10); header.writeUInt16LE(dosDate, 12); header.writeUInt32LE(crc, 14);
+    header.writeUInt32LE(packed.length, 18); header.writeUInt32LE(data.length, 22); header.writeUInt16LE(name.length, 26); header.writeUInt16LE(0, 28);
+    chunks.push(header, name, packed);
+    entries.push({ name, crc, packed: packed.length, size: data.length, offset });
+    offset += header.length + name.length + packed.length;
+  }
+  const centralStart = offset;
+  for (const e of entries) {
+    const header = Buffer.alloc(46);
+    header.writeUInt32LE(0x02014b50, 0); header.writeUInt16LE(20, 4); header.writeUInt16LE(20, 6); header.writeUInt16LE(0, 8); header.writeUInt16LE(8, 10);
+    header.writeUInt16LE(dosTime, 12); header.writeUInt16LE(dosDate, 14); header.writeUInt32LE(e.crc, 16); header.writeUInt32LE(e.packed, 20);
+    header.writeUInt32LE(e.size, 24); header.writeUInt16LE(e.name.length, 28); header.writeUInt32LE(e.offset, 42);
+    chunks.push(header, e.name);
+    offset += header.length + e.name.length;
+  }
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(entries.length, 8); end.writeUInt16LE(entries.length, 10);
+  end.writeUInt32LE(offset - centralStart, 12); end.writeUInt32LE(centralStart, 16);
+  chunks.push(end);
+  mkdirSync(dirname(out), { recursive: true });
+  const zip = Buffer.concat(chunks);
+  writeFileSync(out, zip);
+  console.log(`${relative(root, out)}  ${entries.length} files, ${(zip.length / 1024).toFixed(1)} KB`);
 }
-const centralStart = offset;
-for (const e of entries) {
-  const header = Buffer.alloc(46);
-  header.writeUInt32LE(0x02014b50, 0); header.writeUInt16LE(20, 4); header.writeUInt16LE(20, 6); header.writeUInt16LE(0, 8); header.writeUInt16LE(8, 10);
-  header.writeUInt16LE(dosTime, 12); header.writeUInt16LE(dosDate, 14); header.writeUInt32LE(e.crc, 16); header.writeUInt32LE(e.packed, 20);
-  header.writeUInt32LE(e.size, 24); header.writeUInt16LE(e.name.length, 28); header.writeUInt32LE(e.offset, 42);
-  chunks.push(header, e.name);
-  offset += header.length + e.name.length;
-}
-const end = Buffer.alloc(22);
-end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(entries.length, 8); end.writeUInt16LE(entries.length, 10);
-end.writeUInt32LE(offset - centralStart, 12); end.writeUInt32LE(centralStart, 16);
-chunks.push(end);
 
-const out = join(root, "dist", `oled-night-${manifest.version}.zip`);
-mkdirSync(dirname(out), { recursive: true });
-const zip = Buffer.concat(chunks);
-writeFileSync(out, zip);
-console.log(`${relative(root, out)}  ${entries.length} files, ${(zip.length / 1024).toFixed(1)} KB`);
+writeZip(root, RUNTIME, join(root, "dist", `oled-night-${manifest.version}.zip`));
+
+// The companion Chrome theme (browser window colors) ships as its own zip.
+const themeDir = join(root, "theme");
+const theme = JSON.parse(readFileSync(join(themeDir, "manifest.json"), "utf8"));
+writeZip(themeDir, ["manifest.json", "README.md", ...Object.values(theme.icons)], join(root, "dist", `oled-night-theme-${theme.version}.zip`));

@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.6.1";
+  const VERSION = "0.6.2";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -12,7 +12,11 @@
   // Set while we swap overrides in and out, so site CSS transitions on colors
   // never animate between our dark value and the original light one.
   const NOANIM = "data-oled-night-noanim";
-  const PROPS = ["bg", "img", "shadow", "fg", "bt", "br", "bb", "bl", "fill", "stroke", "stop",
+  const LOGO = "data-oled-night-logo";
+  // "Multiply"-style blends hide a photo's white background on a light page;
+  // over black they turn the whole photo black (Amazon product images).
+  const DARKENING_BLENDS = /^(multiply|darken|color-burn|plus-darker)$/;
+  const PROPS = ["bg", "img", "shadow", "fg", "bt", "br", "bb", "bl", "fill", "stroke", "stop", "blend",
     "before-bg", "before-img", "before-shadow", "after-bg", "after-img", "after-shadow"];
   const SIDES = [["Top", "bt"], ["Right", "br"], ["Bottom", "bb"], ["Left", "bl"]];
   // Frames that are players, maps, ads or challenges are left exactly as they are.
@@ -31,6 +35,8 @@
   let applied = new WeakMap();
   let originalSurface = new WeakMap();
   let textTiers = new WeakMap();
+  let logoChecked = new WeakSet();
+  let logoBudget = 80;
   const hadInlineColor = new WeakSet();
   const pendingTrees = new Set();
   const pendingSelf = new Set();
@@ -151,6 +157,7 @@
     if (ctx.mode === "none") return found;
     mapSurface(computed, "", ctx.mode, found);
     if (ctx.mode === "crush") return found;
+    if (DARKENING_BLENDS.test(computed.mixBlendMode)) found.blend = "normal";
     for (const [side, key] of SIDES) {
       if (computed[`border${side}Width`] === "0px" || computed[`border${side}Style`] === "none") continue;
       const border = colors.mapBorder(colors.parseColor(computed[`border${side}Color`]));
@@ -209,6 +216,42 @@
     }
   }
 
+  // Dark, mostly transparent images (logos and wordmarks like Wikipedia's)
+  // disappear on black. Sample a thumbnail of the pixels; if the visible part
+  // is dark and colorless, flip its lightness. Cross-origin images can't be
+  // sampled (the browser forbids it) and are left alone.
+  function checkLogo(img) {
+    if (logoChecked.has(img) || logoBudget <= 0) return;
+    logoChecked.add(img);
+    logoBudget--;
+    const run = () => {
+      try {
+        // Keep the aspect ratio and enough resolution that thin lettering survives.
+        const scale = Math.min(1, 96 / Math.max(img.naturalWidth, img.naturalHeight));
+        const w = Math.max(1, Math.round(img.naturalWidth * scale)), h = Math.max(1, Math.round(img.naturalHeight * scale));
+        if (!img.naturalWidth || !img.naturalHeight) return;
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        context.drawImage(img, 0, 0, w, h);
+        const data = context.getImageData(0, 0, w, h).data;
+        let clear = 0, solid = 0, light = 0, colorful = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          const alpha = data[i + 3];
+          if (alpha < 16) { clear++; continue; }
+          if (alpha < 128) continue;
+          solid++;
+          const max = Math.max(data[i], data[i + 1], data[i + 2]), min = Math.min(data[i], data[i + 1], data[i + 2]);
+          if (max > 110) light++;
+          if (max - min > 60) colorful++;
+        }
+        const total = w * h;
+        if (clear / total > 0.3 && solid / total > 0.02 && light / solid < 0.2 && colorful / solid < 0.25) img.setAttribute(LOGO, "");
+      } catch {}
+    };
+    if (img.complete) run(); else img.addEventListener("load", run, { once: true });
+  }
+
   function write(element, found) {
     const keys = Object.keys(found);
     const signature = keys.map((key) => `${key}=${found[key]}`).join(";");
@@ -230,10 +273,12 @@
   }
 
   function walkChildren(root, list, seen, icons) {
+    list.images ||= new Set();
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
       acceptNode: (node) => {
         if (!isMedia(node)) return NodeFilter.FILTER_ACCEPT;
         if (node.localName === "svg") icons.add(node);
+        else if (node.localName === "img") list.images.add(node);
         return NodeFilter.FILTER_REJECT;
       }
     });
@@ -243,6 +288,7 @@
   function collect(root, list, seen) {
     if (!(root instanceof Element) || !root.isConnected || seen.has(root)) return;
     if (root.localName === "svg") { list.icons.add(root); return; }
+    if (root.localName === "img") { list.images.add(root); return; }
     if (isMedia(root) || root.closest(MEDIA_SELECTOR)) return;
     visit(root, list, seen);
     walkChildren(root, list, seen, list.icons);
@@ -273,12 +319,13 @@
   function process(trees, selves) {
     const list = [];
     list.icons = new Set();
+    list.images = new Set();
     const seen = new Set();
     for (const node of trees) collect(node, list, seen);
     for (const node of selves) {
       if (!seen.has(node) && node.isConnected && !isMedia(node) && !node.closest(MEDIA_SELECTOR)) { seen.add(node); list.push(node); }
     }
-    if (!list.length && !list.icons.size) return;
+    if (!list.length && !list.icons.size && !list.images.size) return;
     // Already-styled elements hide their original colors behind our overrides.
     // Switch overrides off inside just the affected subtrees for the read phase
     // (no paint happens in between, so nothing flickers).
@@ -305,9 +352,22 @@
     const decisions = list.map((element) => decide(element, ctx));
     const iconDecisions = [];
     for (const icon of list.icons) if (icon.isConnected) decideSvg(icon, ctx, iconDecisions);
+    const recolor = ctx.mode === "oled" || ctx.mode === "soft";
+    const imageDecisions = [];
+    const logoCandidates = [];
+    if (recolor) {
+      for (const img of list.images) {
+        if (!img.isConnected) continue;
+        imageDecisions.push([img, DARKENING_BLENDS.test(ctx.style(img).mixBlendMode) ? { blend: "normal" } : {}]);
+        const rect = img.getBoundingClientRect();
+        if (rect.width >= 12 && rect.height >= 12 && rect.width <= 420 && rect.height <= 160) logoCandidates.push(img);
+      }
+    }
     for (const node of measured) node.removeAttribute(MEASURE);
     list.forEach((element, index) => write(element, decisions[index]));
     for (const [part, found] of iconDecisions) write(part, found);
+    for (const [img, found] of imageDecisions) write(img, found);
+    for (const img of logoCandidates) checkLogo(img);
     // Commit the new colors with transitions still off, then restore them.
     if (calm.length) getComputedStyle(calm[0]).color;
     for (const node of calm) node.removeAttribute(NOANIM);
@@ -336,7 +396,8 @@
   function schedule() {
     if (flushScheduled) return;
     flushScheduled = true;
-    if (globalThis.requestIdleCallback) requestIdleCallback(flush, { timeout: 250 });
+    if (document.readyState === "loading") setTimeout(flush, 16);
+    else if (globalThis.requestIdleCallback) requestIdleCallback(flush, { timeout: 250 });
     else setTimeout(flush, 100);
   }
 
@@ -380,6 +441,7 @@
       [${MARK}~="fill"]${on} { fill: var(--oln-fill) !important; }
       [${MARK}~="stroke"]${on} { stroke: var(--oln-stroke) !important; }
       [${MARK}~="stop"]${on} { stop-color: var(--oln-stop) !important; }
+      [${MARK}~="blend"]${on} { mix-blend-mode: normal !important; }
       [${NOANIM}], [${NOANIM}] *, [${NOANIM}]::before, [${NOANIM}]::after, [${NOANIM}] *::before, [${NOANIM}] *::after { transition: none !important; }
       [${MARK}~="before-bg"]${on}::before { background-color: var(--oln-before-bg) !important; }
       [${MARK}~="before-img"]${on}::before { background-image: var(--oln-before-img) !important; }
@@ -417,6 +479,7 @@
       ${root}:not([data-oled-night-page="none"]) ::selection { background: rgb(38 79 140) !important; color: #fff !important; }
       html[data-oled-night-root][data-oled-night-dim]:not([data-oled-night-invert]) :is(img, video) { filter: brightness(0.78) !important; }
       html[data-oled-night-invert] { filter: invert(1) hue-rotate(180deg) !important; background: #fff !important; }
+      html[data-oled-night-root]:not([data-oled-night-invert]) img[${LOGO}] { filter: invert(1) hue-rotate(180deg) !important; }
       /* Gmail: on black, unread (tr.zE) and read (tr.yO) rows only differ by
          font weight. Mark unread with an accent bar and full-brightness text,
          and step read rows down to the muted text level. */
@@ -450,8 +513,10 @@
     for (const name of ["data-oled-night-root", "data-oled-night-youtube", "data-oled-night-page", "data-oled-night-dim", "data-oled-night-invert", "data-oled-night-site"]) root.removeAttribute(name);
     for (const name of ["--oled-night-page", "--oled-night-youtube-primary", "--oled-night-youtube-secondary", "--oln-light", "--oln-strength"]) root.style.removeProperty(name);
     document.getElementById("oled-night-sheet")?.remove();
+    logoChecked = new WeakSet();
+    logoBudget = 80;
     for (const scope of [document, ...shadowRoots]) {
-      for (const node of scope.querySelectorAll(`[${MEASURE}], [${NOANIM}]`)) { node.removeAttribute(MEASURE); node.removeAttribute(NOANIM); }
+      for (const node of scope.querySelectorAll(`[${MEASURE}], [${NOANIM}], [${LOGO}]`)) { node.removeAttribute(MEASURE); node.removeAttribute(NOANIM); node.removeAttribute(LOGO); }
       for (const element of scope.querySelectorAll(`[${MARK}]`)) {
         element.removeAttribute(MARK);
         for (const key of PROPS) element.style.removeProperty(`--oln-${key}`);
@@ -581,11 +646,24 @@
 
   if (frameIsUntouched()) return;
   installEarly();
+  // Start as soon as <body> exists rather than after the whole document has
+  // loaded, so heavy pages don't show their own white panels first. The page's
+  // light/dark character is re-checked once its styles have fully loaded.
   if (!domReady) {
-    document.addEventListener("DOMContentLoaded", () => {
+    const start = () => {
+      if (domReady) return;
       domReady = true;
+      bodyWatch.disconnect();
       if (isEnabled(settings) && revision > 0) enable();
+    };
+    const bodyWatch = new MutationObserver(() => { if (document.body) start(); });
+    bodyWatch.observe(document.documentElement, { childList: true });
+    if (document.body) start();
+    document.addEventListener("DOMContentLoaded", () => {
+      start();
+      if (active) { polarityDirty = true; schedule(); }
     }, { once: true });
+    addEventListener("load", () => { if (active) { polarityDirty = true; schedule(); } }, { once: true });
   }
   chrome.storage.sync.get(DEFAULTS, applySettings);
   chrome.storage.onChanged.addListener((changes, area) => {

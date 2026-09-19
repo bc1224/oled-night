@@ -127,6 +127,12 @@ try {
   check("gmail: unread text brighter than read", lum(unreadText) > lum(readText) * 1.8 && lum(readText) > 0.1, `${unreadText} vs ${readText}`);
   check("gmail: unread rows get an accent bar", (await css("unread", "boxShadow")).includes("inset") && (await css("read", "boxShadow")) === "none");
 
+  // Shopping-site patterns: multiply-blended product photos and dark logos.
+  await page.go(site("127.0.0.1", "shop.html"), 1800);
+  check("multiply-blended product photos stay visible", (await css("product", "mixBlendMode")) === "normal" && (await css("promo", "mixBlendMode")) === "normal");
+  check("dark transparent logo is flipped light", (await page.eval("document.getElementById('logo').hasAttribute('data-oled-night-logo')")) && /invert/.test(await css("logo", "filter")));
+  check("colored logo and photos are left alone", (await css("colorLogo", "filter")) === "none" && (await css("photo", "filter")) === "none");
+
   // Already-dark page: only the darkest greys go black.
   await page.go(site("127.0.0.1", "dark.html"));
   check("dark site: page crushed to black", (await page.eval("getComputedStyle(document.body).backgroundColor")) === "rgb(0, 0, 0)");

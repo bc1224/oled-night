@@ -80,6 +80,7 @@
   }
 
   async function init() {
+    try { $("version").textContent = `v${chrome.runtime.getManifest().version}`; } catch {}
     if (!hasChrome() || !globalThis.chrome?.tabs) {
       host = "example.com";
       $("hostname").textContent = host;

@@ -166,10 +166,10 @@
       <div class="wrap story">
         <div>
           <div class="kicker">Why I made it</div>
-          <h2>Dark mode shouldn't break the web.</h2>
-          <p>I browse on an OLED screen, where true black means the pixels switch off completely: no glow, better contrast, easier on the eyes at night. So I wanted every site as black as possible, including the many that don't have a dark mode at all.</p>
-          <p>Every dark-mode option I tried let me down in one of two ways. Some left everything a washed-out grey. Others made pages dark but broke them: text I couldn't read, white boxes, strange gradients, and charts that turned into blank white shapes.</p>
-          <p>OLED Night is my fix. It's built one real site at a time, and every bug it has fixed is locked in by an automated test. It's free and open source, so anyone can use it, check exactly what it does, or help improve it.</p>
+          <h2>I just wanted everything actually black.</h2>
+          <p>I've got an OLED monitor, and I wanted every site to be black. Not dark grey. Actually black, so the pixels are off.</p>
+          <p>Every dark mode extension I tried either left everything grey, or made sites dark and broke them: text I couldn't read, random white boxes, weird white gradients around chat boxes, charts turning into blank white shapes, Amazon photos turning into black squares. Some of them even made Gmail and ChatGPT lag.</p>
+          <p>So I made my own. Every time a site broke, I fixed it and added a test so it stays fixed. It's free and open source. Use it, change it, or tell me what's still broken.</p>
         </div>
         <ul class="pains">
           <li>Text you can't read: dark grey on black, or light grey on white</li>
@@ -177,6 +177,7 @@
           <li>Charts and dashboards with blank white fills</li>
           <li>A white flash every time a page loads</li>
           <li>Pages lagging while you scroll or type</li>
+          <li>Product photos turning into black squares</li>
           <li class="fix">OLED Night fixes each of these, and a test suite that runs the real extension keeps them fixed</li>
         </ul>
       </div>
@@ -208,7 +209,7 @@
         <p class="intro">Works in Chrome and in Chromium-based browsers: Edge, Brave, Arc, Opera and Vivaldi.</p>
         <div class="two">
           <div class="card">
-            <h3>From the zip <span class="tag">available now</span></h3>
+            <h3>Install the extension</h3>
             <ol class="steps">
               <li><span><a href="https://github.com/bc1224/oled-night/releases/latest/download/oled-night.zip">Download the zip</a> and unzip it into a folder you'll keep, such as <code>Documents/OLED Night</code>.</span></li>
               <li><span>Open <code>chrome://extensions</code> (or <code>edge://extensions</code>).</span></li>
@@ -218,10 +219,10 @@
             </ol>
           </div>
           <div class="card">
-            <h3>Chrome Web Store <span class="tag">coming soon</span></h3>
-            <p>One click to install, with automatic updates. Until then, the zip is the same extension.</p>
-            <p style="margin-top:14px"><b style="color:var(--text)">Updating the zip version:</b> unzip the new release over the same folder, then click the reload arrow on OLED Night's card in <code>chrome://extensions</code>.</p>
-            <p style="margin-top:14px"><b style="color:var(--text)">Building from source:</b> clone the repo and load the folder directly. There's no build step.</p>
+            <h3>Black browser too <span class="tag">optional</span></h3>
+            <p>The extension darkens websites, but no extension can touch Chrome's own window. The companion <b style="color:var(--text)">OLED Night theme</b> makes the tab bar, toolbar, address bar and new-tab page black to match. <a href="https://github.com/bc1224/oled-night/releases/latest/download/oled-night-theme.zip">Download the theme</a> and install it the same way, with <b>Load unpacked</b>.</p>
+            <p style="margin-top:14px"><b style="color:var(--text)">Getting updates:</b> on GitHub, click <b>Watch → Custom → Releases</b> to get an email for new versions. To update, unzip the new version over the same folder, then click the reload arrow on OLED Night's card in <code>chrome://extensions</code>.</p>
+            <p style="margin-top:14px"><b style="color:var(--text)">From source:</b> clone the repo and load the folder directly. There's no build step.</p>
           </div>
         </div>
       </div>
@@ -267,10 +268,11 @@
         <div class="kicker">FAQ</div>
         <h2>Questions</h2>
         <details><summary>A site still looks wrong. What should I try?</summary><p>Open the popup on that site and try <b>Deepen blacks only</b> if the site already has its own dark design, <b>Invert</b> if it draws its content on a canvas (spreadsheets, design tools), or <b>Off</b>. If it's still broken, click <b>Report a broken site</b> and <a href="https://github.com/bc1224/oled-night/issues/new">open an issue</a> with the saved file and a screenshot.</p></details>
+        <details><summary>How is this different from Dark Reader?</summary><p>Dark Reader is great and does a lot. OLED Night is narrower on purpose: it aims for pure black backgrounds while keeping text readable and images, charts and product photos intact, and it's tested against the specific ways dark modes break sites. That includes unreadable text, white fades and glows, blank chart fills, black product photos, web components and chat widgets. If Dark Reader already looks perfect on your sites, keep it. If you want deeper blacks, or it breaks something you use, try this.</p></details>
         <details><summary>How is this different from Chrome's built-in "Auto Dark Mode"?</summary><p>Chrome's flag runs one filter over the whole page. It produces grey instead of black, can't be tuned per site, and often mangles images and charts. OLED Night decides each element's color separately: backgrounds, text, borders, icons, gradients and shadows each get their own treatment, and images are left alone.</p></details>
         <details><summary>Why don't images get darker?</summary><p>That's on purpose: photos and artwork should look the way they were made. If a bright image is too much on a black page, turn on <b>Dim images on this site</b>, or set it as the default in Settings.</p></details>
         <details><summary>Will it slow my browser down?</summary><p>It's built to stay out of the way. Each update reads all the colors it needs in one pass and writes the changes in a second, and bursts of page activity are grouped together. A test holds it to smooth frame times on a page changing constantly. Moving the sliders only changes two values, so the page never has to be re-scanned.</p></details>
-        <details><summary>Why does Chrome warn me about developer mode extensions?</summary><p>Chrome shows that notice for any extension installed from a zip. It goes away with the Web Store version, which is coming soon.</p></details>
+        <details><summary>Why does Chrome warn me about "developer mode" extensions?</summary><p>Chrome shows that notice for any extension you install yourself from a folder instead of from Google's store. It's normal, and you can dismiss it. The code is all public here, so you can see exactly what it does.</p></details>
         <details><summary>Does it work on YouTube, Gmail and other big sites?</summary><p>Yes. YouTube has its own dark theme, so OLED Night only deepens it to true black without touching its layout. Gmail gets a small tweak so unread emails stand out. Chrome's own pages (<code>chrome://</code> pages and the Web Store) can't be changed by any extension.</p></details>
         <details><summary>Can I use it on my phone?</summary><p>Chrome on Android and iOS doesn't support extensions. On Android, some Chromium browsers that do support extensions, such as Kiwi or Lemur, may work, but they aren't tested.</p></details>
       </div>
@@ -302,7 +304,7 @@
         <ul class="pains">
           <li class="fix">Found a broken site? A report and a screenshot are the most useful thing you can send.</li>
           <li class="fix">Fixing a site? Add a small page that reproduces it to the test suite.</li>
-          <li class="fix">Star the repo if OLED Night saves your eyes.</li>
+          <li class="fix">Star the repo if OLED Night saves your eyes, and watch releases to hear about updates.</li>
         </ul>
       </div>
     </section>

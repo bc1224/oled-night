@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "OLED Night Chrome Theme",
+  "version": "1.0.1",
+  "description": "True-black Chrome frame, tabs, toolbar, bookmarks bar, and new-tab surface.",
+  "icons": {
+    "16": "assets/icon-16.png",
+    "32": "assets/icon-32.png",
+    "48": "assets/icon-48.png",
+    "128": "assets/icon-128.png"
+  },
+  "theme": {
+    "colors": {
+      "frame": [0, 0, 0],
+      "frame_inactive": [0, 0, 0],
+      "toolbar": [0, 0, 0],
+      "toolbar_text": [238, 238, 242],
+      "toolbar_button_icon": [220, 220, 226],
+      "tab_text": [255, 255, 255],
+      "tab_background_text": [166, 166, 176],
+      "bookmark_text": [224, 224, 230],
+      "omnibox_background": [10, 10, 12],
+      "omnibox_text": [245, 245, 248],
+      "omnibox_results_bg": [10, 10, 12],
+      "omnibox_results_text": [238, 238, 242],
+      "button_background": [18, 18, 22],
+      "ntp_background": [0, 0, 0],
+      "ntp_text": [238, 238, 242],
+      "ntp_link": [102, 163, 255]
+    },
+    "tints": {
+      "buttons": [0.0, 0.0, 0.82]
+    },
+    "properties": {
+      "ntp_background_alignment": "center",
+      "ntp_background_repeat": "no-repeat"
+    }
+  }
+}
