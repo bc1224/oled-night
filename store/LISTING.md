@@ -32,7 +32,7 @@ Upload `dist/oled-night-<version>.zip` (build it with `node tools/package.mjs`).
 > Private by design: OLED Night never sends data anywhere. It has no servers, no analytics and no tracking.
 
 **Graphic assets:**
-- Icon: `assets/icon-128.png`
+- Store icon: `store/images/store-icon-128.png` (128x128, artwork padded to 96x96)
 - Screenshots (1280x800): `store/images/screenshot-1-before-after.png`, `store/images/screenshot-2-popup.png`
 - Small promo tile (440x280): `store/images/promo-small.png`
 

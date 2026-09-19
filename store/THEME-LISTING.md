@@ -14,6 +14,7 @@ Package: `dist/oled-night-theme-<version>.zip` (built by `node tools/package.mjs
 
 - **Category:** Themes
 - **Language:** English
+- **Store icon:** `store/images/store-icon-128.png` (128x128, artwork padded to 96x96 as Google recommends)
 - **Screenshot:** `store/images/theme-screenshot.png` (1280x800, taken in a clean profile)
 - **Small promo tile (optional):** `store/images/promo-small.png`
 - **Homepage URL:** https://bc1224.github.io/oled-night/
