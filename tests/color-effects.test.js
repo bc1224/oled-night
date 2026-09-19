@@ -55,3 +55,6 @@ assert.equal(colors.mapShadow("rgb(255, 255, 255) 0px 0px 4px 0px", "crush"), nu
 console.log("v0.5 mapping: 12 assertions passed");
 assert.equal(colors.mapBackground(colors.parseColor("rgb(19, 23, 34)"), "crush"), "#000000");
 console.log("navy crush: 1 assertion passed");
+assert.equal(colors.siteProfile("mail.google.com"), "gmail");
+assert.equal(colors.siteProfile("google.com"), "");
+console.log("site profiles: 2 assertions passed");

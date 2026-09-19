@@ -245,5 +245,10 @@
     return /(^|\.)youtube\.com$/i.test(String(hostname || ""));
   }
 
-  scope.OledNightColors = { parseColor, luminance, chroma, textTier, mapIconPaint, mapBackground, mapForeground, mapBorder, mapGradient, mapShadow, gradientBackdrop, isProtectedMediaTag, usesNativeSafeMode };
+  // Sites with a small hand-tuned profile on top of the generic recoloring.
+  function siteProfile(hostname) {
+    return /^mail\.google\.com$/i.test(String(hostname || "")) ? "gmail" : "";
+  }
+
+  scope.OledNightColors = { siteProfile, parseColor, luminance, chroma, textTier, mapIconPaint, mapBackground, mapForeground, mapBorder, mapGradient, mapShadow, gradientBackdrop, isProtectedMediaTag, usesNativeSafeMode };
 })(globalThis);

@@ -2,7 +2,7 @@
 
 A Manifest V3 Chrome extension that makes web pages true black by recoloring elements rather than applying a blanket filter. Photos, video and artwork keep their real colors.
 
-Current version: **0.6.0**. To install it or share it, see [INSTALL.md](INSTALL.md). To publish it on the Chrome Web Store, see [store/LISTING.md](store/LISTING.md).
+Current version: **0.6.1**. To install it or share it, see [INSTALL.md](INSTALL.md). To publish it on the Chrome Web Store, see [store/LISTING.md](store/LISTING.md).
 
 ## What it does
 - **Light pages:** recolors backgrounds, gradients, shadows, pseudo-elements, borders (colored ones keep their hue), SVG icons and chart fills. Text keeps its primary, secondary or muted emphasis.
@@ -35,7 +35,7 @@ node tests/popup-live-controls.test.js
 node tests/youtube-safe-mode.test.js
 node tests/e2e/run.mjs
 ```
-`tests/e2e/run.mjs` loads the real extension into a throwaway headless Chrome and checks 41 behaviors against the pages in `tests/e2e/site/`: light and dark sites, charts, frames, web components, streaming, slow loads, every site mode, schedule, per-site settings, performance and the popup. Set `CHROME_PATH` if Chrome isn't in a standard location, and `EXT_PATH` to test an unzipped release.
+`tests/e2e/run.mjs` loads the real extension into a throwaway headless Chrome and checks 43 behaviors against the pages in `tests/e2e/site/`: light and dark sites, Gmail read/unread, charts, frames, web components, streaming, slow loads, every site mode, schedule, per-site settings, performance and the popup. Set `CHROME_PATH` if Chrome isn't in a standard location, and `EXT_PATH` to test an unzipped release.
 
 ## Release
 1. Bump `version` in `manifest.json`, and the version string in `content.js` and in the README.

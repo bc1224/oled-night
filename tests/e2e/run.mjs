@@ -121,6 +121,12 @@ try {
   check("diagnostic report", report?.active === true && Array.isArray(report.lowContrast) && report.counts.styled > 10, `styled=${report?.counts?.styled} lowContrast=${report?.lowContrast?.length}`);
   check("report finds no unreadable text", report?.lowContrast?.length === 0, JSON.stringify(report?.lowContrast?.slice(0, 3)));
 
+  // Gmail profile: unread vs read rows stay distinguishable on black.
+  await page.go(site("127.0.0.1", "gmail.html"), 1800);
+  const unreadText = await css("unreadSubject", "color"), readText = await css("readSubject", "color");
+  check("gmail: unread text brighter than read", lum(unreadText) > lum(readText) * 1.8 && lum(readText) > 0.1, `${unreadText} vs ${readText}`);
+  check("gmail: unread rows get an accent bar", (await css("unread", "boxShadow")).includes("inset") && (await css("read", "boxShadow")) === "none");
+
   // Already-dark page: only the darkest greys go black.
   await page.go(site("127.0.0.1", "dark.html"));
   check("dark site: page crushed to black", (await page.eval("getComputedStyle(document.body).backgroundColor")) === "rgb(0, 0, 0)");

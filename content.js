@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.6.0";
+  const VERSION = "0.6.1";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -417,6 +417,12 @@
       ${root}:not([data-oled-night-page="none"]) ::selection { background: rgb(38 79 140) !important; color: #fff !important; }
       html[data-oled-night-root][data-oled-night-dim]:not([data-oled-night-invert]) :is(img, video) { filter: brightness(0.78) !important; }
       html[data-oled-night-invert] { filter: invert(1) hue-rotate(180deg) !important; background: #fff !important; }
+      /* Gmail: on black, unread (tr.zE) and read (tr.yO) rows only differ by
+         font weight. Mark unread with an accent bar and full-brightness text,
+         and step read rows down to the muted text level. */
+      html[data-oled-night-root][data-oled-night-site="gmail"] tr.zA.zE { box-shadow: inset 3px 0 0 #8ab4f8 !important; }
+      html[data-oled-night-root][data-oled-night-site="gmail"] tr.zA.zE td, html[data-oled-night-root][data-oled-night-site="gmail"] tr.zA.zE td * { color: hsl(0 0% var(--oln-light, 88%)) !important; }
+      html[data-oled-night-root][data-oled-night-site="gmail"] tr.zA.yO td, html[data-oled-night-root][data-oled-night-site="gmail"] tr.zA.yO td * { color: hsl(0 0% max(40%, calc(var(--oln-light, 88%) * 0.66))) !important; }
       html[data-oled-night-invert] :is(img, video, iframe, embed, object) { filter: invert(1) hue-rotate(180deg) !important; }
       html[data-oled-night-root][data-oled-night-youtube] body,
       html[data-oled-night-root][data-oled-night-youtube] ytd-app,
@@ -441,7 +447,7 @@
     textTiers = new WeakMap();
     removeEarly();
     const root = document.documentElement;
-    for (const name of ["data-oled-night-root", "data-oled-night-youtube", "data-oled-night-page", "data-oled-night-dim", "data-oled-night-invert"]) root.removeAttribute(name);
+    for (const name of ["data-oled-night-root", "data-oled-night-youtube", "data-oled-night-page", "data-oled-night-dim", "data-oled-night-invert", "data-oled-night-site"]) root.removeAttribute(name);
     for (const name of ["--oled-night-page", "--oled-night-youtube-primary", "--oled-night-youtube-secondary", "--oln-light", "--oln-strength"]) root.style.removeProperty(name);
     document.getElementById("oled-night-sheet")?.remove();
     for (const scope of [document, ...shadowRoots]) {
@@ -483,6 +489,8 @@
     const root = document.documentElement;
     root.setAttribute("data-oled-night-root", "");
     root.setAttribute("data-oled-night-version", VERSION);
+    const profile = colorsApi().siteProfile(hostname());
+    if (profile) root.setAttribute("data-oled-night-site", profile);
     applyTuning();
     // Canvas-drawn apps (Sheets, Figma) can't be recolored element by element:
     // invert the whole page and flip real imagery back.
