@@ -1,0 +1,3 @@
+dist/
+tests/e2e/.profile*/
+node_modules/

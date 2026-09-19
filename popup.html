@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OLED Night</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main class="popup">
+    <header><h1>OLED Night</h1><span class="status-dot" aria-hidden="true"></span></header>
+    <section class="power-row">
+      <div><h2>OLED Night</h2><p>True black without touching imagery.</p></div>
+      <label class="switch"><input id="globalEnabled" type="checkbox"><span></span><span class="sr-only">Enable OLED Night everywhere</span></label>
+    </section>
+    <section class="site-row">
+      <div class="site-label"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.4 3 14.6 0 18M12 3c-3 3.4-3 14.6 0 18"/></svg><div><strong>This site</strong><small id="hostname">Current tab</small></div></div>
+      <select id="siteRule" aria-label="Dark mode for this site"><option value="global">Use global</option><option value="on">On</option><option value="off">Off</option></select>
+    </section>
+    <section class="appearance">
+      <h2>Appearance</h2>
+      <div class="segments" role="radiogroup" aria-label="Appearance">
+        <label><input type="radio" name="appearance" value="oled"><span>OLED Black</span></label>
+        <label><input type="radio" name="appearance" value="soft"><span>Soft Dark</span></label>
+        <label title="Follows your system theme: OLED Black in dark mode, off in light mode"><input type="radio" name="appearance" value="auto"><span>Auto</span></label>
+      </div>
+    </section>
+    <section class="tuning">
+      <label><span>Brightness <output id="brightnessValue">88%</output></span><input id="brightness" type="range" min="40" max="100" value="88"></label>
+      <label><span>Contrast <output id="contrastValue">72%</output></span><input id="contrast" type="range" min="0" max="100" value="72"></label>
+    </section>
+    <button id="siteSettings" class="settings-link" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"/><path d="m19.4 15 .1.1 1.4 2.4-2.6 2.6-2.4-1.4-.1.1-1 .4V22H9.2v-2.8l-1-.4-.1-.1-2.4 1.4-2.6-2.6 1.4-2.4-.1-.1-.4-1H1.2v-4H4l.4-1 .1-.1-1.4-2.4 2.6-2.6 2.4 1.4.1-.1 1-.4V2h5.6v2.8l1 .4.1.1 2.4-1.4 2.6 2.6-1.4 2.4.1.1.4 1h2.8v4H20l-.6 1Z"/></svg>Site settings</button>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>
