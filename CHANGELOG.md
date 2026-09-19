@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.4
+- Relicensed from MIT to GPL-3.0: copies and modified versions that are shared or sold must stay open source. The license file now ships inside the zip.
+
 ## 0.6.3
 - "Report a broken site" also lists each embedded frame and whether it was darkened (origin only, never its address or content).
 - Clearer popup message on pages Chrome keeps extensions off (chrome:// pages, the Chrome Web Store).

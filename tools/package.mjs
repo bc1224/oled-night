@@ -13,7 +13,7 @@ const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));
 // Runtime files only: manifest, scripts, pages, styles and the toolbar icons.
 const RUNTIME = ["manifest.json", "settings.js", "color-utils.js", "content.js", "background.js", "shadow-open.js",
   "popup.html", "popup.css", "popup.js", "options.html", "options.css", "options.js",
-  "assets/icon-16.png", "assets/icon-32.png", "assets/icon-48.png", "assets/icon-128.png", "INSTALL.md"];
+  "assets/icon-16.png", "assets/icon-32.png", "assets/icon-48.png", "assets/icon-128.png", "INSTALL.md", "LICENSE"];
 
 // Every file the manifest and pages reference must be in the list above.
 const referenced = new Set([

@@ -74,4 +74,4 @@ node tools/store-assets.mjs                     # screenshots for the README and
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
 
 ## License
-[MIT](LICENSE)
+[GPL-3.0](LICENSE). You're free to use, study, change and share OLED Night. If you distribute a modified version, or charge for it, you must release its full source code under the same license and keep the original credit. Copyright © 2026 Brandon (bc1224). Versions up to 0.6.3 were released under MIT.
