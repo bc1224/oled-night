@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.6.2
+- Settings page and popup link to the companion OLED Night Chrome theme.
 - Amazon and other shops: product photos no longer turn into black squares. The "multiply" blend they use to hide white photo backgrounds is switched off where the page goes black.
 - Dark, transparent logos and wordmarks (like Wikipedia's) are flipped to light so they stay visible. Colored logos and photos are left alone.
 - Heavy pages start darkening as soon as the page body appears instead of after the whole page loads, so there's less white flash on big sites.

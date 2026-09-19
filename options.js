@@ -2,6 +2,7 @@
   "use strict";
   const Settings = globalThis.OledNightSettings;
   const $ = (id) => document.getElementById(id);
+  const THEME_URL = "https://github.com/bc1224/oled-night/blob/main/theme/README.md";
   let settings = Settings.normalize();
 
   const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -77,6 +78,7 @@
   for (const id of ["scheduleEnabled", "scheduleStart", "scheduleEnd"]) $(id).addEventListener("change", saveSchedule);
   $("openClosedShadows").addEventListener("change", (event) => save({ openClosedShadows: event.target.checked }));
   $("shortcuts").addEventListener("click", () => chrome.tabs.create({ url: "chrome://extensions/shortcuts" }));
+  $("getTheme").addEventListener("click", () => chrome.tabs.create({ url: THEME_URL }));
 
   $("export").addEventListener("click", () => {
     const blob = new Blob([JSON.stringify({ oledNight: 1, settings }, null, 2)], { type: "application/json" });
