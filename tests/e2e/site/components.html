@@ -1,0 +1,20 @@
+<!doctype html><html><head><style>
+:root{--ink:oklch(0 0 0)}
+body{background:#fff;color:#202124;font:14px sans-serif;margin:20px}
+.pill{border:1px solid #ccc;border-radius:20px;padding:6px 14px;background:#fff}.pill span{color:color(srgb 0 0 0)}
+.title{color:var(--ink)}.chat{height:80px;overflow:auto}.chat::after{content:"";display:block;height:30px;background:linear-gradient(rgba(255,255,255,0),#fff)}
+.composer{box-shadow:0 -16px 16px #fff;background:#fff;padding:8px}
+.photo{width:200px;height:60px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E") no-repeat center/cover}
+</style></head><body>
+<button class="pill"><span id="pill">Sort &amp; Filter</span></button>
+<p class="title" id="title">Modern color title</p>
+<div class="chat" id="chat"><p>one</p><p>two</p></div><div class="composer" id="composer">Composer</div>
+<img id="img" width="40" height="40" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23fff'/%3E%3C/svg%3E">
+<ads-grid id="grid"></ads-grid><closed-box id="closed"></closed-box>
+<script>
+customElements.define('ads-grid', class extends HTMLElement { connectedCallback() { const r = this.attachShadow({ mode: 'open' });
+  r.innerHTML = '<style>table{background:#fff}td{color:#6e6e73;padding:4px}</style><table><tr><td id="cell">$0.00</td></tr></table>';
+  setTimeout(() => { const td = document.createElement('td'); td.id = 'late'; td.textContent = 'late'; r.querySelector('tr').appendChild(td); }, 300); } });
+customElements.define('closed-box', class extends HTMLElement { connectedCallback() { const r = this.attachShadow({ mode: 'closed' });
+  r.innerHTML = '<div style="background:#fff;color:#111">closed</div>'; window.closedWasOpened = !!this.shadowRoot; } });
+</script></body></html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Inbox — Demo Mail</title>
+<style>
+  body { margin: 0; background: #f6f8fc; color: #1f1f1f; font: 14px/1.45 "Segoe UI", system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 18px; height: 64px; padding: 0 24px; background: #fff; border-bottom: 1px solid #e3e6ea; }
+  .logo { font-weight: 700; font-size: 20px; color: #1a73e8; }
+  .search { flex: 1; max-width: 640px; height: 44px; border-radius: 22px; background: #e9eef6; display: flex; align-items: center; padding: 0 18px; color: #5f6368; }
+  .layout { display: grid; grid-template-columns: 220px 1fr 320px; gap: 20px; padding: 20px 24px; }
+  nav a { display: block; padding: 8px 14px; border-radius: 0 18px 18px 0; color: #1f1f1f; text-decoration: none; }
+  nav a.active { background: #d3e3fd; font-weight: 600; }
+  nav small { color: #5f6368; float: right; }
+  .compose { display: inline-block; margin-bottom: 14px; padding: 14px 22px; border-radius: 16px; background: #c2e7ff; font-weight: 600; }
+  .list { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 2px rgba(60,64,67,.15); }
+  .row { display: grid; grid-template-columns: 170px 1fr 70px; gap: 12px; padding: 11px 18px; border-bottom: 1px solid #eef0f3; }
+  .row.unread { font-weight: 600; background: #fff; }
+  .row.read { background: #f2f6fc; }
+  .row .snippet { color: #5f6368; font-weight: 400; }
+  .row time { color: #5f6368; text-align: right; font-size: 12px; }
+  .tag { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 4px; background: #e6f4ea; color: #137333; font-size: 11px; font-weight: 600; }
+  .alert { margin-bottom: 14px; padding: 12px 16px; border-radius: 12px; background: #fef7e0; color: #7a5c00; }
+  aside .card { background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(60,64,67,.15); }
+  aside h3 { margin: 0 0 8px; font-size: 15px; }
+  aside p { margin: 0 0 10px; color: #5f6368; }
+  .btn { display: inline-block; padding: 8px 16px; border-radius: 18px; background: #0b57d0; color: #fff; font-weight: 600; }
+  .photo { width: 100%; border-radius: 12px; display: block; margin-bottom: 10px; }
+</style></head>
+<body>
+  <header><span class="logo">DemoMail</span><div class="search">Search mail</div></header>
+  <div class="layout">
+    <nav>
+      <div class="compose">✎ Compose</div>
+      <a class="active" href="#">Inbox <small>12</small></a><a href="#">Starred</a><a href="#">Snoozed</a><a href="#">Sent</a><a href="#">Drafts <small>3</small></a>
+    </nav>
+    <main>
+      <div class="alert">You have 3 messages waiting for a reply.</div>
+      <div class="list">
+        <div class="row unread"><span>Maya Chen</span><span>Trip photos are up <span class="snippet">— Uploaded the album from last weekend, the lake ones came out great</span></span><time>9:41 AM</time></div>
+        <div class="row unread"><span>Design Weekly</span><span><span class="tag">Newsletter</span>Dark UI patterns that don't hurt <span class="snippet">— This issue looks at contrast on OLED screens</span></span><time>8:15 AM</time></div>
+        <div class="row read"><span>Sam Ortiz</span><span>Re: Friday plans <span class="snippet">— Works for me, I'll bring the board games</span></span><time>Yesterday</time></div>
+        <div class="row read"><span>Billing</span><span>Your receipt <span class="snippet">— Thanks for your order, here are the details</span></span><time>Sep 16</time></div>
+        <div class="row read"><span>Priya Nair</span><span>Notes from the call <span class="snippet">— Summary and next steps attached</span></span><time>Sep 15</time></div>
+        <div class="row read"><span>Alex Kim</span><span>Quick question <span class="snippet">— Do you still have the link to that article?</span></span><time>Sep 14</time></div>
+        <div class="row read"><span>Calendar</span><span>Reminder: dentist <span class="snippet">— Tomorrow at 3:30 PM</span></span><time>Sep 14</time></div>
+      </div>
+    </main>
+    <aside>
+      <div class="card">
+        <img class="photo" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 150'%3E%3Cdefs%3E%3ClinearGradient id='s' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ff9a62'/%3E%3Cstop offset='1' stop-color='%23ffd6a0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='300' height='150' fill='url(%23s)'/%3E%3Ccircle cx='220' cy='70' r='26' fill='%23fff3c4'/%3E%3Cpath d='M0 120 L70 70 L130 115 L190 80 L300 125 L300 150 L0 150Z' fill='%234a6fa5'/%3E%3Cpath d='M0 135 L90 105 L170 135 L240 112 L300 138 L300 150 L0 150Z' fill='%232d4a73'/%3E%3C/svg%3E">
+        <h3>Maya shared an album</h3><p>12 photos from Lake Tahoe</p><span class="btn">Open album</span>
+      </div>
+      <div class="card"><h3>Storage</h3><p>4.2 GB of 15 GB used</p></div>
+    </aside>
+  </div>
+</body></html>

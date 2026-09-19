@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 
+require("../settings.js");
 require("../color-utils.js");
 
 let sheet = null;
@@ -57,7 +58,7 @@ assert.equal(styleValues.get("--oled-night-page"), "#000");
 assert.equal(walkerStarted, false);
 assert.equal(observerStarted, false);
 assert.equal(attributes.has("data-oled-night-youtube"), true);
-assert.equal(root.getAttribute?.("data-oled-night-version"), "0.5.1");
+assert.equal(root.getAttribute?.("data-oled-night-version"), "0.6.0");
 assert.doesNotMatch(sheet.textContent, /--yt-spec-base-background/);
 assert.match(sheet.textContent, /--yt-spec-text-primary/);
 messageListener({ type: "oled-night-preview", patch: { brightness: 70 } }, {}, () => {});

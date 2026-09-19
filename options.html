@@ -1,1 +1,71 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OLED Night — Site settings</title><link rel="stylesheet" href="options.css"></head><body><main><h1>Site settings</h1><p>Sites that override your global OLED Night switch.</p><div id="rules" aria-live="polite"></div><button id="clear" type="button">Clear all overrides</button></main><script src="options.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OLED Night Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <h1>OLED Night</h1>
+    <p class="lede">Settings sync across Chrome on every computer where you're signed in.</p>
+
+    <section>
+      <h2>Sites</h2>
+      <p>How each site is treated. Sites not listed follow the main switch.</p>
+      <form id="addRule" class="add">
+        <input id="newHost" type="text" placeholder="example.com" aria-label="Site address" autocomplete="off" spellcheck="false">
+        <select id="newMode" aria-label="Mode"></select>
+        <button type="submit">Add</button>
+      </form>
+      <div id="rules" aria-live="polite"></div>
+      <dl class="modes">
+        <dt>On (automatic)</dt><dd>Recolors light sites; on sites that are already dark, only deepens their blacks.</dd>
+        <dt>Full recolor</dt><dd>Always recolors, even if the site looks dark already.</dd>
+        <dt>Deepen blacks only</dt><dd>Leaves everything alone except pushing the darkest greys to true black.</dd>
+        <dt>Invert</dt><dd>For apps drawn on a canvas (spreadsheets, design tools). Flips the whole page, images flipped back.</dd>
+        <dt>Off</dt><dd>Never touch this site.</dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Defaults</h2>
+      <label class="check"><input id="dimImages" type="checkbox"><span>Dim images on every site (each site can override this from the popup)</span></label>
+    </section>
+
+    <section>
+      <h2>Schedule</h2>
+      <label class="check"><input id="scheduleEnabled" type="checkbox"><span>Only turn on between</span></label>
+      <div class="times">
+        <input id="scheduleStart" type="time" aria-label="Start time"> <span>and</span> <input id="scheduleEnd" type="time" aria-label="End time">
+      </div>
+    </section>
+
+    <section>
+      <h2>Keyboard shortcut</h2>
+      <p>Currently <kbd id="shortcut">not set</kbd> turns the current site on or off.</p>
+      <button id="shortcuts" type="button">Change shortcut</button>
+    </section>
+
+    <section>
+      <h2>Experimental</h2>
+      <label class="check"><input id="openClosedShadows" type="checkbox"><span>Reach inside locked web components</span></label>
+      <p>A few apps build parts of the page as "closed" components that extensions can't see into, so those parts stay light. This makes them reachable. Rarely, a site may behave differently; turn it off if something breaks. Takes effect on newly loaded pages.</p>
+    </section>
+
+    <section>
+      <h2>Backup</h2>
+      <p>Save all settings and site rules to a file, or load them on another browser.</p>
+      <div class="row">
+        <button id="export" type="button">Export settings</button>
+        <label class="button">Import settings<input id="import" type="file" accept="application/json,.json" hidden></label>
+        <button id="reset" type="button" class="danger">Reset everything</button>
+      </div>
+      <p id="backupStatus" class="note" aria-live="polite"></p>
+    </section>
+  </main>
+  <script src="settings.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

@@ -24,6 +24,7 @@ global.chrome = {
   tabs: { async query() { return [{ id: 7, url: "https://example.com/" }]; }, sendMessage(id, message) { messages.push({ id, message }); return Promise.resolve(); } },
   runtime: { openOptionsPage() {} }
 };
+require("../settings.js");
 require("../popup.js");
 
 setImmediate(async () => {

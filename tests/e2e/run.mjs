@@ -1,0 +1,222 @@
+// End-to-end regression suite: loads the real unpacked extension into a
+// throwaway headless Chrome profile and checks every site behavior we rely on.
+//   node tests/e2e/run.mjs            (set CHROME_PATH if Chrome isn't found)
+import { spawn } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import http from "node:http";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
+// EXT_PATH lets the suite run against an unzipped release instead of the source tree.
+const EXT = process.env.EXT_PATH ? resolve(process.env.EXT_PATH) : resolve(here, "..", "..");
+const SITE = join(here, "site");
+const CHROME = process.env.CHROME_PATH || [
+  "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "/usr/bin/google-chrome", "/usr/bin/chromium"
+].find(existsSync);
+if (!CHROME) { console.error("Chrome not found; set CHROME_PATH"); process.exit(2); }
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const lum = (rgb) => {
+  const [r, g, b] = (rgb.match(/[\d.]+/g) || []).slice(0, 3).map((v) => { const c = +v / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+  return (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
+};
+
+// Test site; /slow.js stalls so a page can be observed mid-load.
+const server = http.createServer((req, res) => {
+  const path = req.url.split("?")[0];
+  if (path === "/slow.js") { setTimeout(() => { res.writeHead(200, { "content-type": "text/javascript" }); res.end("1"); }, 3000); return; }
+  if (path === "/rows.html") {
+    let rows = "";
+    for (let i = 0; i < 2500; i++) rows += `<div class="row"><span class="c"><b>Sender ${i}</b></span><span class="c">Subject ${i}</span><span class="c">snippet</span></div>`;
+    res.writeHead(200, { "content-type": "text/html" });
+    res.end(`<!doctype html><html><head><style>body{background:#fff;color:#202124}.row{display:flex;background:#fff;border-bottom:1px solid #eee}.row.hl{background:#f2f6fc}.c{padding:2px 6px;color:#5f6368}</style></head><body><div id="list">${rows}</div></body></html>`);
+    return;
+  }
+  try { const body = readFileSync(join(SITE, path)); res.writeHead(200, { "content-type": "text/html" }); res.end(body); }
+  catch { res.writeHead(404); res.end(); }
+});
+await new Promise((r) => server.listen(0, "127.0.0.1", r));
+const port = server.address().port;
+const site = (host, file) => `http://${host}:${port}/${file}`;
+
+const profile = mkdtempSync(join(tmpdir(), "oled-night-e2e-"));
+const chrome = spawn(CHROME, ["--headless=new", "--remote-debugging-pipe", "--enable-unsafe-extension-debugging", `--user-data-dir=${profile}`,
+  "--no-first-run", "--no-default-browser-check", "--window-size=1000,800",
+  "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows", "about:blank"], { stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"] });
+const toChrome = chrome.stdio[3], fromChrome = chrome.stdio[4];
+let nextId = 0, buffer = "";
+const pending = new Map();
+const exceptions = [];
+fromChrome.on("data", (chunk) => {
+  buffer += chunk;
+  let end;
+  while ((end = buffer.indexOf("\0")) >= 0) {
+    const message = JSON.parse(buffer.slice(0, end));
+    buffer = buffer.slice(end + 1);
+    if (message.id) pending.get(message.id)?.(message);
+    else if (message.method === "Runtime.exceptionThrown") exceptions.push(message.params.exceptionDetails?.exception?.description || message.params.exceptionDetails?.text);
+  }
+});
+const send = (method, params = {}, sessionId) => new Promise((r) => { const id = ++nextId; pending.set(id, r); toChrome.write(JSON.stringify({ id, method, params, sessionId }) + "\0"); });
+
+async function openTab(url) {
+  const { result: { targetId } } = await send("Target.createTarget", { url: "about:blank" });
+  const { result: { sessionId } } = await send("Target.attachToTarget", { targetId, flatten: true });
+  await send("Page.enable", {}, sessionId);
+  await send("Runtime.enable", {}, sessionId);
+  const tab = {
+    sessionId,
+    eval: async (expression) => {
+      const r = await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }, sessionId);
+      if (r.result?.exceptionDetails) throw new Error(r.result.exceptionDetails.exception?.description || "evaluation failed");
+      return r.result?.result?.value;
+    },
+    go: async (to, wait = 1500) => { await send("Page.navigate", { url: to }, sessionId); await sleep(wait); }
+  };
+  if (url) await tab.go(url);
+  return tab;
+}
+
+let failures = 0, passes = 0;
+function check(name, ok, detail = "") {
+  if (ok) passes++; else failures++;
+  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? `  (${detail})` : ""}`);
+}
+
+try {
+  const loaded = await send("Extensions.loadUnpacked", { path: EXT });
+  const extId = loaded.result?.id;
+  check("extension loads", !!extId, loaded.error?.message || "");
+  if (!extId) throw new Error("cannot continue without the extension");
+
+  const ext = await openTab(`chrome-extension://${extId}/options.html`);
+  const setSettings = (patch) => ext.eval(`chrome.storage.sync.set(${JSON.stringify(patch)}).then(() => true)`);
+  const resetSettings = () => ext.eval("chrome.storage.sync.clear().then(() => true)");
+  check("options page renders", (await ext.eval("document.querySelectorAll('#newMode option').length")) === 5);
+
+  const page = await openTab();
+  const css = (id, prop, pseudo) => page.eval(`getComputedStyle(document.getElementById(${JSON.stringify(id)})${pseudo ? `, ${JSON.stringify(pseudo)}` : ""})[${JSON.stringify(prop)}]`);
+
+  // Light page: recolor, text emphasis, icons, borders, tints, frames, streaming.
+  await page.go(site("127.0.0.1", "light.html"), 1800);
+  check("version stamped", (await page.eval("document.documentElement.dataset.oledNightVersion")) === JSON.parse(readFileSync(join(EXT, "manifest.json"), "utf8")).version);
+  check("page background black", (await page.eval("getComputedStyle(document.body).backgroundColor")) === "rgb(0, 0, 0)");
+  const [primary, secondary, muted] = await Promise.all(["primary", "secondary", "muted"].map((id) => css(id, "color")));
+  check("text keeps primary > secondary > muted", lum(primary) > lum(secondary) && lum(secondary) > lum(muted) && lum(muted) > 0.1, `${primary} / ${secondary} / ${muted}`);
+  const underline = await css("tab", "borderBottomColor");
+  check("colored border keeps its hue", /rgb\((\d+), (\d+), (\d+)\)/.test(underline) && +underline.match(/\d+/g)[2] > +underline.match(/\d+/g)[0] + 60, underline);
+  check("dark icon becomes light", lum(await css("iconpath", "fill")) > 0.5);
+  check("colored icon unchanged", (await css("bluecircle", "fill")) === "rgb(26, 115, 232)");
+  check("pale tints become dark", lum(await css("info", "backgroundColor")) < 0.03 && lum(await css("alert", "backgroundColor")) < 0.03);
+  check("button label is primary", lum(await css("btn", "color")) > 0.6);
+  check("streamed text matches existing text", (await css("streamed", "color")) === (await css("first", "color")));
+  const frame = await page.eval("(() => { const d = document.getElementById('frame').contentDocument; return { bg: getComputedStyle(d.body).backgroundColor, text: getComputedStyle(d.getElementById('w')).color }; })()");
+  check("iframe content darkened", frame.bg === "rgb(0, 0, 0)" && lum(frame.text) > 0.5, JSON.stringify(frame));
+  const report = await ext.eval(`(async () => { const [t] = await chrome.tabs.query({ url: "${site("127.0.0.1", "light.html")}" }); return chrome.tabs.sendMessage(t.id, { type: "oled-night-report" }); })()`);
+  check("diagnostic report", report?.active === true && Array.isArray(report.lowContrast) && report.counts.styled > 10, `styled=${report?.counts?.styled} lowContrast=${report?.lowContrast?.length}`);
+  check("report finds no unreadable text", report?.lowContrast?.length === 0, JSON.stringify(report?.lowContrast?.slice(0, 3)));
+
+  // Already-dark page: only the darkest greys go black.
+  await page.go(site("127.0.0.1", "dark.html"));
+  check("dark site: page crushed to black", (await page.eval("getComputedStyle(document.body).backgroundColor")) === "rgb(0, 0, 0)");
+  check("dark site: cards keep their shade", (await css("card", "backgroundColor")) === "rgb(43, 45, 49)");
+  check("dark site: brand color and text untouched", (await css("accent", "backgroundColor")) === "rgb(88, 101, 242)" && (await css("card", "color")) === "rgb(219, 222, 225)");
+
+  // Charts and color transitions.
+  await page.go(site("127.0.0.1", "chart.html"), 700);
+  const samples = [];
+  for (let i = 0; i < 12; i++) { samples.push(await css("search", "backgroundColor")); await sleep(100); }
+  check("color transitions never flash light", samples.every((c) => lum(c) < 0.05), [...new Set(samples)].join(" | "));
+  check("chart fills darkened", lum(await css("s1", "stopColor")) < 0.1 && lum(await css("s2", "stopColor")) < 0.01 && lum(await css("solid", "fill")) < 0.05);
+  check("chart line keeps color", (await css("line", "stroke")) === "rgb(0, 112, 201)");
+
+  // Web components, modern color syntax, gradients, shadows.
+  await page.go(site("127.0.0.1", "components.html"), 1800);
+  check("modern color syntax text readable", lum(await css("pill", "color")) > 0.5 && lum(await css("title", "color")) > 0.5);
+  check("white fade gradient darkened", /rgb\(0, 0, 0\)\)$/.test(await css("chat", "backgroundImage", "::after")));
+  check("white glow shadow darkened", (await css("composer", "boxShadow")).startsWith("rgb(0, 0, 0)"));
+  const shadow = await page.eval("(() => { const r = document.getElementById('grid').shadowRoot; const s = (el, p) => getComputedStyle(el)[p]; return { table: s(r.querySelector('table'), 'backgroundColor'), cell: s(r.getElementById('cell'), 'color'), late: s(r.getElementById('late'), 'color') }; })()");
+  check("web component table darkened", lum(shadow.table) < 0.01 && lum(shadow.cell) > 0.3 && lum(shadow.late) > 0.3, JSON.stringify(shadow));
+  check("images untouched by default", (await css("img", "filter")) === "none");
+
+  // Per-site settings apply live, without reload.
+  await setSettings({ siteTuning: { "127.0.0.1": { dimImages: true, brightness: 50 } } });
+  await sleep(400);
+  check("dim images per site", (await css("img", "filter")) === "brightness(0.78)");
+  check("per-site brightness", (await page.eval("document.documentElement.style.getPropertyValue('--oln-light')")) === "50%");
+  const other = await openTab(site("localhost", "components.html"));
+  check("other sites keep global brightness", (await other.eval("document.documentElement.style.getPropertyValue('--oln-light')")) === "88%");
+  check("closed components stay closed by default", (await other.eval("window.closedWasOpened")) === false);
+
+  // Experimental: open closed web components (registered page-world script).
+  await setSettings({ openClosedShadows: true });
+  await sleep(800);
+  await other.go(site("localhost", "components.html"), 1800);
+  check("experimental: closed components reachable", (await other.eval("window.closedWasOpened")) === true);
+  check("experimental: closed component darkened", lum(await other.eval("getComputedStyle(document.getElementById('closed').shadowRoot.querySelector('div')).backgroundColor")) < 0.01);
+  await setSettings({ openClosedShadows: false });
+  await sleep(500);
+
+  // Site modes.
+  await setSettings({ siteRules: { localhost: "invert" } });
+  await other.go(site("localhost", "canvas.html"));
+  check("invert mode flips page, flips images back", /invert\(1\)/.test(await other.eval("getComputedStyle(document.documentElement).filter")) && /invert\(1\)/.test(await other.eval("getComputedStyle(document.getElementById('photo')).filter")));
+  await setSettings({ siteRules: { localhost: "deepen" } });
+  await other.go(site("localhost", "light.html"));
+  check("deepen-only leaves light page content alone", (await other.eval("getComputedStyle(document.getElementById('info')).backgroundColor")) === "rgb(232, 240, 254)");
+  await setSettings({ siteRules: { localhost: "off" } });
+  await other.go(site("localhost", "light.html"));
+  check("off mode leaves site untouched", (await other.eval("document.documentElement.hasAttribute('data-oled-night-root') || !!document.getElementById('oled-night-early')")) === false);
+  await setSettings({ siteRules: { localhost: "recolor" } });
+  await other.go(site("localhost", "dark.html"));
+  check("full recolor forces recolor on a dark site", (await other.eval("document.getElementById('accent').getAttribute('data-oled-night') || ''")).includes("bg"));
+  await resetSettings();
+  await sleep(300);
+
+  // Schedule outside the window turns it off.
+  const now = new Date();
+  const hhmm = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  await setSettings({ schedule: { enabled: true, start: hhmm(new Date(now.getTime() + 2 * 3600e3)), end: hhmm(new Date(now.getTime() + 3 * 3600e3)) } });
+  await other.go(site("localhost", "light.html"));
+  check("schedule: off outside the window", (await other.eval("document.documentElement.hasAttribute('data-oled-night-root')")) === false);
+  await resetSettings();
+  await sleep(300);
+
+  // No white flash while a page is still loading.
+  await page.go(site("127.0.0.1", "slow.html"), 400);
+  const loading = await page.eval("({ state: document.readyState, bg: getComputedStyle(document.documentElement).backgroundColor })");
+  check("black before the page finishes loading", loading.state === "loading" && loading.bg === "rgb(0, 0, 0)", JSON.stringify(loading));
+
+  // Performance under constant page churn and slider drags.
+  await page.go(site("127.0.0.1", "rows.html"), 2500);
+  const churn = await page.eval(`(async () => { const rows = [...document.querySelectorAll('.row')]; let worst = 0, last = performance.now(), frames = 0; const stop = last + 2000;
+    await new Promise((done) => { (function tick() { const now = performance.now(); worst = Math.max(worst, now - last); last = now; frames++;
+      for (let k = 0; k < 20; k++) rows[(Math.random() * rows.length) | 0].classList.toggle('hl');
+      const p = document.createElement('p'); p.textContent = 'token ' + frames; document.getElementById('list').prepend(p);
+      if (now < stop) setTimeout(tick, 16); else done(); })(); }); return { frames, worst: Math.round(worst) }; })()`);
+  check("stays smooth under constant page changes", churn.frames > 90 && churn.worst < 150, JSON.stringify(churn));
+  const slider = await ext.eval(`(async () => { const [t] = await chrome.tabs.query({ url: "${site("127.0.0.1", "rows.html")}" }); const start = performance.now();
+    for (const b of [60, 70, 80, 90]) await chrome.tabs.sendMessage(t.id, { type: "oled-night-preview", patch: { brightness: b } }); return Math.round((performance.now() - start) / 4); })()`);
+  check("slider step is cheap", slider < 120, `${slider} ms per step`);
+
+  // Popup renders against a real tab.
+  const popup = await openTab(`chrome-extension://${extId}/popup.html`);
+  check("popup renders with every site mode", (await popup.eval("document.querySelectorAll('#siteRule option').length")) === 6);
+
+  check("no uncaught errors in extension pages or test pages", exceptions.length === 0, exceptions.slice(0, 3).join(" | "));
+} catch (error) {
+  failures++;
+  console.log(`FAIL  suite aborted: ${error.message}`);
+} finally {
+  chrome.kill();
+  server.close();
+  await sleep(500);
+  try { rmSync(profile, { recursive: true, force: true }); } catch {}
+}
+console.log(`\n${passes} passed, ${failures} failed`);
+process.exit(failures ? 1 : 0);

@@ -1,8 +1,9 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.5.1";
-  const DEFAULTS = { globalEnabled: true, appearance: "oled", brightness: 88, contrast: 72, siteRules: {} };
+  const VERSION = "0.6.0";
+  const Settings = globalThis.OledNightSettings;
+  const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
   const ICON_PARTS = "path, circle, rect, ellipse, polygon, polyline, line, text, use, g";
   const CHART_PARTS = `${ICON_PARTS}, stop`;
@@ -55,10 +56,10 @@
 
   // "Auto" follows the operating system: OLED Black in dark mode, off in light mode.
   function isEnabled(config) {
-    const rule = config.siteRules?.[hostname()] || "global";
-    const on = rule === "on" || (rule === "global" && config.globalEnabled);
-    return on && (config.appearance !== "auto" || prefersDark());
+    return Settings.isEnabled(config, hostname(), prefersDark());
   }
+
+  const currentSiteMode = () => Settings.siteMode(settings, hostname());
 
   function resolvedAppearance(config) {
     return config.appearance === "auto" ? "oled" : config.appearance;
@@ -262,6 +263,9 @@
 
   function modeFor() {
     const appearance = resolvedAppearance(settings);
+    const site = currentSiteMode();
+    if (site === "recolor") return appearance;
+    if (site === "deepen") return "crush";
     if (!darkPage) return appearance;
     return appearance === "oled" ? "crush" : "none";
   }
@@ -317,7 +321,7 @@
       document.documentElement.setAttribute(MEASURE, "");
       const nowDark = detectDarkPage();
       document.documentElement.removeAttribute(MEASURE);
-      if (nowDark !== darkPage) { enable(); return; }
+      if (nowDark !== darkPage && !["recolor", "deepen"].includes(currentSiteMode())) { enable(); return; }
     }
     const trees = [...pendingTrees];
     const selves = [...pendingSelf];
@@ -409,6 +413,11 @@
       ${root}:not([data-oled-night-page="none"]), ${root}:not([data-oled-night-page="none"]) body { color-scheme: dark !important; background: var(--oled-night-page, #000) !important; }
       ${overrideRules()}
       html[data-oled-night-root] :focus-visible { outline-color: #66a3ff !important; }
+      ${root}:not([data-oled-night-page="none"]) * { scrollbar-color: rgb(58 58 66) transparent; }
+      ${root}:not([data-oled-night-page="none"]) ::selection { background: rgb(38 79 140) !important; color: #fff !important; }
+      html[data-oled-night-root][data-oled-night-dim]:not([data-oled-night-invert]) :is(img, video) { filter: brightness(0.78) !important; }
+      html[data-oled-night-invert] { filter: invert(1) hue-rotate(180deg) !important; background: #fff !important; }
+      html[data-oled-night-invert] :is(img, video, iframe, embed, object) { filter: invert(1) hue-rotate(180deg) !important; }
       html[data-oled-night-root][data-oled-night-youtube] body,
       html[data-oled-night-root][data-oled-night-youtube] ytd-app,
       html[data-oled-night-root][data-oled-night-youtube] #content,
@@ -432,7 +441,7 @@
     textTiers = new WeakMap();
     removeEarly();
     const root = document.documentElement;
-    for (const name of ["data-oled-night-root", "data-oled-night-youtube", "data-oled-night-page"]) root.removeAttribute(name);
+    for (const name of ["data-oled-night-root", "data-oled-night-youtube", "data-oled-night-page", "data-oled-night-dim", "data-oled-night-invert"]) root.removeAttribute(name);
     for (const name of ["--oled-night-page", "--oled-night-youtube-primary", "--oled-night-youtube-secondary", "--oln-light", "--oln-strength"]) root.style.removeProperty(name);
     document.getElementById("oled-night-sheet")?.remove();
     for (const scope of [document, ...shadowRoots]) {
@@ -453,16 +462,20 @@
   // Brightness/contrast live in two root custom properties that every mapped
   // color references (custom properties also inherit into shadow trees).
   function applyTuning() {
+    const tuning = Settings.tuningFor(settings, hostname());
     const root = document.documentElement.style;
-    const brightness = clamp(settings.brightness, 40, 100);
+    const brightness = clamp(tuning.brightness, 40, 100);
     root.setProperty("--oln-light", `${brightness}%`);
-    root.setProperty("--oln-strength", String(clamp(settings.contrast, 0, 100) / 100));
+    root.setProperty("--oln-strength", String(clamp(tuning.contrast, 0, 100) / 100));
+    if (tuning.dimImages) document.documentElement.setAttribute("data-oled-night-dim", "");
+    else document.documentElement.removeAttribute("data-oled-night-dim");
     root.setProperty("--oled-night-youtube-primary", `hsl(0 0% ${brightness}%)`);
     root.setProperty("--oled-night-youtube-secondary", `hsl(0 0% ${Math.max(40, brightness - 18)}%)`);
   }
 
   function enable() {
     disable();
+    const site = currentSiteMode();
     // Read the page's own background before any of our rules paint over it.
     darkPage = !colorsApi().usesNativeSafeMode(hostname()) && detectDarkPage();
     installSheet();
@@ -470,10 +483,17 @@
     const root = document.documentElement;
     root.setAttribute("data-oled-night-root", "");
     root.setAttribute("data-oled-night-version", VERSION);
+    applyTuning();
+    // Canvas-drawn apps (Sheets, Figma) can't be recolored element by element:
+    // invert the whole page and flip real imagery back.
+    if (site === "invert") {
+      root.setAttribute("data-oled-night-invert", "");
+      root.setAttribute("data-oled-night-page", "none");
+      return;
+    }
     const mode = modeFor();
     if (mode === "none") root.setAttribute("data-oled-night-page", "none");
     root.style.setProperty("--oled-night-page", mode === "soft" ? "#101014" : "#000");
-    applyTuning();
     // YouTube watch pages hydrate incrementally. Never traverse or mutate their
     // custom elements and never replace their structural background tokens.
     if (colorsApi().usesNativeSafeMode(hostname())) {
@@ -487,17 +507,69 @@
     observer.takeRecords();
   }
 
+  let scheduleTimer = null;
+  const structureKey = (config) => `${resolvedAppearance(config)}|${Settings.siteMode(config, hostname())}`;
+
   function applySettings(config) {
     revision += 1;
     const previous = settings;
-    settings = { ...DEFAULTS, ...config, siteRules: config.siteRules || {} };
+    settings = Settings.normalize(config);
+    clearTimeout(scheduleTimer);
+    const wait = Settings.msUntilScheduleChange(settings.schedule);
+    if (wait !== null) scheduleTimer = setTimeout(() => applySettings(settings), wait + 500);
     const enabled = isEnabled(settings);
     if (!enabled) { disable(); return; }
     if (!domReady) return; // enable() runs on DOMContentLoaded; the early sheet covers until then
-    // Slider moves only retune the two variables; no page re-scan.
-    if (active && resolvedAppearance(previous) === resolvedAppearance(settings)) { applyTuning(); return; }
+    // Slider moves, per-site tuning and image dimming only retune variables; no page re-scan.
+    if (active && structureKey(previous) === structureKey(settings)) { applyTuning(); return; }
     enable();
   }
+
+  // Diagnostic snapshot for "Report a broken site": what the extension decided
+  // and which visible text still reads poorly. Only short text labels are kept.
+  function report() {
+    const colors = colorsApi();
+    const lowContrast = [];
+    const up = (node) => node.parentElement || node.parentNode?.host || null;
+    const shownBg = (el) => {
+      for (let n = el; n; n = up(n)) {
+        const c = colors.parseColor(getComputedStyle(n).backgroundColor);
+        if (c && c.a >= 0.5) return c;
+      }
+      return { r: 0, g: 0, b: 0, a: 1 };
+    };
+    const describe = (el) => {
+      const cls = typeof el.className === "string" ? el.className.trim().split(/\s+/).filter(Boolean).slice(0, 3) : [];
+      return el.localName + (el.id ? `#${el.id}` : "") + (cls.length ? `.${cls.join(".")}` : "");
+    };
+    const scan = (root) => {
+      for (const el of root.querySelectorAll("*")) {
+        if (lowContrast.length >= 40) return;
+        if (el.shadowRoot) scan(el.shadowRoot);
+        if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+        const rect = el.getBoundingClientRect();
+        if (!rect.width || rect.bottom < 0 || rect.top > innerHeight) continue;
+        const style = getComputedStyle(el);
+        const fg = colors.parseColor(style.color), bg = shownBg(el);
+        if (!fg) continue;
+        const a = colors.luminance(fg), b = colors.luminance(bg);
+        const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+        if (ratio < 3) {
+          lowContrast.push({ element: describe(el), inShadow: !!el.getRootNode().host, text: el.textContent.trim().slice(0, 30),
+            color: style.color, background: `rgb(${bg.r}, ${bg.g}, ${bg.b})`, ratio: +ratio.toFixed(2), mark: el.getAttribute(MARK) });
+        }
+      }
+    };
+    if (active) scan(document);
+    return {
+      extension: "OLED Night", version: VERSION, host: hostname(), when: new Date().toISOString(), userAgent: navigator.userAgent,
+      active, siteMode: currentSiteMode(), mode: active ? modeFor() : "off", darkPage, pageColor,
+      settings: { appearance: settings.appearance, ...Settings.tuningFor(settings, hostname()), schedule: settings.schedule },
+      counts: { styled: document.querySelectorAll(`[${MARK}]`).length, shadowRoots: shadowRoots.size, frames: document.querySelectorAll("iframe").length },
+      lowContrast
+    };
+  }
+
 
   if (frameIsUntouched()) return;
   installEarly();
@@ -518,7 +590,12 @@
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message?.type === "oled-night-status") {
       if (!isTopFrame) return;
-      sendResponse({ active, darkPage, version: VERSION });
+      sendResponse({ active, darkPage, mode: active ? modeFor() : "off", version: VERSION });
+      return;
+    }
+    if (message?.type === "oled-night-report") {
+      if (!isTopFrame) return;
+      sendResponse(report());
       return;
     }
     if (message?.type !== "oled-night-preview") return;

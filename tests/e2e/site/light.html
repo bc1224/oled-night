@@ -1,0 +1,18 @@
+<!doctype html><html><head><style>
+body{background:#fff;color:#202124;font:14px sans-serif;margin:20px}
+.secondary{color:#5f6368}.muted{color:#9aa0a6}
+.tabs span{display:inline-block;padding:6px 10px;border-bottom:3px solid transparent}.tabs .active{border-bottom-color:#1a73e8}
+.info{background:#e8f0fe;padding:8px;margin:8px 0}.alert{background:#fce8e6;padding:8px}
+.btn{background:#1a73e8;color:#fff;padding:6px 12px;display:inline-block}
+iframe{border:1px solid #ddd;width:420px;height:90px;display:block;margin-top:8px}
+</style></head><body>
+<p id="primary">Primary text</p><p id="secondary" class="secondary">Secondary text</p><p id="muted" class="muted">Muted text</p>
+<div class="tabs"><span class="active" id="tab">Active tab</span><span>Other</span></div>
+<svg id="icon" width="24" height="24" viewBox="0 0 24 24"><path id="iconpath" fill="#5f6368" d="M3 3h18v18H3z"/></svg>
+<svg id="blueicon" width="24" height="24"><circle id="bluecircle" cx="12" cy="12" r="10" fill="#1a73e8"/></svg>
+<div class="info" id="info">Pale blue info bar</div><div class="alert" id="alert">Pale red alert</div>
+<div class="btn" id="btn">Blue button</div>
+<div id="chat"><p id="first">first message</p></div>
+<iframe id="frame" src="frame.html"></iframe>
+<script>setTimeout(()=>{const p=document.createElement('p');p.id='streamed';p.textContent='streamed message';chat.appendChild(p)},600)</script>
+</body></html>
