@@ -138,7 +138,7 @@
     if (!tabId || !globalThis.chrome?.tabs) return;
     let report = null;
     try { report = await chrome.tabs.sendMessage(tabId, { type: "oled-night-report" }); } catch {}
-    if (!report) { $("status").textContent = "Can't read this page (Chrome pages and the Web Store are off-limits)."; return; }
+    if (!report) { $("status").textContent = "Chrome doesn't let extensions run on this page (chrome:// pages and the Chrome Web Store), so there's nothing to report."; return; }
     saveReport(report);
     $("status").textContent = "Report saved to Downloads. Send that file along with a screenshot.";
   });

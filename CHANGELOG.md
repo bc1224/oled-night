@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.3
+- "Report a broken site" also lists each embedded frame and whether it was darkened (origin only, never its address or content).
+- Clearer popup message on pages Chrome keeps extensions off (chrome:// pages, the Chrome Web Store).
+
 ## 0.6.2
 - Settings page and popup link to the companion OLED Night Chrome theme.
 - Amazon and other shops: product photos no longer turn into black squares. The "multiply" blend they use to hide white photo backgrounds is switched off where the page goes black.

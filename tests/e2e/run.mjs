@@ -119,6 +119,7 @@ try {
   check("iframe content darkened", frame.bg === "rgb(0, 0, 0)" && lum(frame.text) > 0.5, JSON.stringify(frame));
   const report = await ext.eval(`(async () => { const [t] = await chrome.tabs.query({ url: "${site("127.0.0.1", "light.html")}" }); return chrome.tabs.sendMessage(t.id, { type: "oled-night-report" }); })()`);
   check("diagnostic report", report?.active === true && Array.isArray(report.lowContrast) && report.counts.styled > 10, `styled=${report?.counts?.styled} lowContrast=${report?.lowContrast?.length}`);
+  check("report lists frames", Array.isArray(report?.frames) && report.frames.length === 1 && report.frames[0].darkened === true, JSON.stringify(report?.frames));
   check("report finds no unreadable text", report?.lowContrast?.length === 0, JSON.stringify(report?.lowContrast?.slice(0, 3)));
 
   // Gmail profile: unread vs read rows stay distinguishable on black.

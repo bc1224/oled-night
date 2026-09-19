@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.6.2";
+  const VERSION = "0.6.3";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -639,6 +639,17 @@
       active, siteMode: currentSiteMode(), mode: active ? modeFor() : "off", darkPage, pageColor,
       settings: { appearance: settings.appearance, ...Settings.tuningFor(settings, hostname()), schedule: settings.schedule },
       counts: { styled: document.querySelectorAll(`[${MARK}]`).length, shadowRoots: shadowRoots.size, frames: document.querySelectorAll("iframe").length },
+      // Only each frame's origin and state are recorded, never its address path or content.
+      frames: [...document.querySelectorAll("iframe")].slice(0, 20).map((frame) => {
+        const rect = frame.getBoundingClientRect();
+        let origin = "", reachable = false, darkened = null;
+        try { origin = new URL(frame.src || "about:blank", location.href).origin; } catch {}
+        try {
+          const root = frame.contentDocument?.documentElement;
+          if (root) { reachable = true; darkened = root.hasAttribute("data-oled-night-root"); }
+        } catch {}
+        return { origin, size: `${Math.round(rect.width)}x${Math.round(rect.height)}`, reachable, darkened };
+      }),
       lowContrast
     };
   }
