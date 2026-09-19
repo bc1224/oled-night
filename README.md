@@ -1,43 +1,73 @@
-# OLED Night
+<p align="center"><img src="assets/icon-128.png" width="96" alt=""></p>
 
-A Manifest V3 Chrome extension that makes web pages true black by recoloring elements rather than applying a blanket filter. Photos, video and artwork keep their real colors.
+<h1 align="center">OLED Night</h1>
 
-Current version: **0.6.1**. To install it or share it, see [INSTALL.md](INSTALL.md). To publish it on the Chrome Web Store, see [store/LISTING.md](store/LISTING.md).
+<p align="center"><b>True-black dark mode for every website, without breaking it.</b><br>
+Free and open-source Chrome extension · readable text · images untouched · per-site control</p>
 
-## What it does
-- **Light pages:** recolors backgrounds, gradients, shadows, pseudo-elements, borders (colored ones keep their hue), SVG icons and chart fills. Text keeps its primary, secondary or muted emphasis.
-- **Already-dark pages:** only pushes the darkest greys to true black (the "deepen" mode).
-- **Web components, frames, and modern CSS colors** (`oklch`, `lab`, `color(srgb …)`) are handled. With the experimental option on, "closed" components are too.
-- **No white flash:** runs at `document_start` with an early black sheet.
-- **Per-site:** mode (automatic, full recolor, deepen, invert, off), brightness, contrast and image dimming.
-- **Schedule, keyboard shortcut (Alt+Shift+D), settings export and import, and a diagnostic report** for broken sites.
-- **YouTube** uses a protected profile that never walks its DOM.
+<p align="center">
+  <a href="https://github.com/bc1224/oled-night/releases/latest/download/oled-night.zip"><b>Download</b></a> ·
+  <a href="https://bc1224.github.io/oled-night/">Website</a> ·
+  <a href="INSTALL.md">Install guide</a> ·
+  <a href="https://github.com/bc1224/oled-night/issues">Report a site</a>
+</p>
 
-## Layout
+![Before and after OLED Night on an email inbox](store/images/screenshot-1-before-after.png)
+
+## Why
+On an OLED screen, true black means the pixels are off. I wanted every site that dark, including the many sites with no dark mode of their own. Existing dark modes either left everything grey or broke pages: unreadable text, white boxes and gradients, blank chart fills, a white flash on every load, and lag in busy apps. OLED Night fixes those one real site at a time, and a test suite that runs the real extension keeps them fixed.
+
+## Features
+- **True `#000` black backgrounds.** Cards and panels keep a subtle lift so layouts stay readable.
+- **Images untouched.** Photos, video and art keep their colors. Image dimming is optional.
+- **Readable text, with emphasis kept.** Primary, secondary and muted text stay distinct, and Gmail's read and unread emails stay easy to tell apart.
+- **Respects dark sites.** On a site that's already dark, it only deepens its greys to true black.
+- **Modern web apps.** Charts, web components, embedded chat widgets and frames, and modern CSS colors (`oklch`, `lab`, `color()`).
+- **No white flash, and no lag.** Pages go black before they draw, and updates are batched.
+- **Per-site modes:** automatic, full recolor, deepen blacks only, invert (canvas apps), or off. Each site can also have its own brightness, contrast and image dimming.
+- **Schedule, keyboard shortcut (<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>), settings backup, and a "report a broken site" button.**
+- **Private.** No servers, no analytics, no tracking. See the [privacy policy](store/PRIVACY.md).
+
+## Install
+Download [`oled-night.zip`](https://github.com/bc1224/oled-night/releases/latest/download/oled-night.zip), unzip it into a folder you'll keep, open `chrome://extensions`, turn on **Developer mode**, and click **Load unpacked** on that folder. Full steps, including Edge and updating, are in [INSTALL.md](INSTALL.md). A Chrome Web Store listing is coming.
+
+## Using it
+Click the toolbar icon on any site:
+
+<img src="store/images/screenshot-2-popup.png" alt="The OLED Night popup" width="720">
+
+| Site mode | What it does |
+|---|---|
+| Use global | Follows the main switch |
+| On (automatic) | Recolors light sites; on dark sites, only deepens their blacks |
+| Full recolor | Always recolors, even if the site looks dark |
+| Deepen blacks only | Only pushes the darkest greys to true black |
+| Invert | For canvas apps (Sheets, Figma): flips the page, then flips images back |
+| Off | Never touches the site |
+
+If a site still looks wrong, click **Report a broken site** in the popup and [open an issue](https://github.com/bc1224/oled-night/issues/new) with the saved file and a screenshot.
+
+## How it works
+OLED Night doesn't run one filter over the whole page. It works out a color for each element on its own: backgrounds, text, borders, SVG icons, chart fills, gradients, shadows and `::before`/`::after`. It keeps each text's original emphasis and remembers what was originally behind it. Every update reads all the styles it needs first and writes the changes after, so a batch costs a single style recalculation. Brightness and contrast are CSS variables, so moving a slider never re-scans the page.
+
 | File | Role |
 |---|---|
 | `settings.js` | Shared settings model: defaults, site modes, per-site tuning, schedule |
-| `color-utils.js` | Color parsing (all CSS color syntaxes) and mapping rules |
-| `content.js` | Page engine: batched read-then-write recoloring, mutation tracking, shadow roots, invert mode, reports |
-| `background.js` | Keyboard shortcut; registers `shadow-open.js` when the experimental option is on |
+| `color-utils.js` | Color parsing (every CSS color syntax) and mapping rules |
+| `content.js` | Page engine: batched recoloring, change tracking, shadow roots, invert mode, reports |
+| `background.js` | Keyboard shortcut and the experimental closed-component option |
 | `popup.*`, `options.*` | Toolbar popup and settings page |
-| `tools/package.mjs` | Builds `dist/oled-night-<version>.zip` |
-| `tools/store-assets.mjs` | Renders the Web Store screenshots and promo tile |
+| `docs/` | The project website (GitHub Pages) |
 
-Performance notes: every pass reads all computed styles first, then writes, so a batch costs a single style recalculation. Overrides are switched off only inside the affected subtrees while re-reading. Brightness and contrast are root CSS variables, so the sliders never re-scan the page.
-
-## Test
+## Development
+No build step. Load the folder with **Load unpacked**, then:
 ```
-node tests/color-utils.test.js
-node tests/color-effects.test.js
-node tests/settings.test.js
-node tests/popup-live-controls.test.js
-node tests/youtube-safe-mode.test.js
-node tests/e2e/run.mjs
+for t in tests/*.test.js; do node "$t"; done   # unit tests
+node tests/e2e/run.mjs                          # real extension in headless Chrome, 43 checks
+node tools/package.mjs                          # dist/oled-night-<version>.zip
+node tools/store-assets.mjs                     # Web Store screenshots
 ```
-`tests/e2e/run.mjs` loads the real extension into a throwaway headless Chrome and checks 43 behaviors against the pages in `tests/e2e/site/`: light and dark sites, Gmail read/unread, charts, frames, web components, streaming, slow loads, every site mode, schedule, per-site settings, performance and the popup. Set `CHROME_PATH` if Chrome isn't in a standard location, and `EXT_PATH` to test an unzipped release.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Web Store submission notes are in [store/LISTING.md](store/LISTING.md).
 
-## Release
-1. Bump `version` in `manifest.json`, and the version string in `content.js` and in the README.
-2. Run the tests above.
-3. `node tools/package.mjs`, then upload the zip, or send it along with INSTALL.md.
+## License
+[MIT](LICENSE)

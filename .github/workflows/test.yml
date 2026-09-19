@@ -1,0 +1,25 @@
+name: Tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Unit tests
+        run: for t in tests/*.test.js; do node "$t"; done
+      - name: End-to-end tests (real extension in headless Chrome)
+        run: node tests/e2e/run.mjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+      - name: Package
+        run: node tools/package.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oled-night-zip
+          path: dist/*.zip
