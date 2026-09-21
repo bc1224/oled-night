@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.5
+- Icons drawn through masks (like App Store Connect's logo and info icons) and text painted by its background now turn light instead of disappearing or blowing out.
+- Charts that add shapes after they first draw (Google Ads' shaded date band) get those shapes darkened too.
+- Turning the main switch on also clears an "Off" on the current site, and the popup says when a site setting is overriding the switch.
+
 ## 0.6.4
 - Relicensed from MIT to GPL-3.0: copies and modified versions that are shared or sold must stay open source. The license file now ships inside the zip.
 

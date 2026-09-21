@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.6.4";
+  const VERSION = "0.6.5";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -135,9 +135,22 @@
     return result;
   }
 
+  // An element drawn through a mask (icon fonts, logos) or with its background
+  // clipped to its text shows its background color AS the icon or the text.
+  function paintsInk(computed) {
+    const mask = computed.maskImage || computed.webkitMaskImage;
+    return (mask && mask !== "none") || /text/.test(computed.webkitBackgroundClip || computed.backgroundClip || "");
+  }
+
   function mapSurface(computed, prefix, mode, found) {
     const colors = colorsApi();
     const original = colors.parseColor(computed.backgroundColor);
+    if (paintsInk(computed)) {
+      if (mode !== "oled" && mode !== "soft") return;
+      const ink = original && original.a >= 0.08 && colors.luminance(original) < 0.5 && colors.chroma(original) < 0.15 ? colors.mapForeground(original, 1) : null;
+      if (ink) found[`${prefix}bg`] = ink;
+      return;
+    }
     const alreadyBlack = original && mode !== "soft" && original.r <= 2 && original.g <= 2 && original.b <= 2;
     const background = alreadyBlack ? null : colors.mapBackground(original, mode);
     const gradient = colors.mapGradient(computed.backgroundImage, mode);
@@ -288,6 +301,14 @@
   function collect(root, list, seen) {
     if (!(root instanceof Element) || !root.isConnected || seen.has(root)) return;
     if (root.localName === "svg") { list.icons.add(root); return; }
+    // Charts often draw in stages, adding shapes to an SVG that's already on the
+    // page. Re-check the outermost SVG so late-added fills get darkened too.
+    if (root instanceof SVGElement) {
+      let svg = root.closest("svg");
+      for (let up = svg?.parentElement?.closest("svg"); up; up = up.parentElement?.closest("svg")) svg = up;
+      if (svg) list.icons.add(svg);
+      return;
+    }
     if (root.localName === "img") { list.images.add(root); return; }
     if (isMedia(root) || root.closest(MEDIA_SELECTOR)) return;
     visit(root, list, seen);

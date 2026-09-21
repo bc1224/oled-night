@@ -35,7 +35,11 @@
     }
     const on = !!status?.active;
     dot.style.opacity = on ? "1" : ".3";
-    const text = on ? `Active: ${MODE_LABELS[status.mode] || "on"}` : (tabId ? "Not active on this page" : "");
+    const siteOff = Settings.siteMode(settings, host) === "off";
+    const text = on ? `Active: ${MODE_LABELS[status.mode] || "on"}`
+      : siteOff ? "Off for this site: change \"This site\" above to turn it back on"
+      : !settings.globalEnabled ? "Off everywhere: turn on the main switch"
+      : (tabId ? "Not active on this page" : "");
     dot.title = text;
     $("status").textContent = text;
   }
@@ -102,7 +106,17 @@
     } catch {}
   }
 
-  $("globalEnabled").addEventListener("change", (event) => persist({ globalEnabled: event.target.checked }));
+  // Turning the main switch on also clears an "Off" on the current site, which
+  // would otherwise silently override it.
+  $("globalEnabled").addEventListener("change", (event) => {
+    const patch = { globalEnabled: event.target.checked };
+    if (event.target.checked && host && settings.siteRules[host] === "off") {
+      const siteRules = { ...settings.siteRules };
+      delete siteRules[host];
+      patch.siteRules = siteRules;
+    }
+    persist(patch);
+  });
   $("siteRule").addEventListener("change", (event) => {
     if (!host) return;
     const siteRules = { ...settings.siteRules };

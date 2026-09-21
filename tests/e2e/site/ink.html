@@ -1,0 +1,11 @@
+<!doctype html><html><head><style>
+body{background:#fff;color:#1d1d1f;font:14px sans-serif;margin:20px}
+.icon{display:inline-block;width:20px;height:20px;background-color:#86868b;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='9'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='9'/%3E%3C/svg%3E") center/contain no-repeat}
+.clip{background-color:#333;-webkit-background-clip:text;background-clip:text;color:transparent;font-size:24px;font-weight:700}
+</style></head><body>
+<span class="icon" id="maskIcon"></span> <span class="clip" id="clipText">Clipped heading</span>
+<svg id="chart" width="400" height="120"><rect id="early" x="0" y="0" width="200" height="120" fill="#f1f3f4"/></svg>
+<script>setTimeout(() => { const r = document.createElementNS("http://www.w3.org/2000/svg", "rect"); r.id = "late"; r.setAttribute("x", "200"); r.setAttribute("width", "200"); r.setAttribute("height", "120"); r.setAttribute("fill", "#f1f3f4"); document.getElementById("chart").appendChild(r); }, 1200);</script>
+</body></html>

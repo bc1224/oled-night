@@ -134,6 +134,12 @@ try {
   check("dark transparent logo is flipped light", (await page.eval("document.getElementById('logo').hasAttribute('data-oled-night-logo')")) && /invert/.test(await css("logo", "filter")));
   check("colored logo and photos are left alone", (await css("colorLogo", "filter")) === "none" && (await css("photo", "filter")) === "none");
 
+  // Icons drawn through masks, text-clipped backgrounds, and charts that add shapes later.
+  await page.go(site("127.0.0.1", "ink.html"), 2600);
+  check("masked icons turn light, not invisible", lum(await css("maskIcon", "backgroundColor")) > 0.5);
+  check("text-clipped headings stay readable", lum(await css("clipText", "backgroundColor")) > 0.5);
+  check("chart shapes added later are darkened", lum(await css("early", "fill")) < 0.05 && lum(await css("late", "fill")) < 0.05, `${await css("early", "fill")} / ${await css("late", "fill")}`);
+
   // Already-dark page: only the darkest greys go black.
   await page.go(site("127.0.0.1", "dark.html"));
   check("dark site: page crushed to black", (await page.eval("getComputedStyle(document.body).backgroundColor")) === "rgb(0, 0, 0)");
