@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.9
+- Recheck CSS-only hover, focus, active and field states across sites, including transparent dropdown rows and open shadow components. Interaction updates run before the next paint and stay scoped to the affected control and its ancestors.
+- Keep explicit field text-fill, caret and placeholder colors readable. Native autofill gets a dark inset surface and readable text without changing field values or focus outlines.
+- Add cross-browser focus/blur and field regressions, plus Chrome real-pointer and browser-forced autofill-state coverage. Saved credentials are not needed for these tests.
+
 ## 0.6.8
 - Gmail's trimmed-content ellipsis is visible on dark backgrounds. Compact dark/mixed-color logos gain contrast without inverting their brand colors, including named logo assets behind image proxies.
 - Selected dropdown options stay readable when a site's important background rule loads after OLED Night (including Reddit Ads).

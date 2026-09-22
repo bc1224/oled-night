@@ -9,6 +9,14 @@ body { background: #f6f8f9; color: #182024; font: 16px sans-serif; }
 .hover-option { background: white; padding: 12px; }
 .hover-option:hover { background: #e5ebee !important; }
 select, option { background: white; color: #182024; }
+.app-menu li { background: transparent; padding: 10px; }
+.app-menu li:hover, .app-menu li:focus-within { background: #f5f5f5; }
+.app-menu li:active { background: #bde2f0; }
+.app-menu a { color: #383838; }
+.field-wrap:focus-within { background: #eee; }
+#genericField { background: transparent; color: #222; -webkit-text-fill-color: #222; caret-color: #222; }
+#genericField:focus { background: #f5f5f5; outline: 2px solid blue; }
+#genericField::placeholder { color: #444; }
 </style></head><body>
 <ul role="menu" aria-label="Objective">
 <li id="traffic" role="menuitemradio" aria-checked="false" class="MenuListItem-radio MenuListItem" tabindex="-1"><span>Traffic</span></li>
@@ -17,7 +25,11 @@ select, option { background: white; color: #182024; }
 <div role="listbox"><div id="dynamicOption" role="option" aria-selected="false" class="state-option">Dynamic selection</div></div>
 <div id="hoverOption" class="hover-option" role="option" tabindex="0">Hover selection</div>
 <select id="native"><option id="nativeOption">Native selection</option><option>Other</option></select>
+<ul class="app-menu"><li id="transparentRow"><a id="transparentLink" href="#fixture"><span>Console fixture</span></a></li></ul>
+<div class="field-wrap" id="fieldWrap"><input id="genericField" autocomplete="email" placeholder="Email fixture"></div>
+<div id="shadowInteraction"></div>
 <script>
+document.getElementById('shadowInteraction').attachShadow({mode:'open'}).innerHTML = '<style>button{background:transparent;color:#222}button:focus{background:#eee}</style><button>Shadow focus</button>';
 // App CSS can arrive after the extension's document-start stylesheet.
 setTimeout(() => {
   const style = document.createElement('style');

@@ -35,6 +35,8 @@ const root = {
 };
 
 global.document = {
+  removeEventListener() {},
+  addEventListener() { throw new Error("YouTube interaction traversal must stay disabled"); },
   documentElement: root,
   head: { appendChild(node) { nodesById.set(node.id, node); if (node.id === "oled-night-sheet") sheet = node; } },
   querySelectorAll() { return []; },
@@ -58,7 +60,7 @@ assert.equal(styleValues.get("--oled-night-page"), "#000");
 assert.equal(walkerStarted, false);
 assert.equal(observerStarted, false);
 assert.equal(attributes.has("data-oled-night-youtube"), true);
-assert.equal(root.getAttribute?.("data-oled-night-version"), "0.6.8");
+assert.equal(root.getAttribute?.("data-oled-night-version"), "0.6.9");
 assert.doesNotMatch(sheet.textContent, /--yt-spec-base-background/);
 assert.match(sheet.textContent, /--yt-spec-text-primary/);
 messageListener({ type: "oled-night-preview", patch: { brightness: 70 } }, {}, () => {});

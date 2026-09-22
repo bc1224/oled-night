@@ -58,8 +58,26 @@
       const e=document.getElementById('dynamicOption');
       return e.getAttribute('data-oled-night').includes('bg') && parseFloat(getComputedStyle(e).backgroundColor.match(/[\d.]+/)[0]) < 60;
     }));
+    await inspect(() => document.getElementById('transparentLink').focus()); await wait(100);
+    check('dropdown focus-within transparent ancestor darkened', await inspect(() => {
+      const el=document.getElementById('transparentRow');
+      return el.getAttribute('data-oled-night').includes('bg') && parseFloat(getComputedStyle(el).backgroundColor.match(/[\d.]+/)[0]) < 60;
+    }));
+    await inspect(() => document.getElementById('genericField').focus()); await wait(100);
+    check('field focus background and explicit text-fill readable', await inspect(() => {
+      const s=getComputedStyle(document.getElementById('genericField'));
+      return parseFloat(s.backgroundColor.match(/[\d.]+/)[0]) < 60 && parseFloat(s.webkitTextFillColor.match(/[\d.]+/)[0]) > 180 && s.outlineStyle === 'solid';
+    }));
+    check('dropdown blur clears old focus highlight', await inspect(() => getComputedStyle(document.getElementById('transparentRow')).backgroundColor === 'rgba(0, 0, 0, 0)'));
+    await inspect(() => document.getElementById('shadowInteraction').shadowRoot.querySelector('button').focus()); await wait(100);
+    check('shadow focus state darkened', await inspect(() => {
+      const el=document.getElementById('shadowInteraction').shadowRoot.querySelector('button');
+      return el.getAttribute('data-oled-night').includes('bg') && parseFloat(getComputedStyle(el).backgroundColor.match(/[\d.]+/)[0]) < 60;
+    }));
     await browser.storage.sync.set({globalEnabled:false}); await wait(400);
     check('dropdown off restores selection', await inspect(() => getComputedStyle(document.getElementById('promotion')).backgroundColor === 'rgb(229, 235, 238)'));
+    await inspect(() => document.getElementById('genericField').focus()); await wait(100);
+    check('field off restores original text fill', await inspect(() => getComputedStyle(document.getElementById('genericField')).webkitTextFillColor === 'rgb(34, 34, 34)'));
     await browser.storage.sync.clear(); await wait(400);
     const report = await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'});
     check('diagnostic report works', report.extension === 'OLED Night' && report.active);

@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.8";
+  const VERSION = "0.6.9";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -18,7 +18,7 @@
   // "Multiply"-style blends hide a photo's white background on a light page;
   // over black they turn the whole photo black (Amazon product images).
   const DARKENING_BLENDS = /^(multiply|darken|color-burn|plus-darker)$/;
-  const PROPS = ["bg", "img", "shadow", "fg", "bt", "br", "bb", "bl", "fill", "stroke", "stop", "blend",
+  const PROPS = ["bg", "img", "shadow", "fg", "ink", "caret", "placeholder", "field", "bt", "br", "bb", "bl", "fill", "stroke", "stop", "blend",
     "before-bg", "before-img", "before-shadow", "after-bg", "after-img", "after-shadow"];
   const SIDES = [["Top", "bt"], ["Right", "br"], ["Bottom", "bb"], ["Left", "bl"]];
   // Frames that are players, maps, ads or challenges are left exactly as they are.
@@ -44,6 +44,11 @@
   const pendingTrees = new Set();
   const pendingSelf = new Set();
   let flushScheduled = false;
+  const interactionTrees = new Set();
+  const interactionSelf = new Set();
+  let interactionFrame = null;
+  const INTERACTION_EVENTS = ["pointerover", "pointerout", "pointerdown", "pointerup", "pointercancel", "focusin", "focusout", "input", "change", "keydown", "keyup"];
+  const CONTROL = 'a, button, input, textarea, select, option, label, li, [role="option"], [role^="menuitem"], [role="button"], [role="combobox"], [contenteditable="true"], [tabindex]';
   // Open shadow roots (web components) we style and watch. Page stylesheets
   // never reach inside them, so each gets our rules adopted directly.
   const shadowRoots = new Set();
@@ -172,6 +177,7 @@
     originalSurface.set(element, surfaceInfo(computed));
     if (ctx.mode === "none") return found;
     mapSurface(computed, "", ctx.mode, found);
+    if (element.matches("input, textarea, select")) found.field = "1";
     if (ctx.mode === "crush") return found;
     if (DARKENING_BLENDS.test(computed.mixBlendMode)) found.blend = "normal";
     for (const [side, key] of SIDES) {
@@ -197,6 +203,14 @@
         textTiers.set(element, tier);
         found.fg = colors.mapForeground(text, tier);
       }
+    }
+    if (found.field && found.fg) {
+      const ink = colors.parseColor(computed.webkitTextFillColor);
+      if (ink && ink.a >= 0.08) found.ink = colors.mapForeground(ink, textTiers.get(element) ?? 1);
+      const caret = colors.parseColor(computed.caretColor);
+      if (caret && caret.a >= 0.08 && colors.luminance(caret) < 0.3 && colors.chroma(caret) < 0.15) found.caret = found.fg;
+      const placeholder = colors.parseColor(getComputedStyle(element, "::placeholder").color);
+      if (placeholder && placeholder.a >= 0.08) found.placeholder = colors.mapForeground(placeholder, 0.8);
     }
     return found;
   }
@@ -436,7 +450,31 @@
 
   function hasInlineColor(element) {
     const style = element.style;
-    return !!style && !!(style.background || style.backgroundColor || style.backgroundImage || style.color || style.boxShadow || style.borderColor || style.fill || style.stroke);
+    return !!style && !!(style.background || style.backgroundColor || style.backgroundImage || style.color || style.webkitTextFillColor || style.caretColor || style.boxShadow || style.borderColor || style.fill || style.stroke);
+  }
+
+  // Hover/focus/active and native field states do not necessarily mutate the DOM.
+  // Read their final styles before the next paint, only along the changed path
+  // and inside the nearest control, rather than traversing the entire page.
+  function onInteraction(event) {
+    if (!observer) return;
+    const path = event.composedPath().filter(node => node instanceof Element);
+    const control = path.find(node => node.matches(CONTROL));
+    if (control && control !== document.body && control !== document.documentElement) interactionTrees.add(control);
+    for (const node of path) {
+      if (node === document.body || node === document.documentElement) break;
+      interactionSelf.add(node);
+    }
+    if (interactionFrame !== null) return;
+    interactionFrame = requestAnimationFrame(() => {
+      interactionFrame = null;
+      if (!observer) return;
+      // Preserve page mutations queued before this read/write batch.
+      onMutations(observer.takeRecords());
+      process([...interactionTrees], [...interactionSelf]);
+      interactionTrees.clear(); interactionSelf.clear();
+      observer.takeRecords();
+    });
   }
 
   function onMutations(records) {
@@ -470,6 +508,11 @@
       [${MARK}~="img"]${on} { background-image: var(--oln-img) !important; }
       [${MARK}~="shadow"]${on} { box-shadow: var(--oln-shadow) !important; }
       [${MARK}~="fg"]${on} { color: var(--oln-fg) !important; }
+      [${MARK}~="ink"]${on} { -webkit-text-fill-color: var(--oln-ink) !important; }
+      [${MARK}~="caret"]${on} { caret-color: var(--oln-caret) !important; }
+      [${MARK}~="placeholder"]${on}::placeholder { color: var(--oln-placeholder) !important; -webkit-text-fill-color: var(--oln-placeholder) !important; }
+      [${MARK}~="field"]${on} { color-scheme: dark !important; }
+      [${MARK}~="field"]${on}:is(:autofill, :-webkit-autofill) { -webkit-text-fill-color: var(--oln-fg, #ddd) !important; caret-color: var(--oln-fg, #ddd) !important; box-shadow: 0 0 0 1000px var(--oln-bg, #101014) inset !important; }
       [${MARK}~="bt"]${on} { border-top-color: var(--oln-bt) !important; }
       [${MARK}~="br"]${on} { border-right-color: var(--oln-br) !important; }
       [${MARK}~="bb"]${on} { border-bottom-color: var(--oln-bb) !important; }
@@ -565,6 +608,10 @@
   }
 
   function disable() {
+    for (const type of INTERACTION_EVENTS) document.removeEventListener(type, onInteraction, true);
+    if (interactionFrame !== null) cancelAnimationFrame(interactionFrame);
+    interactionFrame = null;
+    interactionTrees.clear(); interactionSelf.clear();
     active = false;
     observer?.disconnect();
     observer = null;
@@ -641,6 +688,7 @@
     // Observer first so shadow roots found during the first pass get watched too.
     observer = new MutationObserver(onMutations);
     observer.observe(root, OBSERVE);
+    for (const type of INTERACTION_EVENTS) document.addEventListener(type, onInteraction, true);
     process([root], []);
     observer.takeRecords();
   }
