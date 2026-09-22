@@ -49,7 +49,20 @@
     );
   }
 
+  // Color values repeat across hundreds of rows. Cache pure conversions, not
+  // DOM state, so hover, late stylesheets and field resets still get re-read.
+  // Bound caches to avoid growth on animations with continuously changing colors.
+  const parsedColors = new Map();
   function parseColor(value) {
+    const key = String(value || "");
+    if (parsedColors.has(key)) return parsedColors.get(key);
+    const color = parseColorUncached(key);
+    if (parsedColors.size >= 512) parsedColors.clear();
+    parsedColors.set(key, color && Object.freeze(color));
+    return color;
+  }
+
+  function parseColorUncached(value) {
     const match = String(value || "").match(COLOR_FN);
     if (!match) return null;
     const fn = match[1].toLowerCase();
@@ -82,7 +95,15 @@
     return null;
   }
 
-  function luminance({ r, g, b }) {
+  const lightnessCache = new WeakMap();
+  function luminance(color) {
+    if (Object.isFrozen(color) && lightnessCache.has(color)) return lightnessCache.get(color);
+    const value = computeLuminance(color);
+    if (Object.isFrozen(color)) lightnessCache.set(color, value);
+    return value;
+  }
+
+  function computeLuminance({ r, g, b }) {
     const linear = [r, g, b].map((value) => {
       return decode(value / 255);
     });

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.10
+
+- Bound and reuse pure color conversions to reduce repeated CPU work without caching stale element styles.
+
+- Process pending color changes before the next paint instead of waiting for idle time, reducing flashes in newly loaded sections.
+- Restore field overrides after frameworks replace inline styles (Maps-style dark text on black).
+- Keep highlighted rows readable when sites use more-specific important CSS (FlightAware and Amazon).
+- Separate current-site controls from global defaults, add a site switch, clarify slider effects and retain all rapid slider changes when saving.
+- Leave Figma native by default and protect identifiable color pickers/swatches.
+- Validate imported settings and diagnose field contrast without including field contents.
+- Audit extension behavior, privacy, performance and theme palette; theme remains 1.0.2.
+
 ## 0.6.9
 - Recheck CSS-only hover, focus, active and field states across sites, including transparent dropdown rows and open shadow components. Interaction updates run before the next paint and stay scoped to the affected control and its ancestors.
 - Keep explicit field text-fill, caret and placeholder colors readable. Native autofill gets a dark inset surface and readable text without changing field values or focus outlines.

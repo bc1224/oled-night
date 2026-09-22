@@ -17,6 +17,8 @@ select, option { background: white; color: #182024; }
 #genericField { background: transparent; color: #222; -webkit-text-fill-color: #222; caret-color: #222; }
 #genericField:focus { background: #f5f5f5; outline: 2px solid blue; }
 #genericField::placeholder { color: #444; }
+div.audit-page div.audit-table div.audit-active { background-color: #fbeb9c !important; }
+.ma-attribute-group-expander .a-expander-header.a-link-section-expander { background-color:#f3f3f3!important; }
 </style></head><body>
 <ul role="menu" aria-label="Objective">
 <li id="traffic" role="menuitemradio" aria-checked="false" class="MenuListItem-radio MenuListItem" tabindex="-1"><span>Traffic</span></li>
@@ -28,6 +30,7 @@ select, option { background: white; color: #182024; }
 <ul class="app-menu"><li id="transparentRow"><a id="transparentLink" href="#fixture"><span>Console fixture</span></a></li></ul>
 <div class="field-wrap" id="fieldWrap"><input id="genericField" autocomplete="email" placeholder="Email fixture"></div>
 <div id="shadowInteraction"></div>
+<div class="audit-page"><div class="audit-table"><div id="importantRow" class="audit-active"><span>Selected flight fixture</span></div></div></div>
 <script>
 document.getElementById('shadowInteraction').attachShadow({mode:'open'}).innerHTML = '<style>button{background:transparent;color:#222}button:focus{background:#eee}</style><button>Shadow focus</button>';
 // App CSS can arrive after the extension's document-start stylesheet.
@@ -45,4 +48,5 @@ window.dropdownResult = id => {
   const fg=lum(getComputedStyle(el.querySelector('span') || el).color), bg=lum(s.backgroundColor);
   return { background:s.backgroundColor, dark:bg<.05, contrast:(Math.max(fg,bg)+.05)/(Math.min(fg,bg)+.05), outline:s.outlineStyle, marked:el.getAttribute('data-oled-night') };
 };
-</script></body></html>
+</script><div class="color-picker" id="colorPicker" style="background:linear-gradient(to right, red, lime, blue)"><span id="swatch" style="background:#fbeb9c;color:#222">Actual color</span></div><input id="nativeColor" type="color" value="#ff0000">
+<div class="ma-attribute-group-expander"><a id="amazonHeader" role="button" aria-expanded="true" class="a-expander-header a-link-section-expander"><span>Delivery options fixture</span></a></div></body></html>

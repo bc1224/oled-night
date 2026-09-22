@@ -9,22 +9,28 @@
   let settings = Settings.normalize();
   let persistTimer = null;
 
-  const MODE_LABELS = { oled: "recoloring this page", soft: "recoloring this page (soft)", crush: "page was already dark: deepening its blacks", none: "page is already dark: left as is" };
+  const MODE_LABELS = { native: "Figma native colors protected", oled: "recoloring this page", soft: "recoloring this page (soft)", crush: "page was already dark: deepening its blacks", none: "page is already dark: left as is" };
 
-  function siteOnly() {
-    return !!host && Settings.tuningFor(settings, host).custom;
-  }
-
+  let pageStatus = null;
   function render() {
     const tuning = Settings.tuningFor(settings, host);
     $("globalEnabled").checked = settings.globalEnabled;
+    $("siteEnabled").checked = Settings.siteMode(settings, host) !== "off" && (Settings.siteMode(settings, host) !== "global" || (settings.globalEnabled && !Settings.prefersNativeColors(host)));
     $("siteRule").value = Settings.siteMode(settings, host);
     const radio = document.querySelector(`input[name="appearance"][value="${settings.appearance}"]`);
     if (radio) radio.checked = true;
-    for (const key of ["brightness", "contrast"]) { $(key).value = tuning[key]; $(`${key}Value`).value = `${tuning[key]}%`; }
-    $("siteOnly").checked = siteOnly();
+    for (const key of ["brightness", "contrast"]) {
+      $(key).value = tuning[key]; $(`${key}Value`).value = `${tuning[key]}%`;
+      const globalId = 'global' + key[0].toUpperCase() + key.slice(1);
+      $(globalId).value = settings[key]; $(`${globalId}Value`).value = `${settings[key]}%`;
+      $(key).disabled = !host || Settings.prefersNativeColors(host);
+    }
     $("dimImages").checked = !!tuning.dimImages;
-    for (const id of ["siteOnly", "dimImages"]) $(id).disabled = !host;
+    for (const id of ["siteEnabled", "siteRule", "dimImages", "resetSite"]) $(id).disabled = !host || (Settings.prefersNativeColors(host) && ["dimImages", "siteRule"].includes(id));
+    const preserved = pageStatus?.active && ["crush", "none"].includes(pageStatus.mode);
+    $("tuningHelp").textContent = Settings.prefersNativeColors(host) ? "Figma keeps native colors even when on. Recoloring, inversion and image dimming are bypassed to protect design accuracy." : preserved
+      ? "This mode keeps the site's colors. Choose Full recolor under Advanced site mode to adjust text and panels."
+      : tuning.custom ? "Custom values for this site. Other sites keep their defaults." : "Using defaults. Moving a slider changes only this site.";
   }
 
   // The dot shows whether this tab is actually darkened right now, not just the global switch.
@@ -34,12 +40,15 @@
     if (tabId && chrome?.tabs) {
       try { status = await chrome.tabs.sendMessage(tabId, { type: "oled-night-status" }); } catch {}
     }
+    pageStatus = status;
+    render();
     const on = !!status?.active;
     dot.style.opacity = on ? "1" : ".3";
     const siteOff = Settings.siteMode(settings, host) === "off";
     const text = on ? `Active: ${MODE_LABELS[status.mode] || "on"}`
-      : siteOff ? "Off for this site: change \"This site\" above to turn it back on"
-      : !settings.globalEnabled ? "Off everywhere: turn on the main switch"
+      : siteOff ? "Off for this site: use the site switch above"
+      : Settings.prefersNativeColors(host) && Settings.siteMode(settings, host) === "global" ? "Native colors: Figma is off by default to protect design colors and performance."
+      : !settings.globalEnabled ? "Default is off: turn on this site or change All sites"
       : (tabId ? "Not active on this page" : "");
     dot.title = text;
     $("status").textContent = text;
@@ -51,26 +60,35 @@
 
   function persist(patch) {
     settings = Settings.normalize({ ...settings, ...patch });
-    write(patch);
+    clearTimeout(persistTimer);
+    pendingPatch = { ...pendingPatch, ...patch };
+    flushPreview();
     render();
     setTimeout(refreshStatus, 250);
   }
 
-  // Per-site values live in siteTuning[host]; global ones at the top level.
+  // Every site slider writes only that site's override. Global controls never erase it.
   function tuningPatch(key, value) {
-    if (!siteOnly()) return { [key]: value };
-    const siteTuning = { ...settings.siteTuning, [host]: { ...settings.siteTuning[host], [key]: value } };
-    return { siteTuning };
+    return { siteTuning: { ...settings.siteTuning, [host]: { ...settings.siteTuning[host], [key]: value } } };
   }
-
+  let pendingPatch = {};
+  let saveQueue = Promise.resolve();
+  function flushPreview() {
+    clearTimeout(persistTimer);
+    const patch = pendingPatch;
+    pendingPatch = {};
+    saveQueue = saveQueue.then(() => write(patch)).catch(() => { $("status").textContent = "Could not save. Please try again."; });
+    return saveQueue;
+  }
   async function preview(patch, persistNow = false) {
     settings = Settings.normalize({ ...settings, ...patch });
+    pendingPatch = { ...pendingPatch, ...patch };
     render();
     if (!hasChrome()) return;
     if (tabId) chrome.tabs.sendMessage(tabId, { type: "oled-night-preview", patch }).catch(() => {});
     clearTimeout(persistTimer);
-    if (persistNow) return write(patch);
-    persistTimer = setTimeout(() => write(patch), 120);
+    if (persistNow) return flushPreview();
+    persistTimer = setTimeout(flushPreview, 120);
   }
 
   function saveReport(report) {
@@ -95,8 +113,9 @@
     settings = Settings.normalize(await chrome.storage.sync.get(Settings.DEFAULTS));
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     tabId = tab?.id ?? null;
-    try { host = new URL(tab.url).hostname; } catch { host = ""; }
+    try { const url = new URL(tab.url); host = /^https?:$/.test(url.protocol) ? url.hostname : ""; } catch { host = ""; }
     $("hostname").textContent = host || "Unavailable on this page";
+    $("hostname").title = host;
     $("siteRule").disabled = !host;
     render();
     refreshStatus();
@@ -107,16 +126,15 @@
     } catch {}
   }
 
-  // Turning the main switch on also clears an "Off" on the current site, which
-  // would otherwise silently override it.
-  $("globalEnabled").addEventListener("change", (event) => {
-    const patch = { globalEnabled: event.target.checked };
-    if (event.target.checked && host && settings.siteRules[host] === "off") {
-      const siteRules = { ...settings.siteRules };
-      delete siteRules[host];
-      patch.siteRules = siteRules;
-    }
-    persist(patch);
+  $("globalEnabled").addEventListener("change", event => persist({ globalEnabled: event.target.checked }));
+  $("siteEnabled").addEventListener("change", event => {
+    if (host) persist({ siteRules: { ...settings.siteRules, [host]: event.target.checked ? "on" : "off" } });
+  });
+  $("resetSite").addEventListener("click", () => {
+    if (!host) return;
+    const siteRules = { ...settings.siteRules }, siteTuning = { ...settings.siteTuning };
+    delete siteRules[host]; delete siteTuning[host];
+    persist({ siteRules, siteTuning });
   });
   $("siteRule").addEventListener("change", (event) => {
     if (!host) return;
@@ -126,24 +144,12 @@
   });
   document.querySelectorAll('input[name="appearance"]').forEach((input) => input.addEventListener("change", () => persist({ appearance: input.value })));
   for (const key of ["brightness", "contrast"]) {
+    const globalId = "global" + key[0].toUpperCase() + key.slice(1);
+    $(globalId).addEventListener("input", event => preview({ [key]: +event.target.value }));
+    $(globalId).addEventListener("change", event => preview({ [key]: +event.target.value }, true));
     $(key).addEventListener("input", (event) => preview(tuningPatch(key, +event.target.value)));
     $(key).addEventListener("change", (event) => preview(tuningPatch(key, +event.target.value), true));
   }
-  $("siteOnly").addEventListener("change", (event) => {
-    if (!host) return;
-    const current = { ...settings.siteTuning[host] };
-    if (event.target.checked) {
-      const tuning = Settings.tuningFor(settings, host);
-      current.brightness = tuning.brightness;
-      current.contrast = tuning.contrast;
-    } else {
-      delete current.brightness;
-      delete current.contrast;
-    }
-    const siteTuning = { ...settings.siteTuning };
-    if (Object.keys(current).length) siteTuning[host] = current; else delete siteTuning[host];
-    persist({ siteTuning });
-  });
   $("dimImages").addEventListener("change", (event) => {
     if (!host) return;
     const siteTuning = { ...settings.siteTuning, [host]: { ...settings.siteTuning[host], dimImages: event.target.checked } };

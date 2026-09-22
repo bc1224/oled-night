@@ -2,7 +2,7 @@
 // throwaway headless Chrome profile and checks every site behavior we rely on.
 //   node tests/e2e/run.mjs            (set CHROME_PATH if Chrome isn't found)
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import http from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -12,6 +12,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 // EXT_PATH lets the suite run against an unzipped release instead of the source tree.
 const EXT = process.env.EXT_PATH ? resolve(process.env.EXT_PATH) : resolve(here, "..", "..");
 const SITE = join(here, "site");
+mkdirSync(join(EXT,"dist"),{recursive:true});
 const CHROME = process.env.CHROME_PATH || [
   "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
@@ -64,13 +65,13 @@ fromChrome.on("data", (chunk) => {
 });
 const send = (method, params = {}, sessionId) => new Promise((r) => { const id = ++nextId; pending.set(id, r); toChrome.write(JSON.stringify({ id, method, params, sessionId }) + "\0"); });
 
-async function openTab(url) {
-  const { result: { targetId } } = await send("Target.createTarget", { url: "about:blank" });
+async function openTab(url, background = false) {
+  const { result: { targetId } } = await send("Target.createTarget", { url: "about:blank", background });
   const { result: { sessionId } } = await send("Target.attachToTarget", { targetId, flatten: true });
   await send("Page.enable", {}, sessionId);
   await send("Runtime.enable", {}, sessionId);
   const tab = {
-    sessionId,
+    sessionId, targetId,
     eval: async (expression) => {
       const r = await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }, sessionId);
       if (r.result?.exceptionDetails) throw new Error(r.result.exceptionDetails.exception?.description || "evaluation failed");
@@ -123,6 +124,10 @@ try {
   check("diagnostic report", report?.active === true && Array.isArray(report.lowContrast) && report.counts.styled > 10, `styled=${report?.counts?.styled} lowContrast=${report?.lowContrast?.length}`);
   check("report lists frames", Array.isArray(report?.frames) && report.frames.length === 1 && report.frames[0].darkened === true, JSON.stringify(report?.frames));
   check("report finds no unreadable text", report?.lowContrast?.length === 0, JSON.stringify(report?.lowContrast?.slice(0, 3)));
+
+  await page.go(site("127.0.0.1", "report-fields.html"));
+  const fieldReport=await ext.eval(`(async()=>{const [t]=await chrome.tabs.query({url:"${site("127.0.0.1", "report-fields.html")}"});return chrome.tabs.sendMessage(t.id,{type:'oled-night-report'});})()`);
+  check('reports diagnose field text-fill contrast without field contents', fieldReport.lowContrast.filter(e=>e.element.includes('private')).length===4 && !JSON.stringify(fieldReport).includes('SENTINEL') && !fieldReport.lowContrast.some(e=>e.element.includes('transparentIcon')));
 
   // Gmail profile: unread vs read rows stay distinguishable on black.
   await page.go(site("127.0.0.1", "gmail.html"), 1800);
@@ -180,6 +185,11 @@ try {
   check("dropdown: hovered option readable", dropdown.dark && dropdown.contrast >= 4.5);
   dropdown = await page.eval("dropdownResult('nativeOption')");
   check("dropdown: native option readable", dropdown.dark && dropdown.contrast >= 4.5);
+  check('color picker and swatch retain original data colors',await page.eval("!document.getElementById('colorPicker').hasAttribute('data-oled-night') && getComputedStyle(document.getElementById('swatch')).backgroundColor === 'rgb(251, 235, 156)' && !document.getElementById('nativeColor').hasAttribute('data-oled-night')"));
+  const amazonHeader=await page.eval("dropdownResult('amazonHeader')");
+  check('Amazon expanded header important background readable',amazonHeader.dark && amazonHeader.contrast>=4.5,JSON.stringify(amazonHeader));
+  const importantRow = await page.eval("dropdownResult('importantRow')");
+  check("highlight: multi-class and tag important rule stays readable", importantRow.contrast >= 4.5 && (await css('importantRow','backgroundColor')) !== 'rgb(251, 235, 156)', JSON.stringify(importantRow));
   const transparentRect = await page.eval("(() => { const r=document.getElementById('transparentLink').getBoundingClientRect(); return {x:r.x+5,y:r.y+5}; })()");
   await send("Input.dispatchMouseEvent", {type:"mouseMoved", ...transparentRect}, page.sessionId); await sleep(80);
   dropdown = await page.eval("dropdownResult('transparentRow')");
@@ -200,6 +210,10 @@ try {
   check("fields: focus background, text-fill and caret readable", lum(await css("genericField", "backgroundColor")) < .05 && lum(await css("genericField", "webkitTextFillColor")) > .5 && lum(await css("genericField", "caretColor")) > .5);
   check("fields: placeholder and focus indicator retained", await page.eval("getComputedStyle(document.getElementById('genericField'),'::placeholder').color !== 'rgb(68, 68, 68)' && getComputedStyle(document.getElementById('genericField')).outlineStyle === 'solid'"));
   check("fields: focus-within wrapper darkened", lum(await css("fieldWrap", "backgroundColor")) < .05);
+  await page.eval("document.getElementById('genericField').setAttribute('style','width:100%'); document.getElementById('genericField').removeAttribute('data-oled-night')"); await sleep(400);
+  check("fields: framework attribute reset repaired", lum(await css("genericField", "webkitTextFillColor")) > .5 && await page.eval("document.getElementById('genericField').getAttribute('data-oled-night')?.includes('field')"));
+  await page.eval("document.getElementById('genericField').blur(); document.getElementById('genericField').focus()"); await sleep(100);
+  check("fields: cached decision does not skip missing overrides", lum(await css("genericField", "webkitTextFillColor")) > .5);
   await send("DOM.enable", {}, page.sessionId); await send("CSS.enable", {}, page.sessionId);
   const doc = await send("DOM.getDocument", {}, page.sessionId);
   const fieldNode = await send("DOM.querySelector", {nodeId:doc.result.root.nodeId,selector:'#genericField'}, page.sessionId);
@@ -297,6 +311,14 @@ try {
   const loading = await page.eval("({ state: document.readyState, bg: getComputedStyle(document.documentElement).backgroundColor })");
   check("black before the page finishes loading", loading.state === "loading" && loading.bg === "rgb(0, 0, 0)", JSON.stringify(loading));
 
+  await page.go(site("127.0.0.1", "light.html"));
+  await send("Target.activateTarget",{targetId:page.targetId});
+  const newPanel=await page.eval(`new Promise(resolve=>setTimeout(()=>{
+    const panel=document.createElement('section');panel.style.background='#fff';panel.style.color='#222';panel.textContent='New dynamic section';document.body.append(panel);
+    queueMicrotask(()=>requestAnimationFrame(()=>resolve(getComputedStyle(panel).backgroundColor)));
+  },0))`);
+  check('new sections recolored in the next pre-paint batch',newPanel==='rgb(0, 0, 0)',newPanel);
+
   // Performance under constant page churn and slider drags.
   await page.go(site("127.0.0.1", "rows.html"), 2500);
   const churn = await page.eval(`(async () => { const rows = [...document.querySelectorAll('.row')]; let worst = 0, last = performance.now(), frames = 0; const stop = last + 2000;
@@ -309,9 +331,29 @@ try {
     for (const b of [60, 70, 80, 90]) await chrome.tabs.sendMessage(t.id, { type: "oled-night-preview", patch: { brightness: b } }); return Math.round((performance.now() - start) / 4); })()`);
   check("slider step is cheap", slider < 120, `${slider} ms per step`);
 
-  // Popup renders against a real tab.
-  const popup = await openTab(`chrome-extension://${extId}/popup.html`);
-  check("popup renders with every site mode", (await popup.eval("document.querySelectorAll('#siteRule option').length")) === 6);
+  await resetSettings();
+  await page.go(site("127.0.0.1", "light.html"));
+  await ext.eval(`(async()=>{const [t]=await chrome.tabs.query({url:"${site("127.0.0.1", "light.html")}"});await chrome.tabs.update(t.id,{active:true});})()`);
+  const popup = await openTab(`chrome-extension://${extId}/popup.html`, true);
+  check("popup renders site before defaults", await popup.eval("document.querySelector('section').className === 'site-panel' && !document.querySelector('#siteOnly') && document.getElementById('hostname').textContent === '127.0.0.1'"));
+  const move = (id,value) => popup.eval(`(()=>{const e=document.getElementById('${id}');e.value=${value};e.dispatchEvent(new Event('input'));e.dispatchEvent(new Event('change'));})()`);
+  const beforeText=await css('primary','color'), beforePanel=await css('info','backgroundColor');
+  await move('brightness',60); await move('contrast',0); await sleep(400);
+  check('site sliders visibly change text and panels', (await css('primary','color'))!==beforeText && (await css('info','backgroundColor'))!==beforePanel);
+  let saved=await ext.eval('chrome.storage.sync.get(null)');
+  check('site sliders preserve global defaults', saved.siteTuning['127.0.0.1'].brightness===60 && saved.siteTuning['127.0.0.1'].contrast===0 && saved.brightness===undefined);
+  await move('globalBrightness',95); await sleep(400);
+  check('global slider preserves site override', await page.eval("document.documentElement.style.getPropertyValue('--oln-light') === '60%'"));
+  await popup.eval("document.getElementById('siteEnabled').click()"); await sleep(400);
+  check('site switch restores original page', await page.eval("!document.documentElement.hasAttribute('data-oled-night-root')"));
+  await popup.eval("document.getElementById('siteEnabled').click()"); await sleep(400);
+  check('site switch reapplies',await page.eval("document.documentElement.hasAttribute('data-oled-night-root')"));
+  await popup.eval("document.getElementById('resetSite').click()"); await sleep(400);
+  saved=await ext.eval('chrome.storage.sync.get(null)');
+  check('use defaults clears only current site overrides', !saved.siteTuning['127.0.0.1'] && !saved.siteRules['127.0.0.1'] && saved.brightness===95 && await page.eval("document.documentElement.style.getPropertyValue('--oln-light') === '95%'"));
+  await send('Target.activateTarget',{targetId:popup.targetId});
+  const capture=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true},popup.sessionId);
+  writeFileSync(join(EXT,'dist','popup-audit.png'),Buffer.from(capture.result.data,'base64'));
 
   check("no uncaught errors in extension pages or test pages", exceptions.length === 0, exceptions.slice(0, 3).join(" | "));
 } catch (error) {

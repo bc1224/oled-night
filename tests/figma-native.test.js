@@ -13,7 +13,7 @@ const attributes = new Set();
 const styleValues = new Map();
 const attributeValues = new Map();
 
-global.location = { hostname: "www.youtube.com" };
+global.location = { hostname: "www.figma.com" };
 global.matchMedia = () => ({ matches: true });
 global.Element = class Element {};
 global.NodeFilter = { SHOW_ELEMENT: 1 };
@@ -36,13 +36,13 @@ const root = {
 
 global.document = {
   removeEventListener() {},
-  addEventListener() { throw new Error("YouTube interaction traversal must stay disabled"); },
+  addEventListener() { throw new Error("Figma interaction traversal must stay disabled"); },
   documentElement: root,
   head: { appendChild(node) { nodesById.set(node.id, node); if (node.id === "oled-night-sheet") sheet = node; } },
   querySelectorAll() { return []; },
   getElementById(id) { return nodesById.get(id) || null; },
   createElement() { return { id: "", textContent: "", remove() { nodesById.delete(this.id); if (sheet === this) sheet = null; } }; },
-  createTreeWalker() { walkerStarted = true; throw new Error("YouTube DOM traversal must stay disabled"); }
+  createTreeWalker() { walkerStarted = true; throw new Error("Figma DOM traversal must stay disabled"); }
 };
 
 global.chrome = {
@@ -55,18 +55,23 @@ global.chrome = {
 
 require("../content.js");
 
-assert.equal(attributes.has("data-oled-night-root"), true);
-assert.equal(styleValues.get("--oled-night-page"), "#000");
-assert.equal(walkerStarted, false);
-assert.equal(observerStarted, false);
-assert.equal(attributes.has("data-oled-night-youtube"), true);
-assert.equal(root.getAttribute?.("data-oled-night-version"), "0.6.10");
-assert.doesNotMatch(sheet.textContent, /--yt-spec-base-background/);
-assert.match(sheet.textContent, /--yt-spec-text-primary/);
-messageListener({ type: "oled-night-preview", patch: { brightness: 70 } }, {}, () => {});
-assert.equal(styleValues.get("--oled-night-youtube-primary"), "hsl(0 0% 70%)");
-assert.equal(walkerStarted, false);
-assert.equal(observerStarted, false);
-storageListener({ contrast: { newValue: 84 } }, "sync");
-assert.equal(walkerStarted, false);
-console.log("youtube-safe-mode: 12 assertions passed");
+assert.equal(attributes.has('data-oled-night-root'), false);
+assert.equal(walkerStarted,false);
+assert.equal(observerStarted,false);
+assert.equal(sheet,null);
+let status;
+messageListener({type:'oled-night-status'},{},v=>status=v);
+assert.equal(status.active,false);
+console.log('figma-native: no recoloring, observer or DOM traversal by default');
+
+for(const mode of ['on','recolor','deepen','invert']) {
+ messageListener({type:'oled-night-preview',patch:{siteRules:{'www.figma.com':mode},brightness:40,dimImages:true}},{},()=>{});
+ messageListener({type:'oled-night-status'},{},v=>status=v);
+ assert.equal(status.active,true);
+ assert.equal(status.mode,'native');
+ assert.equal(sheet,null);
+ assert.equal(walkerStarted,false);
+ assert.equal(observerStarted,false);
+ assert.equal(styleValues.has('--oln-light'),false);
+}
+console.log('figma-native: explicit on/recolor/deepen/invert all preserve native editor');

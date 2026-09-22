@@ -9,37 +9,32 @@
 <body>
   <main class="popup">
     <header><h1>OLED Night <small id="version" class="version"></small></h1><span class="status-dot" aria-hidden="true"></span></header>
-    <section class="power-row">
-      <div><h2>OLED Night</h2><p>True black without touching imagery.</p></div>
-      <label class="switch"><input id="globalEnabled" type="checkbox"><span></span><span class="sr-only">Enable OLED Night everywhere</span></label>
-    </section>
-    <section class="site-row">
-      <div class="site-label"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.4 3 14.6 0 18M12 3c-3 3.4-3 14.6 0 18"/></svg><div><strong>This site</strong><small id="hostname">Current tab</small></div></div>
-      <select id="siteRule" aria-label="How OLED Night treats this site">
-        <option value="global">Use global</option>
-        <option value="on">On (automatic)</option>
-        <option value="recolor">Full recolor</option>
-        <option value="deepen">Deepen blacks only</option>
-        <option value="invert">Invert (canvas apps)</option>
-        <option value="off">Off</option>
-      </select>
-    </section>
-    <p id="status" class="status-line" aria-live="polite"></p>
-    <section class="appearance">
-      <h2>Appearance</h2>
-      <div class="segments" role="radiogroup" aria-label="Appearance">
-        <label><input type="radio" name="appearance" value="oled"><span>OLED Black</span></label>
-        <label><input type="radio" name="appearance" value="soft"><span>Soft Dark</span></label>
-        <label title="Follows your system theme: OLED Black in dark mode, off in light mode"><input type="radio" name="appearance" value="auto"><span>Auto</span></label>
+    <section class="site-panel">
+      <div class="power-row"><div><h2 id="hostname">Current tab</h2><p>Only this site</p></div>
+        <label class="switch"><input id="siteEnabled" type="checkbox"><span></span><span class="sr-only">Enable OLED Night on this site</span></label>
       </div>
-    </section>
-    <section class="tuning">
-      <label><span>Brightness <output id="brightnessValue">88%</output></span><input id="brightness" type="range" min="40" max="100" value="88"></label>
-      <label><span>Contrast <output id="contrastValue">72%</output></span><input id="contrast" type="range" min="0" max="100" value="72"></label>
-      <div class="toggles">
-        <label class="check"><input id="siteOnly" type="checkbox"><span>Sliders apply to this site only</span></label>
-        <label class="check"><input id="dimImages" type="checkbox"><span>Dim images on this site</span></label>
+      <p id="status" class="status-line" aria-live="polite"></p>
+      <div class="tuning">
+        <label><span>Text brightness <output id="brightnessValue"></output></span><input id="brightness" type="range" min="40" max="100"></label>
+        <label><span>Surface contrast <output id="contrastValue"></output></span><input id="contrast" type="range" min="0" max="100"></label>
       </div>
+      <p id="tuningHelp" class="control-help"></p>
+      <div class="site-tools"><label class="check"><input id="dimImages" type="checkbox"><span>Dim images</span></label><button id="resetSite" type="button" class="text-button">Use defaults</button></div>
+      <details><summary>Advanced site mode</summary><select id="siteRule" aria-label="How OLED Night treats this site">
+        <option value="global">Use default</option><option value="on">On (automatic)</option><option value="recolor">Full recolor</option><option value="deepen">Deepen blacks only</option><option value="invert">Invert (canvas apps)</option><option value="off">Off</option>
+      </select></details>
+    </section>
+    <section class="global-panel">
+      <div class="power-row"><div><h2>All sites</h2><p>Defaults. Your site choices take priority.</p></div><label class="switch"><input id="globalEnabled" type="checkbox"><span></span><span class="sr-only">Enable OLED Night by default</span></label></div>
+      <details><summary>Default appearance &amp; sliders</summary>
+        <div class="segments" role="radiogroup" aria-label="Default appearance">
+          <label><input type="radio" name="appearance" value="oled"><span>OLED Black</span></label><label><input type="radio" name="appearance" value="soft"><span>Soft Dark</span></label><label><input type="radio" name="appearance" value="auto"><span>Follow system</span></label>
+        </div>
+        <div class="tuning">
+          <label><span>Text brightness <output id="globalBrightnessValue"></output></span><input id="globalBrightness" type="range" min="40" max="100"></label>
+          <label><span>Surface contrast <output id="globalContrastValue"></output></span><input id="globalContrast" type="range" min="0" max="100"></label>
+        </div><p class="control-help">Text brightness changes text, not your monitor. Surface contrast changes panel and border separation. Already-dark pages keep their own colors.</p>
+      </details>
     </section>
     <footer class="actions">
       <button id="report" class="settings-link" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4h11l-1.5 4L16 12H5"/></svg>Report a broken site</button>

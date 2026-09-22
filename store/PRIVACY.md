@@ -17,3 +17,5 @@ OLED Night is a browser extension that makes web pages dark. It is built to work
 **Changes:** if this policy ever changes, the new version will be published with the extension update.
 
 **Contact:** questions about this policy can be sent to the developer through https://github.com/bc1224/oled-night/issues.
+
+Diagnostic contrast checks include form controls, but their contents are omitted. Passwords and entered form values are not read for the report.

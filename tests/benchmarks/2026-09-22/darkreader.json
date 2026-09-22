@@ -1,0 +1,144 @@
+{
+  "variant": "darkreader",
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Chrome/153.0.8010.53",
+    "revision": "@792bf6722e73a45aa9e47c163b9901bdc17f3230",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+    "jsVersion": "15.3.76.13"
+  },
+  "results": [
+    {
+      "variant": "darkreader",
+      "file": "light.html",
+      "repeat": 0,
+      "pageState": {
+        "bg": "rgb(24, 26, 27)",
+        "oln": false,
+        "dr": true,
+        "mode": "dynamic",
+        "loadMs": 39.80000001192093
+      },
+      "privateMiB": 415.9,
+      "jsHeapMiB": 1.92,
+      "idleMs": 2006,
+      "workMs": 3005,
+      "idleBrowserCpuMs": 167,
+      "workBrowserCpuMs": 43,
+      "idleRendererTaskMs": 3,
+      "workRendererTaskMs": 14,
+      "ticks": 181,
+      "worstMs": 18
+    },
+    {
+      "variant": "darkreader",
+      "file": "light.html",
+      "repeat": 1,
+      "pageState": {
+        "bg": "rgb(24, 26, 27)",
+        "oln": false,
+        "dr": true,
+        "mode": "dynamic",
+        "loadMs": 36.700000047683716
+      },
+      "privateMiB": 454.2,
+      "jsHeapMiB": 1.92,
+      "idleMs": 2012,
+      "workMs": 3001,
+      "idleBrowserCpuMs": 554,
+      "workBrowserCpuMs": 422,
+      "idleRendererTaskMs": 1,
+      "workRendererTaskMs": 15,
+      "ticks": 181,
+      "worstMs": 18
+    },
+    {
+      "variant": "darkreader",
+      "file": "light.html",
+      "repeat": 2,
+      "pageState": {
+        "bg": "rgb(24, 26, 27)",
+        "oln": false,
+        "dr": true,
+        "mode": "dynamic",
+        "loadMs": 35.60000002384186
+      },
+      "privateMiB": 470.4,
+      "jsHeapMiB": 1.92,
+      "idleMs": 2003,
+      "workMs": 3001,
+      "idleBrowserCpuMs": 224,
+      "workBrowserCpuMs": 64,
+      "idleRendererTaskMs": 0,
+      "workRendererTaskMs": 14,
+      "ticks": 181,
+      "worstMs": 18
+    },
+    {
+      "variant": "darkreader",
+      "file": "rows.html",
+      "repeat": 0,
+      "pageState": {
+        "bg": "rgb(24, 26, 27)",
+        "oln": false,
+        "dr": true,
+        "mode": "dynamic",
+        "loadMs": 195.89999997615814
+      },
+      "privateMiB": 476,
+      "jsHeapMiB": 2.86,
+      "idleMs": 2014,
+      "workMs": 3011,
+      "idleBrowserCpuMs": 106,
+      "workBrowserCpuMs": 917,
+      "idleRendererTaskMs": 9,
+      "workRendererTaskMs": 376,
+      "ticks": 177,
+      "worstMs": 18
+    },
+    {
+      "variant": "darkreader",
+      "file": "rows.html",
+      "repeat": 1,
+      "pageState": {
+        "bg": "rgb(24, 26, 27)",
+        "oln": false,
+        "dr": true,
+        "mode": "dynamic",
+        "loadMs": 192.9000000357628
+      },
+      "privateMiB": 472,
+      "jsHeapMiB": 2.81,
+      "idleMs": 2012,
+      "workMs": 3005,
+      "idleBrowserCpuMs": 50,
+      "workBrowserCpuMs": 813,
+      "idleRendererTaskMs": 10,
+      "workRendererTaskMs": 388,
+      "ticks": 177,
+      "worstMs": 19
+    },
+    {
+      "variant": "darkreader",
+      "file": "rows.html",
+      "repeat": 2,
+      "pageState": {
+        "bg": "rgb(24, 26, 27)",
+        "oln": false,
+        "dr": true,
+        "mode": "dynamic",
+        "loadMs": 236.4000000357628
+      },
+      "privateMiB": 450.2,
+      "jsHeapMiB": 2.87,
+      "idleMs": 2003,
+      "workMs": 3004,
+      "idleBrowserCpuMs": 59,
+      "workBrowserCpuMs": 913,
+      "idleRendererTaskMs": 13,
+      "workRendererTaskMs": 465,
+      "ticks": 177,
+      "worstMs": 18
+    }
+  ]
+}

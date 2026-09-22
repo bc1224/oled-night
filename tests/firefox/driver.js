@@ -68,6 +68,10 @@
       const s=getComputedStyle(document.getElementById('genericField'));
       return parseFloat(s.backgroundColor.match(/[\d.]+/)[0]) < 60 && parseFloat(s.webkitTextFillColor.match(/[\d.]+/)[0]) > 180 && s.outlineStyle === 'solid';
     }));
+    await inspect(() => { const e=document.getElementById('genericField'); e.setAttribute('style','width:100%'); e.removeAttribute('data-oled-night'); }); await wait(400);
+    check('field recovers after framework replaces inline styles', await inspect(() => parseFloat(getComputedStyle(document.getElementById('genericField')).webkitTextFillColor.match(/[\d.]+/)[0]) > 180));
+    check('Amazon expanded header darkened',await inspect(()=>getComputedStyle(document.getElementById('amazonHeader')).backgroundColor!=='rgb(243, 243, 243)'));
+    check('specific important highlighted row darkened', await inspect(() => getComputedStyle(document.getElementById('importantRow')).backgroundColor !== 'rgb(251, 235, 156)'));
     check('dropdown blur clears old focus highlight', await inspect(() => getComputedStyle(document.getElementById('transparentRow')).backgroundColor === 'rgba(0, 0, 0, 0)'));
     await inspect(() => document.getElementById('shadowInteraction').shadowRoot.querySelector('button').focus()); await wait(100);
     check('shadow focus state darkened', await inspect(() => {
@@ -81,6 +85,9 @@
     await browser.storage.sync.clear(); await wait(400);
     const report = await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'});
     check('diagnostic report works', report.extension === 'OLED Night' && report.active);
+    await open('report-fields.html');
+    const fieldReport=await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'});
+    check('report catches field contrast without private contents',fieldReport.lowContrast.filter(e=>e.element.includes('private')).length===4 && !JSON.stringify(fieldReport).includes('SENTINEL') && !fieldReport.lowContrast.some(e=>e.element.includes('transparentIcon')));
     check('keyboard shortcut registered', (await browser.commands.getAll()).some(c => c.name === 'toggle-site' && c.shortcut));
     for (const page of ['options.html', 'popup.html']) {
       let resolveUI;

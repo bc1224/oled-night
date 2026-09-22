@@ -1,0 +1,138 @@
+{
+  "variant": "oled",
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Chrome/153.0.8010.53",
+    "revision": "@792bf6722e73a45aa9e47c163b9901bdc17f3230",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+    "jsVersion": "15.3.76.13"
+  },
+  "results": [
+    {
+      "variant": "oled",
+      "file": "light.html",
+      "repeat": 0,
+      "pageState": {
+        "bg": "rgb(0, 0, 0)",
+        "oln": true,
+        "dr": false,
+        "loadMs": 31.19999998807907
+      },
+      "privateMiB": 340.4,
+      "jsHeapMiB": 1.38,
+      "idleMs": 2007,
+      "workMs": 3003,
+      "idleBrowserCpuMs": 45,
+      "workBrowserCpuMs": 43,
+      "idleRendererTaskMs": 3,
+      "workRendererTaskMs": 16,
+      "ticks": 181,
+      "worstMs": 18
+    },
+    {
+      "variant": "oled",
+      "file": "light.html",
+      "repeat": 1,
+      "pageState": {
+        "bg": "rgb(0, 0, 0)",
+        "oln": true,
+        "dr": false,
+        "loadMs": 23
+      },
+      "privateMiB": 398.4,
+      "jsHeapMiB": 1.37,
+      "idleMs": 2005,
+      "workMs": 3005,
+      "idleBrowserCpuMs": 716,
+      "workBrowserCpuMs": 168,
+      "idleRendererTaskMs": 0,
+      "workRendererTaskMs": 13,
+      "ticks": 181,
+      "worstMs": 18
+    },
+    {
+      "variant": "oled",
+      "file": "light.html",
+      "repeat": 2,
+      "pageState": {
+        "bg": "rgb(0, 0, 0)",
+        "oln": true,
+        "dr": false,
+        "loadMs": 19.100000023841858
+      },
+      "privateMiB": 410.1,
+      "jsHeapMiB": 1.37,
+      "idleMs": 2004,
+      "workMs": 3006,
+      "idleBrowserCpuMs": 256,
+      "workBrowserCpuMs": 40,
+      "idleRendererTaskMs": 0,
+      "workRendererTaskMs": 15,
+      "ticks": 181,
+      "worstMs": 18
+    },
+    {
+      "variant": "oled",
+      "file": "rows.html",
+      "repeat": 0,
+      "pageState": {
+        "bg": "rgb(0, 0, 0)",
+        "oln": true,
+        "dr": false,
+        "loadMs": 392.30000001192093
+      },
+      "privateMiB": 508.1,
+      "jsHeapMiB": 4,
+      "idleMs": 2015,
+      "workMs": 3003,
+      "idleBrowserCpuMs": 134,
+      "workBrowserCpuMs": 2036,
+      "idleRendererTaskMs": 16,
+      "workRendererTaskMs": 1342,
+      "ticks": 175,
+      "worstMs": 19
+    },
+    {
+      "variant": "oled",
+      "file": "rows.html",
+      "repeat": 1,
+      "pageState": {
+        "bg": "rgb(0, 0, 0)",
+        "oln": true,
+        "dr": false,
+        "loadMs": 39.69999998807907
+      },
+      "privateMiB": 461.9,
+      "jsHeapMiB": 4.08,
+      "idleMs": 2012,
+      "workMs": 3002,
+      "idleBrowserCpuMs": 43,
+      "workBrowserCpuMs": 1470,
+      "idleRendererTaskMs": 10,
+      "workRendererTaskMs": 963,
+      "ticks": 175,
+      "worstMs": 18
+    },
+    {
+      "variant": "oled",
+      "file": "rows.html",
+      "repeat": 2,
+      "pageState": {
+        "bg": "rgb(0, 0, 0)",
+        "oln": true,
+        "dr": false,
+        "loadMs": 28.099999964237213
+      },
+      "privateMiB": 483.1,
+      "jsHeapMiB": 4.15,
+      "idleMs": 2009,
+      "workMs": 3019,
+      "idleBrowserCpuMs": 47,
+      "workBrowserCpuMs": 1801,
+      "idleRendererTaskMs": 13,
+      "workRendererTaskMs": 1242,
+      "ticks": 176,
+      "worstMs": 18
+    }
+  ]
+}

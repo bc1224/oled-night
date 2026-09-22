@@ -1,0 +1,138 @@
+{
+  "variant": "base",
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Chrome/153.0.8010.53",
+    "revision": "@792bf6722e73a45aa9e47c163b9901bdc17f3230",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+    "jsVersion": "15.3.76.13"
+  },
+  "results": [
+    {
+      "variant": "base",
+      "file": "light.html",
+      "repeat": 0,
+      "pageState": {
+        "bg": "rgb(255, 255, 255)",
+        "oln": false,
+        "dr": false,
+        "loadMs": 209.30000001192093
+      },
+      "privateMiB": 308.7,
+      "jsHeapMiB": 0.69,
+      "idleMs": 2014,
+      "workMs": 3016,
+      "idleBrowserCpuMs": 165,
+      "workBrowserCpuMs": 48,
+      "idleRendererTaskMs": 3,
+      "workRendererTaskMs": 17,
+      "ticks": 182,
+      "worstMs": 18
+    },
+    {
+      "variant": "base",
+      "file": "light.html",
+      "repeat": 1,
+      "pageState": {
+        "bg": "rgb(255, 255, 255)",
+        "oln": false,
+        "dr": false,
+        "loadMs": 19.30000001192093
+      },
+      "privateMiB": 369.4,
+      "jsHeapMiB": 0.69,
+      "idleMs": 2012,
+      "workMs": 3008,
+      "idleBrowserCpuMs": 22,
+      "workBrowserCpuMs": 1187,
+      "idleRendererTaskMs": 0,
+      "workRendererTaskMs": 16,
+      "ticks": 181,
+      "worstMs": 18
+    },
+    {
+      "variant": "base",
+      "file": "light.html",
+      "repeat": 2,
+      "pageState": {
+        "bg": "rgb(255, 255, 255)",
+        "oln": false,
+        "dr": false,
+        "loadMs": 18.899999976158142
+      },
+      "privateMiB": 411,
+      "jsHeapMiB": 0.69,
+      "idleMs": 2014,
+      "workMs": 3010,
+      "idleBrowserCpuMs": 46,
+      "workBrowserCpuMs": 272,
+      "idleRendererTaskMs": 0,
+      "workRendererTaskMs": 16,
+      "ticks": 181,
+      "worstMs": 18
+    },
+    {
+      "variant": "base",
+      "file": "rows.html",
+      "repeat": 0,
+      "pageState": {
+        "bg": "rgb(255, 255, 255)",
+        "oln": false,
+        "dr": false,
+        "loadMs": 41.30000001192093
+      },
+      "privateMiB": 414.5,
+      "jsHeapMiB": 0.89,
+      "idleMs": 2012,
+      "workMs": 3006,
+      "idleBrowserCpuMs": 123,
+      "workBrowserCpuMs": 912,
+      "idleRendererTaskMs": 13,
+      "workRendererTaskMs": 412,
+      "ticks": 177,
+      "worstMs": 18
+    },
+    {
+      "variant": "base",
+      "file": "rows.html",
+      "repeat": 1,
+      "pageState": {
+        "bg": "rgb(255, 255, 255)",
+        "oln": false,
+        "dr": false,
+        "loadMs": 68.19999998807907
+      },
+      "privateMiB": 412.4,
+      "jsHeapMiB": 0.89,
+      "idleMs": 2006,
+      "workMs": 3008,
+      "idleBrowserCpuMs": 51,
+      "workBrowserCpuMs": 887,
+      "idleRendererTaskMs": 11,
+      "workRendererTaskMs": 440,
+      "ticks": 177,
+      "worstMs": 18
+    },
+    {
+      "variant": "base",
+      "file": "rows.html",
+      "repeat": 2,
+      "pageState": {
+        "bg": "rgb(255, 255, 255)",
+        "oln": false,
+        "dr": false,
+        "loadMs": 60
+      },
+      "privateMiB": 391.5,
+      "jsHeapMiB": 0.89,
+      "idleMs": 2009,
+      "workMs": 3006,
+      "idleBrowserCpuMs": 45,
+      "workBrowserCpuMs": 842,
+      "idleRendererTaskMs": 11,
+      "workRendererTaskMs": 435,
+      "ticks": 177,
+      "worstMs": 18
+    }
+  ]
+}

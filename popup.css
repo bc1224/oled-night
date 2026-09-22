@@ -49,9 +49,21 @@ input[type="range"]::-webkit-slider-thumb { appearance: none; width: 16px; heigh
 .check input:disabled + span { color: #5c5c64; }
 .actions { display: flex; justify-content: space-between; gap: 12px; }
 .actions .settings-link { margin-top: 10px; }
-.hint { margin: 8px 0 0; color: #6f6f78; font-size: 11px; }
+.hint { margin: 8px 0 0; color: #858590; font-size: 11px; }
 kbd { padding: 2px 6px; border: 1px solid #34343c; border-radius: 5px; background: #0b0b0f; color: #d5d5da; font: 11px ui-monospace, "Cascadia Mono", monospace; }
-.version { margin-left: 6px; color: #6f6f78; font-size: 11px; font-weight: 500; letter-spacing: 0; }
+.version { margin-left: 6px; color: #858590; font-size: 11px; font-weight: 500; letter-spacing: 0; }
 .hint { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .hint a { color: #a99cff; text-decoration: none; white-space: nowrap; }
 .hint a:hover { color: #c1b9ff; }
+
+.site-panel, .global-panel { padding-bottom: 12px; }
+#hostname { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.site-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0; }
+.text-button { border: 0; background: transparent; color: #b8aaff; padding: 8px 0; cursor: pointer; font-size: 12px; }
+details > summary { color: #b8b8c0; font-size: 12px; cursor: pointer; padding: 8px 0; }
+details > select { width: 100%; }
+.control-help { margin: 0 0 8px; font-size: 12px; }
+.tuning { padding-top: 8px; }
+input[type="range"] { height: 18px; background: linear-gradient(#2a2a30, #2a2a30) center / 100% 3px no-repeat; }
+input[type="range"]:focus-visible, summary:focus-visible, button:focus-visible { outline: 2px solid #b8aaff; outline-offset: 3px; }
+:disabled { opacity: .5; cursor: default; }

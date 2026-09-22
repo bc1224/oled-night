@@ -2,10 +2,13 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.9";
+  const VERSION = "0.6.10";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
+  // Explicit color controls carry data, not decorative page colors.
+  const COLOR_CONTROL = 'input[type="color"], [data-oled-night-preserve-colors], .react-colorful, .color-picker, .color-swatch, [role="slider"][aria-label*="hue" i], [role="slider"][aria-label*="saturation" i], [role="slider"][aria-label*="color" i]';
+
   const ICON_PARTS = "path, circle, rect, ellipse, polygon, polyline, line, text, use, g";
   const CHART_PARTS = `${ICON_PARTS}, stop`;
   const MARK = "data-oled-night";
@@ -24,7 +27,7 @@
   // Frames that are players, maps, ads or challenges are left exactly as they are.
   const UNTOUCHED_FRAMES = /(youtube(-nocookie)?\.com|vimeo\.com|player\.|twitch\.tv|spotify\.com|soundcloud\.com|maps\.google|google\.[a-z.]+\/maps|doubleclick\.net|googlesyndication\.com|recaptcha|hcaptcha\.com|challenges\.cloudflare\.com)/i;
   const STATE_ATTRIBUTES = ["aria-selected", "aria-checked", "aria-expanded", "aria-disabled", "data-state", "data-highlighted", "selected", "disabled"];
-  const OBSERVE = { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style", ...STATE_ATTRIBUTES] };
+  const OBSERVE = { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style", MARK, ...STATE_ATTRIBUTES] };
   const isTopFrame = (() => { try { return typeof window === "undefined" || window.top === window; } catch { return false; } })();
 
   let observer = null;
@@ -85,6 +88,11 @@
       if (UNTOUCHED_FRAMES.test(location.href)) return true;
       return innerWidth < 80 || innerHeight < 40;
     } catch { return true; }
+  }
+
+  function preservesColor(element) {
+    for (let node = element; node; node = parentAcrossShadow(node)) if (node.matches?.(COLOR_CONTROL)) return true;
+    return false;
   }
 
   function isMedia(element) {
@@ -291,10 +299,16 @@
     if (img.complete) run(); else img.addEventListener("load", run, { once: true });
   }
 
+  function overridesIntact(element, signature = applied.get(element)) {
+    if (signature === undefined) return true;
+    const keys = (element.getAttribute(MARK) || "").split(" ").filter(Boolean);
+    return keys.map(key => `${key}=${element.style.getPropertyValue(`--oln-${key}`)}`).join(";") === signature;
+  }
+
   function write(element, found) {
     const keys = Object.keys(found);
     const signature = keys.map((key) => `${key}=${found[key]}`).join(";");
-    if ((applied.get(element) || "") === signature) return;
+    if ((applied.get(element) || "") === signature && overridesIntact(element, signature)) return;
     for (const key of PROPS) if (!(key in found)) element.style.removeProperty(`--oln-${key}`);
     for (const key of keys) element.style.setProperty(`--oln-${key}`, found[key]);
     if (keys.length) element.setAttribute(MARK, keys.join(" ")); else element.removeAttribute(MARK);
@@ -315,6 +329,7 @@
     list.images ||= new Set();
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
       acceptNode: (node) => {
+        if (node.matches(COLOR_CONTROL)) return NodeFilter.FILTER_REJECT;
         if (!isMedia(node)) return NodeFilter.FILTER_ACCEPT;
         if (node.localName === "svg") icons.add(node);
         else if (node.localName === "img") list.images.add(node);
@@ -325,7 +340,7 @@
   }
 
   function collect(root, list, seen) {
-    if (!(root instanceof Element) || !root.isConnected || seen.has(root)) return;
+    if (!(root instanceof Element) || !root.isConnected || seen.has(root) || preservesColor(root)) return;
     if (root.localName === "svg") { list.icons.add(root); return; }
     // Charts often draw in stages, adding shapes to an SVG that's already on the
     // page. Re-check the outermost SVG so late-added fills get darkened too.
@@ -355,6 +370,7 @@
   }
 
   function modeFor() {
+    if (Settings.prefersNativeColors(hostname())) return "native";
     const appearance = resolvedAppearance(settings);
     const site = currentSiteMode();
     if (site === "recolor") return appearance;
@@ -370,7 +386,7 @@
     const seen = new Set();
     for (const node of trees) collect(node, list, seen);
     for (const node of selves) {
-      if (!seen.has(node) && node.isConnected && !isMedia(node) && !node.closest(MEDIA_SELECTOR)) { seen.add(node); list.push(node); }
+      if (!seen.has(node) && node.isConnected && !isMedia(node) && !node.closest(MEDIA_SELECTOR) && !preservesColor(node)) { seen.add(node); list.push(node); }
     }
     if (!list.length && !list.icons.size && !list.images.size) return;
     // Already-styled elements hide their original colors behind our overrides.
@@ -438,14 +454,13 @@
     observer.takeRecords();
   }
 
-  // Busy apps (Gmail, streaming chat) mutate constantly; coalesce into one pass
-  // when the page is idle, but never later than 250 ms.
+  // Batch mutations before the next paint. Idle callbacks run after painting,
+  // allowing newly inserted white sections to flash for up to 250 ms.
   function schedule() {
     if (flushScheduled) return;
     flushScheduled = true;
-    if (document.readyState === "loading") setTimeout(flush, 16);
-    else if (globalThis.requestIdleCallback) requestIdleCallback(flush, { timeout: 250 });
-    else setTimeout(flush, 100);
+    if (document.hidden) setTimeout(flush, 16);
+    else requestAnimationFrame(flush);
   }
 
   function hasInlineColor(element) {
@@ -487,6 +502,10 @@
         if (target === document.documentElement || target === document.body) polarityDirty = true;
         // Class changes can restyle the whole subtree through descendant selectors.
         pendingTrees.add(target);
+      } else if (!overridesIntact(target)) {
+        // Frameworks can replace style/attributes without changing any page
+        // color property. The cached decision is not proof it is still applied.
+        pendingSelf.add(target);
       } else if (hasInlineColor(target)) {
         // Inline style churn is mostly transforms/opacity from animations and
         // virtual scrollers. Only colors matter, so skip everything else.
@@ -499,10 +518,10 @@
   }
 
   function overrideRules() {
-    // Beat common two-class/attribute !important state rules even when a site's
-    // stylesheet loads after ours (e.g. Reddit Ads' checked menu option).
-    // Repeating the marker adds specificity without affecting measurement.
-    const on = `[${MARK}]:not([${MEASURE}], [${MEASURE}] *)`;
+    // Use ID-level specificity without requiring an ID on page elements.
+    // Multi-class + tag !important selection rules must not beat our colors.
+    // The outer marker still scopes every override; measurement still opts out.
+    const on = `:is([${MARK}], #oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *)`;
     return `
       [${MARK}~="bg"]${on} { background-color: var(--oln-bg) !important; }
       [${MARK}~="img"]${on} { background-image: var(--oln-img) !important; }
@@ -534,6 +553,7 @@
 
   // Painted before the page has any content, so a white page never flashes.
   function installEarly() {
+    if (Settings.prefersNativeColors(hostname())) return;
     if (document.getElementById("oled-night-early")) return;
     const early = document.createElement("style");
     early.id = "oled-night-early";
@@ -547,7 +567,7 @@
 
   function installSheet() {
     if (document.getElementById("oled-night-sheet")) return;
-    const root = `html[data-oled-night-root]:not([${MEASURE}])`;
+    const root = `html[data-oled-night-root]:is(*, #oled-night-profile-priority):not([${MEASURE}])`;
     const sheet = document.createElement("style");
     sheet.id = "oled-night-sheet";
     sheet.textContent = `
@@ -590,10 +610,10 @@
       /* Gmail: on black, unread (tr.zE) and read (tr.yO) rows only differ by
          font weight. Mark unread with an accent bar and full-brightness text,
          and step read rows down to the muted text level. */
-      html[data-oled-night-root][data-oled-night-site="gmail"] tr.zA.zE { box-shadow: inset 3px 0 0 #8ab4f8 !important; }
+      ${root}[data-oled-night-site="gmail"] tr.zA.zE { box-shadow: inset 3px 0 0 #8ab4f8 !important; }
       ${root}[data-oled-night-site="gmail"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) :is(.ajR, .ajV)[role="button"] img.ajT { filter: brightness(0) invert(1) !important; opacity: .85 !important; }
-      html[data-oled-night-root][data-oled-night-site="gmail"] tr.zA.zE td, html[data-oled-night-root][data-oled-night-site="gmail"] tr.zA.zE td * { color: hsl(0 0% var(--oln-light, 88%)) !important; }
-      html[data-oled-night-root][data-oled-night-site="gmail"] tr.zA.yO td, html[data-oled-night-root][data-oled-night-site="gmail"] tr.zA.yO td * { color: hsl(0 0% max(40%, calc(var(--oln-light, 88%) * 0.66))) !important; }
+      ${root}[data-oled-night-site="gmail"] tr.zA.zE td, ${root}[data-oled-night-site="gmail"] tr.zA.zE td * { color: hsl(0 0% var(--oln-light, 88%)) !important; }
+      ${root}[data-oled-night-site="gmail"] tr.zA.yO td, ${root}[data-oled-night-site="gmail"] tr.zA.yO td * { color: hsl(0 0% max(40%, calc(var(--oln-light, 88%) * 0.66))) !important; }
       html[data-oled-night-invert] :is(img, video, iframe, embed, object) { filter: invert(1) hue-rotate(180deg) !important; }
       html[data-oled-night-root][data-oled-night-youtube] body,
       html[data-oled-night-root][data-oled-night-youtube] ytd-app,
@@ -658,6 +678,9 @@
 
   function enable() {
     disable();
+    // A design editor's UI and canvas share color-bearing elements. Preserve
+    // the entire document even for explicit recolor/invert overrides.
+    if (Settings.prefersNativeColors(hostname())) { active = true; return; }
     const site = currentSiteMode();
     // Read the page's own background before any of our rules paint over it.
     darkPage = !colorsApi().usesNativeSafeMode(hostname()) && detectDarkPage();
@@ -707,7 +730,7 @@
     if (!enabled) { disable(); return; }
     if (!domReady) return; // enable() runs on DOMContentLoaded; the early sheet covers until then
     // Slider moves, per-site tuning and image dimming only retune variables; no page re-scan.
-    if (active && structureKey(previous) === structureKey(settings)) { applyTuning(); return; }
+    if (active && structureKey(previous) === structureKey(settings)) { if (!Settings.prefersNativeColors(hostname())) applyTuning(); return; }
     enable();
   }
 
@@ -732,17 +755,22 @@
       for (const el of root.querySelectorAll("*")) {
         if (lowContrast.length >= 40) return;
         if (el.shadowRoot) scan(el.shadowRoot);
-        if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+        const field = el.matches("input, textarea, select") || el.isContentEditable;
+        if (!field && ![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
         const rect = el.getBoundingClientRect();
         if (!rect.width || rect.bottom < 0 || rect.top > innerHeight) continue;
         const style = getComputedStyle(el);
-        const fg = colors.parseColor(style.color), bg = shownBg(el);
-        if (!fg) continue;
-        const a = colors.luminance(fg), b = colors.luminance(bg);
+        if (style.visibility !== "visible" || +style.opacity === 0) continue;
+        const ink = style.getPropertyValue("-webkit-text-fill-color") || style.color;
+        const fg = colors.parseColor(ink), bg = shownBg(el);
+        if (!fg || fg.a < 0.08) continue;
+        const alpha = fg.a * +style.opacity;
+        const blended = { r: fg.r * alpha + bg.r * (1 - alpha), g: fg.g * alpha + bg.g * (1 - alpha), b: fg.b * alpha + bg.b * (1 - alpha) };
+        const a = colors.luminance(blended), b = colors.luminance(bg);
         const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
         if (ratio < 3) {
-          lowContrast.push({ element: describe(el), inShadow: !!el.getRootNode().host, text: el.textContent.trim().slice(0, 30),
-            color: style.color, background: `rgb(${bg.r}, ${bg.g}, ${bg.b})`, ratio: +ratio.toFixed(2), mark: el.getAttribute(MARK) });
+          lowContrast.push({ element: describe(el), inShadow: !!el.getRootNode().host, text: field ? "[field content omitted]" : [...el.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join(" ").trim().slice(0, 30),
+            color: ink, background: `rgb(${bg.r}, ${bg.g}, ${bg.b})`, ratio: +ratio.toFixed(2), mark: el.getAttribute(MARK) });
         }
       }
     };

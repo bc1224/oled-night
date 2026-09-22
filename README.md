@@ -82,3 +82,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 [GPL-3.0](LICENSE). You're free to use, study, change and share OLED Night. If you distribute a modified version, or charge for it, you must release its full source code under the same license and keep the original credit. Copyright © 2026 Brandon (bc1224). Versions up to 0.6.3 were released under MIT.
+
+### Site controls and design tools
+
+The popup starts with this site's on/off switch and its own **Text brightness** and **Surface contrast** sliders. **All sites** below holds defaults; existing site choices take priority. **Use defaults** clears the current site's custom mode, sliders and image setting. Advanced rendering modes remain available in an expandable section.
+
+Text brightness changes recolored text, not monitor brightness. Surface contrast changes mapped panels and borders, not pure black backgrounds. Already-dark pages in Deepen blacks mode keep their original colors; choose Full recolor if you want the sliders to change them.
+
+Figma uses its native colors by default, avoiding recoloring work and protecting design colors. Even when explicitly turned on, Figma remains in native-color protection mode: recoloring, inversion, image dimming and tuning are bypassed. It is not forced to OLED black. Native color inputs and explicitly identifiable color-picker/swatch controls are excluded from recoloring. Arbitrary custom controls cannot always be identified.
