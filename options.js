@@ -1,13 +1,19 @@
 (function () {
   "use strict";
+  const chrome = globalThis.browser || globalThis.chrome;
   const Settings = globalThis.OledNightSettings;
   const $ = (id) => document.getElementById(id);
   const THEME_URL = "https://github.com/bc1224/oled-night/blob/main/theme/README.md";
   let settings = Settings.normalize();
 
-  const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-  const modeOptions = (selected) => Object.entries(Settings.SITE_MODES).filter(([mode]) => mode !== "global")
-    .map(([mode, label]) => `<option value="${mode}"${mode === selected ? " selected" : ""}>${label}</option>`).join("");
+  function modeOptions(selected, includeGlobal = false) {
+    const fragment = document.createDocumentFragment();
+    if (includeGlobal) fragment.appendChild(new Option("Use global", "global", false, !selected));
+    for (const [mode, label] of Object.entries(Settings.SITE_MODES)) {
+      if (mode !== "global") fragment.appendChild(new Option(label, mode, false, mode === selected));
+    }
+    return fragment;
+  }
 
   function cleanHost(value) {
     const text = String(value || "").trim().toLowerCase();
@@ -26,12 +32,25 @@
 
   function renderRules() {
     const hosts = [...new Set([...Object.keys(settings.siteRules), ...Object.keys(settings.siteTuning)])].sort();
-    $("rules").innerHTML = hosts.length ? hosts.map((host) => `
-      <div class="rule" data-host="${escapeHtml(host)}">
-        <div><strong>${escapeHtml(host)}</strong><small>${escapeHtml(describeTuning(settings.siteTuning[host]))}</small></div>
-        <select aria-label="Mode for ${escapeHtml(host)}"><option value="global"${settings.siteRules[host] ? "" : " selected"}>Use global</option>${modeOptions(settings.siteRules[host])}</select>
-        <button type="button" class="remove" aria-label="Remove ${escapeHtml(host)}">Remove</button>
-      </div>`).join("") : '<p class="empty">No site-specific settings yet. Use the popup on any site, or add one above.</p>';
+    $("rules").replaceChildren();
+    if (!hosts.length) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "No site-specific settings yet. Use the popup on any site, or add one above.";
+      $("rules").appendChild(empty);
+    }
+    for (const host of hosts) {
+      const row = document.createElement("div"); row.className = "rule"; row.dataset.host = host;
+      const text = document.createElement("div");
+      const name = document.createElement("strong"); name.textContent = host;
+      const tuning = document.createElement("small"); tuning.textContent = describeTuning(settings.siteTuning[host]);
+      text.append(name, tuning);
+      const select = document.createElement("select"); select.setAttribute("aria-label", `Mode for ${host}`);
+      select.appendChild(modeOptions(settings.siteRules[host], true));
+      const remove = document.createElement("button"); remove.type = "button"; remove.className = "remove";
+      remove.setAttribute("aria-label", `Remove ${host}`); remove.textContent = "Remove";
+      row.append(text, select, remove); $("rules").appendChild(row);
+    }
   }
 
   function render() {
@@ -49,7 +68,7 @@
     render();
   }
 
-  $("newMode").innerHTML = modeOptions("off");
+  $("newMode").replaceChildren(modeOptions("off"));
   $("addRule").addEventListener("submit", (event) => {
     event.preventDefault();
     const host = cleanHost($("newHost").value);
@@ -77,7 +96,12 @@
   const saveSchedule = () => save({ schedule: { enabled: $("scheduleEnabled").checked, start: $("scheduleStart").value || "20:00", end: $("scheduleEnd").value || "07:00" } });
   for (const id of ["scheduleEnabled", "scheduleStart", "scheduleEnd"]) $(id).addEventListener("change", saveSchedule);
   $("openClosedShadows").addEventListener("change", (event) => save({ openClosedShadows: event.target.checked }));
-  $("shortcuts").addEventListener("click", () => chrome.tabs.create({ url: "chrome://extensions/shortcuts" }));
+  $("shortcuts").addEventListener("click", () => {
+    if (globalThis.browser) {
+      $("shortcutHelp").hidden = false;
+    } else chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
+  });
+  if (globalThis.browser) $("getTheme").closest("section").hidden = true;
   $("getTheme").addEventListener("click", () => chrome.tabs.create({ url: THEME_URL }));
 
   $("export").addEventListener("click", () => {

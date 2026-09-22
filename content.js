@@ -1,7 +1,8 @@
 (function () {
   "use strict";
+  const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.6";
+  const VERSION = "0.6.7";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -724,10 +725,12 @@
     }, { once: true });
     addEventListener("load", () => { if (active) { polarityDirty = true; schedule(); } }, { once: true });
   }
-  chrome.storage.sync.get(DEFAULTS, applySettings);
+  if (globalThis.browser) chrome.storage.sync.get(DEFAULTS).then(applySettings);
+  else chrome.storage.sync.get(DEFAULTS, applySettings);
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "sync") return;
-    chrome.storage.sync.get(DEFAULTS, applySettings);
+    if (globalThis.browser) chrome.storage.sync.get(DEFAULTS).then(applySettings);
+    else chrome.storage.sync.get(DEFAULTS, applySettings);
   });
   try {
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => applySettings(settings));

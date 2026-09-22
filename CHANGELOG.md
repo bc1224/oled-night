@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.7
+- Added a Firefox desktop preview package, native Firefox API support, and Firefox-specific settings instructions.
+- Added Firefox runtime regression tests and packaging to CI. Mozilla signing is still pending.
+
 ## 0.6.6
 - Apple sign-in fields keep readable text and password dots on black, including autofill and focus states.
 - Reddit Enhancement Suite's floating account toolbar now matches the dark page, with visible icons.

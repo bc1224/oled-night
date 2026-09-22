@@ -76,3 +76,23 @@ writeZip(themeDir, ["manifest.json", "README.md", ...Object.values(theme.icons)]
 // Stable asset names keep the website and README latest-release links working.
 copyFileSync(join(root, "dist", `oled-night-${manifest.version}.zip`), join(root, "dist", "oled-night.zip"));
 copyFileSync(join(root, "dist", `oled-night-theme-${theme.version}.zip`), join(root, "dist", "oled-night-theme.zip"));
+
+// Firefox shares runtime files; only its manifest/background entry differs.
+const firefoxDir = join(root, "dist", "firefox");
+mkdirSync(firefoxDir, { recursive: true });
+for (const file of RUNTIME) {
+  mkdirSync(dirname(join(firefoxDir, file)), { recursive: true });
+  copyFileSync(join(root, file), join(firefoxDir, file));
+}
+const firefoxManifest = {
+  ...manifest,
+  background: { scripts: ["settings.js", "background.js"] },
+  browser_specific_settings: { gecko: {
+    id: "oled-night@bc1224.github.io",
+    strict_min_version: "142.0",
+    data_collection_permissions: { required: ["none"] }
+  } }
+};
+writeFileSync(join(firefoxDir, "manifest.json"), JSON.stringify(firefoxManifest, null, 2) + "\n");
+writeZip(firefoxDir, RUNTIME, join(root, "dist", `oled-night-firefox-${manifest.version}.zip`));
+copyFileSync(join(root, "dist", `oled-night-firefox-${manifest.version}.zip`), join(root, "dist", "oled-night-firefox.zip"));

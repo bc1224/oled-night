@@ -25,3 +25,6 @@ Please keep changes focused, and explain what site or behavior they fix.
 
 ## Release downloads
 Run `node tools/package.mjs` and attach both versioned ZIPs plus `dist/oled-night.zip` and `dist/oled-night-theme.zip` to each GitHub release. Mark the release as latest when ready. The website and README use GitHub's `/releases/latest/download/` links, so they automatically follow that release without a website edit. Keep the stable asset names on every release.
+
+## Firefox
+See [FIREFOX.md](FIREFOX.md) for building and running the Firefox preview. `npm ci` installs test tooling only; runtime packages contain no npm dependencies. Run Firefox lint and runtime checks in addition to Chrome checks when changing shared code. Do not publish an unsigned Firefox ZIP as a permanent installer.

@@ -1,4 +1,5 @@
-importScripts("settings.js");
+if (typeof importScripts === "function") importScripts("settings.js");
+const chrome = globalThis.browser || globalThis.chrome;
 
 const Settings = globalThis.OledNightSettings;
 const OPEN_SHADOWS_ID = "oled-night-open-shadows";

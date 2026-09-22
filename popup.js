@@ -1,8 +1,9 @@
 (function () {
   "use strict";
+  const chrome = globalThis.browser || globalThis.chrome;
   const Settings = globalThis.OledNightSettings;
   const $ = (id) => document.getElementById(id);
-  const hasChrome = () => !!globalThis.chrome?.storage;
+  const hasChrome = () => !!chrome?.storage;
   let host = "";
   let tabId = null;
   let settings = Settings.normalize();
@@ -30,7 +31,7 @@
   async function refreshStatus() {
     const dot = document.querySelector(".status-dot");
     let status = null;
-    if (tabId && globalThis.chrome?.tabs) {
+    if (tabId && chrome?.tabs) {
       try { status = await chrome.tabs.sendMessage(tabId, { type: "oled-night-status" }); } catch {}
     }
     const on = !!status?.active;
@@ -85,7 +86,7 @@
 
   async function init() {
     try { $("version").textContent = `v${chrome.runtime.getManifest().version}`; } catch {}
-    if (!hasChrome() || !globalThis.chrome?.tabs) {
+    if (!hasChrome() || !chrome?.tabs) {
       host = "example.com";
       $("hostname").textContent = host;
       render();
@@ -149,13 +150,13 @@
     persist({ siteTuning });
   });
   $("report").addEventListener("click", async () => {
-    if (!tabId || !globalThis.chrome?.tabs) return;
+    if (!tabId || !chrome?.tabs) return;
     let report = null;
     try { report = await chrome.tabs.sendMessage(tabId, { type: "oled-night-report" }); } catch {}
-    if (!report) { $("status").textContent = "Chrome doesn't let extensions run on this page (chrome:// pages and the Chrome Web Store), so there's nothing to report."; return; }
+    if (!report) { $("status").textContent = "Your browser restricts extensions on this page (such as browser settings and extension stores), so there is nothing to report."; return; }
     saveReport(report);
     $("status").textContent = "Report saved to Downloads. Send that file along with a screenshot.";
   });
-  $("siteSettings").addEventListener("click", () => globalThis.chrome?.runtime?.openOptionsPage());
+  $("siteSettings").addEventListener("click", () => chrome?.runtime?.openOptionsPage());
   init();
 })();

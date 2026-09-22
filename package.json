@@ -1,0 +1,12 @@
+{
+  "name": "oled-night",
+  "private": true,
+  "scripts": {
+    "package": "node tools/package.mjs",
+    "test:firefox": "node tests/firefox/run.mjs",
+    "lint:firefox": "web-ext lint --source-dir dist/firefox --warnings-as-errors"
+  },
+  "devDependencies": {
+    "web-ext": "10.7.0"
+  }
+}
