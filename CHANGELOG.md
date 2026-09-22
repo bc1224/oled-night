@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.8
+- Gmail's trimmed-content ellipsis is visible on dark backgrounds. Compact dark/mixed-color logos gain contrast without inverting their brand colors, including named logo assets behind image proxies.
+- Selected dropdown options stay readable when a site's important background rule loads after OLED Night (including Reddit Ads).
+- Recolor dropdown state changes driven by ARIA selection/checking and component state attributes.
+- Added Chrome and Firefox regression coverage for dropdown selection and restoring original colors when disabled.
+
 ## 0.6.7
 - Added a Firefox desktop preview package, native Firefox API support, and Firefox-specific settings instructions.
 - Added Firefox runtime regression tests and packaging to CI. Mozilla signing is still pending.

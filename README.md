@@ -3,7 +3,7 @@
 <h1 align="center">OLED Night</h1>
 
 <p align="center"><b>True-black dark mode for every website, without breaking it.</b><br>
-Free and open-source Chrome extension � Firefox desktop preview · readable text · images untouched · per-site control</p>
+Free and open-source Chrome extension � Firefox desktop preview · readable text · images untouched · per-site control</p>
 
 <p align="center">
   <a href="https://github.com/bc1224/oled-night/releases/latest/download/oled-night.zip"><b>Download latest ZIP</b></a> ·
@@ -40,7 +40,7 @@ Download [`oled-night.zip`](https://github.com/bc1224/oled-night/releases/latest
 
 **Want Chrome itself black too?** The extension darkens websites, but only a theme can change Chrome's own window. Grab [`oled-night-theme.zip`](https://github.com/bc1224/oled-night/releases/latest/download/oled-night-theme.zip) and load it the same way. See [theme/README.md](theme/README.md).
 
-**Firefox desktop:** A Firefox build is available from the source and CI artifacts. See [Firefox installation](FIREFOX.md). It currently installs temporarily for testing; Mozilla signing and a public Add-ons listing are still pending. The Chrome theme is not compatible with Firefox.
+**Firefox desktop:** A Firefox preview ZIP is available in GitHub releases and CI artifacts. See [Firefox installation](FIREFOX.md). It currently installs temporarily for testing; the Mozilla Add-ons submission is awaiting review. The Chrome theme is not compatible with Firefox.
 
 ## Using it
 Click the toolbar icon on any site:

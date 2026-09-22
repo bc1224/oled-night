@@ -38,12 +38,29 @@
     check('closed shadow opt-in works', await inspect(() => !!document.getElementById('closed').shadowRoot));
     await browser.storage.sync.set({openClosedShadows:false}); await wait(400);
     check('MAIN world script unregisters', !(await browser.scripting.getRegisteredContentScripts()).length);
+    await open('gmail.html');
+    check('Gmail ellipsis visible', await inspect(() => getComputedStyle(document.getElementById('ellipsis')).filter.includes('invert(1)')));
+    check('Gmail cross-origin logo edge preserves colors', await inspect(() => { const f=getComputedStyle(document.getElementById('mailLogo')).filter; return f.includes('drop-shadow') && !f.includes('invert'); }));
+    check('Gmail ordinary remote image unchanged', await inspect(() => getComputedStyle(document.getElementById('mailPhoto')).filter === 'none'));
     await open('apple-auth.html');
     check('Apple text-fill readable', await inspect(() => parseFloat(getComputedStyle(document.getElementById('password')).webkitTextFillColor.match(/[\d.]+/)[0]) > 180));
     check('Apple field inset black', await inspect(() => getComputedStyle(document.getElementById('email')).boxShadow.includes('rgb(0, 0, 0)')));
     await open('reddit-res.html');
     check('RES floater dark', await inspect(() => getComputedStyle(document.getElementById('floater')).backgroundColor === 'rgb(0, 0, 0)'));
     check('RES icon visible', await inspect(() => getComputedStyle(document.getElementById('RESAccountSwitcherIcon')).filter === 'invert(1)'));
+    await open('dropdowns.html');
+    check('dropdown selected important background dark', await inspect(() => {
+      const s=getComputedStyle(document.getElementById('promotion'));
+      return s.backgroundColor !== 'rgb(229, 235, 238)' && parseFloat(s.backgroundColor.match(/[\d.]+/)[0]) < 60;
+    }));
+    await inspect(() => document.getElementById('dynamicOption').setAttribute('aria-selected','true')); await wait(400);
+    check('dropdown aria-only change recolored', await inspect(() => {
+      const e=document.getElementById('dynamicOption');
+      return e.getAttribute('data-oled-night').includes('bg') && parseFloat(getComputedStyle(e).backgroundColor.match(/[\d.]+/)[0]) < 60;
+    }));
+    await browser.storage.sync.set({globalEnabled:false}); await wait(400);
+    check('dropdown off restores selection', await inspect(() => getComputedStyle(document.getElementById('promotion')).backgroundColor === 'rgb(229, 235, 238)'));
+    await browser.storage.sync.clear(); await wait(400);
     const report = await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'});
     check('diagnostic report works', report.extension === 'OLED Night' && report.active);
     check('keyboard shortcut registered', (await browser.commands.getAll()).some(c => c.name === 'toggle-site' && c.shortcut));

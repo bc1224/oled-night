@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.7";
+  const VERSION = "0.6.8";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -14,6 +14,7 @@
   // never animate between our dark value and the original light one.
   const NOANIM = "data-oled-night-noanim";
   const LOGO = "data-oled-night-logo";
+  const LOGO_EDGE = "data-oled-night-logo-edge";
   // "Multiply"-style blends hide a photo's white background on a light page;
   // over black they turn the whole photo black (Amazon product images).
   const DARKENING_BLENDS = /^(multiply|darken|color-burn|plus-darker)$/;
@@ -22,7 +23,8 @@
   const SIDES = [["Top", "bt"], ["Right", "br"], ["Bottom", "bb"], ["Left", "bl"]];
   // Frames that are players, maps, ads or challenges are left exactly as they are.
   const UNTOUCHED_FRAMES = /(youtube(-nocookie)?\.com|vimeo\.com|player\.|twitch\.tv|spotify\.com|soundcloud\.com|maps\.google|google\.[a-z.]+\/maps|doubleclick\.net|googlesyndication\.com|recaptcha|hcaptcha\.com|challenges\.cloudflare\.com)/i;
-  const OBSERVE = { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style"] };
+  const STATE_ATTRIBUTES = ["aria-selected", "aria-checked", "aria-expanded", "aria-disabled", "data-state", "data-highlighted", "selected", "disabled"];
+  const OBSERVE = { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style", ...STATE_ATTRIBUTES] };
   const isTopFrame = (() => { try { return typeof window === "undefined" || window.top === window; } catch { return false; } })();
 
   let observer = null;
@@ -233,9 +235,11 @@
   // Dark, mostly transparent images (logos and wordmarks like Wikipedia's)
   // disappear on black. Sample a thumbnail of the pixels; if the visible part
   // is dark and colorless, flip its lightness. Cross-origin images can't be
-  // sampled (the browser forbids it) and are left alone.
+  // sampled (the browser forbids it). Explicit compact logo assets get a light
+  // edge instead: it reveals dark lettering without changing brand colors.
   function checkLogo(img) {
     if (logoChecked.has(img) || logoBudget <= 0) return;
+    const namedLogo = /(?:^|[\s_./#-])logo(?:[\s_./?#-]|$)/i.test(`${img.alt} ${img.currentSrc || img.src}`);
     logoChecked.add(img);
     logoBudget--;
     const run = () => {
@@ -260,8 +264,15 @@
           if (max - min > 60) colorful++;
         }
         const total = w * h;
-        if (clear / total > 0.3 && solid / total > 0.02 && light / solid < 0.2 && colorful / solid < 0.25) img.setAttribute(LOGO, "");
-      } catch {}
+        if (clear / total > 0.3 && solid / total > 0.02) {
+          if (light / solid < 0.2 && colorful / solid < 0.25) img.setAttribute(LOGO, "");
+          else if (namedLogo && light / solid < 0.7) img.setAttribute(LOGO_EDGE, "");
+        }
+      } catch {
+        // No extra request or canvas security bypass. Only assets explicitly
+        // named as logos qualify; ordinary photos and mail attachments do not.
+        if (namedLogo) img.setAttribute(LOGO_EDGE, "");
+      }
     };
     if (img.complete) run(); else img.addEventListener("load", run, { once: true });
   }
@@ -433,7 +444,7 @@
       const target = record.target;
       if (record.type === "childList") {
         for (const node of record.addedNodes) if (node.nodeType === Node.ELEMENT_NODE) pendingTrees.add(node);
-      } else if (record.attributeName === "class") {
+      } else if (record.attributeName === "class" || STATE_ATTRIBUTES.includes(record.attributeName)) {
         // Sites often switch their own theme with a class on <html>/<body>.
         if (target === document.documentElement || target === document.body) polarityDirty = true;
         // Class changes can restyle the whole subtree through descendant selectors.
@@ -450,7 +461,10 @@
   }
 
   function overrideRules() {
-    const on = `:not([${MEASURE}], [${MEASURE}] *)`;
+    // Beat common two-class/attribute !important state rules even when a site's
+    // stylesheet loads after ours (e.g. Reddit Ads' checked menu option).
+    // Repeating the marker adds specificity without affecting measurement.
+    const on = `[${MARK}]:not([${MEASURE}], [${MEASURE}] *)`;
     return `
       [${MARK}~="bg"]${on} { background-color: var(--oln-bg) !important; }
       [${MARK}~="img"]${on} { background-image: var(--oln-img) !important; }
@@ -502,6 +516,7 @@
       html[data-oled-night-root][data-oled-night-dim]:not([data-oled-night-invert]) :is(img, video) { filter: brightness(0.78) !important; }
       html[data-oled-night-invert] { filter: invert(1) hue-rotate(180deg) !important; background: #fff !important; }
       html[data-oled-night-root]:not([data-oled-night-invert]) img[${LOGO}] { filter: invert(1) hue-rotate(180deg) !important; }
+      html[data-oled-night-root]:not([data-oled-night-invert]) img[${LOGO_EDGE}] { filter: drop-shadow(0 0 1px #ddd) drop-shadow(0 0 1px #ddd) !important; }
       /* Apple's auth widget paints autofill with an inset shadow and explicit
          text-fill, independently of color. Cover UA autofill/preview paint in
          every input state; keep a separate focus outline visible. */
@@ -533,6 +548,7 @@
          font weight. Mark unread with an accent bar and full-brightness text,
          and step read rows down to the muted text level. */
       html[data-oled-night-root][data-oled-night-site="gmail"] tr.zA.zE { box-shadow: inset 3px 0 0 #8ab4f8 !important; }
+      ${root}[data-oled-night-site="gmail"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) :is(.ajR, .ajV)[role="button"] img.ajT { filter: brightness(0) invert(1) !important; opacity: .85 !important; }
       html[data-oled-night-root][data-oled-night-site="gmail"] tr.zA.zE td, html[data-oled-night-root][data-oled-night-site="gmail"] tr.zA.zE td * { color: hsl(0 0% var(--oln-light, 88%)) !important; }
       html[data-oled-night-root][data-oled-night-site="gmail"] tr.zA.yO td, html[data-oled-night-root][data-oled-night-site="gmail"] tr.zA.yO td * { color: hsl(0 0% max(40%, calc(var(--oln-light, 88%) * 0.66))) !important; }
       html[data-oled-night-invert] :is(img, video, iframe, embed, object) { filter: invert(1) hue-rotate(180deg) !important; }
@@ -565,7 +581,7 @@
     logoChecked = new WeakSet();
     logoBudget = 80;
     for (const scope of [document, ...shadowRoots]) {
-      for (const node of scope.querySelectorAll(`[${MEASURE}], [${NOANIM}], [${LOGO}]`)) { node.removeAttribute(MEASURE); node.removeAttribute(NOANIM); node.removeAttribute(LOGO); }
+      for (const node of scope.querySelectorAll(`[${MEASURE}], [${NOANIM}], [${LOGO}], [${LOGO_EDGE}]`)) { node.removeAttribute(MEASURE); node.removeAttribute(NOANIM); node.removeAttribute(LOGO); node.removeAttribute(LOGO_EDGE); }
       for (const element of scope.querySelectorAll(`[${MARK}]`)) {
         element.removeAttribute(MARK);
         for (const key of PROPS) element.style.removeProperty(`--oln-${key}`);

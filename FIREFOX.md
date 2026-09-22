@@ -1,6 +1,6 @@
 # Firefox desktop preview
 
-OLED Night shares its darkening engine and settings UI between Chrome and Firefox. Firefox 142 or newer is required. This preview is not yet signed or listed on Mozilla Add-ons; it is not a permanent one-click install.
+OLED Night shares its darkening engine and settings UI between Chrome and Firefox. Firefox 142 or newer is required. The Mozilla Add-ons submission is awaiting review. Until approval, the preview ZIP is for temporary installation only.
 
 ## Try it from the repo
 
@@ -12,7 +12,7 @@ OLED Night shares its darkening engine and settings UI between Chrome and Firefo
 
 Firefox removes temporary add-ons when it restarts. Load it again to continue testing. Browser settings pages and Mozilla Add-ons pages restrict extensions.
 
-You can also download the `oled-night-zip` artifact from a successful [Tests workflow](https://github.com/bc1224/oled-night/actions/workflows/test.yml), extract `oled-night-firefox.zip`, and select its manifest as above. GitHub may require sign-in to download artifacts.
+You can download the unsigned [Firefox preview ZIP](https://github.com/bc1224/oled-night/releases/latest/download/oled-night-firefox.zip) from GitHub releases, extract it and load its manifest temporarily. You can also download the `oled-night-zip` artifact from a successful [Tests workflow](https://github.com/bc1224/oled-night/actions/workflows/test.yml), extract `oled-night-firefox.zip`, and select its manifest as above. GitHub may require sign-in to download artifacts.
 
 ## What is included
 

@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body { background: #f6f8f9; color: #182024; font: 16px sans-serif; }
+.MenuListItem { background: white; padding: 12px; outline-offset: -2px; }
+.MenuListItem-radio[aria-checked=true] { background-color: #e5ebee !important; }
+.MenuListItem:focus-visible { outline: 2px solid #007faa; }
+.state-option { background: transparent; padding: 12px; }
+.state-option[aria-selected=true] { background: #e5ebee !important; }
+.state-option[data-highlighted] { background: #dce7eb !important; }
+.hover-option { background: white; padding: 12px; }
+.hover-option:hover { background: #e5ebee !important; }
+select, option { background: white; color: #182024; }
+</style></head><body>
+<ul role="menu" aria-label="Objective">
+<li id="traffic" role="menuitemradio" aria-checked="false" class="MenuListItem-radio MenuListItem" tabindex="-1"><span>Traffic</span></li>
+<li id="promotion" role="menuitemradio" aria-checked="true" class="MenuListItem-radio MenuListItem" tabindex="0"><span>App Promotion</span></li>
+</ul>
+<div role="listbox"><div id="dynamicOption" role="option" aria-selected="false" class="state-option">Dynamic selection</div></div>
+<div id="hoverOption" class="hover-option" role="option" tabindex="0">Hover selection</div>
+<select id="native"><option id="nativeOption">Native selection</option><option>Other</option></select>
+<script>
+// App CSS can arrive after the extension's document-start stylesheet.
+setTimeout(() => {
+  const style = document.createElement('style');
+  style.textContent = '.MenuListItem-radio[aria-checked=true]{background-color:#e5ebee!important}.state-option[aria-selected=true]{background:#e5ebee!important}.hover-option:hover{background:#e5ebee!important}';
+  document.head.append(style);
+}, 500);
+window.dropdownResult = id => {
+  const el = document.getElementById(id), s = getComputedStyle(el);
+  const lum = color => {
+    const [r,g,b] = color.match(/[\d.]+/g).slice(0,3).map(v => { const n=+v/255; return n<=0.04045?n/12.92:((n+0.055)/1.055)**2.4; });
+    return .2126*r+.7152*g+.0722*b;
+  };
+  const fg=lum(getComputedStyle(el.querySelector('span') || el).color), bg=lum(s.backgroundColor);
+  return { background:s.backgroundColor, dark:bg<.05, contrast:(Math.max(fg,bg)+.05)/(Math.min(fg,bg)+.05), outline:s.outlineStyle, marked:el.getAttribute('data-oled-night') };
+};
+</script></body></html>

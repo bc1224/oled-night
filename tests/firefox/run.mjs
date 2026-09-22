@@ -16,8 +16,8 @@ const server = createServer((req, res) => {
   }
   try {
     const file = req.url.split('?')[0].slice(1);
-    if (!/^[a-z-]+\.html$/.test(file)) throw Error('invalid path');
-    res.setHeader('content-type', 'text/html');
+    if (!/^[a-z-]+\.(html|svg)$/.test(file)) throw Error('invalid path');
+    res.setHeader('content-type', file.endsWith('.svg') ? 'image/svg+xml' : 'text/html');
     res.end(readFileSync(join(root, 'tests/e2e/site', file)));
   } catch { res.statusCode = 404; res.end(); }
 });

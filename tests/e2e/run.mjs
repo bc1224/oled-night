@@ -37,7 +37,7 @@ const server = http.createServer((req, res) => {
     res.end(`<!doctype html><html><head><style>body{background:#fff;color:#202124}.row{display:flex;background:#fff;border-bottom:1px solid #eee}.row.hl{background:#f2f6fc}.c{padding:2px 6px;color:#5f6368}</style></head><body><div id="list">${rows}</div></body></html>`);
     return;
   }
-  try { const body = readFileSync(join(SITE, path)); res.writeHead(200, { "content-type": "text/html" }); res.end(body); }
+  try { const body = readFileSync(join(SITE, path)); res.writeHead(200, { "content-type": path.endsWith('.svg') ? "image/svg+xml" : "text/html" }); res.end(body); }
   catch { res.writeHead(404); res.end(); }
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
@@ -131,6 +131,13 @@ try {
   check("gmail: unread rows get an accent bar", (await css("unread", "boxShadow")).includes("inset") && (await css("read", "boxShadow")) === "none");
 
   // Site CSS reproduced from Apple's auth widget and RES on dark Reddit.
+  check("gmail: trimmed-content ellipsis visible", (await css("ellipsis", "filter")).includes("invert(1)") && (await css("ellipsis", "opacity")) === "0.85");
+  check("gmail: cross-origin logo gains edge without inversion", (await css("mailLogo", "filter")).includes("drop-shadow") && !(await css("mailLogo", "filter")).includes("invert"));
+  check("gmail: other remote images untouched", (await css("mailPhoto", "filter")) === "none");
+  await setSettings({globalEnabled:false}); await sleep(400);
+  check("gmail: disabling restores images", (await css("mailLogo", "filter")) === "none" && (await css("ellipsis", "filter")) === "none");
+  await resetSettings();
+
   await page.go(site("127.0.0.1", "apple-auth.html"), 1800);
   check("Apple: text-fill and password dots readable", lum(await css("email", "webkitTextFillColor")) > 0.5 && lum(await css("password", "webkitTextFillColor")) > 0.5);
   check("Apple: pale autofill shadow replaced with black", (await css("email", "boxShadow")).startsWith("rgb(0, 0, 0)") && (await css("email", "backgroundColor")) === "rgb(0, 0, 0)");
@@ -149,6 +156,31 @@ try {
   await setSettings({ globalEnabled: false });
   await sleep(400);
   check("RES: disabling restores toolbar and icon", (await css("floater", "backgroundColor")) === "rgb(255, 255, 255)" && (await css("RESAccountSwitcherIcon", "filter")) === "none");
+  await resetSettings();
+
+  // Selected dropdown CSS loaded after our sheet must not win the cascade.
+  await page.go(site("127.0.0.1", "dropdowns.html"), 1800);
+  let dropdown = await page.eval("dropdownResult('promotion')");
+  check("dropdown: late important selection readable", dropdown.dark && dropdown.contrast >= 4.5, JSON.stringify(dropdown));
+  check("dropdown: selection distinct from unselected", (await css("promotion", "backgroundColor")) !== (await css("traffic", "backgroundColor")));
+  await page.eval("document.getElementById('dynamicOption').setAttribute('aria-selected','true')");
+  await sleep(400);
+  dropdown = await page.eval("dropdownResult('dynamicOption')");
+  check("dropdown: aria-only selection recolored", dropdown.dark && dropdown.contrast >= 4.5 && dropdown.marked.includes('bg'), JSON.stringify(dropdown));
+  await page.eval("document.getElementById('dynamicOption').setAttribute('aria-selected','false'); document.getElementById('dynamicOption').setAttribute('data-highlighted','')");
+  await sleep(400);
+  dropdown = await page.eval("dropdownResult('dynamicOption')");
+  check("dropdown: highlighted state readable", dropdown.dark && dropdown.contrast >= 4.5);
+  await page.eval("document.getElementById('promotion').focus()");
+  check("dropdown: keyboard focus retained", (await css("promotion", "outlineStyle")) === "solid");
+  const hoverRect = await page.eval("(() => { const r=document.getElementById('hoverOption').getBoundingClientRect(); return {x:r.x+10,y:r.y+10}; })()");
+  await send("Input.dispatchMouseEvent", {type:"mouseMoved", ...hoverRect}, page.sessionId);
+  dropdown = await page.eval("dropdownResult('hoverOption')");
+  check("dropdown: hovered option readable", dropdown.dark && dropdown.contrast >= 4.5);
+  dropdown = await page.eval("dropdownResult('nativeOption')");
+  check("dropdown: native option readable", dropdown.dark && dropdown.contrast >= 4.5);
+  await setSettings({globalEnabled:false}); await sleep(400);
+  check("dropdown: off restores original selection", (await css("promotion", "backgroundColor")) === "rgb(229, 235, 238)");
   await resetSettings();
 
   // Shopping-site patterns: multiply-blended product photos and dark logos.
