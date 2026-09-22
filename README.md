@@ -6,7 +6,9 @@
 Free and open-source Chrome extension · readable text · images untouched · per-site control</p>
 
 <p align="center">
-  <a href="https://github.com/bc1224/oled-night/releases/latest/download/oled-night.zip"><b>Download</b></a> ·
+  <a href="https://github.com/bc1224/oled-night/releases/download/v0.6.5/oled-night-0.6.5.zip"><b>Download ZIP v0.6.5</b></a> ·
+  <a href="https://chromewebstore.google.com/detail/oled-night/afffgalhockmjmknnaljghdneaeichbl">Chrome Web Store extension</a> ·
+  <a href="https://chromewebstore.google.com/detail/oled-night-chrome-theme/pkdklfocgpcnijiggfddneadmhacbpmf">Chrome Web Store theme</a> ·
   <a href="https://bc1224.github.io/oled-night/">Website</a> ·
   <a href="INSTALL.md">Install guide</a> ·
   <a href="https://github.com/bc1224/oled-night/issues">Report a site</a>
@@ -31,7 +33,10 @@ Every dark mode extension I tried either left everything grey, or made sites dar
 - **Private.** No servers, no analytics, no tracking. See the [privacy policy](store/PRIVACY.md).
 
 ## Install
-Download [`oled-night.zip`](https://github.com/bc1224/oled-night/releases/latest/download/oled-night.zip), unzip it into a folder you'll keep, open `chrome://extensions`, turn on **Developer mode**, and click **Load unpacked** on that folder. Full steps, including Edge and updating, are in [INSTALL.md](INSTALL.md). To hear about new versions, click **Watch → Custom → Releases** at the top of this page.
+Install the [OLED Night extension](https://chromewebstore.google.com/detail/oled-night/afffgalhockmjmknnaljghdneaeichbl) from the Chrome Web Store. For a matching black browser window, install the [OLED Night Chrome theme](https://chromewebstore.google.com/detail/oled-night-chrome-theme/pkdklfocgpcnijiggfddneadmhacbpmf) too. Store installs update automatically.
+
+**Manual install (v0.6.5):**
+Download [`oled-night-0.6.5.zip`](https://github.com/bc1224/oled-night/releases/download/v0.6.5/oled-night-0.6.5.zip), unzip it into a folder you'll keep, open `chrome://extensions`, turn on **Developer mode**, and click **Load unpacked** on that folder. Full steps, including Edge and updating, are in [INSTALL.md](INSTALL.md). To hear about new versions, click **Watch → Custom → Releases** at the top of this page.
 
 **Want Chrome itself black too?** The extension darkens websites, but only a theme can change Chrome's own window. Grab [`oled-night-theme.zip`](https://github.com/bc1224/oled-night/releases/latest/download/oled-night-theme.zip) and load it the same way. See [theme/README.md](theme/README.md).
 
