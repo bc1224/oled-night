@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.6
+- Apple sign-in fields keep readable text and password dots on black, including autofill and focus states.
+- Reddit Enhancement Suite's floating account toolbar now matches the dark page, with visible icons.
+
 ## 0.6.5
 - Icons drawn through masks (like App Store Connect's logo and info icons) and text painted by its background now turn light instead of disappearing or blowing out.
 - Charts that add shapes after they first draw (Google Ads' shaded date band) get those shapes darkened too.

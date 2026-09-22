@@ -128,6 +128,27 @@ try {
   check("gmail: unread text brighter than read", lum(unreadText) > lum(readText) * 1.8 && lum(readText) > 0.1, `${unreadText} vs ${readText}`);
   check("gmail: unread rows get an accent bar", (await css("unread", "boxShadow")).includes("inset") && (await css("read", "boxShadow")) === "none");
 
+  // Site CSS reproduced from Apple's auth widget and RES on dark Reddit.
+  await page.go(site("127.0.0.1", "apple-auth.html"), 1800);
+  check("Apple: text-fill and password dots readable", lum(await css("email", "webkitTextFillColor")) > 0.5 && lum(await css("password", "webkitTextFillColor")) > 0.5);
+  check("Apple: pale autofill shadow replaced with black", (await css("email", "boxShadow")).startsWith("rgb(0, 0, 0)") && (await css("email", "backgroundColor")) === "rgb(0, 0, 0)");
+  await page.eval("document.getElementById('password').focus()");
+  check("Apple: focus keeps black fill and visible outline", (await css("password", "boxShadow")).startsWith("rgb(0, 0, 0)") && (await css("password", "outlineStyle")) === "solid");
+  await page.eval("document.getElementById('email').disabled=true");
+  check("Apple: disabled field stays readable", lum(await css("email", "webkitTextFillColor")) > 0.5);
+  await setSettings({ globalEnabled: false });
+  await sleep(400);
+  check("Apple: disabling restores original text fill", (await css("password", "webkitTextFillColor")) === "rgb(29, 29, 31)");
+  await resetSettings();
+  await page.go(site("127.0.0.1", "reddit-res.html"), 1800);
+  check("RES: white floater black in deepen mode", (await css("floater", "backgroundColor")) === "rgb(0, 0, 0)");
+  check("RES: icon and text visible", (await css("RESAccountSwitcherIcon", "filter")) === "invert(1)" && lum(await css("gear", "color")) > 0.5);
+  check("RES: unrelated white content unchanged", (await css("unrelated", "backgroundColor")) === "rgb(255, 255, 255)");
+  await setSettings({ globalEnabled: false });
+  await sleep(400);
+  check("RES: disabling restores toolbar and icon", (await css("floater", "backgroundColor")) === "rgb(255, 255, 255)" && (await css("RESAccountSwitcherIcon", "filter")) === "none");
+  await resetSettings();
+
   // Shopping-site patterns: multiply-blended product photos and dark logos.
   await page.go(site("127.0.0.1", "shop.html"), 1800);
   check("multiply-blended product photos stay visible", (await css("product", "mixBlendMode")) === "normal" && (await css("promo", "mixBlendMode")) === "normal");

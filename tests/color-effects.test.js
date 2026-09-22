@@ -58,3 +58,7 @@ console.log("navy crush: 1 assertion passed");
 assert.equal(colors.siteProfile("mail.google.com"), "gmail");
 assert.equal(colors.siteProfile("google.com"), "");
 console.log("site profiles: 2 assertions passed");
+
+for (const host of ["idmsa.apple.com", "appleid.apple.com", "appstoreconnect.apple.com"]) assert.equal(colors.siteProfile(host), "apple-auth");
+for (const host of ["reddit.com", "www.reddit.com", "old.reddit.com"]) assert.equal(colors.siteProfile(host), "reddit");
+for (const host of ["notreddit.com", "reddit.com.example.org", "idmsa.apple.com.example.org"]) assert.equal(colors.siteProfile(host), "");

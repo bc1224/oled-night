@@ -247,7 +247,11 @@
 
   // Sites with a small hand-tuned profile on top of the generic recoloring.
   function siteProfile(hostname) {
-    return /^mail\.google\.com$/i.test(String(hostname || "")) ? "gmail" : "";
+    const host = String(hostname || "").toLowerCase();
+    if (host === "mail.google.com") return "gmail";
+    if (/^(idmsa|appleid|appstoreconnect)\.apple\.com$/.test(host)) return "apple-auth";
+    if (/(^|\.)reddit\.com$/.test(host)) return "reddit";
+    return "";
   }
 
   scope.OledNightColors = { siteProfile, parseColor, luminance, chroma, textTier, mapIconPaint, mapBackground, mapForeground, mapBorder, mapGradient, mapShadow, gradientBackdrop, isProtectedMediaTag, usesNativeSafeMode };

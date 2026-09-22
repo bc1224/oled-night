@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "0.6.5";
+  const VERSION = "0.6.6";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -501,6 +501,33 @@
       html[data-oled-night-root][data-oled-night-dim]:not([data-oled-night-invert]) :is(img, video) { filter: brightness(0.78) !important; }
       html[data-oled-night-invert] { filter: invert(1) hue-rotate(180deg) !important; background: #fff !important; }
       html[data-oled-night-root]:not([data-oled-night-invert]) img[${LOGO}] { filter: invert(1) hue-rotate(180deg) !important; }
+      /* Apple's auth widget paints autofill with an inset shadow and explicit
+         text-fill, independently of color. Cover UA autofill/preview paint in
+         every input state; keep a separate focus outline visible. */
+      ${root}[data-oled-night-site="apple-auth"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) .form-textbox :is(input.form-textbox-input, textarea.form-textarea) {
+        background-color: var(--oled-night-page, #000) !important;
+        color: hsl(0 0% var(--oln-light, 88%)) !important;
+        -webkit-text-fill-color: hsl(0 0% var(--oln-light, 88%)) !important;
+        caret-color: hsl(0 0% var(--oln-light, 88%)) !important;
+        box-shadow: inset 0 0 0 1000px var(--oled-night-page, #000) !important;
+      }
+      ${root}[data-oled-night-site="apple-auth"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) .form-textbox :is(input.form-textbox-input, textarea.form-textarea):focus-visible {
+        outline: 2px solid #66a3ff !important;
+        outline-offset: -2px !important;
+      }
+      /* RES adds a light toolbar even on native-dark Reddit. Do not recolor
+         unrelated white content or invert images elsewhere on the page. */
+      ${root}[data-oled-night-site="reddit"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) .res-floater-belowNavbar {
+        background-color: var(--oled-night-page, #000) !important;
+        color: hsl(0 0% var(--oln-light, 88%)) !important;
+        border: 1px solid #38383e !important;
+      }
+      ${root}[data-oled-night-site="reddit"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) .res-floater-belowNavbar :is(a, span, button) {
+        color: hsl(0 0% var(--oln-light, 88%)) !important;
+      }
+      ${root}[data-oled-night-site="reddit"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) .res-floater-belowNavbar #RESAccountSwitcherIcon {
+        filter: invert(1) !important;
+      }
       /* Gmail: on black, unread (tr.zE) and read (tr.yO) rows only differ by
          font weight. Mark unread with an accent bar and full-brightness text,
          and step read rows down to the muted text level. */
@@ -575,7 +602,7 @@
     const root = document.documentElement;
     root.setAttribute("data-oled-night-root", "");
     root.setAttribute("data-oled-night-version", VERSION);
-    const profile = colorsApi().siteProfile(hostname());
+    const profile = colorsApi().siteProfile(location.hostname) || colorsApi().siteProfile(hostname());
     if (profile) root.setAttribute("data-oled-night-site", profile);
     applyTuning();
     // Canvas-drawn apps (Sheets, Figma) can't be recolored element by element:
