@@ -13,7 +13,8 @@ setTimeout(async () => {
     check('options renders saved rule', !!document.querySelector('[data-host="example.test"] select'));
   } else {
     check('popup version rendered', $('version').textContent === 'v'+browser.runtime.getManifest().version);
-    check('popup site modes render', $('siteRule').options.length === 6);
+    check('popup site modes render', $('siteRule').options.length === 4);
+    check('popup hides Chrome theme link in Firefox', $('theme').hidden);
     $('globalEnabled').checked = false; $('globalEnabled').dispatchEvent(new Event('change'));
     await new Promise(r => setTimeout(r,300));
     check('popup persists switch', (await browser.storage.sync.get('globalEnabled')).globalEnabled === false);

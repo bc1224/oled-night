@@ -6,7 +6,9 @@
 - Re-read original colors by switching off only the overrides being checked, instead of whole subtrees; pseudo-element and page-background checks use their own narrow switches. Subtree switches remain where inherited text colors require them.
 - Recheck only elements whose hover/focus state changed right away; other ancestors are rechecked once interaction pauses, so `:has()` and similar rules still apply.
 - Page polarity checks no longer switch off the forced dark color scheme unless the page background depends on it (for example `light-dark()`).
-- Add Chrome regression coverage for scoped rechecks, theme classes with page transitions, `:has()` after typing and color-scheme-dependent pages. No new permissions or theme changes.
+- Simpler, accurate popup: one status line says what the page is actually doing, and why when it's off (site switch, All sites, schedule, system light mode, Figma). Tabs opened before an update get a Reload button instead of "Not active". Pages where the browser blocks extensions say so.
+- Brightness and contrast appear only when they affect the page. On already-dark sites the popup explains they need full recolor and offers it. The Mode menu no longer repeats On/Off. Reset appears only when a site has its own settings. The Chrome theme link opens the store listing and is hidden in Firefox.
+- Add Chrome regression coverage for scoped rechecks, theme classes with page transitions, `:has()` after typing, color-scheme-dependent pages and every popup control and status. No new permissions or theme changes.
 
 ## 0.6.12
 

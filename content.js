@@ -1039,7 +1039,8 @@
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message?.type === "oled-night-status") {
       if (!isTopFrame) return;
-      sendResponse({ active, darkPage, mode: active ? modeFor() : "off", version: VERSION });
+      const mode = active ? modeFor() : "off";
+      sendResponse({ active, darkPage, mode: mode !== "native" && active && currentSiteMode() === "invert" ? "invert" : mode, version: VERSION });
       return;
     }
     if (message?.type === "oled-night-report") {

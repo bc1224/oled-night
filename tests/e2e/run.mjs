@@ -398,11 +398,78 @@ try {
   await popup.eval("document.getElementById('resetSite').click()"); await sleep(400);
   saved=await ext.eval('chrome.storage.sync.get(null)');
   check('use defaults clears only current site overrides', !saved.siteTuning['127.0.0.1'] && !saved.siteRules['127.0.0.1'] && saved.brightness===95 && await page.eval("document.documentElement.style.getPropertyValue('--oln-light') === '95%'"));
+  // Every popup control, and a status line that matches what the page is actually doing.
+  const popupFor = async (file, tab = page, pop = popup) => {
+    await tab.go(site("127.0.0.1", file));
+    await ext.eval(`(async()=>{const [t]=await chrome.tabs.query({url:"${site("127.0.0.1", file)}"});await chrome.tabs.update(t.id,{active:true});})()`);
+    await pop.go(`chrome-extension://${extId}/popup.html`, 1200);
+  };
+  const ui = (pop = popup) => pop.eval("(() => { const $ = (id) => document.getElementById(id); return { status: $('status').textContent, controls: !$('siteControls').hidden, sliders: !$('siteControls').hidden && !$('siteTuning').hidden, recolor: !$('useRecolor').hidden, reload: !$('reloadTab').hidden, reset: !$('resetSite').hidden, site: $('siteEnabled').checked, mode: $('siteRule').value }; })()");
+  const click = async (id) => { await popup.eval(`document.getElementById('${id}').click()`); await sleep(500); };
+  const choose = async (id, value) => { await popup.eval(`(()=>{const e=document.getElementById('${id}');e.value='${value}';e.dispatchEvent(new Event('change'));})()`); await sleep(500); };
+  const rootHas = (name) => page.eval(`document.documentElement.hasAttribute('${name}')`);
+  await popupFor("light.html");
+  let state = await ui();
+  check("popup: recolored page reports recoloring with sliders", state.status === "On · recoloring this page" && state.sliders && !state.reset && state.mode === "auto", JSON.stringify(state));
+  await click("dimImages");
+  const dimmed = await rootHas("data-oled-night-dim");
+  state = await ui();
+  await click("dimImages");
+  check("popup: dim images toggles this site and offers reset", dimmed && !(await rootHas("data-oled-night-dim")) && state.reset, JSON.stringify(state));
+  await click("resetSite");
+  await choose("siteRule", "invert");
+  const inverted = await rootHas("data-oled-night-invert");
+  await popupFor("light.html");
+  state = await ui();
+  check("popup: invert mode applies and hides sliders", inverted && state.status === "On · page inverted" && !state.sliders && !state.recolor && state.mode === "invert", JSON.stringify(state));
+  await choose("siteRule", "auto");
+  saved = await ext.eval("chrome.storage.sync.get(null)");
+  check("popup: automatic mode returns the site to the default", !(await rootHas("data-oled-night-invert")) && !("127.0.0.1" in (saved.siteRules || {})));
+  await popupFor("dark.html");
+  state = await ui();
+  const darkState = state;
+  await click("useRecolor");
+  state = await ui();
+  saved = await ext.eval("chrome.storage.sync.get(null)");
+  check("popup: already-dark page explains sliders and offers full recolor", /already dark/.test(darkState.status) && !darkState.sliders && darkState.recolor, JSON.stringify(darkState));
+  check("popup: full recolor button recolors and shows sliders", saved.siteRules["127.0.0.1"] === "recolor" && state.status === "On · recoloring this page" && state.sliders, JSON.stringify(state));
+  await click("resetSite");
+  await popupFor("light.html");
+  await click("globalEnabled");
+  state = await ui();
+  check("popup: all-sites off is explained on the site", !(await rootHas("data-oled-night-root")) && state.status === "Off · All sites is off below" && !state.site && !state.controls, JSON.stringify(state));
+  await click("siteEnabled");
+  check("popup: site switch turns this site on while the default is off", await rootHas("data-oled-night-root"));
+  await click("resetSite");
+  await click("globalEnabled");
+  if (!(await page.eval("matchMedia('(prefers-color-scheme: dark)').matches"))) {
+    await popup.eval("document.querySelector('input[name=appearance][value=auto]').click()"); await sleep(600);
+    state = await ui();
+    check("popup: follow system explains light-mode off", !(await rootHas("data-oled-night-root")) && state.status === "Off while your system is in light mode", JSON.stringify(state));
+    await popup.eval("document.querySelector('input[name=appearance][value=oled]').click()"); await sleep(600);
+  }
   await send('Target.activateTarget',{targetId:popup.targetId});
   const capture=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true},popup.sessionId);
   writeFileSync(join(EXT,'dist','popup-audit.png'),Buffer.from(capture.result.data,'base64'));
 
   check("no uncaught errors in extension pages or test pages", exceptions.length === 0, exceptions.slice(0, 3).join(" | "));
+
+  // After an extension update, already-open tabs lose their connection: say so and offer a reload.
+  await page.go(site("127.0.0.1", "light.html"));
+  await send("Extensions.loadUnpacked", { path: EXT });
+  await sleep(1000);
+  const ext2 = await openTab(`chrome-extension://${extId}/options.html`, true);
+  await ext2.eval(`(async()=>{const [t]=await chrome.tabs.query({url:"${site("127.0.0.1", "light.html")}"});await chrome.tabs.update(t.id,{active:true});})()`);
+  const popup2 = await openTab(`chrome-extension://${extId}/popup.html`, true);
+  await sleep(1200);
+  state = await ui(popup2);
+  check("popup: disconnected tab asks for a reload", state.status === "Reload this tab to apply OLED Night" && state.reload && !state.controls, JSON.stringify(state));
+  await popup2.eval("document.getElementById('reloadTab').click()").catch(() => {});
+  await sleep(2000);
+  const popup3 = await openTab(`chrome-extension://${extId}/popup.html`, true);
+  await sleep(1200);
+  state = await ui(popup3);
+  check("popup: reload reconnects the tab", state.status === "On · recoloring this page" && !state.reload, JSON.stringify(state));
 } catch (error) {
   failures++;
   console.log(`FAIL  suite aborted: ${error.message}`);

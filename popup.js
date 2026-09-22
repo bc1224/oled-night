@@ -4,54 +4,106 @@
   const Settings = globalThis.OledNightSettings;
   const $ = (id) => document.getElementById(id);
   const hasChrome = () => !!chrome?.storage;
+  const isFirefox = (() => { try { return chrome.runtime.getURL("").startsWith("moz-extension://"); } catch { return false; } })();
   let host = "";
   let tabId = null;
   let settings = Settings.normalize();
   let persistTimer = null;
+  // What the tab reported: null while unknown, { active, mode } when it answered,
+  // "reload" when it can run scripts but OLED Night isn't connected (tab opened
+  // before an update), "blocked" when the browser forbids extensions there.
+  let page = null;
 
-  const MODE_LABELS = { native: "Figma native colors protected", oled: "recoloring this page", soft: "recoloring this page (soft)", crush: "page was already dark: deepening its blacks", none: "page is already dark: left as is" };
+  const ACTIVE = {
+    oled: "On · recoloring this page",
+    soft: "On · recoloring this page (Soft Dark)",
+    crush: "On · page was already dark, so only its greys turn black",
+    none: "On · page is already dark and left as is",
+    invert: "On · page inverted",
+    native: "Figma keeps its own colors"
+  };
+  const HOLD_COLORS = {
+    crush: "Brightness and contrast only apply in full recolor.",
+    none: "Brightness and contrast only apply in full recolor.",
+    invert: "Inverted pages don't use brightness or contrast."
+  };
 
-  let pageStatus = null;
+  const siteMode = () => Settings.siteMode(settings, host);
+  const figma = () => Settings.prefersNativeColors(host);
+  const followsDefault = () => settings.globalEnabled && !figma();
+  const siteOn = () => { const mode = siteMode(); return mode !== "off" && (mode !== "global" || followsDefault()); };
+  function prefersDark() {
+    try { return matchMedia("(prefers-color-scheme: dark)").matches; } catch { return true; }
+  }
+
+  // Why settings keep this site off right now, or null when they turn it on.
+  function offReason() {
+    const mode = siteMode();
+    if (mode === "off") return "Off on this site";
+    if (mode === "global" && figma()) return "Off by default on Figma to keep design colors exact";
+    if (mode === "global" && !settings.globalEnabled) return "Off · All sites is off below";
+    if (!Settings.inSchedule(settings.schedule)) return `Off until ${settings.schedule.start} (schedule in Settings)`;
+    if (settings.appearance === "auto" && !prefersDark()) return "Off while your system is in light mode";
+    return null;
+  }
+
+  function statusText() {
+    if (!host) return "Extensions can't change this page";
+    if (page === "blocked") return "Your browser doesn't let extensions change this page";
+    const off = offReason();
+    if (off) return off;
+    if (page === "reload") return "Reload this tab to apply OLED Night";
+    if (page?.active) return ACTIVE[page.mode] || "On";
+    return page ? "Waiting for the page to load" : "";
+  }
+
+  // The mode the page is (or will be) drawn in: the page's report when it has
+  // one, otherwise what the site setting forces.
+  function effectiveMode() {
+    if (page?.active) return page.mode;
+    return { recolor: "oled", deepen: "crush", invert: "invert" }[siteMode()] || null;
+  }
+
   function render() {
     const tuning = Settings.tuningFor(settings, host);
+    const mode = siteMode();
     $("globalEnabled").checked = settings.globalEnabled;
-    $("siteEnabled").checked = Settings.siteMode(settings, host) !== "off" && (Settings.siteMode(settings, host) !== "global" || (settings.globalEnabled && !Settings.prefersNativeColors(host)));
-    $("siteRule").value = Settings.siteMode(settings, host);
+    $("globalHelp").textContent = `${settings.globalEnabled ? "On" : "Off"} for every site you haven't set yourself`;
+    $("siteEnabled").checked = siteOn();
+    $("siteEnabled").disabled = !host || page === "blocked";
+    $("siteRule").value = ["recolor", "deepen", "invert"].includes(mode) ? mode : "auto";
     const radio = document.querySelector(`input[name="appearance"][value="${settings.appearance}"]`);
     if (radio) radio.checked = true;
     for (const key of ["brightness", "contrast"]) {
       $(key).value = tuning[key]; $(`${key}Value`).value = `${tuning[key]}%`;
-      const globalId = 'global' + key[0].toUpperCase() + key.slice(1);
+      const globalId = "global" + key[0].toUpperCase() + key.slice(1);
       $(globalId).value = settings[key]; $(`${globalId}Value`).value = `${settings[key]}%`;
-      $(key).disabled = !host || Settings.prefersNativeColors(host);
     }
     $("dimImages").checked = !!tuning.dimImages;
-    for (const id of ["siteEnabled", "siteRule", "dimImages", "resetSite"]) $(id).disabled = !host || (Settings.prefersNativeColors(host) && ["dimImages", "siteRule"].includes(id));
-    const preserved = pageStatus?.active && ["crush", "none"].includes(pageStatus.mode);
-    $("tuningHelp").textContent = Settings.prefersNativeColors(host) ? "Figma keeps native colors even when on. Recoloring, inversion and image dimming are bypassed to protect design accuracy." : preserved
-      ? "This mode keeps the site's colors. Choose Full recolor under Advanced site mode to adjust text and panels."
-      : tuning.custom ? "Custom values for this site. Other sites keep their defaults." : "Using defaults. Moving a slider changes only this site.";
+    $("status").textContent = statusText();
+    $("reloadTab").hidden = statusText() !== "Reload this tab to apply OLED Night";
+    // Site controls only when they can affect this page.
+    $("siteControls").hidden = !host || page === "blocked" || page === "reload" || !siteOn() || figma();
+    const holds = HOLD_COLORS[effectiveMode()];
+    $("siteTuning").hidden = !!holds;
+    $("useRecolor").hidden = !holds || effectiveMode() === "invert";
+    $("tuningHelp").textContent = holds || (tuning.custom ? "This site has its own values." : "Moving a slider changes only this site.");
+    $("resetSite").hidden = !host || !(Object.hasOwn(settings.siteRules, host) || Object.hasOwn(settings.siteTuning, host));
   }
 
-  // The dot shows whether this tab is actually darkened right now, not just the global switch.
   async function refreshStatus() {
-    const dot = document.querySelector(".status-dot");
-    let status = null;
-    if (tabId && chrome?.tabs) {
-      try { status = await chrome.tabs.sendMessage(tabId, { type: "oled-night-status" }); } catch {}
+    if (tabId && host && chrome?.tabs) {
+      let reply = null;
+      try { reply = await chrome.tabs.sendMessage(tabId, { type: "oled-night-status" }); } catch {}
+      page = reply || await probe();
     }
-    pageStatus = status;
     render();
-    const on = !!status?.active;
-    dot.style.opacity = on ? "1" : ".3";
-    const siteOff = Settings.siteMode(settings, host) === "off";
-    const text = on ? `Active: ${MODE_LABELS[status.mode] || "on"}`
-      : siteOff ? "Off for this site: use the site switch above"
-      : Settings.prefersNativeColors(host) && Settings.siteMode(settings, host) === "global" ? "Native colors: Figma is off by default to protect design colors and performance."
-      : !settings.globalEnabled ? "Default is off: turn on this site or change All sites"
-      : (tabId ? "Not active on this page" : "");
-    dot.title = text;
-    $("status").textContent = text;
+  }
+
+  // No answer: the tab either predates this copy of OLED Night (a reload
+  // connects it) or is a page where the browser blocks extensions.
+  async function probe() {
+    try { await chrome.scripting.executeScript({ target: { tabId }, func: () => true }); return "reload"; } catch { return "blocked"; }
   }
 
   function write(patch) {
@@ -65,6 +117,12 @@
     flushPreview();
     render();
     setTimeout(refreshStatus, 250);
+  }
+
+  function setSiteRule(rule) {
+    const siteRules = { ...settings.siteRules };
+    if (rule === null) delete siteRules[host]; else siteRules[host] = rule;
+    persist({ siteRules });
   }
 
   // Every site slider writes only that site's override. Global controls never erase it.
@@ -104,6 +162,8 @@
 
   async function init() {
     try { $("version").textContent = `v${chrome.runtime.getManifest().version}`; } catch {}
+    // The companion theme exists for Chrome only.
+    $("theme").hidden = isFirefox;
     if (!hasChrome() || !chrome?.tabs) {
       host = "example.com";
       $("hostname").textContent = host;
@@ -114,9 +174,8 @@
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     tabId = tab?.id ?? null;
     try { const url = new URL(tab.url); host = /^https?:$/.test(url.protocol) ? url.hostname : ""; } catch { host = ""; }
-    $("hostname").textContent = host || "Unavailable on this page";
+    $("hostname").textContent = host || "This page";
     $("hostname").title = host;
-    $("siteRule").disabled = !host;
     render();
     refreshStatus();
     try {
@@ -127,20 +186,21 @@
   }
 
   $("globalEnabled").addEventListener("change", event => persist({ globalEnabled: event.target.checked }));
+  // Turning a site on returns it to the default when the default is on, so later
+  // default changes (appearance, schedule) keep applying to it.
   $("siteEnabled").addEventListener("change", event => {
-    if (host) persist({ siteRules: { ...settings.siteRules, [host]: event.target.checked ? "on" : "off" } });
+    if (host) setSiteRule(event.target.checked ? (followsDefault() ? null : "on") : "off");
   });
+  $("siteRule").addEventListener("change", (event) => {
+    if (host) setSiteRule(event.target.value === "auto" ? (followsDefault() ? null : "on") : event.target.value);
+  });
+  $("useRecolor").addEventListener("click", () => { if (host) setSiteRule("recolor"); });
+  $("reloadTab").addEventListener("click", () => { if (tabId) chrome.tabs.reload(tabId); window.close(); });
   $("resetSite").addEventListener("click", () => {
     if (!host) return;
     const siteRules = { ...settings.siteRules }, siteTuning = { ...settings.siteTuning };
     delete siteRules[host]; delete siteTuning[host];
     persist({ siteRules, siteTuning });
-  });
-  $("siteRule").addEventListener("change", (event) => {
-    if (!host) return;
-    const siteRules = { ...settings.siteRules };
-    if (event.target.value === "global") delete siteRules[host]; else siteRules[host] = event.target.value;
-    persist({ siteRules });
   });
   document.querySelectorAll('input[name="appearance"]').forEach((input) => input.addEventListener("change", () => persist({ appearance: input.value })));
   for (const key of ["brightness", "contrast"]) {
@@ -159,7 +219,10 @@
     if (!tabId || !chrome?.tabs) return;
     let report = null;
     try { report = await chrome.tabs.sendMessage(tabId, { type: "oled-night-report" }); } catch {}
-    if (!report) { $("status").textContent = "Your browser restricts extensions on this page (such as browser settings and extension stores), so there is nothing to report."; return; }
+    if (!report) {
+      $("status").textContent = page === "reload" ? "Reload this tab first, then report." : "Your browser doesn't let extensions read this page, so there is nothing to report.";
+      return;
+    }
     saveReport(report);
     $("status").textContent = "Report saved to Downloads. Send that file along with a screenshot.";
   });
