@@ -2,7 +2,7 @@
 // at runtime. That zip is what gets uploaded to the Chrome Web Store, or shared
 // with people who install it with "Load unpacked".
 //   node tools/package.mjs
-import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { crc32, deflateRawSync } from "node:zlib";
@@ -72,3 +72,7 @@ writeZip(root, RUNTIME, join(root, "dist", `oled-night-${manifest.version}.zip`)
 const themeDir = join(root, "theme");
 const theme = JSON.parse(readFileSync(join(themeDir, "manifest.json"), "utf8"));
 writeZip(themeDir, ["manifest.json", "README.md", ...Object.values(theme.icons)], join(root, "dist", `oled-night-theme-${theme.version}.zip`));
+
+// Stable asset names keep the website and README latest-release links working.
+copyFileSync(join(root, "dist", `oled-night-${manifest.version}.zip`), join(root, "dist", "oled-night.zip"));
+copyFileSync(join(root, "dist", `oled-night-theme-${theme.version}.zip`), join(root, "dist", "oled-night-theme.zip"));

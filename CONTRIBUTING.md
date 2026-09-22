@@ -22,3 +22,6 @@ No build step and no dependencies are needed beyond Node 20+ and Chrome.
 4. `node tools/package.mjs` builds the release zip.
 
 Please keep changes focused, and explain what site or behavior they fix.
+
+## Release downloads
+Run `node tools/package.mjs` and attach both versioned ZIPs plus `dist/oled-night.zip` and `dist/oled-night-theme.zip` to each GitHub release. Mark the release as latest when ready. The website and README use GitHub's `/releases/latest/download/` links, so they automatically follow that release without a website edit. Keep the stable asset names on every release.
