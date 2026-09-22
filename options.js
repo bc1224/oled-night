@@ -1,6 +1,7 @@
 (function () {
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
+  const isFirefox = chrome.runtime.getURL("").startsWith("moz-extension://");
   const Settings = globalThis.OledNightSettings;
   const $ = (id) => document.getElementById(id);
   const THEME_URL = "https://github.com/bc1224/oled-night/blob/main/theme/README.md";
@@ -97,11 +98,11 @@
   for (const id of ["scheduleEnabled", "scheduleStart", "scheduleEnd"]) $(id).addEventListener("change", saveSchedule);
   $("openClosedShadows").addEventListener("change", (event) => save({ openClosedShadows: event.target.checked }));
   $("shortcuts").addEventListener("click", () => {
-    if (globalThis.browser) {
+    if (isFirefox) {
       $("shortcutHelp").hidden = false;
     } else chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
   });
-  if (globalThis.browser) $("getTheme").closest("section").hidden = true;
+  if (isFirefox) $("getTheme").closest("section").hidden = true;
   $("getTheme").addEventListener("click", () => chrome.tabs.create({ url: THEME_URL }));
 
   $("export").addEventListener("click", () => {

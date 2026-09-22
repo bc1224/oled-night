@@ -99,6 +99,8 @@ try {
   const resetSettings = () => ext.eval("chrome.storage.sync.clear().then(() => true)");
   check("options page renders", (await ext.eval("document.querySelectorAll('#newMode option').length")) === 5);
 
+  check("Chrome options retain theme controls", await ext.eval("!document.getElementById('getTheme').closest('section').hidden && document.getElementById('shortcutHelp').hidden"));
+
   const page = await openTab();
   const css = (id, prop, pseudo) => page.eval(`getComputedStyle(document.getElementById(${JSON.stringify(id)})${pseudo ? `, ${JSON.stringify(pseudo)}` : ""})[${JSON.stringify(prop)}]`);
 
