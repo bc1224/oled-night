@@ -325,8 +325,42 @@ try {
   check('new sections recolored in the next pre-paint batch',newPanel==='rgb(0, 0, 0)',newPanel);
 
   await page.go(site("127.0.0.1", "efficiency.html"));
-  const efficiency = await page.eval("(async () => {\n const wait = () => new Promise(r=>setTimeout(r,150));\n const p=document.getElementById('parent'), c=document.getElementById('child'), v=document.getElementById('variable');\n const dark = node => { const c=getComputedStyle(node); return c.backgroundColor.match(/[0-9.]+/g).slice(0,3).every(n=>+n<30) && +c.color.match(/[0-9.]+/)[0]>180; };\n const results={}; let batches=0;\n const watch=new MutationObserver(records=>{batches+=records.filter(r=>r.attributeName==='data-oled-night-measure' && r.oldValue===null).length});\n watch.observe(p,{attributes:true,subtree:true,attributeOldValue:true,attributeFilter:['data-oled-night-measure']});\n p.style.transform='translateX(1px)'; await wait(); batches=0;\n for(let i=0;i<20;i++)p.style.transform='translateX('+i+'px)';\n await wait(); results.transformSkips=batches===0;\n batches=0; c.classList.add('changed');p.classList.add('changed');c.dispatchEvent(new Event('focusin',{bubbles:true,composed:true}));\n await wait();results.coalesced=batches===1;\n p.style.setProperty('--surface','#eee'); await wait();results.variableDark=dark(v);\n p.setAttribute('style','--surface:#ddd;background:white');await wait();results.resetInheritance=dark(v);\n const sheet=document.createElement('style');sheet.textContent='#late{background:#eee!important;color:#222}';document.head.append(sheet);await wait();results.lateSheet=dark(document.getElementById('late'));\n sheet.firstChild.data='#late{background:rgb(230,230,230)!important;color:#111}';await wait();results.editedSheet=dark(document.getElementById('late'));\n batches=0;await wait();results.noFeedback=batches===0;watch.disconnect();return results;\n})()");
+  const efficiency = await page.eval("(async () => {\n const wait = () => new Promise(r=>setTimeout(r,150));\n const p=document.getElementById('parent'), c=document.getElementById('child'), v=document.getElementById('variable');\n const dark = node => { const c=getComputedStyle(node); return c.backgroundColor.match(/[0-9.]+/g).slice(0,3).every(n=>+n<30) && +c.color.match(/[0-9.]+/)[0]>180; };\n const results={}; let batches=0;\n const watch=new MutationObserver(records=>{batches+=records.some(r=>r.oldValue===null)?1:0});\n watch.observe(p,{attributes:true,subtree:true,attributeOldValue:true,attributeFilter:['data-oled-night-measure','data-oled-night-measure-self']});\n p.style.transform='translateX(1px)'; await wait(); batches=0;\n for(let i=0;i<20;i++)p.style.transform='translateX('+i+'px)';\n await wait(); results.transformSkips=batches===0;\n batches=0; c.classList.add('changed');p.classList.add('changed');c.dispatchEvent(new Event('focusin',{bubbles:true,composed:true}));\n await wait();results.coalesced=batches===1;\n p.style.setProperty('--surface','#eee'); await wait();results.variableDark=dark(v);\n p.setAttribute('style','--surface:#ddd;background:white');await wait();results.resetInheritance=dark(v);\n const sheet=document.createElement('style');sheet.textContent='#late{background:#eee!important;color:#222}';document.head.append(sheet);await wait();results.lateSheet=dark(document.getElementById('late'));\n sheet.firstChild.data='#late{background:rgb(230,230,230)!important;color:#111}';await wait();results.editedSheet=dark(document.getElementById('late'));\n batches=0;await wait();results.noFeedback=batches===0;watch.disconnect();return results;\n})()");
   for (const [name,ok] of Object.entries(efficiency)) check('efficiency: '+name,ok,JSON.stringify(efficiency));
+
+  // Input-modality classes on <html> (Discord's mouse-mode) must not switch overrides off for the whole
+  // document, yet real theme classes must still land on their final colors despite page transitions.
+  await page.go(site("127.0.0.1", "scope-dark.html"));
+  const scopeDark = await page.eval(`(async () => { const wait = (ms) => new Promise(r => setTimeout(r, ms)); const h = document.documentElement; let rootSwitches = 0;
+    const watch = new MutationObserver(r => { rootSwitches += r.filter(x => x.oldValue === null).length; }); watch.observe(h, { attributes: true, attributeOldValue: true, attributeFilter: ['data-oled-night-measure', 'data-oled-night-noanim'] });
+    for (let i = 0; i < 4; i++) { h.classList.toggle('mouse-mode'); await wait(60); } watch.disconnect();
+    h.classList.add('accent'); await wait(700);
+    return { rootSwitches, panel: getComputedStyle(document.getElementById('panel')).backgroundColor }; })()`);
+  check("modality class on html: no whole-document switch", scopeDark.rootSwitches === 0, JSON.stringify(scopeDark));
+  check("theme class with page transition: final color applied", scopeDark.panel === "rgb(0, 0, 0)", JSON.stringify(scopeDark));
+  // Chrome restyles whole subtrees for attributes named in pseudo-element rules; keep the element switch out of them.
+  const pseudoRules = await page.eval("document.getElementById('oled-night-sheet').textContent.split('}').filter(rule => rule.includes('::') && rule.includes('data-oled-night-measure-self')).length");
+  check("element switch never named in pseudo-element rules", pseudoRules === 0, `${pseudoRules} rules`);
+  // A root background that follows color-scheme keeps its original polarity (no flip-flop or re-enable).
+  await page.go(site("127.0.0.1", "scope-scheme.html"));
+  const scheme = await page.eval(`(async () => { const wait = (ms) => new Promise(r => setTimeout(r, ms)); const h = document.documentElement; let reenabled = 0;
+    const watch = new MutationObserver(r => { reenabled += r.filter(x => x.oldValue !== null).length; }); watch.observe(h, { attributes: true, attributeOldValue: true, attributeFilter: ['data-oled-night-root'] });
+    for (let i = 0; i < 4; i++) { h.classList.toggle('mouse-mode'); await wait(80); } watch.disconnect();
+    return { reenabled, card: getComputedStyle(document.getElementById('card')).backgroundColor, mark: document.getElementById('card').getAttribute('data-oled-night') }; })()`);
+  check("color-scheme-dependent page keeps polarity across html class changes", scheme.reenabled === 0 && /bg/.test(scheme.mark || "") && scheme.card !== "rgb(241, 243, 244)", JSON.stringify(scheme));
+  // Moving between rows or typing rechecks only elements whose state changed right away; unchanged
+  // ancestors are rechecked once interaction pauses (e.g. a :has() rule on an outer wrapper).
+  await page.go(site("127.0.0.1", "scope-light.html"));
+  const scopeLight = await page.eval(`(async () => { const wait = (ms) => new Promise(r => setTimeout(r, ms)); const $ = (id) => document.getElementById(id); let outerSwitches = 0;
+    const watch = new MutationObserver(r => { outerSwitches += r.filter(x => x.oldValue === null).length; }); const names = ['data-oled-night-measure', 'data-oled-night-measure-self', 'data-oled-night-noanim', 'data-oled-night-noanim-self'];
+    for (const id of ['main', 'sec']) watch.observe($(id), { attributes: true, attributeOldValue: true, attributeFilter: names });
+    $('s1').dispatchEvent(new PointerEvent('pointerout', { bubbles: true, relatedTarget: $('s2') })); $('s2').dispatchEvent(new PointerEvent('pointerover', { bubbles: true, relatedTarget: $('s1') }));
+    await wait(100); const moveSwitches = outerSwitches; watch.disconnect();
+    $('field').focus(); $('field').value = 'typed'; $('field').dispatchEvent(new InputEvent('input', { bubbles: true })); await wait(800);
+    const bg = getComputedStyle($('outer')).backgroundColor.match(/[0-9.]+/g).slice(0, 3).map(Number);
+    return { moveSwitches, outer: bg, outerDark: bg.every(n => n < 40) }; })()`);
+  check("pointer move between rows leaves unchanged ancestors alone", scopeLight.moveSwitches === 0, JSON.stringify(scopeLight));
+  check("typing: ancestor :has() rule rechecked after pause", scopeLight.outerDark, JSON.stringify(scopeLight));
 
   // Performance under constant page churn and slider drags.
   await page.go(site("127.0.0.1", "rows.html"), 2500);
@@ -336,7 +370,8 @@ try {
       const p = document.createElement('p'); p.textContent = 'token ' + frames; document.getElementById('list').prepend(p);
       if (now < stop) setTimeout(tick, 16); else done(); })(); }); return { frames, worst: Math.round(worst) }; })()`);
   check("stays smooth under constant page changes", churn.frames > 90 && churn.worst < 150, JSON.stringify(churn));
-  await page.eval("window.tuningPasses=0;window.tuningWatch=new MutationObserver(r=>{window.tuningPasses+=r.length});window.tuningWatch.observe(document.documentElement,{attributes:true,attributeFilter:['data-oled-night-measure']})");
+  await sleep(500);
+  await page.eval("window.tuningPasses=0;window.tuningWatch=new MutationObserver(r=>{window.tuningPasses+=r.length});window.tuningWatch.observe(document.documentElement,{attributes:true,subtree:true,attributeFilter:['data-oled-night-measure','data-oled-night-measure-self']})");
   const slider = await ext.eval(`(async () => { const [t] = await chrome.tabs.query({ url: "${site("127.0.0.1", "rows.html")}" }); const start = performance.now();
     for (const b of [60, 70, 80, 90]) await chrome.tabs.sendMessage(t.id, { type: "oled-night-preview", patch: { brightness: b } }); return Math.round((performance.now() - start) / 4); })()`);
   await sleep(100);

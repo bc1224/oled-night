@@ -51,3 +51,49 @@ The class-change case is essentially unchanged within sample noise. The transfor
 Set BENCH_WORKLOAD=transforms to reproduce the animation case (rows only); default classes retains the original workload. Use EXT_PATH for an unpacked release baseline. Raw paired results are tests/benchmarks/2026-09-22/oled-0.6.10-paired.json, oled-0.6.11-classes.json, and oled-{0.6.10,0.6.11}-transforms.json.
 
 Regression tests additionally verify zero recoloring passes for transform-only changes, one batch for overlapping interaction/mutation work, zero document rescans for tuning, and readable inherited/late-stylesheet colors.
+
+## 0.6.13: Discord interaction lag (live) and the global fix
+
+**Verdict:** 0.6.12 did cause noticeable lag on Discord. It was not idle CPU: it was 50–150 ms main-thread stalls on ordinary input. The cause was generic, not Discord-specific, so the fix applies to every site.
+
+### What 0.6.12 did
+
+Every hover, focus, key press and `<html>` class change (Discord toggles `mouse-mode` on each keyboard/mouse switch) made OLED Night re-read colors. To read original colors it switched its overrides off with **subtree** attributes (`data-oled-night-measure`, `data-oled-night-noanim`) on large ancestors such as `<html>`, `<body>` and `#app-mount`. Each switch forces the browser to restyle every descendant twice. On Discord, the probes below measured one switch at 47–87 ms, while reading the colors themselves took about 7 ms and Discord's own class flip took 6.7 ms.
+
+Live Discord, same page load, OLED Night's per-site switch as the only difference. Median main-thread time per trigger:
+
+| Trigger | OFF | 0.6.12 (two runs) | 0.6.13 |
+|---|---:|---:|---:|
+| `<html>` class flip (`mouse-mode`) | 0.0 ms | 152 / 112 ms | 30 ms |
+| `keyup` in the message box | 0.0 ms | 72 / 48 ms | 0.4 ms |
+| `pointerover` on a message | 0.0 ms | 63 / 51 ms | 2.8 ms |
+| `focusin` on the message box | 0.0 ms | 66 / 48 ms | 2.0 ms |
+| Pointer moving between messages | — | — | 1.4 ms |
+
+Real keyboard/mouse switching (16 switches, 17 `<html>` class changes): OFF 0 long frames; 0.6.12 23–27 long frames totalling 3.7–4.2 s with key events up to 416 ms; 0.6.13 8 long frames totalling 0.63 s. With 0.6.12, context menus produced 26 long frames (OFF: 1) and a typing burst 12 (OFF: 2). Discord renderer CPU with 0.6.12 was 4–7× OFF during these interactions and about the same at idle. Idle and wheel scrolling had no long frames in any state.
+
+### What changed
+
+- Original colors are re-read by switching off only the marked elements being checked. Subtree switches remain where inherited overrides (text, fill, stroke) would restyle the subtree anyway, and for large rescans.
+- Chrome restyles whole subtrees for attributes named in `::placeholder`, `::before` or `::after` rules. Those rules use a separate switch, set only on elements with pseudo-element overrides.
+- Page-polarity checks switch off only the root background, not the inherited `color-scheme: dark`. That dropped the check from 135 ms to 8 ms on Discord. Pages whose background depends on `color-scheme` (for example `light-dark()`) keep the full switch.
+- Moving between elements rechecks only elements below the common ancestor, whose `:hover`/`:focus-within` state actually changed. Typing rechecks up to the field's control. Remaining ancestors are rechecked after a 400 ms pause, so `:has()` rules still apply. A page's own running color transitions are finished before reading, as the subtree switch previously did.
+- `<html>`/`<body>` class changes still recheck the whole document so that real theme switches keep working. That is the remaining ~30 ms on Discord.
+
+### Generic pages (synthetic)
+
+`tests/e2e/interaction-benchmark.mjs` builds a 3,305-element dark page (deepen mode) and light page (full recolor) and compares no extension, a baseline and a candidate in isolated headless Chrome 153 profiles. It checks cost, and whether every element's final colors match the baseline after an accent-theme class, a descendant-selector class, a menu opening and highlighting, editor focus and an inherited-color theme. All snapshots were identical to 0.6.12. Median ms, 0.6.12 → 0.6.13 (`interaction-generic.json`, keys `v0612`/`proto`):
+
+| Trigger | Dark page | Light page |
+|---|---:|---:|
+| `keyup` in editor | 10.2 → 0.2 | 39.1 → 0.3 |
+| Pointer moving between rows | 9.6 → 0.4 | 36.3 → 1.3 |
+| Focus moving between buttons | 9.6 → 0.2 | 35.2 → 1.0 |
+| Pointer/focus entering with no `relatedTarget` | 9.7–10.2 → 0.2–0.3 | 35–40 → 35 (unchanged) |
+| `<html>` class full rescan (interleaved A/B, `interaction-html-class-ab.json`) | 29–35 → 33–37 | 96–97 → 97–101 |
+
+On light pages the synthetic full-rescan cost is unchanged (within noise). There the per-element reads dominate, not the restyle.
+
+### Method and limits
+
+Live figures come from the maintainer's everyday Chrome profile. Its other extensions were constant across ON/OFF. Dark Reader was installed but inactive on Discord. Bracket timing = time between a `requestAnimationFrame` callback registered before the trigger and one registered after OLED Night's queued work. Long frames come from the Long Animation Frames API, which does not attribute extension scripts, so attribution comes from the ON/OFF difference. Renderer CPU came from Windows process CPU time for Discord's renderer. A 240 Hz rAF recorder ran in all states. The 0.6.13 live run used a different channel and account (a ~15% larger DOM) because the tab's Discord account changed between runs. The test channels were small (6–14 messages). These are not whole-PC, energy or Dark Reader comparisons. Raw live data: `tests/benchmarks/2026-09-22/discord-live.json`.

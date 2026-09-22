@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.12";
+  const VERSION = "0.6.13";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -16,6 +16,23 @@
   // Set while we swap overrides in and out, so site CSS transitions on colors
   // never animate between our dark value and the original light one.
   const NOANIM = "data-oled-night-noanim";
+  // Element-only variants. Toggling the subtree forms on a large ancestor
+  // restyles every descendant, which is expensive on any large page.
+  const MEASURE_SELF = "data-oled-night-measure-self";
+  const NOANIM_SELF = "data-oled-night-noanim-self";
+  // Chrome restyles the whole subtree around any element whose attribute is
+  // named in a ::placeholder/::before/::after rule, so those rules use their own
+  // switch, set only on elements that carry pseudo-element overrides.
+  const MEASURE_PSEUDO = "data-oled-night-measure-pseudo";
+  const PSEUDO_KEYS = /(?:^|\s)(?:before-|after-|placeholder)/;
+  // Switches off only the page background on <html>/<body>. The inherited
+  // color-scheme stays, so a polarity check does not restyle the whole page.
+  const MEASURE_ROOT = "data-oled-night-measure-root";
+  // Overrides that descendants inherit, so switching them needs a subtree calm.
+  const INHERITED_KEYS = /(?:^|\s)(?:fg|ink|caret|fill|stroke|field)(?:\s|$)/;
+  // Above this many re-read overrides, subtree switches cost less than per-element ones.
+  const MANY_MARKED = 150;
+  const COLOR_TRANSITION = /^all$|color|background|border|shadow|fill|stroke/;
   const LOGO = "data-oled-night-logo";
   const LOGO_EDGE = "data-oled-night-logo-edge";
   // "Multiply"-style blends hide a photo's white background on a light page;
@@ -35,6 +52,9 @@
   let darkPage = false;
   let pageColor = { r: 255, g: 255, b: 255, a: 1 };
   let polarityDirty = false;
+  // The page's own background follows color-scheme (light-dark(), Canvas):
+  // polarity checks must also switch off our forced dark scheme.
+  let schemeSensitive = false;
   let domReady = document.readyState !== "loading";
   let settings = DEFAULTS;
   let revision = 0;
@@ -49,6 +69,10 @@
   let flushScheduled = false;
   let flushHandle = null;
   let flushTimer = false;
+  const settleSelf = new Set();
+  const settleTrees = new Set();
+  let settleTimer = null;
+  const SETTLE_MS = 400;
   const INTERACTION_EVENTS = ["pointerover", "pointerout", "pointerdown", "pointerup", "pointercancel", "focusin", "focusout", "input", "change", "keydown", "keyup"];
   const CONTROL = 'a, button, input, textarea, select, option, label, li, [role="option"], [role^="menuitem"], [role="button"], [role="combobox"], [contenteditable="true"], [tabindex]';
   // Open shadow roots (web components) we style and watch. Page stylesheets
@@ -319,11 +343,18 @@
     return keys.map(key => `${key}=${element.style.getPropertyValue(`--oln-${key}`)}`).join(";") === signature;
   }
 
-  function write(element, found) {
+  const signatureOf = (found) => Object.keys(found).map((key) => `${key}=${found[key]}`).join(";");
+
+  function unchanged(element, found) {
+    const signature = signatureOf(found);
+    return (applied.get(element) || "") === signature && overridesIntact(element, signature);
+  }
+
+  function write(element, found, same = unchanged(element, found)) {
     inlineStyles.set(element, inlineSignature(element));
+    if (same) return;
     const keys = Object.keys(found);
-    const signature = keys.map((key) => `${key}=${found[key]}`).join(";");
-    if ((applied.get(element) || "") === signature && overridesIntact(element, signature)) return;
+    const signature = signatureOf(found);
     for (const key of PROPS) if (!(key in found)) element.style.removeProperty(`--oln-${key}`);
     for (const key of keys) element.style.setProperty(`--oln-${key}`, found[key]);
     if (keys.length) element.setAttribute(MARK, keys.join(" ")); else element.removeAttribute(MARK);
@@ -414,17 +445,52 @@
     }
     if (!list.length && !list.icons.size && !list.images.size) return;
     // Already-styled elements hide their original colors behind our overrides.
-    // Switch overrides off inside just the affected subtrees for the read phase
-    // (no paint happens in between, so nothing flickers).
-    const measured = [...trees, ...selves].filter((node) => node instanceof Element && node.isConnected
-      && (node.hasAttribute(MARK) || node.querySelector(`[${MARK}]`)));
-    // "[measure] *" cannot see into shadow trees, so switch those off at their top level too.
-    if (measured.length) for (const element of list) if (element.parentNode?.host && element.hasAttribute(MARK)) measured.push(element);
-    for (const icon of list.icons) if (icon.hasAttribute(MARK) || icon.querySelector(`[${MARK}]`)) measured.push(icon);
-    const calm = [...trees, ...selves, ...list.icons].filter((node) => node instanceof Element && node.isConnected);
-    for (const element of list) if (element.parentNode?.host) calm.push(element);
+    // Read original colors with our overrides switched off (no paint happens in
+    // between, so nothing flickers). A subtree switch restyles every descendant,
+    // which is expensive on large pages, so when no re-read override is inherited
+    // switch off just those elements. Inherited overrides (text, fill, stroke)
+    // restyle their subtree either way, so they keep one switch per root.
+    const measured = [], measuredSelf = [], measuredPseudo = [], calm = [], calmSelf = new Set();
+    let scoped = false;
+    const marked = [...list, ...list.images].filter((element) => element.isConnected && element.hasAttribute(MARK));
+    // Form fields have (almost) no subtree, so their inherited overrides are cheap to switch.
+    const deep = (element) => INHERITED_KEYS.test(element.getAttribute(MARK)) && !element.matches("input, textarea, select");
+    if (marked.length <= MANY_MARKED && !marked.some(deep)) {
+      for (const element of marked) {
+        const keys = element.getAttribute(MARK);
+        measuredSelf.push(element);
+        if (PSEUDO_KEYS.test(keys)) measuredPseudo.push(element);
+        if (INHERITED_KEYS.test(keys)) calm.push(element); else calmSelf.add(element);
+      }
+      scoped = true;
+    } else {
+      const roots = [...trees, ...selves].filter((node) => node instanceof Element && node.isConnected);
+      for (const node of roots) if (node.hasAttribute(MARK) || node.querySelector(`[${MARK}]`)) measured.push(node);
+      calm.push(...roots);
+      // "[measure] *" cannot see into shadow trees, so switch those off at their top level too.
+      for (const element of list) if (element.parentNode?.host) { calm.push(element); if (element.hasAttribute(MARK)) measured.push(element); }
+    }
+    for (const icon of list.icons) {
+      if (!icon.isConnected) continue;
+      calm.push(icon);
+      if (icon.hasAttribute(MARK) || icon.querySelector(`[${MARK}]`)) measured.push(icon);
+    }
     for (const node of calm) node.setAttribute(NOANIM, "");
+    for (const node of calmSelf) node.setAttribute(NOANIM_SELF, "");
     for (const node of measured) node.setAttribute(MEASURE, "");
+    for (const node of measuredSelf) node.setAttribute(MEASURE_SELF, "");
+    for (const node of measuredPseudo) node.setAttribute(MEASURE_PSEUDO, "");
+    if (scoped) {
+      // Like a subtree switch, finish the page's own color transitions before reading.
+      const batch = new Set([...list, ...list.images]);
+      for (const animation of document.getAnimations()) {
+        const target = animation.effect?.target;
+        if (animation instanceof CSSTransition && batch.has(target) && !calmSelf.has(target) && COLOR_TRANSITION.test(animation.transitionProperty)) {
+          calmSelf.add(target);
+          target.setAttribute(NOANIM_SELF, "");
+        }
+      }
+    }
     const styles = new Map();
     const ctx = {
       mode: modeFor(),
@@ -451,13 +517,39 @@
       }
     }
     for (const node of measured) node.removeAttribute(MEASURE);
-    list.forEach((element, index) => write(element, decisions[index]));
-    for (const [part, found] of iconDecisions) write(part, found);
-    for (const [img, found] of imageDecisions) write(img, found);
+    for (const node of measuredSelf) node.removeAttribute(MEASURE_SELF);
+    for (const node of measuredPseudo) node.removeAttribute(MEASURE_PSEUDO);
+    const writes = [...list.map((element, index) => [element, decisions[index]]), ...iconDecisions, ...imageDecisions];
+    // Elements about to gain, lose or change an override also skip transitions.
+    const changed = new Set();
+    for (const [element, found] of writes) {
+      if (unchanged(element, found)) continue;
+      changed.add(element);
+      if (calmSelf.has(element) || element.closest(`[${NOANIM}]`)) continue;
+      const keys = `${element.getAttribute(MARK) || ""} ${Object.keys(found).join(" ")}`;
+      if (INHERITED_KEYS.test(keys)) calm.push(element); else calmSelf.add(element);
+      element.setAttribute(INHERITED_KEYS.test(keys) ? NOANIM : NOANIM_SELF, "");
+    }
+    for (const [element, found] of writes) write(element, found, !changed.has(element));
     for (const img of logoCandidates) checkLogo(img);
     // Commit the new colors with transitions still off, then restore them.
-    if (calm.length) getComputedStyle(calm[0]).color;
+    const first = calm[0] || calmSelf.values().next().value;
+    if (first) getComputedStyle(first).color;
     for (const node of calm) node.removeAttribute(NOANIM);
+    for (const node of calmSelf) node.removeAttribute(NOANIM_SELF);
+  }
+
+  // Re-reads the page's original polarity with only the page background and
+  // the root elements' own overrides switched off; everything else stays styled.
+  function remeasurePolarity(full = schemeSensitive) {
+    const root = document.documentElement, roots = [root, document.body].filter(Boolean);
+    if (full) root.setAttribute(MEASURE, "");
+    else { root.setAttribute(MEASURE_ROOT, ""); for (const node of roots) node.setAttribute(MEASURE_SELF, ""); }
+    const dark = detectDarkPage();
+    root.removeAttribute(MEASURE);
+    root.removeAttribute(MEASURE_ROOT);
+    for (const node of roots) node.removeAttribute(MEASURE_SELF);
+    return dark;
   }
 
   function flush() {
@@ -466,9 +558,7 @@
     if (!observer) { pendingTrees.clear(); pendingSelf.clear(); return; }
     if (polarityDirty) {
       polarityDirty = false;
-      document.documentElement.setAttribute(MEASURE, "");
-      const nowDark = detectDarkPage();
-      document.documentElement.removeAttribute(MEASURE);
+      const nowDark = remeasurePolarity();
       if (nowDark !== darkPage && !["recolor", "deepen"].includes(currentSiteMode())) { enable(); return; }
     }
     const trees = [...pendingTrees];
@@ -508,12 +598,52 @@
   function onInteraction(event) {
     if (!observer) return;
     const path = event.composedPath().filter(node => node instanceof Element);
-    const control = path.find(node => node.matches(CONTROL));
-    if (control && control !== document.body && control !== document.documentElement) pendingTrees.add(control);
+    const found = path.find(node => node.matches(CONTROL));
+    const control = found && found !== document.body && found !== document.documentElement ? found : null;
+    const stop = firstUnchanged(event, path, control);
+    let rest = false, top = null;
     for (const node of path) {
       if (node === document.body || node === document.documentElement) break;
-      pendingSelf.add(node);
+      if (node === stop) rest = true;
+      (rest ? settleSelf : pendingSelf).add(node);
+      if (!rest) top = node;
     }
+    // Descendant rules of changed elements (".row:hover .label") need their subtree.
+    const controlChanged = control && (!stop || path.indexOf(control) < path.indexOf(stop));
+    if (controlChanged) pendingTrees.add(control);
+    else {
+      if (top) pendingTrees.add(top);
+      if (control) settleTrees.add(control);
+    }
+    schedule();
+    if (settleSelf.size || settleTrees.size) {
+      clearTimeout(settleTimer);
+      settleTimer = setTimeout(settle, SETTLE_MS);
+    }
+  }
+
+  // Moving between elements changes :hover/:focus-within only below the common
+  // ancestor; typing changes state only up to the field's control. Everything
+  // above is rechecked once interaction pauses (e.g. :has() rules).
+  function firstUnchanged(event, path, control) {
+    if (/^key|^input$|^change$/.test(event.type)) {
+      const top = control || path[0];
+      return path[path.indexOf(top) + 1] || null;
+    }
+    const other = event.relatedTarget;
+    if (!/^(pointerover|pointerout|focusin|focusout)$/.test(event.type) || !(other instanceof Element)) return null;
+    const around = new Set();
+    for (let node = other; node; node = parentAcrossShadow(node)) around.add(node);
+    return path.find(node => around.has(node)) || null;
+  }
+
+  function settle() {
+    settleTimer = null;
+    if (!observer) { settleSelf.clear(); settleTrees.clear(); return; }
+    for (const node of settleSelf) if (node.isConnected) pendingSelf.add(node);
+    for (const node of settleTrees) if (node.isConnected) pendingTrees.add(node);
+    settleSelf.clear();
+    settleTrees.clear();
     schedule();
   }
 
@@ -571,7 +701,8 @@
     // Use ID-level specificity without requiring an ID on page elements.
     // Multi-class + tag !important selection rules must not beat our colors.
     // The outer marker still scopes every override; measurement still opts out.
-    const on = `:is([${MARK}], #oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *)`;
+    const on = `:is([${MARK}], #oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}])`;
+    const onPseudo = `:is([${MARK}], #oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_PSEUDO}])`;
     return `
       [${MARK}~="bg"]${on} { background-color: var(--oln-bg) !important; }
       [${MARK}~="img"]${on} { background-image: var(--oln-img) !important; }
@@ -579,7 +710,7 @@
       [${MARK}~="fg"]${on} { color: var(--oln-fg) !important; }
       [${MARK}~="ink"]${on} { -webkit-text-fill-color: var(--oln-ink) !important; }
       [${MARK}~="caret"]${on} { caret-color: var(--oln-caret) !important; }
-      [${MARK}~="placeholder"]${on}::placeholder { color: var(--oln-placeholder) !important; -webkit-text-fill-color: var(--oln-placeholder) !important; }
+      [${MARK}~="placeholder"]${onPseudo}::placeholder { color: var(--oln-placeholder) !important; -webkit-text-fill-color: var(--oln-placeholder) !important; }
       [${MARK}~="field"]${on} { color-scheme: dark !important; }
       [${MARK}~="field"]${on}:is(:autofill, :-webkit-autofill) { -webkit-text-fill-color: var(--oln-fg, #ddd) !important; caret-color: var(--oln-fg, #ddd) !important; box-shadow: 0 0 0 1000px var(--oln-bg, #101014) inset !important; }
       [${MARK}~="bt"]${on} { border-top-color: var(--oln-bt) !important; }
@@ -591,12 +722,13 @@
       [${MARK}~="stop"]${on} { stop-color: var(--oln-stop) !important; }
       [${MARK}~="blend"]${on} { mix-blend-mode: normal !important; }
       [${NOANIM}], [${NOANIM}] *, [${NOANIM}]::before, [${NOANIM}]::after, [${NOANIM}] *::before, [${NOANIM}] *::after { transition: none !important; }
-      [${MARK}~="before-bg"]${on}::before { background-color: var(--oln-before-bg) !important; }
-      [${MARK}~="before-img"]${on}::before { background-image: var(--oln-before-img) !important; }
-      [${MARK}~="before-shadow"]${on}::before { box-shadow: var(--oln-before-shadow) !important; }
-      [${MARK}~="after-bg"]${on}::after { background-color: var(--oln-after-bg) !important; }
-      [${MARK}~="after-img"]${on}::after { background-image: var(--oln-after-img) !important; }
-      [${MARK}~="after-shadow"]${on}::after { box-shadow: var(--oln-after-shadow) !important; }
+      [${NOANIM_SELF}], [${NOANIM_SELF}]::before, [${NOANIM_SELF}]::after { transition: none !important; }
+      [${MARK}~="before-bg"]${onPseudo}::before { background-color: var(--oln-before-bg) !important; }
+      [${MARK}~="before-img"]${onPseudo}::before { background-image: var(--oln-before-img) !important; }
+      [${MARK}~="before-shadow"]${onPseudo}::before { box-shadow: var(--oln-before-shadow) !important; }
+      [${MARK}~="after-bg"]${onPseudo}::after { background-color: var(--oln-after-bg) !important; }
+      [${MARK}~="after-img"]${onPseudo}::after { background-image: var(--oln-after-img) !important; }
+      [${MARK}~="after-shadow"]${onPseudo}::after { box-shadow: var(--oln-after-shadow) !important; }
       input[${MARK}~="bg"], textarea[${MARK}~="bg"], select[${MARK}~="bg"], button[${MARK}~="bg"] { color-scheme: dark !important; accent-color: #66a3ff; }
     `;
   }
@@ -618,10 +750,12 @@
   function installSheet() {
     if (document.getElementById("oled-night-sheet")) return;
     const root = `html[data-oled-night-root]:is(*, #oled-night-profile-priority):not([${MEASURE}])`;
+    const surface = `${root}:not([${MEASURE_ROOT}])`;
     const sheet = document.createElement("style");
     sheet.id = "oled-night-sheet";
     sheet.textContent = `
-      ${root}:not([data-oled-night-page="none"]), ${root}:not([data-oled-night-page="none"]) body { color-scheme: dark !important; background: var(--oled-night-page, #000) !important; }
+      ${root}:not([data-oled-night-page="none"]), ${root}:not([data-oled-night-page="none"]) body { color-scheme: dark !important; }
+      ${surface}:not([data-oled-night-page="none"]), ${surface}:not([data-oled-night-page="none"]) body { background: var(--oled-night-page, #000) !important; }
       ${overrideRules()}
       html[data-oled-night-root] :focus-visible { outline-color: #66a3ff !important; }
       ${root}:not([data-oled-night-page="none"]) * { scrollbar-color: rgb(58 58 66) transparent; }
@@ -693,6 +827,10 @@
     }
     flushHandle = null;
     flushScheduled = false;
+    clearTimeout(settleTimer);
+    settleTimer = null;
+    settleSelf.clear();
+    settleTrees.clear();
     inlineStyles = new WeakMap();
     active = false;
     observer?.disconnect();
@@ -710,7 +848,9 @@
     logoChecked = new WeakSet();
     logoBudget = 80;
     for (const scope of [document, ...shadowRoots]) {
-      for (const node of scope.querySelectorAll(`[${MEASURE}], [${NOANIM}], [${LOGO}], [${LOGO_EDGE}]`)) { node.removeAttribute(MEASURE); node.removeAttribute(NOANIM); node.removeAttribute(LOGO); node.removeAttribute(LOGO_EDGE); }
+      for (const node of scope.querySelectorAll(`[${MEASURE}], [${NOANIM}], [${MEASURE_SELF}], [${NOANIM_SELF}], [${MEASURE_PSEUDO}], [${MEASURE_ROOT}], [${LOGO}], [${LOGO_EDGE}]`)) {
+        for (const name of [MEASURE, NOANIM, MEASURE_SELF, NOANIM_SELF, MEASURE_PSEUDO, MEASURE_ROOT, LOGO, LOGO_EDGE]) node.removeAttribute(name);
+      }
       for (const element of scope.querySelectorAll(`[${MARK}]`)) {
         element.removeAttribute(MARK);
         for (const key of PROPS) element.style.removeProperty(`--oln-${key}`);
@@ -771,6 +911,12 @@
       return;
     }
     // Observer first so shadow roots found during the first pass get watched too.
+    // A page background that follows color-scheme reads differently under our
+    // forced dark scheme; such pages keep the full switch for polarity checks.
+    const original = pageColor;
+    remeasurePolarity(false);
+    schemeSensitive = ["r", "g", "b", "a"].some((channel) => pageColor[channel] !== original[channel]);
+    pageColor = original;
     observer = new MutationObserver(onMutations);
     observer.observe(root, OBSERVE);
     document.addEventListener("load", onSheetLoad, true);

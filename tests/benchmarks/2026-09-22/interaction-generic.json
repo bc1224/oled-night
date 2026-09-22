@@ -1,0 +1,88 @@
+{
+  "costs": {
+    "base/dark": {
+      "htmlModalityClass": 0,
+      "leafClass": 0,
+      "keyupEditor": 0,
+      "pointeroverMessage": 0,
+      "pointerMoveBetweenRows": 0,
+      "focusMoveBetweenButtons": 0,
+      "focusinEditor": 0
+    },
+    "base/light": {
+      "htmlModalityClass": 0,
+      "leafClass": 0,
+      "keyupEditor": 0,
+      "pointeroverMessage": 0,
+      "pointerMoveBetweenRows": 0,
+      "focusMoveBetweenButtons": 0,
+      "focusinEditor": 0
+    },
+    "v0612/dark": {
+      "htmlModalityClass": 27.8,
+      "leafClass": 0.2,
+      "keyupEditor": 10.2,
+      "pointeroverMessage": 9.7,
+      "pointerMoveBetweenRows": 9.6,
+      "focusMoveBetweenButtons": 9.6,
+      "focusinEditor": 10.2
+    },
+    "v0612/light": {
+      "htmlModalityClass": 104.2,
+      "leafClass": 0.4,
+      "keyupEditor": 39.1,
+      "pointeroverMessage": 35.4,
+      "pointerMoveBetweenRows": 36.3,
+      "focusMoveBetweenButtons": 35.2,
+      "focusinEditor": 40.1
+    },
+    "proto/dark": {
+      "htmlModalityClass": 37,
+      "leafClass": 0.2,
+      "keyupEditor": 0.2,
+      "pointeroverMessage": 0.3,
+      "pointerMoveBetweenRows": 0.4,
+      "focusMoveBetweenButtons": 0.2,
+      "focusinEditor": 0.2
+    },
+    "proto/light": {
+      "htmlModalityClass": 99.4,
+      "leafClass": 0.5,
+      "keyupEditor": 0.3,
+      "pointeroverMessage": 34.6,
+      "pointerMoveBetweenRows": 1.3,
+      "focusMoveBetweenButtons": 1,
+      "focusinEditor": 35.4
+    }
+  },
+  "identicalToV0612": {
+    "dark": {
+      "initial": "identical",
+      "accentTheme": "identical",
+      "descendantRule": "identical",
+      "menuOpen": "identical",
+      "menuHighlight": "identical",
+      "editorFocus": "identical",
+      "inheritedTheme": "identical"
+    },
+    "dark-changedVsNoExtension": true,
+    "light": {
+      "initial": "identical",
+      "accentTheme": "identical",
+      "descendantRule": "identical",
+      "menuOpen": "identical",
+      "menuHighlight": "identical",
+      "editorFocus": "identical",
+      "inheritedTheme": "identical"
+    },
+    "light-changedVsNoExtension": true
+  },
+  "transitions": {
+    "base/dark": 300,
+    "base/light": 300,
+    "v0612/dark": 300,
+    "v0612/light": 0,
+    "proto/dark": 300,
+    "proto/light": 0
+  }
+}

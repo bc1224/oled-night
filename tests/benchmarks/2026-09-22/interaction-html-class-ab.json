@@ -1,0 +1,32 @@
+[
+  {
+    "name": "v0612",
+    "dark": 33.9,
+    "light": 96.1
+  },
+  {
+    "name": "proto",
+    "dark": 33.4,
+    "light": 100.7
+  },
+  {
+    "name": "v0612",
+    "dark": 29.5,
+    "light": 97.2
+  },
+  {
+    "name": "proto",
+    "dark": 32.8,
+    "light": 97.3
+  },
+  {
+    "name": "v0612",
+    "dark": 34.6,
+    "light": 96
+  },
+  {
+    "name": "proto",
+    "dark": 36.5,
+    "light": 101.4
+  }
+]

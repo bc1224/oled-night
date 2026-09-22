@@ -97,8 +97,8 @@
  const p=document.getElementById('parent'), c=document.getElementById('child'), v=document.getElementById('variable');
  const dark = node => { const c=getComputedStyle(node); return c.backgroundColor.match(/[0-9.]+/g).slice(0,3).every(n=>+n<30) && +c.color.match(/[0-9.]+/)[0]>180; };
  const results={}; let batches=0;
- const watch=new MutationObserver(records=>{batches+=records.filter(r=>r.attributeName==='data-oled-night-measure' && r.oldValue===null).length});
- watch.observe(p,{attributes:true,subtree:true,attributeOldValue:true,attributeFilter:['data-oled-night-measure']});
+ const watch=new MutationObserver(records=>{batches+=records.some(r=>r.oldValue===null)?1:0});
+ watch.observe(p,{attributes:true,subtree:true,attributeOldValue:true,attributeFilter:['data-oled-night-measure','data-oled-night-measure-self']});
  p.style.transform='translateX(1px)'; await wait(); batches=0;
  for(let i=0;i<20;i++)p.style.transform='translateX('+i+'px)';
  await wait(); results.transformSkips=batches===0;

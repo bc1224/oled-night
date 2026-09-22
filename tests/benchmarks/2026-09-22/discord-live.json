@@ -1,0 +1,41 @@
+{
+  "note": "Live discord.com in the maintainer's real Chrome 153 profile (Windows 11, Ryzen 9 9950X3D, 240 Hz display). Other installed extensions were constant across ON/OFF; Dark Reader 4.9.132 was enabled in the profile but inactive on Discord (no darkreader style). OFF = OLED Night's own per-site switch (Alt+Shift+D), same page load, same instrumentation. 'bracket' = main-thread time between a requestAnimationFrame callback registered before the trigger and one registered after OLED Night's queued work (median of n). Long frames = long-animation-frame entries (>50 ms). CPU = Windows TotalProcessorTime delta of the Discord renderer process.",
+  "v0.6.12": {
+    "page": "GLIMBO TEST SERVER 2 #general, 2,636-2,724 elements, deepen mode, 15-22 marked elements",
+    "bracketMedianMs": {
+      "run1": { "htmlMouseModeClass": 152.1, "leafClass": 0.5, "keyupEditor": 71.9, "pointeroverMessage": 63.2, "focusinEditor": 66.4 },
+      "run2": { "htmlMouseModeClass": 112.5, "leafClass": 0.4, "keyupEditor": 47.9, "pointeroverMessage": 51.2, "focusinEditor": 47.8 },
+      "friendsScreen1791Elements": { "htmlMouseModeClass": 55.3, "htmlUnrelatedClass": 71.0, "leafClass": 0.3 }
+    },
+    "realInput": {
+      "keyboardMouseSwitch16x": { "run1": { "htmlClassChanges": 17, "longFrames": 27, "longFrameMs": 4221, "blockingMs": 2824, "worstKeyEventMs": 352 }, "run2": { "htmlClassChanges": 16, "longFrames": 23, "longFrameMs": 3731, "blockingMs": 2560, "worstKeyEventMs": 416 } },
+      "contextMenu5x": { "htmlClassChanges": 10, "longFrames": 26, "longFrameMs": 3598, "blockingMs": 2252, "worstEventMs": 296 },
+      "typingBurst2x": { "run1": { "longFrames": 12, "longFrameMs": 1950, "blockingMs": 1331, "worstEventMs": 520 }, "run2": { "longFrames": 12, "longFrameMs": 1443, "blockingMs": 799, "worstEventMs": 272 } },
+      "wheelScroll6x": { "longFrames": 0 }
+    },
+    "rendererCpuMs": { "htmlFlips30": 5869, "syntheticEvents60": 6050, "keyboardMouse": 4873, "typing": 2324, "idle15s": 3699 }
+  },
+  "off": {
+    "bracketMedianMs": { "htmlMouseModeClass": 0.0, "leafClass": 0.0, "keyupEditor": 0.0, "pointeroverMessage": 0.0, "focusinEditor": 0.0 },
+    "realInput": {
+      "keyboardMouseSwitch16x": { "htmlClassChanges": 17, "longFrames": 0, "longFrameMs": 0, "worstKeyEventMs": 48 },
+      "contextMenu5x": { "htmlClassChanges": 10, "longFrames": 1, "longFrameMs": 74, "blockingMs": 23, "worstEventMs": 80 },
+      "typingBurst2x": { "longFrames": 2, "longFrameMs": 216, "blockingMs": 67, "worstEventMs": 120 },
+      "wheelScroll6x": { "longFrames": 0 }
+    },
+    "rendererCpuMs": { "htmlFlips30": 821, "syntheticEvents60": 1383, "keyboardMouse": 966, "typing": 974, "idle15s": 3394 }
+  },
+  "costBreakdownOn0.6.12Ms": {
+    "discordOwnMouseModeFlip": 6.7,
+    "measureSwitchOnHtml": 86.7,
+    "noanimSwitchOnHtml": 61.2,
+    "measureSwitchOnAppMount": 46.6,
+    "readTenPropertiesOnAllElements": 7.4
+  },
+  "v0.6.13": {
+    "page": "Referral QA 1 #general, 3,076 elements, deepen mode (different channel/account than the 0.6.12 run: the tab's Discord account changed; DOM ~15% larger)",
+    "bracketMedianMs": { "htmlMouseModeClass": 30.1, "leafClass": 0.3, "keyupEditor": 0.4, "pointeroverMessage": 2.8, "focusinEditor": 2.0, "pointerMoveBetweenMessages": 1.4 },
+    "realInput": { "keyboardMouseSwitch16x": { "htmlClassChanges": 17, "longFrames": 8, "longFrameMs": 626 } },
+    "idleLongFrames": 0
+  }
+}

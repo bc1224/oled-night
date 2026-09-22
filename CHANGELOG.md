@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.13
+
+- Fix input lag on large pages, measured on Discord: typing, hovering, focus moves and keyboard/mouse switches no longer restyle the whole document. Applies to every site.
+- Re-read original colors by switching off only the overrides being checked, instead of whole subtrees; pseudo-element and page-background checks use their own narrow switches. Subtree switches remain where inherited text colors require them.
+- Recheck only elements whose hover/focus state changed right away; other ancestors are rechecked once interaction pauses, so `:has()` and similar rules still apply.
+- Page polarity checks no longer switch off the forced dark color scheme unless the page background depends on it (for example `light-dark()`).
+- Add Chrome regression coverage for scoped rechecks, theme classes with page transitions, `:has()` after typing and color-scheme-dependent pages. No new permissions or theme changes.
+
 ## 0.6.12
 
 - Keep Amazon accordion arrows, delivery-dialog close icons and show-more chevrons visible on dark surfaces.
