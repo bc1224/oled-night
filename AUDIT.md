@@ -24,3 +24,13 @@ Live Maps and FlightAware evidence established the symptoms and FlightAware sele
 Performance: see PERFORMANCE.md and raw benchmark JSON. OLED Night was approximately twice the browser CPU cost of Dark Reader on the synthetic high-churn case; do not market it as lighter. Figma native-color protection avoids recoloring work.
 
 Validation: all unit suites passed; Chrome 95/95; Firefox 42/42; Firefox lint zero errors, warnings or notices. Bounded color-cache correctness includes eviction and mutable-input coverage.
+
+## 0.6.11 efficiency follow-up
+
+Mutation and interaction queues now share a pre-paint batch. Ancestor work subsumes descendant work, and repeated attribute records are coalesced. Inline declaration snapshots skip compositor-only changes but preserve page custom-property and style-reset invalidation. A bounded surface-mapping cache shares pure conversion results; it does not reuse element decisions across state changes. Existing shared CSS rules remain the application mechanism.
+
+Late stylesheet DOM changes/load events trigger a full refresh. Direct CSSOM insertRule/adoptedStyleSheets changes without DOM or load events remain a coverage limitation. No offscreen deferral or added recoloring delay is introduced. Transform-based style attribute selectors remain an unusual unsupported dependency, as with prior transform skipping.
+
+No faster/accurate toggle was added: safe optimizations apply automatically, and existing per-site modes remain available.
+
+0.6.11 validation: Chrome103/103, Firefox49/49, Firefox lint zero errors/warnings/notices. Sequential class and transform benchmarks recorded in PERFORMANCE.md.

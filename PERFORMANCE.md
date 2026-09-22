@@ -34,3 +34,20 @@ The third-party extension binary is not included in this repository or release.
 Raw results: `tests/benchmarks/2026-09-22/{base,oled,darkreader}.json`.
 
 A bounded cache of parsed colors and immutable color luminance avoids repeated conversion work. The before-cache median was 1801 ms browser CPU and 1242 ms renderer task time; after-cache medians were 1696 ms and 1143 ms (about 6% and 8% lower). This sequential three-sample comparison is noisy, not a guaranteed improvement on real sites. Before-cache samples are retained in `tests/benchmarks/2026-09-22/oled-before-cache.json`.
+
+## 0.6.11 follow-up: duplicate work and animations
+
+Fresh sequential comparisons against the packaged 0.6.10 build, three samples each, same machine and browser.
+
+| Workload | Browser CPU ms / ~3s | Renderer task ms | JS heap MiB |
+|---|---:|---:|---:|
+| 0.6.10 class changes | 1370 | 918 | 3.89 |
+| 0.6.11 class changes | 1383 | 896 | 4.43 |
+| 0.6.10 transform changes | 1472 | 1048 | 3.08 |
+| 0.6.11 transform changes | 974 | 643 | 4.24 |
+
+The class-change case is essentially unchanged within sample noise. The transform case uses the same 2,500-row fixture with inline background/text colors; 20 rows per tick receive transform changes instead of class changes. It specifically exercises repeated style mutations without changed colors. These are scenario-specific measurements, not a whole-PC or universal speedup. Additional caches/snapshots trade some JS heap for less repeated work.
+
+Set BENCH_WORKLOAD=transforms to reproduce the animation case (rows only); default classes retains the original workload. Use EXT_PATH for an unpacked release baseline. Raw paired results are tests/benchmarks/2026-09-22/oled-0.6.10-paired.json, oled-0.6.11-classes.json, and oled-{0.6.10,0.6.11}-transforms.json.
+
+Regression tests additionally verify zero recoloring passes for transform-only changes, one batch for overlapping interaction/mutation work, zero document rescans for tuning, and readable inherited/late-stylesheet colors.

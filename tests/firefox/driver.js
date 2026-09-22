@@ -88,6 +88,27 @@
     await open('report-fields.html');
     const fieldReport=await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'});
     check('report catches field contrast without private contents',fieldReport.lowContrast.filter(e=>e.element.includes('private')).length===4 && !JSON.stringify(fieldReport).includes('SENTINEL') && !fieldReport.lowContrast.some(e=>e.element.includes('transparentIcon')));
+    await open('efficiency.html');
+    const efficiency = await inspect(async () => {
+ const wait = () => new Promise(r=>setTimeout(r,150));
+ const p=document.getElementById('parent'), c=document.getElementById('child'), v=document.getElementById('variable');
+ const dark = node => { const c=getComputedStyle(node); return c.backgroundColor.match(/[0-9.]+/g).slice(0,3).every(n=>+n<30) && +c.color.match(/[0-9.]+/)[0]>180; };
+ const results={}; let batches=0;
+ const watch=new MutationObserver(records=>{batches+=records.filter(r=>r.attributeName==='data-oled-night-measure' && r.oldValue===null).length});
+ watch.observe(p,{attributes:true,subtree:true,attributeOldValue:true,attributeFilter:['data-oled-night-measure']});
+ p.style.transform='translateX(1px)'; await wait(); batches=0;
+ for(let i=0;i<20;i++)p.style.transform='translateX('+i+'px)';
+ await wait(); results.transformSkips=batches===0;
+ batches=0; c.classList.add('changed');p.classList.add('changed');c.dispatchEvent(new Event('focusin',{bubbles:true,composed:true}));
+ await wait();results.coalesced=batches===1;
+ p.style.setProperty('--surface','#eee'); await wait();results.variableDark=dark(v);
+ p.setAttribute('style','--surface:#ddd;background:white');await wait();results.resetInheritance=dark(v);
+ const sheet=document.createElement('style');sheet.textContent='#late{background:#eee!important;color:#222}';document.head.append(sheet);await wait();results.lateSheet=dark(document.getElementById('late'));
+ sheet.firstChild.data='#late{background:rgb(230,230,230)!important;color:#111}';await wait();results.editedSheet=dark(document.getElementById('late'));
+ batches=0;await wait();results.noFeedback=batches===0;watch.disconnect();return results;
+});
+    for(const [name,ok] of Object.entries(efficiency)) check('efficiency: '+name,ok,JSON.stringify(efficiency));
+
     check('keyboard shortcut registered', (await browser.commands.getAll()).some(c => c.name === 'toggle-site' && c.shortcut));
     for (const page of ['options.html', 'popup.html']) {
       let resolveUI;

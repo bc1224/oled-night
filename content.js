@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.10";
+  const VERSION = "0.6.11";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -27,7 +27,7 @@
   // Frames that are players, maps, ads or challenges are left exactly as they are.
   const UNTOUCHED_FRAMES = /(youtube(-nocookie)?\.com|vimeo\.com|player\.|twitch\.tv|spotify\.com|soundcloud\.com|maps\.google|google\.[a-z.]+\/maps|doubleclick\.net|googlesyndication\.com|recaptcha|hcaptcha\.com|challenges\.cloudflare\.com)/i;
   const STATE_ATTRIBUTES = ["aria-selected", "aria-checked", "aria-expanded", "aria-disabled", "data-state", "data-highlighted", "selected", "disabled"];
-  const OBSERVE = { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style", MARK, ...STATE_ATTRIBUTES] };
+  const OBSERVE = { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "href", "media", MARK, ...STATE_ATTRIBUTES] };
   const isTopFrame = (() => { try { return typeof window === "undefined" || window.top === window; } catch { return false; } })();
 
   let observer = null;
@@ -43,13 +43,12 @@
   let textTiers = new WeakMap();
   let logoChecked = new WeakSet();
   let logoBudget = 80;
-  const hadInlineColor = new WeakSet();
+  let inlineStyles = new WeakMap();
   const pendingTrees = new Set();
   const pendingSelf = new Set();
   let flushScheduled = false;
-  const interactionTrees = new Set();
-  const interactionSelf = new Set();
-  let interactionFrame = null;
+  let flushHandle = null;
+  let flushTimer = false;
   const INTERACTION_EVENTS = ["pointerover", "pointerout", "pointerdown", "pointerup", "pointercancel", "focusin", "focusout", "input", "change", "keydown", "keyup"];
   const CONTROL = 'a, button, input, textarea, select, option, label, li, [role="option"], [role^="menuitem"], [role="button"], [role="combobox"], [contenteditable="true"], [tabindex]';
   // Open shadow roots (web components) we style and watch. Page stylesheets
@@ -158,7 +157,22 @@
     return (mask && mask !== "none") || /text/.test(computed.webkitBackgroundClip || computed.backgroundClip || "");
   }
 
+  const surfaceMappings = new Map();
   function mapSurface(computed, prefix, mode, found) {
+    // Reuse only pure mappings of complete paint inputs, never element state.
+    const key = JSON.stringify([mode, computed.backgroundColor, computed.backgroundImage, computed.boxShadow,
+      computed.maskImage, computed.webkitMaskImage, computed.webkitBackgroundClip, computed.backgroundClip]);
+    let mapped = surfaceMappings.get(key);
+    if (!mapped) {
+      mapped = {};
+      computeSurface(computed, "", mode, mapped);
+      if (surfaceMappings.size >= 512) surfaceMappings.clear();
+      surfaceMappings.set(key, mapped);
+    }
+    for (const name of Object.keys(mapped)) found[prefix + name] = mapped[name];
+  }
+
+  function computeSurface(computed, prefix, mode, found) {
     const colors = colorsApi();
     const original = colors.parseColor(computed.backgroundColor);
     if (paintsInk(computed)) {
@@ -306,6 +320,7 @@
   }
 
   function write(element, found) {
+    inlineStyles.set(element, inlineSignature(element));
     const keys = Object.keys(found);
     const signature = keys.map((key) => `${key}=${found[key]}`).join(";");
     if ((applied.get(element) || "") === signature && overridesIntact(element, signature)) return;
@@ -379,7 +394,16 @@
     return appearance === "oled" ? "crush" : "none";
   }
 
+  // Ancestor batches already cover descendants, including open shadow roots.
+  function covered(node, roots) {
+    for (let parent = parentAcrossShadow(node); parent; parent = parentAcrossShadow(parent)) if (roots.has(parent)) return true;
+    return false;
+  }
+
   function process(trees, selves) {
+    const roots = new Set(trees.filter(node => node.isConnected));
+    trees = [...roots].filter(node => !covered(node, roots));
+    selves = [...new Set(selves)].filter(node => node.isConnected && !roots.has(node) && !covered(node, roots));
     const list = [];
     list.icons = new Set();
     list.images = new Set();
@@ -438,6 +462,7 @@
 
   function flush() {
     flushScheduled = false;
+    flushHandle = null;
     if (!observer) { pendingTrees.clear(); pendingSelf.clear(); return; }
     if (polarityDirty) {
       polarityDirty = false;
@@ -459,13 +484,22 @@
   function schedule() {
     if (flushScheduled) return;
     flushScheduled = true;
-    if (document.hidden) setTimeout(flush, 16);
-    else requestAnimationFrame(flush);
+    flushTimer = document.hidden;
+    flushHandle = flushTimer ? setTimeout(flush, 16) : requestAnimationFrame(flush);
   }
 
-  function hasInlineColor(element) {
+  // Ignore compositor-only animation churn, but retain all other declarations
+  // and page custom properties: they can change inherited colors indirectly.
+  function inlineSignature(element) {
     const style = element.style;
-    return !!style && !!(style.background || style.backgroundColor || style.backgroundImage || style.color || style.webkitTextFillColor || style.caretColor || style.boxShadow || style.borderColor || style.fill || style.stroke);
+    if (!style) return "";
+    const parts = [];
+    for (let i = 0; i < style.length; i++) {
+      const name = style[i];
+      if (name.startsWith("--oln-") || name.startsWith("--oled-night-") || ["transform", "translate", "rotate", "scale", "opacity", "will-change"].includes(name)) continue;
+      parts.push(name + ":" + style.getPropertyValue(name) + "!" + style.getPropertyPriority(name));
+    }
+    return parts.sort().join(";");
   }
 
   // Hover/focus/active and native field states do not necessarily mutate the DOM.
@@ -475,27 +509,41 @@
     if (!observer) return;
     const path = event.composedPath().filter(node => node instanceof Element);
     const control = path.find(node => node.matches(CONTROL));
-    if (control && control !== document.body && control !== document.documentElement) interactionTrees.add(control);
+    if (control && control !== document.body && control !== document.documentElement) pendingTrees.add(control);
     for (const node of path) {
       if (node === document.body || node === document.documentElement) break;
-      interactionSelf.add(node);
+      pendingSelf.add(node);
     }
-    if (interactionFrame !== null) return;
-    interactionFrame = requestAnimationFrame(() => {
-      interactionFrame = null;
-      if (!observer) return;
-      // Preserve page mutations queued before this read/write batch.
-      onMutations(observer.takeRecords());
-      process([...interactionTrees], [...interactionSelf]);
-      interactionTrees.clear(); interactionSelf.clear();
-      observer.takeRecords();
-    });
+    schedule();
+  }
+
+  function isPageSheet(node) {
+    return node instanceof Element && node.matches('style, link[rel~="stylesheet"]') && !node.id.startsWith("oled-night-");
+  }
+
+  function onSheetLoad(event) {
+    if (!observer || !isPageSheet(event.target)) return;
+    polarityDirty = true;
+    pendingTrees.add(document.documentElement);
+    schedule();
   }
 
   function onMutations(records) {
+    const seenAttributes = new Map();
     for (const record of records) {
       const target = record.target;
-      if (record.type === "childList") {
+      if (record.type === "attributes") {
+        let names = seenAttributes.get(target);
+        if (!names) seenAttributes.set(target, names = new Set());
+        if (names.has(record.attributeName)) continue;
+        names.add(record.attributeName);
+      }
+      if (isPageSheet(target) || (record.type === "characterData" && isPageSheet(target.parentElement))) {
+        polarityDirty = true;
+        pendingTrees.add(document.documentElement);
+      } else if (record.type === "childList") {
+        const changedSheets = [...record.addedNodes, ...record.removedNodes].some(node => isPageSheet(node) || (node instanceof Element && [...node.querySelectorAll('style, link[rel~="stylesheet"]')].some(isPageSheet)));
+        if (changedSheets) { polarityDirty = true; pendingTrees.add(document.documentElement); }
         for (const node of record.addedNodes) if (node.nodeType === Node.ELEMENT_NODE) pendingTrees.add(node);
       } else if (record.attributeName === "class" || STATE_ATTRIBUTES.includes(record.attributeName)) {
         // Sites often switch their own theme with a class on <html>/<body>.
@@ -505,13 +553,15 @@
       } else if (!overridesIntact(target)) {
         // Frameworks can replace style/attributes without changing any page
         // color property. The cached decision is not proof it is still applied.
-        pendingSelf.add(target);
-      } else if (hasInlineColor(target)) {
-        // Inline style churn is mostly transforms/opacity from animations and
-        // virtual scrollers. Only colors matter, so skip everything else.
-        hadInlineColor.add(target); pendingSelf.add(target);
-      } else if (hadInlineColor.has(target)) {
-        hadInlineColor.delete(target); pendingSelf.add(target);
+        pendingTrees.add(target);
+      } else if (record.attributeName === "style") {
+        const signature = inlineSignature(target);
+        if (signature !== (inlineStyles.get(target) || "")) {
+          inlineStyles.set(target, signature);
+          // Custom properties and inherited ink can restyle descendants.
+          pendingTrees.add(target);
+        }
+
       }
     }
     if (pendingTrees.size || pendingSelf.size || polarityDirty) schedule();
@@ -628,10 +678,14 @@
   }
 
   function disable() {
+    document.removeEventListener("load", onSheetLoad, true);
     for (const type of INTERACTION_EVENTS) document.removeEventListener(type, onInteraction, true);
-    if (interactionFrame !== null) cancelAnimationFrame(interactionFrame);
-    interactionFrame = null;
-    interactionTrees.clear(); interactionSelf.clear();
+    if (flushHandle !== null) {
+      if (flushTimer) clearTimeout(flushHandle); else cancelAnimationFrame(flushHandle);
+    }
+    flushHandle = null;
+    flushScheduled = false;
+    inlineStyles = new WeakMap();
     active = false;
     observer?.disconnect();
     observer = null;
@@ -711,6 +765,7 @@
     // Observer first so shadow roots found during the first pass get watched too.
     observer = new MutationObserver(onMutations);
     observer.observe(root, OBSERVE);
+    document.addEventListener("load", onSheetLoad, true);
     for (const type of INTERACTION_EVENTS) document.addEventListener(type, onInteraction, true);
     process([root], []);
     observer.takeRecords();

@@ -8,6 +8,8 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+const workload = process.env.BENCH_WORKLOAD || 'classes';
+if (!['classes','transforms'].includes(workload)) throw Error('Unknown workload');
 const here = dirname(fileURLToPath(import.meta.url));
 // EXT_PATH lets the suite run against an unzipped release instead of the source tree.
 const EXT = process.env.EXT_PATH ? resolve(process.env.EXT_PATH) : resolve(here, "..", "..");
@@ -33,7 +35,7 @@ const server = http.createServer((req, res) => {
   if (path === "/slow.js") { setTimeout(() => { res.writeHead(200, { "content-type": "text/javascript" }); res.end("1"); }, 3000); return; }
   if (path === "/rows.html") {
     let rows = "";
-    for (let i = 0; i < 2500; i++) rows += `<div class="row"><span class="c"><b>Sender ${i}</b></span><span class="c">Subject ${i}</span><span class="c">snippet</span></div>`;
+    for (let i = 0; i < 2500; i++) rows += `<div class="row" ${workload==='transforms'?'style="background:#fff;color:#202124"':''}><span class="c"><b>Sender ${i}</b></span><span class="c">Subject ${i}</span><span class="c">snippet</span></div>`;
     res.writeHead(200, { "content-type": "text/html" });
     res.end(`<!doctype html><html><head><style>body{background:#fff;color:#202124}.row{display:flex;background:#fff;border-bottom:1px solid #eee}.row.hl{background:#f2f6fc}.c{padding:2px 6px;color:#5f6368}</style></head><body><div id="list">${rows}</div></body></html>`);
     return;
@@ -97,7 +99,7 @@ try {
   await send('Performance.enable',{},page.sessionId);
   const metrics=async()=>Object.fromEntries((await send('Performance.getMetrics',{},page.sessionId)).result.metrics.map(m=>[m.name,m.value]));
   const processes=async()=>(await send('SystemInfo.getProcessInfo')).result.processInfo;
-  for(const file of ['light.html','rows.html']) {
+  for(const file of (workload==='transforms'?['rows.html']:['light.html','rows.html'])) {
     for(let repeat=0;repeat<3;repeat++) {
       const navStart=performance.now();
       await page.go(site('127.0.0.1',file),2000);
@@ -114,17 +116,17 @@ try {
       await sleep(2000);
       const idleMs=performance.now()-idleStart,cpuIdle=await processes(), idleAfter=await metrics();
       const workStart=performance.now();
-      const workload=await page.eval(`(async()=>{const rows=[...document.querySelectorAll('.row')];let ticks=0,worst=0,last=performance.now();const stop=last+3000;
+      const timing=await page.eval(`(async()=>{const rows=[...document.querySelectorAll('.row')];let ticks=0,worst=0,last=performance.now();const stop=last+3000;
         await new Promise(done=>{const tick=()=>{const now=performance.now();worst=Math.max(worst,now-last);last=now;ticks++;
-          for(let k=0;k<Math.min(20,rows.length);k++)rows[(ticks*20+k)%rows.length].classList.toggle('hl');
+          for(let k=0;k<Math.min(20,rows.length);k++){const row=rows[(ticks*20+k)%rows.length];if(${JSON.stringify(workload)}==='transforms')row.style.transform='translateX('+(ticks%2)+'px)';else row.classList.toggle('hl');}
           scrollTo(0,(ticks*60)%10000);if(now<stop)setTimeout(tick,16);else done();};tick();});return {ticks,worstMs:Math.round(worst)};})()`);
       const workMs=performance.now()-workStart, cpuAfter=await processes(),workAfter=await metrics();
       const cpuDelta=(before,after)=>after.reduce((sum,p)=>{const old=before.find(v=>v.id===p.id);return sum+(old?Math.max(0,p.cpuTime-old.cpuTime):0);},0)*1000;
-      results.push({variant,file,repeat,pageState,privateMiB,jsHeapMiB:+(idleBefore.JSHeapUsedSize/1048576).toFixed(2),idleMs:Math.round(idleMs),workMs:Math.round(workMs),idleBrowserCpuMs:Math.round(cpuDelta(cpuBefore,cpuIdle)),workBrowserCpuMs:Math.round(cpuDelta(cpuIdle,cpuAfter)),idleRendererTaskMs:Math.round((idleAfter.TaskDuration-idleBefore.TaskDuration)*1000),workRendererTaskMs:Math.round((workAfter.TaskDuration-idleAfter.TaskDuration)*1000),...workload});
+      results.push({variant,file,repeat,pageState,privateMiB,jsHeapMiB:+(idleBefore.JSHeapUsedSize/1048576).toFixed(2),idleMs:Math.round(idleMs),workMs:Math.round(workMs),idleBrowserCpuMs:Math.round(cpuDelta(cpuBefore,cpuIdle)),workBrowserCpuMs:Math.round(cpuDelta(cpuIdle,cpuAfter)),idleRendererTaskMs:Math.round((idleAfter.TaskDuration-idleBefore.TaskDuration)*1000),workRendererTaskMs:Math.round((workAfter.TaskDuration-idleAfter.TaskDuration)*1000),...timing});
       console.log(JSON.stringify(results.at(-1)));
     }
   }
-  writeFileSync(join(EXT,'dist',`benchmark-${variant}.json`),JSON.stringify({variant,browser:(await send('Browser.getVersion')).result,results},null,2));
+  writeFileSync(join(EXT,'dist',`benchmark-${variant}.json`),JSON.stringify({variant,workload,browser:(await send('Browser.getVersion')).result,results},null,2));
 } finally {
   chrome.kill();server.close();await sleep(500);
   try{rmSync(profile,{recursive:true,force:true});}catch{}

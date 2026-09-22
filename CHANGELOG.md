@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.11
+
+- Combine interaction and mutation updates in one pre-paint batch; remove overlapping subtree work.
+- Skip transform/opacity-only inline animation updates while detecting changed page declarations, inherited custom properties and overwritten overrides.
+- Share bounded pure surface mappings for repeated colors, gradients, shadows and masks. Element styles remain freshly measured when needed.
+- Recheck pages when stylesheets are inserted, edited, removed or loaded; retain global theme-change handling.
+- Cancel queued work when disabled and add Chrome/Firefox efficiency and correctness regressions.
+- Keep optimizations automatic; no speed/accuracy toggle or new permissions. Theme unchanged at 1.0.2.
+
 ## 0.6.10
 
 - Bound and reuse pure color conversions to reduce repeated CPU work without caching stale element styles.

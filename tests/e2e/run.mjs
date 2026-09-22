@@ -319,6 +319,10 @@ try {
   },0))`);
   check('new sections recolored in the next pre-paint batch',newPanel==='rgb(0, 0, 0)',newPanel);
 
+  await page.go(site("127.0.0.1", "efficiency.html"));
+  const efficiency = await page.eval("(async () => {\n const wait = () => new Promise(r=>setTimeout(r,150));\n const p=document.getElementById('parent'), c=document.getElementById('child'), v=document.getElementById('variable');\n const dark = node => { const c=getComputedStyle(node); return c.backgroundColor.match(/[0-9.]+/g).slice(0,3).every(n=>+n<30) && +c.color.match(/[0-9.]+/)[0]>180; };\n const results={}; let batches=0;\n const watch=new MutationObserver(records=>{batches+=records.filter(r=>r.attributeName==='data-oled-night-measure' && r.oldValue===null).length});\n watch.observe(p,{attributes:true,subtree:true,attributeOldValue:true,attributeFilter:['data-oled-night-measure']});\n p.style.transform='translateX(1px)'; await wait(); batches=0;\n for(let i=0;i<20;i++)p.style.transform='translateX('+i+'px)';\n await wait(); results.transformSkips=batches===0;\n batches=0; c.classList.add('changed');p.classList.add('changed');c.dispatchEvent(new Event('focusin',{bubbles:true,composed:true}));\n await wait();results.coalesced=batches===1;\n p.style.setProperty('--surface','#eee'); await wait();results.variableDark=dark(v);\n p.setAttribute('style','--surface:#ddd;background:white');await wait();results.resetInheritance=dark(v);\n const sheet=document.createElement('style');sheet.textContent='#late{background:#eee!important;color:#222}';document.head.append(sheet);await wait();results.lateSheet=dark(document.getElementById('late'));\n sheet.firstChild.data='#late{background:rgb(230,230,230)!important;color:#111}';await wait();results.editedSheet=dark(document.getElementById('late'));\n batches=0;await wait();results.noFeedback=batches===0;watch.disconnect();return results;\n})()");
+  for (const [name,ok] of Object.entries(efficiency)) check('efficiency: '+name,ok,JSON.stringify(efficiency));
+
   // Performance under constant page churn and slider drags.
   await page.go(site("127.0.0.1", "rows.html"), 2500);
   const churn = await page.eval(`(async () => { const rows = [...document.querySelectorAll('.row')]; let worst = 0, last = performance.now(), frames = 0; const stop = last + 2000;
@@ -327,8 +331,11 @@ try {
       const p = document.createElement('p'); p.textContent = 'token ' + frames; document.getElementById('list').prepend(p);
       if (now < stop) setTimeout(tick, 16); else done(); })(); }); return { frames, worst: Math.round(worst) }; })()`);
   check("stays smooth under constant page changes", churn.frames > 90 && churn.worst < 150, JSON.stringify(churn));
+  await page.eval("window.tuningPasses=0;window.tuningWatch=new MutationObserver(r=>{window.tuningPasses+=r.length});window.tuningWatch.observe(document.documentElement,{attributes:true,attributeFilter:['data-oled-night-measure']})");
   const slider = await ext.eval(`(async () => { const [t] = await chrome.tabs.query({ url: "${site("127.0.0.1", "rows.html")}" }); const start = performance.now();
     for (const b of [60, 70, 80, 90]) await chrome.tabs.sendMessage(t.id, { type: "oled-night-preview", patch: { brightness: b } }); return Math.round((performance.now() - start) / 4); })()`);
+  await sleep(100);
+  check('slider changes do not rescan the document',await page.eval("window.tuningWatch.disconnect();window.tuningPasses===0"));
   check("slider step is cheap", slider < 120, `${slider} ms per step`);
 
   await resetSettings();
