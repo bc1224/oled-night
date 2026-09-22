@@ -4,15 +4,14 @@
   const isFirefox = chrome.runtime.getURL("").startsWith("moz-extension://");
   const Settings = globalThis.OledNightSettings;
   const $ = (id) => document.getElementById(id);
-  const THEME_URL = "https://github.com/bc1224/oled-night/blob/main/theme/README.md";
+  const THEME_URL = "https://chromewebstore.google.com/detail/oled-night-chrome-theme/pkdklfocgpcnijiggfddneadmhacbpmf";
+  // Same names as the popup. "Automatic" is stored as "on"; a site without a rule also behaves automatically.
+  const MODE_LABELS = { on: "Automatic", recolor: "Full recolor", deepen: "Deepen blacks only", invert: "Invert (canvas apps)", off: "Off" };
   let settings = Settings.normalize();
 
-  function modeOptions(selected, includeGlobal = false) {
+  function modeOptions(selected) {
     const fragment = document.createDocumentFragment();
-    if (includeGlobal) fragment.appendChild(new Option("Use global", "global", false, !selected));
-    for (const [mode, label] of Object.entries(Settings.SITE_MODES)) {
-      if (mode !== "global") fragment.appendChild(new Option(label, mode, false, mode === selected));
-    }
+    for (const [mode, label] of Object.entries(MODE_LABELS)) fragment.appendChild(new Option(label, mode, false, mode === (selected === "global" || !selected ? "on" : selected)));
     return fragment;
   }
 
@@ -27,12 +26,13 @@
     const parts = [];
     if (tuning.brightness !== undefined) parts.push(`brightness ${tuning.brightness}%`);
     if (tuning.contrast !== undefined) parts.push(`contrast ${tuning.contrast}%`);
-    if (tuning.dimImages) parts.push("images dimmed");
+    if (tuning.dimImages !== undefined) parts.push(tuning.dimImages ? "images dimmed" : "images not dimmed");
     return parts.join(", ");
   }
 
   function renderRules() {
     const hosts = [...new Set([...Object.keys(settings.siteRules), ...Object.keys(settings.siteTuning)])].sort();
+    $("siteCount").textContent = `(${hosts.length})`;
     $("rules").replaceChildren();
     if (!hosts.length) {
       const empty = document.createElement("p");
@@ -47,9 +47,9 @@
       const tuning = document.createElement("small"); tuning.textContent = describeTuning(settings.siteTuning[host]);
       text.append(name, tuning);
       const select = document.createElement("select"); select.setAttribute("aria-label", `Mode for ${host}`);
-      select.appendChild(modeOptions(settings.siteRules[host], true));
+      select.appendChild(modeOptions(settings.siteRules[host]));
       const remove = document.createElement("button"); remove.type = "button"; remove.className = "remove";
-      remove.setAttribute("aria-label", `Remove ${host}`); remove.textContent = "Remove";
+      remove.setAttribute("aria-label", `Reset ${host} to defaults`); remove.textContent = "Reset";
       row.append(text, select, remove); $("rules").appendChild(row);
     }
   }
@@ -57,6 +57,13 @@
   function render() {
     renderRules();
     $("dimImages").checked = !!settings.dimImages;
+    const radio = document.querySelector(`input[name="appearance"][value="${settings.appearance}"]`);
+    if (radio) radio.checked = true;
+    for (const key of ["brightness", "contrast"]) {
+      const id = "default" + key[0].toUpperCase() + key.slice(1);
+      if (document.activeElement !== $(id)) $(id).value = settings[key];
+      $(`${id}Value`).value = `${settings[key]}%`;
+    }
     $("scheduleEnabled").checked = !!settings.schedule.enabled;
     $("scheduleStart").value = settings.schedule.start;
     $("scheduleEnd").value = settings.schedule.end;
@@ -80,9 +87,7 @@
   $("rules").addEventListener("change", (event) => {
     const host = event.target.closest(".rule")?.dataset.host;
     if (!host || event.target.tagName !== "SELECT") return;
-    const siteRules = { ...settings.siteRules };
-    if (event.target.value === "global") delete siteRules[host]; else siteRules[host] = event.target.value;
-    save({ siteRules });
+    save({ siteRules: { ...settings.siteRules, [host]: event.target.value } });
   });
   $("rules").addEventListener("click", (event) => {
     if (!event.target.classList.contains("remove")) return;
@@ -94,6 +99,13 @@
     save({ siteRules, siteTuning });
   });
   $("dimImages").addEventListener("change", (event) => save({ dimImages: event.target.checked }));
+  document.querySelectorAll('input[name="appearance"]').forEach((input) => input.addEventListener("change", () => save({ appearance: input.value })));
+  for (const key of ["brightness", "contrast"]) {
+    const id = "default" + key[0].toUpperCase() + key.slice(1);
+    // Save when the drag ends; storage.sync limits how often it can be written.
+    $(id).addEventListener("input", (event) => { $(`${id}Value`).value = `${event.target.value}%`; });
+    $(id).addEventListener("change", (event) => save({ [key]: +event.target.value }));
+  }
   const saveSchedule = () => save({ schedule: { enabled: $("scheduleEnabled").checked, start: $("scheduleStart").value || "20:00", end: $("scheduleEnd").value || "07:00" } });
   for (const id of ["scheduleEnabled", "scheduleStart", "scheduleEnd"]) $(id).addEventListener("change", saveSchedule);
   $("openClosedShadows").addEventListener("change", (event) => save({ openClosedShadows: event.target.checked }));

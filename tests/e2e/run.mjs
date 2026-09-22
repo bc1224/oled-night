@@ -389,8 +389,9 @@ try {
   check('site sliders visibly change text and panels', (await css('primary','color'))!==beforeText && (await css('info','backgroundColor'))!==beforePanel);
   let saved=await ext.eval('chrome.storage.sync.get(null)');
   check('site sliders preserve global defaults', saved.siteTuning['127.0.0.1'].brightness===60 && saved.siteTuning['127.0.0.1'].contrast===0 && saved.brightness===undefined);
-  await move('globalBrightness',95); await sleep(400);
-  check('global slider preserves site override', await page.eval("document.documentElement.style.getPropertyValue('--oln-light') === '60%'"));
+  const moveDefault = (id, value) => ext.eval(`(()=>{const e=document.getElementById('${id}');e.value=${value};e.dispatchEvent(new Event('input'));e.dispatchEvent(new Event('change'));})()`);
+  await moveDefault('defaultBrightness',95); await sleep(600);
+  check('default slider preserves site override', await page.eval("document.documentElement.style.getPropertyValue('--oln-light') === '60%'"));
   await popup.eval("document.getElementById('siteEnabled').click()"); await sleep(400);
   check('site switch restores original page', await page.eval("!document.documentElement.hasAttribute('data-oled-night-root')"));
   await popup.eval("document.getElementById('siteEnabled').click()"); await sleep(400);
@@ -443,11 +444,25 @@ try {
   await click("resetSite");
   await click("globalEnabled");
   if (!(await page.eval("matchMedia('(prefers-color-scheme: dark)').matches"))) {
-    await popup.eval("document.querySelector('input[name=appearance][value=auto]').click()"); await sleep(600);
+    await ext.eval("document.querySelector('input[name=appearance][value=auto]').click()"); await sleep(600);
     state = await ui();
     check("popup: follow system explains light-mode off", !(await rootHas("data-oled-night-root")) && state.status === "Off while your system is in light mode", JSON.stringify(state));
-    await popup.eval("document.querySelector('input[name=appearance][value=oled]').click()"); await sleep(600);
+    await ext.eval("document.querySelector('input[name=appearance][value=oled]').click()"); await sleep(600);
   }
+  // Settings: defaults first, site list collapsed, same mode names as the popup.
+  await setSettings({ siteRules: { "a.example": "on", "b.example": "deepen" }, siteTuning: { "c.example": { dimImages: false } } });
+  await ext.go(`chrome-extension://${extId}/options.html`, 800);
+  const opts = await ext.eval("(() => ({ collapsed: !document.getElementById('sitesPanel').open, count: document.getElementById('siteCount').textContent, labels: [...document.querySelector('[data-host=\"a.example\"] select').options].map(o => o.text), a: document.querySelector('[data-host=\"a.example\"] select').selectedOptions[0].text, b: document.querySelector('[data-host=\"b.example\"] select').selectedOptions[0].text, c: document.querySelector('[data-host=\"c.example\"] small').textContent, reset: document.querySelector('[data-host=\"a.example\"] .remove').textContent, popupHasDefaults: false }))()");
+  check("settings: site list collapsed with count and popup mode names", opts.collapsed && opts.count === "(3)" && opts.labels.join("|") === "Automatic|Full recolor|Deepen blacks only|Invert (canvas apps)|Off" && opts.a === "Automatic" && opts.b === "Deepen blacks only" && opts.c === "images not dimmed" && opts.reset === "Reset", JSON.stringify(opts));
+  await ext.eval("document.querySelector('[data-host=\"c.example\"] .remove').click()"); await sleep(300);
+  check("settings: reset removes a site", !(await ext.eval("!!document.querySelector('[data-host=\"c.example\"]')")));
+  await resetSettings();
+  await page.go(site("127.0.0.1", "light.html"));
+  const before = await css("primary", "color");
+  await moveDefault("defaultBrightness", 50); await sleep(700);
+  check("settings: default brightness changes sites without their own values", (await css("primary", "color")) !== before && await page.eval("document.documentElement.style.getPropertyValue('--oln-light') === '50%'"));
+  check("popup: defaults live in Settings, not the popup", await popup.eval("!document.getElementById('globalBrightness') && !document.querySelector('input[name=appearance]')"));
+  await resetSettings();
   await send('Target.activateTarget',{targetId:popup.targetId});
   const capture=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true},popup.sessionId);
   writeFileSync(join(EXT,'dist','popup-audit.png'),Buffer.from(capture.result.data,'base64'));

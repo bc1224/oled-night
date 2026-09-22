@@ -30,20 +30,11 @@
       </div>
     </section>
     <section class="global-panel">
-      <div class="power-row"><div><h2>All sites</h2><p id="globalHelp">Default for every site you haven't set yourself</p></div><label class="switch"><input id="globalEnabled" type="checkbox"><span></span><span class="sr-only">OLED Night on by default</span></label></div>
-      <details><summary>Default look</summary>
-        <div class="segments" role="radiogroup" aria-label="Default appearance">
-          <label><input type="radio" name="appearance" value="oled"><span>OLED Black</span></label><label><input type="radio" name="appearance" value="soft"><span>Soft Dark</span></label><label><input type="radio" name="appearance" value="auto"><span>Follow system</span></label>
-        </div>
-        <div class="tuning">
-          <label><span>Text brightness <output id="globalBrightnessValue"></output></span><input id="globalBrightness" type="range" min="40" max="100"></label>
-          <label><span>Surface contrast <output id="globalContrastValue"></output></span><input id="globalContrast" type="range" min="0" max="100"></label>
-        </div><p class="control-help">Used by sites without their own values. Brightness changes text, not your monitor; contrast separates panels and borders. Follow system turns OLED Night off while your system is in light mode.</p>
-      </details>
+      <div class="power-row"><div><h2>All sites</h2><p id="globalHelp">On for every site you haven't set yourself</p></div><label class="switch"><input id="globalEnabled" type="checkbox"><span></span><span class="sr-only">OLED Night on by default</span></label></div>
     </section>
     <footer class="actions">
       <button id="report" class="settings-link" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4h11l-1.5 4L16 12H5"/></svg>Report a broken site</button>
-      <button id="siteSettings" class="settings-link" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"/><path d="m19.4 15 .1.1 1.4 2.4-2.6 2.6-2.4-1.4-.1.1-1 .4V22H9.2v-2.8l-1-.4-.1-.1-2.4 1.4-2.6-2.6 1.4-2.4-.1-.1-.4-1H1.2v-4H4l.4-1 .1-.1-1.4-2.4 2.6-2.6 2.4 1.4.1-.1 1-.4V2h5.6v2.8l1 .4.1.1 2.4-1.4 2.6 2.6-1.4 2.4.1.1.4 1h2.8v4H20l-.6 1Z"/></svg>Settings</button>
+      <button id="siteSettings" class="settings-link" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"/><path d="m19.4 15 .1.1 1.4 2.4-2.6 2.6-2.4-1.4-.1.1-1 .4V22H9.2v-2.8l-1-.4-.1-.1-2.4 1.4-2.6-2.6 1.4-2.4-.1-.1-.4-1H1.2v-4H4l.4-1 .1-.1-1.4-2.4 2.6-2.6 2.4 1.4.1-.1 1-.4V2h5.6v2.8l1 .4.1.1 2.4-1.4 2.6 2.6-1.4 2.4.1.1.4 1h2.8v4H20l-.6 1Z"/></svg>Settings &amp; defaults</button>
     </footer>
     <p class="hint"><span><kbd id="shortcut">Alt+Shift+D</kbd> turns this site on or off</span><a id="theme" href="https://chromewebstore.google.com/detail/oled-night-chrome-theme/pkdklfocgpcnijiggfddneadmhacbpmf" target="_blank" rel="noopener">Black Chrome theme</a></p>
   </main>

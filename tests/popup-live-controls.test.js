@@ -35,14 +35,8 @@ setImmediate(async () => {
   element("brightness").listeners.change({ target: { value: "73" } });
   await new Promise((resolve) => setTimeout(resolve, 10));
   assert.deepEqual(writes.at(-1), {siteTuning:{"example.com":{brightness:73}}});
-  element('globalContrast').listeners.input({target:{value:'85'}});
-  element('globalBrightness').listeners.input({target:{value:'95'}});
-  element('globalBrightness').listeners.change({target:{value:'95'}});
-  await new Promise(r=>setTimeout(r,20));
-  assert.deepEqual(writes.at(-1),{contrast:85,brightness:95});
-  assert.equal(element('brightness').value,73);
   element('siteEnabled').listeners.change({target:{checked:false}});
   await new Promise(r=>setTimeout(r,20));
   assert.deepEqual(writes.at(-1),{siteRules:{'example.com':'off'}});
-  console.log("popup-live-controls: 6 assertions passed");
+  console.log("popup-live-controls: 5 assertions passed");
 });

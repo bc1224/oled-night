@@ -13,7 +13,8 @@ chrome.commands.onCommand.addListener(async (command) => {
   if (command !== "toggle-site") return;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   let host = "";
-  try { host = new URL(tab?.url || "").hostname; } catch {}
+  // Websites only: browser pages (chrome://extensions) are not sites and can't be changed.
+  try { const url = new URL(tab?.url || ""); if (/^https?:$/.test(url.protocol)) host = url.hostname; } catch {}
   if (!host) return;
   const config = await load();
   const siteRules = { ...config.siteRules };

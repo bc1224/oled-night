@@ -72,13 +72,7 @@
     $("siteEnabled").checked = siteOn();
     $("siteEnabled").disabled = !host || page === "blocked";
     $("siteRule").value = ["recolor", "deepen", "invert"].includes(mode) ? mode : "auto";
-    const radio = document.querySelector(`input[name="appearance"][value="${settings.appearance}"]`);
-    if (radio) radio.checked = true;
-    for (const key of ["brightness", "contrast"]) {
-      $(key).value = tuning[key]; $(`${key}Value`).value = `${tuning[key]}%`;
-      const globalId = "global" + key[0].toUpperCase() + key.slice(1);
-      $(globalId).value = settings[key]; $(`${globalId}Value`).value = `${settings[key]}%`;
-    }
+    for (const key of ["brightness", "contrast"]) { $(key).value = tuning[key]; $(`${key}Value`).value = `${tuning[key]}%`; }
     $("dimImages").checked = !!tuning.dimImages;
     $("status").textContent = statusText();
     $("reloadTab").hidden = statusText() !== "Reload this tab to apply OLED Night";
@@ -202,17 +196,17 @@
     delete siteRules[host]; delete siteTuning[host];
     persist({ siteRules, siteTuning });
   });
-  document.querySelectorAll('input[name="appearance"]').forEach((input) => input.addEventListener("change", () => persist({ appearance: input.value })));
   for (const key of ["brightness", "contrast"]) {
-    const globalId = "global" + key[0].toUpperCase() + key.slice(1);
-    $(globalId).addEventListener("input", event => preview({ [key]: +event.target.value }));
-    $(globalId).addEventListener("change", event => preview({ [key]: +event.target.value }, true));
     $(key).addEventListener("input", (event) => preview(tuningPatch(key, +event.target.value)));
     $(key).addEventListener("change", (event) => preview(tuningPatch(key, +event.target.value), true));
   }
   $("dimImages").addEventListener("change", (event) => {
     if (!host) return;
-    const siteTuning = { ...settings.siteTuning, [host]: { ...settings.siteTuning[host], dimImages: event.target.checked } };
+    // Matching the default is not a site setting; keep only real differences.
+    const own = { ...settings.siteTuning[host], dimImages: event.target.checked };
+    if (own.dimImages === settings.dimImages) delete own.dimImages;
+    const siteTuning = { ...settings.siteTuning, [host]: own };
+    if (!Object.keys(own).length) delete siteTuning[host];
     persist({ siteTuning });
   });
   $("report").addEventListener("click", async () => {

@@ -12,26 +12,38 @@
     <p class="lede">Settings sync across Chrome on every computer where you're signed in.</p>
 
     <section>
-      <h2>Sites</h2>
-      <p>How each site is treated. Sites not listed follow the main switch.</p>
-      <form id="addRule" class="add">
-        <input id="newHost" type="text" placeholder="example.com" aria-label="Site address" autocomplete="off" spellcheck="false">
-        <select id="newMode" aria-label="Mode"></select>
-        <button type="submit">Add</button>
-      </form>
-      <div id="rules" aria-live="polite"></div>
-      <dl class="modes">
-        <dt>On (automatic)</dt><dd>Recolors light sites; on sites that are already dark, only deepens their blacks.</dd>
-        <dt>Full recolor</dt><dd>Always recolors, even if the site looks dark already.</dd>
-        <dt>Deepen blacks only</dt><dd>Leaves everything alone except pushing the darkest greys to true black.</dd>
-        <dt>Invert</dt><dd>For apps drawn on a canvas (spreadsheets, design tools). Flips the whole page, images flipped back.</dd>
-        <dt>Off</dt><dd>Never touch this site.</dd>
-      </dl>
+      <h2>Defaults</h2>
+      <p>Every site uses these unless you change that site from the popup.</p>
+      <div class="segments" role="radiogroup" aria-label="Default appearance">
+        <label><input type="radio" name="appearance" value="oled"><span>OLED Black</span></label><label><input type="radio" name="appearance" value="soft"><span>Soft Dark</span></label><label><input type="radio" name="appearance" value="auto"><span>Follow system</span></label>
+      </div>
+      <p class="note-small">Follow system turns OLED Night off while your computer is in light mode.</p>
+      <div class="sliders">
+        <label><span>Text brightness <output id="defaultBrightnessValue"></output></span><input id="defaultBrightness" type="range" min="40" max="100"></label>
+        <label><span>Surface contrast <output id="defaultContrastValue"></output></span><input id="defaultContrast" type="range" min="0" max="100"></label>
+      </div>
+      <p class="note-small">Brightness changes text, not your monitor; contrast separates panels and borders. Both apply to recolored sites; already-dark sites keep their own colors.</p>
+      <label class="check"><input id="dimImages" type="checkbox"><span>Dim images</span></label>
     </section>
 
     <section>
-      <h2>Defaults</h2>
-      <label class="check"><input id="dimImages" type="checkbox"><span>Dim images on every site (each site can override this from the popup)</span></label>
+      <details id="sitesPanel">
+        <summary><h2>Your sites <span id="siteCount" class="count"></span></h2><span class="summary-help">Sites you changed from the popup, or add one here</span></summary>
+        <form id="addRule" class="add">
+          <input id="newHost" type="text" placeholder="example.com" aria-label="Site address" autocomplete="off" spellcheck="false">
+          <select id="newMode" aria-label="Mode"></select>
+          <button type="submit">Add</button>
+        </form>
+        <div id="rules" aria-live="polite"></div>
+        <dl class="modes">
+          <dt>Automatic</dt><dd>Recolors light sites; on sites that are already dark, only deepens their blacks.</dd>
+          <dt>Full recolor</dt><dd>Always recolors, even if the site looks dark already.</dd>
+          <dt>Deepen blacks only</dt><dd>Leaves everything alone except pushing the darkest greys to true black.</dd>
+          <dt>Invert</dt><dd>For apps drawn on a canvas (spreadsheets, design tools). Flips the whole page, images flipped back.</dd>
+          <dt>Off</dt><dd>Never touch this site.</dd>
+        </dl>
+        <p class="note-small">Reset returns a site to the defaults above.</p>
+      </details>
     </section>
 
     <section>
