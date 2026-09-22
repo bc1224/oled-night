@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.11";
+  const VERSION = "0.6.12";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -643,6 +643,14 @@
       ${root}[data-oled-night-site="apple-auth"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) .form-textbox :is(input.form-textbox-input, textarea.form-textarea):focus-visible {
         outline: 2px solid #66a3ff !important;
         outline-offset: -2px !important;
+      }
+      /* Amazon's monochrome disclosure/close sprites do not inherit text color.
+         Limit the filter to these controls: the same sheet contains colored art. */
+      ${root}[data-oled-night-site="amazon"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) :is(.a-expander-header .a-icon-section-expand, .a-expander-header .a-icon-section-collapse, .a-popover .a-icon-close) {
+        filter: brightness(0) invert(1) !important;
+      }
+      ${root}[data-oled-night-site="amazon"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) .a-expander-header :is(.a-icon-extender-expand, .a-icon-extender-collapse) {
+        border-color: currentColor !important;
       }
       /* RES adds a light toolbar even on native-dark Reddit. Do not recolor
          unrelated white content or invert images elsewhere on the page. */

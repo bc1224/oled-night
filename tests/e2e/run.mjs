@@ -186,6 +186,10 @@ try {
   dropdown = await page.eval("dropdownResult('nativeOption')");
   check("dropdown: native option readable", dropdown.dark && dropdown.contrast >= 4.5);
   check('color picker and swatch retain original data colors',await page.eval("!document.getElementById('colorPicker').hasAttribute('data-oled-night') && getComputedStyle(document.getElementById('swatch')).backgroundColor === 'rgb(251, 235, 156)' && !document.getElementById('nativeColor').hasAttribute('data-oled-night')"));
+  check('Amazon disclosure and close sprites visible', (await css('amazonArrow','filter')) === 'brightness(0) invert(1)' && (await css('amazonClose','filter')) === 'brightness(0) invert(1)');
+  check('Amazon border chevron readable; other sprites unchanged', lum(await css('amazonMore','borderRightColor')) > .5 && (await css('amazonOther','filter')) === 'none');
+  await page.eval("document.getElementById('amazonArrow').className='a-icon a-icon-section-collapse sprite-icon'"); await sleep(80);
+  check('Amazon expanded arrow remains visible', (await css('amazonArrow','filter')) === 'brightness(0) invert(1)');
   const amazonHeader=await page.eval("dropdownResult('amazonHeader')");
   check('Amazon expanded header important background readable',amazonHeader.dark && amazonHeader.contrast>=4.5,JSON.stringify(amazonHeader));
   const importantRow = await page.eval("dropdownResult('importantRow')");
@@ -223,6 +227,7 @@ try {
   await page.eval("document.getElementById('shadowInteraction').shadowRoot.querySelector('button').focus()"); await sleep(80);
   check("dropdown: shadow focus-only surface darkened", await page.eval("getComputedStyle(document.getElementById('shadowInteraction').shadowRoot.querySelector('button')).backgroundColor !== 'rgb(238, 238, 238)'"));
   await setSettings({globalEnabled:false}); await sleep(400);
+  check("Amazon off restores icons", (await css("amazonArrow","filter")) === "none" && (await css("amazonMore","borderRightColor")) === "rgb(17, 17, 17)");
   check("dropdown: off restores original selection", (await css("promotion", "backgroundColor")) === "rgb(229, 235, 238)");
   await page.eval("document.getElementById('genericField').focus()"); await sleep(80);
   check("fields: off restores focus and text-fill", (await css("genericField", "backgroundColor")) === "rgb(245, 245, 245)" && (await css("genericField", "webkitTextFillColor")) === "rgb(34, 34, 34)");

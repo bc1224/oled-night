@@ -30,3 +30,6 @@ for(let i=0;i<600;i++) colors.parseColor(`rgba(12,34,56,${i/600})`);
 assert.deepEqual(colors.parseColor('rgb(12, 34, 56)'),cachedColor);
 assert.equal(colors.parseColor('invalid'),null);
 console.log('Color cache preserves correctness after eviction and mutable inputs');
+
+assert.equal(colors.siteProfile('www.amazon.com'), 'amazon');
+assert.equal(colors.siteProfile('amazon.com.evil.example'), '');

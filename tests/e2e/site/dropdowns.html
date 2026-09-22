@@ -19,6 +19,9 @@ select, option { background: white; color: #182024; }
 #genericField::placeholder { color: #444; }
 div.audit-page div.audit-table div.audit-active { background-color: #fbeb9c !important; }
 .ma-attribute-group-expander .a-expander-header.a-link-section-expander { background-color:#f3f3f3!important; }
+.a-icon {display:inline-block;width:20px;height:20px}
+.sprite-icon {background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M3 7L10 14L17 7' fill='none' stroke='%23111' stroke-width='2'/%3E%3C/svg%3E")}
+.a-icon-extender-expand {width:6px;height:6px;border:solid #111;border-width:0 2px 2px 0;transform:rotate(45deg)}
 </style></head><body>
 <ul role="menu" aria-label="Objective">
 <li id="traffic" role="menuitemradio" aria-checked="false" class="MenuListItem-radio MenuListItem" tabindex="-1"><span>Traffic</span></li>
@@ -49,4 +52,8 @@ window.dropdownResult = id => {
   return { background:s.backgroundColor, dark:bg<.05, contrast:(Math.max(fg,bg)+.05)/(Math.min(fg,bg)+.05), outline:s.outlineStyle, marked:el.getAttribute('data-oled-night') };
 };
 </script><div class="color-picker" id="colorPicker" style="background:linear-gradient(to right, red, lime, blue)"><span id="swatch" style="background:#fbeb9c;color:#222">Actual color</span></div><input id="nativeColor" type="color" value="#ff0000">
-<div class="ma-attribute-group-expander"><a id="amazonHeader" role="button" aria-expanded="true" class="a-expander-header a-link-section-expander"><span>Delivery options fixture</span></a></div></body></html>
+<div class="ma-attribute-group-expander"><a id="amazonHeader" role="button" aria-expanded="true" class="a-expander-header a-link-section-expander"><span>Delivery options fixture</span></a></div><div class="a-popover"><button><i id="amazonClose" class="a-icon a-icon-close sprite-icon"></i></button></div>
+<button class="a-expander-header"><i id="amazonArrow" class="a-icon a-icon-section-expand sprite-icon"></i></button>
+<button class="a-expander-header"><i id="amazonMore" class="a-icon a-icon-extender-expand"></i>More</button>
+<i id="amazonOther" class="a-icon a-icon-checkbox sprite-icon"></i>
+<script>setTimeout(()=>document.documentElement.setAttribute('data-oled-night-site','amazon'),1200)</script></body></html>

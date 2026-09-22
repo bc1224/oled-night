@@ -60,7 +60,7 @@ assert.equal(styleValues.get("--oled-night-page"), "#000");
 assert.equal(walkerStarted, false);
 assert.equal(observerStarted, false);
 assert.equal(attributes.has("data-oled-night-youtube"), true);
-assert.equal(root.getAttribute?.("data-oled-night-version"), "0.6.11");
+assert.equal(root.getAttribute?.("data-oled-night-version"), "0.6.12");
 assert.doesNotMatch(sheet.textContent, /--yt-spec-base-background/);
 assert.match(sheet.textContent, /--yt-spec-text-primary/);
 messageListener({ type: "oled-night-preview", patch: { brightness: 70 } }, {}, () => {});

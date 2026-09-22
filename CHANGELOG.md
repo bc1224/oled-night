@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.12
+
+- Keep Amazon accordion arrows, delivery-dialog close icons and show-more chevrons visible on dark surfaces.
+- Limit sprite recoloring to known monochrome controls; preserve other icons and images and restore original styling when disabled.
+- Add Chrome and Firefox regression coverage. No new observers, permissions or theme changes.
+
 ## 0.6.11
 
 - Combine interaction and mutation updates in one pre-paint batch; remove overlapping subtree work.

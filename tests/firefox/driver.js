@@ -70,6 +70,8 @@
     }));
     await inspect(() => { const e=document.getElementById('genericField'); e.setAttribute('style','width:100%'); e.removeAttribute('data-oled-night'); }); await wait(400);
     check('field recovers after framework replaces inline styles', await inspect(() => parseFloat(getComputedStyle(document.getElementById('genericField')).webkitTextFillColor.match(/[\d.]+/)[0]) > 180));
+    check('Amazon sprites and border chevron readable', await inspect(() => getComputedStyle(document.getElementById('amazonArrow')).filter === 'brightness(0) invert(1)' && getComputedStyle(document.getElementById('amazonClose')).filter === 'brightness(0) invert(1)' && parseFloat(getComputedStyle(document.getElementById('amazonMore')).borderRightColor.match(/[\d.]+/)[0]) > 180));
+    check('Amazon unrelated sprite untouched', await inspect(() => getComputedStyle(document.getElementById('amazonOther')).filter === 'none'));
     check('Amazon expanded header darkened',await inspect(()=>getComputedStyle(document.getElementById('amazonHeader')).backgroundColor!=='rgb(243, 243, 243)'));
     check('specific important highlighted row darkened', await inspect(() => getComputedStyle(document.getElementById('importantRow')).backgroundColor !== 'rgb(251, 235, 156)'));
     check('dropdown blur clears old focus highlight', await inspect(() => getComputedStyle(document.getElementById('transparentRow')).backgroundColor === 'rgba(0, 0, 0, 0)'));
@@ -79,6 +81,7 @@
       return el.getAttribute('data-oled-night').includes('bg') && parseFloat(getComputedStyle(el).backgroundColor.match(/[\d.]+/)[0]) < 60;
     }));
     await browser.storage.sync.set({globalEnabled:false}); await wait(400);
+    check('Amazon off restores icons', await inspect(() => getComputedStyle(document.getElementById('amazonArrow')).filter === 'none' && getComputedStyle(document.getElementById('amazonMore')).borderRightColor === 'rgb(17, 17, 17)'));
     check('dropdown off restores selection', await inspect(() => getComputedStyle(document.getElementById('promotion')).backgroundColor === 'rgb(229, 235, 238)'));
     await inspect(() => document.getElementById('genericField').focus()); await wait(100);
     check('field off restores original text fill', await inspect(() => getComputedStyle(document.getElementById('genericField')).webkitTextFillColor === 'rgb(34, 34, 34)'));
