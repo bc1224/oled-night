@@ -445,6 +445,7 @@ try {
   await click("globalEnabled");
   if (!(await page.eval("matchMedia('(prefers-color-scheme: dark)').matches"))) {
     await ext.eval("document.querySelector('input[name=appearance][value=auto]').click()"); await sleep(600);
+    await popup.go(`chrome-extension://${extId}/popup.html`, 1200);
     state = await ui();
     check("popup: follow system explains light-mode off", !(await rootHas("data-oled-night-root")) && state.status === "Off while your system is in light mode", JSON.stringify(state));
     await ext.eval("document.querySelector('input[name=appearance][value=oled]').click()"); await sleep(600);
