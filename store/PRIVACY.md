@@ -12,7 +12,7 @@ OLED Night is a browser extension that makes web pages dark. It is built to work
 
 **Diagnostic reports:** if you click "Report a broken site", the extension saves a small file to your own computer. It contains the site's address, the extension's settings, and short text snippets (30 characters or fewer) from any text it found hard to read. No screenshot is captured. The file goes nowhere unless you choose to send it to someone; review it before sharing.
 
-**Permissions:** OLED Night runs on every site because recoloring pages is its purpose. The `storage` permission saves your settings, `activeTab` identifies the current site for the popup and keyboard shortcut, and `scripting` is used only if you turn on the experimental "reach inside locked web components" setting.
+**Permissions:** OLED Night runs on every site because recoloring pages is its purpose. The `storage` permission saves your settings, `activeTab` identifies the current site for the popup and keyboard shortcut, and `scripting` lets the popup check whether the current tab can be reached. No code is injected into the page's own scripts.
 
 **Changes:** if this policy ever changes, the new version will be published with the extension update.
 

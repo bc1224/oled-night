@@ -18,7 +18,7 @@ You can download the unsigned [Firefox preview ZIP](https://github.com/bc1224/ol
 
 - The same darkening engine, per-site controls, schedule, settings backup and diagnostic JSON reports.
 - Apple sign-in field and Reddit Enhancement Suite fixes.
-- Optional closed-shadow component support (off by default).
+- Optional closed-shadow component support (off by default), read through the extension API without changing the page.
 - Firefox-specific shortcut instructions. The separate Chrome browser theme is not included.
 
 ## Development checks

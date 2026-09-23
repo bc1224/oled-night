@@ -24,23 +24,16 @@ chrome.commands.onCommand.addListener(async (command) => {
   await chrome.storage.sync.set({ siteRules });
 });
 
-// Experimental: closed web components are unreachable from an extension, so
-// when enabled, a page-world script opens them as they are created.
-async function syncOpenShadows() {
-  const { openClosedShadows } = await load();
-  const existing = await chrome.scripting.getRegisteredContentScripts({ ids: [OPEN_SHADOWS_ID] });
-  if (openClosedShadows && !existing.length) {
-    await chrome.scripting.registerContentScripts([{
-      id: OPEN_SHADOWS_ID, js: ["shadow-open.js"], matches: ["<all_urls>"],
-      runAt: "document_start", allFrames: true, world: "MAIN", persistAcrossSessions: true
-    }]);
-  } else if (!openClosedShadows && existing.length) {
-    await chrome.scripting.unregisterContentScripts({ ids: [OPEN_SHADOWS_ID] });
-  }
+// Up to 0.6.14 the experimental closed-component option registered a page-world
+// script that replaced Element.prototype.attachShadow. Bot checks such as
+// Cloudflare Turnstile treat that as tampering, so content.js now reads closed
+// roots through the extension API instead; remove any leftover registration.
+async function removeOpenShadowsScript() {
+  try {
+    const existing = await chrome.scripting.getRegisteredContentScripts({ ids: [OPEN_SHADOWS_ID] });
+    if (existing.length) await chrome.scripting.unregisterContentScripts({ ids: [OPEN_SHADOWS_ID] });
+  } catch {}
 }
 
-chrome.runtime.onInstalled.addListener(syncOpenShadows);
-chrome.runtime.onStartup.addListener(syncOpenShadows);
-chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "sync" && "openClosedShadows" in changes) syncOpenShadows();
-});
+chrome.runtime.onInstalled.addListener(removeOpenShadowsScript);
+chrome.runtime.onStartup.addListener(removeOpenShadowsScript);

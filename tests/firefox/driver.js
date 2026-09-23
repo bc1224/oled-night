@@ -33,11 +33,12 @@
     check('shadow root background darkened', await inspect(() => getComputedStyle(document.getElementById('grid').shadowRoot.querySelector('table')).backgroundColor === 'rgb(0, 0, 0)'));
     check('images unchanged', await inspect(() => getComputedStyle(document.getElementById('img')).filter === 'none'));
     await browser.storage.sync.set({openClosedShadows:true}); await wait(600);
-    check('MAIN world script registered', (await browser.scripting.getRegisteredContentScripts()).some(s => s.id === 'oled-night-open-shadows'));
+    check('no page-world script registered', !(await browser.scripting.getRegisteredContentScripts()).length);
     await open('components.html');
-    check('closed shadow opt-in works', await inspect(() => !!document.getElementById('closed').shadowRoot));
+    check('closed shadow opt-in works', await inspect(() => getComputedStyle(document.getElementById('closed').openOrClosedShadowRoot.querySelector('div')).backgroundColor === 'rgb(0, 0, 0)'));
+    check('closed root stays closed to the page', await inspect(() => document.getElementById('closed').wrappedJSObject.shadowRoot === null));
+    check('Turnstile-style closed div untouched', await inspect(() => getComputedStyle(document.getElementById('turnstile').openOrClosedShadowRoot.querySelector('div')).backgroundColor === 'rgb(255, 255, 255)'));
     await browser.storage.sync.set({openClosedShadows:false}); await wait(400);
-    check('MAIN world script unregisters', !(await browser.scripting.getRegisteredContentScripts()).length);
     await open('gmail.html');
     check('Gmail ellipsis visible', await inspect(() => getComputedStyle(document.getElementById('ellipsis')).filter.includes('invert(1)')));
     check('Gmail cross-origin logo edge preserves colors', await inspect(() => { const f=getComputedStyle(document.getElementById('mailLogo')).filter; return f.includes('drop-shadow') && !f.includes('invert'); }));

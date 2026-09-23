@@ -47,7 +47,7 @@ Regenerate the images with `node tools/store-assets.mjs`.
 - `host_permissions: <all_urls>`: The extension recolors the pages the user visits, so its content script must run on every site. It only changes colors on the page; it does not read, store or send page content.
 - `storage`: Saves the user's settings and per-site choices in Chrome sync storage.
 - `activeTab`: Lets the popup and the keyboard shortcut identify the current site so its settings can be shown and changed.
-- `scripting`: Registers an optional page script, only when the user turns on the experimental "reach inside locked web components" setting.
+- `scripting`: Lets the popup check whether the current tab can be reached (to offer a Reload button), and removes a page script that versions before 0.6.15 registered for the experimental "reach inside locked web components" setting. No code is injected into pages.
 
 **Remote code:** No, the extension does not use remote code. All code ships in the package.
 

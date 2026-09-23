@@ -11,14 +11,14 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));
 
 // Runtime files only: manifest, scripts, pages, styles and the toolbar icons.
-const RUNTIME = ["manifest.json", "settings.js", "color-utils.js", "content.js", "background.js", "shadow-open.js",
+const RUNTIME = ["manifest.json", "settings.js", "color-utils.js", "content.js", "background.js",
   "popup.html", "popup.css", "popup.js", "options.html", "options.css", "options.js",
   "assets/icon-16.png", "assets/icon-32.png", "assets/icon-48.png", "assets/icon-128.png", "INSTALL.md", "LICENSE"];
 
 // Every file the manifest and pages reference must be in the list above.
 const referenced = new Set([
   manifest.background.service_worker, ...manifest.content_scripts.flatMap((c) => c.js), manifest.action.default_popup, manifest.options_page,
-  ...Object.values(manifest.icons), "shadow-open.js"
+  ...Object.values(manifest.icons)
 ]);
 for (const page of ["popup.html", "options.html"]) {
   for (const [, ref] of readFileSync(join(root, page), "utf8").matchAll(/(?:src|href)="([^":]+)"/g)) referenced.add(ref);

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.15
+
+- Fix Cloudflare Turnstile and other human-verification checks failing while OLED Night is on. The experimental "reach inside locked web components" option replaced the page's own `attachShadow` function and forced closed components open, in every frame including verification frames; bot checks detect that as tampering. Closed components are now read through the extension-only API (`chrome.dom.openOrClosedShadowRoot` / `openOrClosedShadowRoot` in Firefox), so no page function is changed and closed components stay closed to the page. Any page script registered by an earlier version is removed.
+- Leave every verification provider alone, not just Cloudflare: Turnstile, reCAPTCHA, hCaptcha, Arkose/FunCaptcha, DataDome, HUMAN/PerimeterX, GeeTest, AWS WAF, Friendly Captcha, MTCaptcha and generic captcha/challenge widgets. Their frames get no content script (`exclude_matches` plus a URL backstop, including script-built frames inside a widget), their in-page containers are never recolored or marked, closed components holding them are skipped, and whole-page challenges ("Just a moment...") are not darkened.
+- Add Chrome and Firefox regression coverage: page `attachShadow` stays native with the option on and off, closed roots stay closed, Turnstile/hCaptcha/reCAPTCHA/PerimeterX-style widgets stay untouched while the rest of the page darkens, and a full-page challenge is left alone. No new permissions.
+
 ## 0.6.14
 
 - Fix input lag on large pages, measured on Discord: typing, hovering, focus moves and keyboard/mouse switches no longer restyle the whole document. Applies to every site.

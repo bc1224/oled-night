@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.14";
+  const VERSION = "0.6.15";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -42,7 +42,15 @@
     "before-bg", "before-img", "before-shadow", "after-bg", "after-img", "after-shadow"];
   const SIDES = [["Top", "bt"], ["Right", "br"], ["Bottom", "bb"], ["Left", "bl"]];
   // Frames that are players, maps, ads or challenges are left exactly as they are.
-  const UNTOUCHED_FRAMES = /(youtube(-nocookie)?\.com|vimeo\.com|player\.|twitch\.tv|spotify\.com|soundcloud\.com|maps\.google|google\.[a-z.]+\/maps|doubleclick\.net|googlesyndication\.com|recaptcha|hcaptcha\.com|challenges\.cloudflare\.com)/i;
+  const UNTOUCHED_FRAMES = /(youtube(-nocookie)?\.com|vimeo\.com|player\.|twitch\.tv|spotify\.com|soundcloud\.com|maps\.google|google\.[a-z.]+\/maps|doubleclick\.net|googlesyndication\.com)/i;
+  // Bot and human verification of any provider (Turnstile, reCAPTCHA, hCaptcha,
+  // Arkose, DataDome, HUMAN/PerimeterX, GeeTest, AWS WAF, Friendly Captcha and
+  // others). These check the page for tampering, so their frames, widgets and
+  // full-page challenges are never recolored, marked or observed.
+  const BOT_CHECK_URL = /captcha|challenge|turnstile|arkoselabs|funcaptcha|geetest|perimeterx|px-cloud\.net|px-cdn\.net|humansecurity|datadome|awswaf|kasada|friendlycaptcha|frcapi|\/cdn-cgi\//i;
+  const BOT_CHECK = ':is([class*="captcha" i], [id*="captcha" i], [class*="turnstile" i], [id^="cf-chl-"], [data-sitekey], [class*="arkose" i], [id*="arkose" i], [class*="geetest" i], [id*="geetest" i], .frc-container, iframe[src*="captcha" i], iframe[src*="challenge" i]):not(html, body)';
+  // Subtrees we never recolor: color data and verification widgets.
+  const PRESERVE = `${COLOR_CONTROL}, ${BOT_CHECK}`;
   const STATE_ATTRIBUTES = ["aria-selected", "aria-checked", "aria-expanded", "aria-disabled", "data-state", "data-highlighted", "selected", "disabled"];
   const OBSERVE = { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "href", "media", MARK, ...STATE_ATTRIBUTES] };
   const isTopFrame = (() => { try { return typeof window === "undefined" || window.top === window; } catch { return false; } })();
@@ -81,6 +89,7 @@
   let shadowSheet = null;
 
   const colorsApi = () => globalThis.OledNightColors;
+  const domApi = globalThis.chrome?.dom;
 
   // Site rules follow the page in the address bar, including inside its frames.
   function hostname() {
@@ -108,13 +117,25 @@
   function frameIsUntouched() {
     if (isTopFrame) return false;
     try {
-      if (UNTOUCHED_FRAMES.test(location.href)) return true;
+      if (UNTOUCHED_FRAMES.test(location.href) || BOT_CHECK_URL.test(location.href)) return true;
+      // Script-built (about:blank/srcdoc) frames inside a verification widget.
+      if (window.frameElement?.closest(BOT_CHECK)) return true;
       return innerWidth < 80 || innerHeight < 40;
     } catch { return true; }
   }
 
   function preservesColor(element) {
-    for (let node = element; node; node = parentAcrossShadow(node)) if (node.matches?.(COLOR_CONTROL)) return true;
+    for (let node = element; node; node = parentAcrossShadow(node)) if (node.matches?.(PRESERVE)) return true;
+    return false;
+  }
+
+  // A whole-page challenge ("Just a moment...", "Press & Hold", "Verify you are
+  // human") is left alone rather than darkened.
+  function isChallengePage() {
+    try {
+      if (document.querySelector('#challenge-form, #challenge-running, #challenge-stage, #challenge-success-text, #cf-challenge-running, #sec-if-cpt-container, [data-translate="checking_browser"]')) return true;
+      for (const script of document.scripts) if (/_cf_chl_opt|\/cdn-cgi\/challenge-platform\/h\/|captcha-delivery\.com|awswaf.*captcha|_Incapsula_Resource/i.test(script.src || script.textContent.slice(0, 4000))) return true;
+    } catch {}
     return false;
   }
 
@@ -365,17 +386,34 @@
     if (seen.has(element)) return;
     seen.add(element);
     list.push(element);
-    if (element.shadowRoot) {
-      adoptShadowRoot(element.shadowRoot);
-      walkChildren(element.shadowRoot, list, seen, list.icons);
+    const root = shadowOf(element);
+    if (root) {
+      adoptShadowRoot(root);
+      walkChildren(root, list, seen, list.icons);
     }
+  }
+
+  // Experimental: closed roots are read through the extension-only API, so the
+  // page's own functions stay native and its roots stay closed. Only custom
+  // elements are asked (challenge widgets such as Turnstile lock plain <div>s),
+  // and roots that hold a verification frame are never touched.
+  function shadowOf(element) {
+    if (element.shadowRoot) return element.shadowRoot;
+    if (!settings.openClosedShadows || !element.localName.includes("-")) return null;
+    let root = null;
+    // Firefox exposes the root on the element; Chrome through its dom API.
+    try { root = "openOrClosedShadowRoot" in element ? element.openOrClosedShadowRoot : domApi?.openOrClosedShadowRoot(element); } catch {}
+    if (!root) return null;
+    if (element.matches(BOT_CHECK) || root.querySelector(BOT_CHECK)) return null;
+    for (const frame of root.querySelectorAll("iframe")) if (BOT_CHECK_URL.test(frame.src)) return null;
+    return root;
   }
 
   function walkChildren(root, list, seen, icons) {
     list.images ||= new Set();
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
       acceptNode: (node) => {
-        if (node.matches(COLOR_CONTROL)) return NodeFilter.FILTER_REJECT;
+        if (node.matches(PRESERVE)) return NodeFilter.FILTER_REJECT;
         if (!isMedia(node)) return NodeFilter.FILTER_ACCEPT;
         if (node.localName === "svg") icons.add(node);
         else if (node.localName === "img") list.images.add(node);
@@ -883,6 +921,7 @@
     // A design editor's UI and canvas share color-bearing elements. Preserve
     // the entire document even for explicit recolor/invert overrides.
     if (Settings.prefersNativeColors(hostname())) { active = true; return; }
+    if (isChallengePage()) { removeEarly(); active = true; return; }
     const site = currentSiteMode();
     // Read the page's own background before any of our rules paint over it.
     darkPage = !colorsApi().usesNativeSafeMode(hostname()) && detectDarkPage();
@@ -926,7 +965,7 @@
   }
 
   let scheduleTimer = null;
-  const structureKey = (config) => `${resolvedAppearance(config)}|${Settings.siteMode(config, hostname())}`;
+  const structureKey = (config) => `${resolvedAppearance(config)}|${Settings.siteMode(config, hostname())}|${config.openClosedShadows}`;
 
   function applySettings(config) {
     revision += 1;

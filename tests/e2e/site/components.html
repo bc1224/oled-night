@@ -10,11 +10,20 @@ body{background:#fff;color:#202124;font:14px sans-serif;margin:20px}
 <p class="title" id="title">Modern color title</p>
 <div class="chat" id="chat"><p>one</p><p>two</p></div><div class="composer" id="composer">Composer</div>
 <img id="img" width="40" height="40" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23fff'/%3E%3C/svg%3E">
-<ads-grid id="grid"></ads-grid><closed-box id="closed"></closed-box>
+<ads-grid id="grid"></ads-grid><closed-box id="closed"></closed-box><div id="turnstile"></div>
+<div class="h-captcha" data-sitekey="x" id="hcap"><div id="hcapInner" style="background:#fff;color:#111">hCaptcha</div></div>
+<div id="px-captcha"><p id="pxInner" style="background:#fff;color:#111">Press &amp; Hold</p></div>
+<form class="g-recaptcha-form"><button class="g-recaptcha" data-sitekey="x" id="recapButton" style="background:#fff;color:#111">Submit</button></form><challenge-box id="challenge"></challenge-box>
 <script>
 customElements.define('ads-grid', class extends HTMLElement { connectedCallback() { const r = this.attachShadow({ mode: 'open' });
   r.innerHTML = '<style>table{background:#fff}td{color:#6e6e73;padding:4px}</style><table><tr><td id="cell">$0.00</td></tr></table>';
   setTimeout(() => { const td = document.createElement('td'); td.id = 'late'; td.textContent = 'late'; r.querySelector('tr').appendChild(td); }, 300); } });
 customElements.define('closed-box', class extends HTMLElement { connectedCallback() { const r = this.attachShadow({ mode: 'closed' });
-  r.innerHTML = '<div style="background:#fff;color:#111">closed</div>'; window.closedWasOpened = !!this.shadowRoot; } });
+  r.innerHTML = '<div style="background:#fff;color:#111">closed</div>'; window.closedWasOpened = !!this.shadowRoot; window.closedRoot = r; } });
+// Like Cloudflare Turnstile: a closed root on a plain <div>, and one holding a challenge frame.
+window.turnstileRoot = document.getElementById('turnstile').attachShadow({ mode: 'closed' });
+window.turnstileRoot.innerHTML = '<div style="background:#fff;color:#111">verify</div>';
+customElements.define('challenge-box', class extends HTMLElement { connectedCallback() { const r = this.attachShadow({ mode: 'closed' });
+  r.innerHTML = '<div style="background:#fff;color:#111">challenge</div><iframe src="about:blank#challenges.cloudflare.com" width="10" height="10"></iframe>'; window.challengeRoot = r; } });
+window.nativeAttachShadow = () => Function.prototype.toString.call(Element.prototype.attachShadow).includes('[native code]') && !('__oledNight' in Element.prototype.attachShadow);
 </script></body></html>

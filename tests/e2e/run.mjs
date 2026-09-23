@@ -276,13 +276,24 @@ try {
   const other = await openTab(site("localhost", "components.html"));
   check("other sites keep global brightness", (await other.eval("document.documentElement.style.getPropertyValue('--oln-light')")) === "88%");
   check("closed components stay closed by default", (await other.eval("window.closedWasOpened")) === false);
+  check("bot check: page attachShadow native by default", (await other.eval("window.nativeAttachShadow()")) === true);
+  check("bot check: hCaptcha-style widget untouched", (await other.eval("getComputedStyle(document.getElementById('hcapInner')).backgroundColor")) === "rgb(255, 255, 255)" && (await other.eval("document.querySelectorAll('#hcap [data-oled-night], #hcap[data-oled-night]').length")) === 0);
+  check("bot check: PerimeterX-style widget untouched", (await other.eval("getComputedStyle(document.getElementById('pxInner')).backgroundColor")) === "rgb(255, 255, 255)");
+  check("bot check: reCAPTCHA button untouched", (await other.eval("getComputedStyle(document.getElementById('recapButton')).backgroundColor")) === "rgb(255, 255, 255)");
+  check("bot check: rest of the page still darkened", lum(await other.eval("getComputedStyle(document.body).backgroundColor")) < 0.01);
+  const challenge = await openTab(site("localhost", "challenge.html"));
+  await sleep(600);
+  check("bot check: full-page challenge left alone", (await challenge.eval("getComputedStyle(document.body).backgroundColor")) === "rgb(255, 255, 255)" && (await challenge.eval("document.querySelectorAll('[data-oled-night], #oled-night-sheet, #oled-night-early').length")) === 0);
 
-  // Experimental: open closed web components (registered page-world script).
+  // Experimental: reach closed web components through the extension API only.
   await setSettings({ openClosedShadows: true });
   await sleep(800);
   await other.go(site("localhost", "components.html"), 1800);
-  check("experimental: closed components reachable", (await other.eval("window.closedWasOpened")) === true);
-  check("experimental: closed component darkened", lum(await other.eval("getComputedStyle(document.getElementById('closed').shadowRoot.querySelector('div')).backgroundColor")) < 0.01);
+  check("experimental: closed components stay closed to the page", (await other.eval("window.closedWasOpened")) === false);
+  check("experimental: page attachShadow stays native (Turnstile)", (await other.eval("window.nativeAttachShadow()")) === true);
+  check("experimental: closed component darkened", lum(await other.eval("getComputedStyle(window.closedRoot.querySelector('div')).backgroundColor")) < 0.01);
+  check("experimental: Turnstile-style closed <div> untouched", (await other.eval("getComputedStyle(window.turnstileRoot.querySelector('div')).backgroundColor")) === "rgb(255, 255, 255)" && (await other.eval("window.turnstileRoot.adoptedStyleSheets.length")) === 0);
+  check("experimental: closed root with challenge frame untouched", (await other.eval("getComputedStyle(window.challengeRoot.querySelector('div')).backgroundColor")) === "rgb(255, 255, 255)" && (await other.eval("window.challengeRoot.adoptedStyleSheets.length")) === 0);
   await setSettings({ openClosedShadows: false });
   await sleep(500);
 

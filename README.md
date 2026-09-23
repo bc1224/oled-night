@@ -66,7 +66,7 @@ OLED Night doesn't run one filter over the whole page. It works out a color for 
 | `settings.js` | Shared settings model: defaults, site modes, per-site tuning, schedule |
 | `color-utils.js` | Color parsing (every CSS color syntax) and mapping rules |
 | `content.js` | Page engine: batched recoloring, change tracking, shadow roots, invert mode, reports |
-| `background.js` | Keyboard shortcut and the experimental closed-component option |
+| `background.js` | Keyboard shortcut; removes the page script older versions registered |
 | `popup.*`, `options.*` | Toolbar popup and settings page |
 | `docs/` | The project website (GitHub Pages) |
 

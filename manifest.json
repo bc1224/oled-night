@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "OLED Night",
-  "version": "0.6.14",
+  "version": "0.6.15",
   "description": "True-black dark mode for every site. Keeps images intact, readable text, per-site controls.",
   "permissions": [
     "storage",
@@ -43,6 +43,21 @@
     {
       "matches": [
         "<all_urls>"
+      ],
+      "exclude_matches": [
+        "*://challenges.cloudflare.com/*",
+        "*://*.hcaptcha.com/*",
+        "*://www.google.com/recaptcha/*",
+        "*://www.recaptcha.net/*",
+        "*://*.arkoselabs.com/*",
+        "*://*.funcaptcha.com/*",
+        "*://*.captcha-delivery.com/*",
+        "*://*.perimeterx.net/*",
+        "*://*.px-cloud.net/*",
+        "*://*.geetest.com/*",
+        "*://*.friendlycaptcha.com/*",
+        "*://*.awswaf.com/*",
+        "*://*.mtcaptcha.com/*"
       ],
       "js": [
         "settings.js",
