@@ -9,27 +9,44 @@ Upload `dist/oled-night-<version>.zip` (build it with `node tools/package.mjs`).
 
 **Name:** OLED Night
 
-**Summary** (132 characters max):
-> True-black dark mode for every site. Keeps images intact and text readable, with per-site modes and brightness.
+**Summary** (132 characters max). The store shows the `description` from `manifest.json` here, so a new summary goes live with the next package:
+> True-black dark mode for every site. Open source, zero tracking, nothing leaves your browser. Images and text stay intact.
 
 **Category:** Accessibility (alternative: Productivity)
 
 **Language:** English
 
 **Description:**
-> OLED Night turns websites true black, the kind of black that switches OLED pixels off completely, without the usual dark-mode side effects.
+> OLED Night makes every website true black, the kind of black that switches OLED pixels off, without the usual dark-mode side effects.
 >
+> NO TRACKING. NOTHING LEAVES YOUR BROWSER.
+> • No analytics, no telemetry, no ads, no accounts and no servers. The extension makes no network requests of its own.
+> • Your settings live in Chrome's own sync storage. The developer never sees them.
+> • It reads page colors only to recolor them, inside your browser. Page content is never saved or sent anywhere.
+> • "Report a broken site" saves a small file to your own computer. It goes nowhere unless you choose to share it.
+>
+> 100% OPEN SOURCE (GPL-3.0)
+> Every line of code is public on GitHub: https://github.com/bc1224/oled-night
+> • Read exactly what runs on your pages before you install.
+> • Every version is tagged on GitHub with its changelog and a downloadable build.
+> • Report a broken site or request a feature in GitHub Issues.
+>
+> WHAT IT DOES
 > • Real recoloring, not a blanket filter: photos, videos and artwork keep their true colors.
 > • Readable text: main, secondary and muted text keep their emphasis instead of all turning the same grey.
 > • Works on already-dark sites: it only deepens their greys to true black and leaves the design alone.
-> • Handles modern web apps: web components, embedded frames and chat widgets, charts, and modern CSS color formats.
+> • Handles modern web apps: web components, embedded frames, chat widgets, charts and modern CSS colors.
+> • Leaves "verify you are human" checks (Cloudflare Turnstile, reCAPTCHA, hCaptcha and others) untouched so they keep working.
 > • No white flash while pages load.
 > • Per-site modes: automatic, full recolor, deepen blacks only, invert (for canvas apps such as spreadsheets and design tools), or off.
 > • Per-site brightness and contrast, plus optional image dimming.
 > • A schedule (for example, only at night) and a keyboard shortcut (Alt+Shift+D) to switch any site on or off.
 > • Settings sync through your Chrome profile; export and import them as a file.
 >
-> Private by design: OLED Night never sends data anywhere. It has no servers, no analytics and no tracking.
+> WHY IT ASKS TO RUN ON EVERY SITE
+> Recoloring pages is the whole job, so it has to run on the pages you visit. It only changes colors. Its other permissions just save your settings (storage) and let the popup and shortcut see which site you're on (activeTab, scripting).
+>
+> Privacy policy: https://github.com/bc1224/oled-night/blob/main/store/PRIVACY.md
 
 **Graphic assets:**
 - Store icon: `store/images/store-icon-128.png` (128x128, artwork padded to 96x96)
