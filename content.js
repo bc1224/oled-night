@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.15";
+  const VERSION = "0.6.16";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -46,9 +46,15 @@
   // Bot and human verification of any provider (Turnstile, reCAPTCHA, hCaptcha,
   // Arkose, DataDome, HUMAN/PerimeterX, GeeTest, AWS WAF, Friendly Captcha and
   // others). These check the page for tampering, so their frames, widgets and
-  // full-page challenges are never recolored, marked or observed.
-  const BOT_CHECK_URL = /captcha|challenge|turnstile|arkoselabs|funcaptcha|geetest|perimeterx|px-cloud\.net|px-cdn\.net|humansecurity|datadome|awswaf|kasada|friendlycaptcha|frcapi|\/cdn-cgi\//i;
-  const BOT_CHECK = ':is([class*="captcha" i], [id*="captcha" i], [class*="turnstile" i], [id^="cf-chl-"], [data-sitekey], [class*="arkose" i], [id*="arkose" i], [class*="geetest" i], [id*="geetest" i], .frc-container, iframe[src*="captcha" i], iframe[src*="challenge" i]):not(html, body)';
+  // full-page challenges are never recolored, marked or observed. Frame URLs
+  // are matched on origin and path only, so a query or hash that merely
+  // mentions a challenge doesn't leave a normal embed white.
+  const BOT_CHECK_URL = /captcha|challenges\.cloudflare\.com|challenge-platform|turnstile|arkoselabs|funcaptcha|geetest|perimeterx|px-cloud\.net|px-cdn\.net|humansecurity|datadome|awswaf|kasada|friendlycaptcha|frcapi|\/cdn-cgi\//i;
+  const frameUrl = (src) => { try { const url = new URL(src, location.href); return url.origin + url.pathname; } catch { return ""; } };
+  // Provider widgets by their own markup. A site's own element that merely has
+  // "captcha" in its name counts only while it holds no form of its own, so a
+  // login form wrapped in "login-captcha-wrapper" is still darkened.
+  const BOT_CHECK = ':is([data-sitekey], .cf-turnstile, [id^="cf-chl-"], [id^="cf-turnstile"], .g-recaptcha, .grecaptcha-badge, .h-captcha, .frc-captcha, .frc-container, #px-captcha, [class^="geetest_"], [class*=" geetest_"], [id^="arkose"], [id^="funcaptcha"], awswaf-captcha, :is([class*="captcha" i], [id*="captcha" i]):not(:has(form, input:not([type="hidden"]), select, button, textarea:not([name*="response" i]))), iframe[src*="captcha" i], iframe[src*="challenges.cloudflare.com"], iframe[src*="/challenge-platform/"], iframe[src*="arkoselabs"], iframe[src*="geetest"], iframe[src*="perimeterx"], iframe[src*="px-cloud.net"], iframe[src*="px-cdn.net"], iframe[src*="datadome"], iframe[src*="awswaf"], iframe[src*="kasada"], iframe[src*="frcapi"]):not(html, body)';
   // Subtrees we never recolor: color data and verification widgets.
   const PRESERVE = `${COLOR_CONTROL}, ${BOT_CHECK}`;
   const STATE_ATTRIBUTES = ["aria-selected", "aria-checked", "aria-expanded", "aria-disabled", "data-state", "data-highlighted", "selected", "disabled"];
@@ -56,6 +62,7 @@
   const isTopFrame = (() => { try { return typeof window === "undefined" || window.top === window; } catch { return false; } })();
 
   let observer = null;
+  let challengeTimer = null;
   let active = false;
   let darkPage = false;
   let pageColor = { r: 255, g: 255, b: 255, a: 1 };
@@ -117,7 +124,7 @@
   function frameIsUntouched() {
     if (isTopFrame) return false;
     try {
-      if (UNTOUCHED_FRAMES.test(location.href) || BOT_CHECK_URL.test(location.href)) return true;
+      if (UNTOUCHED_FRAMES.test(location.href) || BOT_CHECK_URL.test(frameUrl(location.href))) return true;
       // Script-built (about:blank/srcdoc) frames inside a verification widget.
       if (window.frameElement?.closest(BOT_CHECK)) return true;
       return innerWidth < 80 || innerHeight < 40;
@@ -133,8 +140,12 @@
   // human") is left alone rather than darkened.
   function isChallengePage() {
     try {
-      if (document.querySelector('#challenge-form, #challenge-running, #challenge-stage, #challenge-success-text, #cf-challenge-running, #sec-if-cpt-container, [data-translate="checking_browser"]')) return true;
-      for (const script of document.scripts) if (/_cf_chl_opt|\/cdn-cgi\/challenge-platform\/h\/|captcha-delivery\.com|awswaf.*captcha|_Incapsula_Resource/i.test(script.src || script.textContent.slice(0, 4000))) return true;
+      if (document.querySelector('#challenge-form, #challenge-running, #challenge-stage, #challenge-success-text, #cf-challenge-running, #sec-if-cpt-container, [data-translate="checking_browser"], iframe#main-iframe[src*="_Incapsula_Resource"]')) return true;
+      // Only markers that exist on the interstitial itself. Ordinary protected
+      // pages load bot-detection scripts and inline data mentioning captchas.
+      for (const script of document.scripts) {
+        if (script.src ? /\/cdn-cgi\/challenge-platform\/h\/[a-z]\/orchestrate\/|\/\/[\w.-]*captcha-delivery\.com\//i.test(script.src) : /(?:^|[\s;{(])(?:window\.)?(?:_cf_chl_opt|gokuProps)\s*=/.test(script.textContent.slice(0, 4000))) return true;
+      }
     } catch {}
     return false;
   }
@@ -405,15 +416,16 @@
     try { root = "openOrClosedShadowRoot" in element ? element.openOrClosedShadowRoot : domApi?.openOrClosedShadowRoot(element); } catch {}
     if (!root) return null;
     if (element.matches(BOT_CHECK) || root.querySelector(BOT_CHECK)) return null;
-    for (const frame of root.querySelectorAll("iframe")) if (BOT_CHECK_URL.test(frame.src)) return null;
+    for (const frame of root.querySelectorAll("iframe")) if (BOT_CHECK_URL.test(frameUrl(frame.src))) return null;
     return root;
   }
 
   function walkChildren(root, list, seen, icons) {
     list.images ||= new Set();
+    const guard = root.querySelector(BOT_CHECK) ? PRESERVE : COLOR_CONTROL;
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
       acceptNode: (node) => {
-        if (node.matches(PRESERVE)) return NodeFilter.FILTER_REJECT;
+        if (node.matches(guard)) return NodeFilter.FILTER_REJECT;
         if (!isMedia(node)) return NodeFilter.FILTER_ACCEPT;
         if (node.localName === "svg") icons.add(node);
         else if (node.localName === "img") list.images.add(node);
@@ -871,6 +883,8 @@
     settleTrees.clear();
     inlineStyles = new WeakMap();
     active = false;
+    clearInterval(challengeTimer);
+    challengeTimer = null;
     observer?.disconnect();
     observer = null;
     pendingTrees.clear();
@@ -921,7 +935,13 @@
     // A design editor's UI and canvas share color-bearing elements. Preserve
     // the entire document even for explicit recolor/invert overrides.
     if (Settings.prefersNativeColors(hostname())) { active = true; return; }
-    if (isChallengePage()) { removeEarly(); active = true; return; }
+    if (isChallengePage()) {
+      removeEarly();
+      active = true;
+      // Some challenges (press-and-hold, overlays) reveal the page in place.
+      challengeTimer = setInterval(() => { if (!isChallengePage()) enable(); }, 1500);
+      return;
+    }
     const site = currentSiteMode();
     // Read the page's own background before any of our rules paint over it.
     darkPage = !colorsApi().usesNativeSafeMode(hostname()) && detectDarkPage();
@@ -1061,7 +1081,10 @@
     if (document.body) start();
     document.addEventListener("DOMContentLoaded", () => {
       start();
-      if (active) { polarityDirty = true; schedule(); }
+      // Challenge markers usually arrive after <body> opens, when darkening
+      // already began; enable() now leaves the parsed challenge alone.
+      if (active && isChallengePage()) enable();
+      else if (active) { polarityDirty = true; schedule(); }
     }, { once: true });
     addEventListener("load", () => { if (active) { polarityDirty = true; schedule(); } }, { once: true });
   }

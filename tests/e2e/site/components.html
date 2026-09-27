@@ -14,6 +14,8 @@ body{background:#fff;color:#202124;font:14px sans-serif;margin:20px}
 <div class="h-captcha" data-sitekey="x" id="hcap"><div id="hcapInner" style="background:#fff;color:#111">hCaptcha</div></div>
 <div id="px-captcha"><p id="pxInner" style="background:#fff;color:#111">Press &amp; Hold</p></div>
 <form class="g-recaptcha-form"><button class="g-recaptcha" data-sitekey="x" id="recapButton" style="background:#fff;color:#111">Submit</button></form><challenge-box id="challenge"></challenge-box>
+<div class="login-captcha-wrapper" id="siteCaptcha" style="background:#fff;color:#111"><input name="user"><button type="button">Log in</button></div>
+<iframe id="challengeQueryFrame" src="frame.html?next=/challenge" width="200" height="40"></iframe>
 <script>
 customElements.define('ads-grid', class extends HTMLElement { connectedCallback() { const r = this.attachShadow({ mode: 'open' });
   r.innerHTML = '<style>table{background:#fff}td{color:#6e6e73;padding:4px}</style><table><tr><td id="cell">$0.00</td></tr></table>';
@@ -24,6 +26,6 @@ customElements.define('closed-box', class extends HTMLElement { connectedCallbac
 window.turnstileRoot = document.getElementById('turnstile').attachShadow({ mode: 'closed' });
 window.turnstileRoot.innerHTML = '<div style="background:#fff;color:#111">verify</div>';
 customElements.define('challenge-box', class extends HTMLElement { connectedCallback() { const r = this.attachShadow({ mode: 'closed' });
-  r.innerHTML = '<div style="background:#fff;color:#111">challenge</div><iframe src="about:blank#challenges.cloudflare.com" width="10" height="10"></iframe>'; window.challengeRoot = r; } });
+  r.innerHTML = '<div style="background:#fff;color:#111">challenge</div><iframe src="/cdn-cgi/challenge-platform/h/b/turnstile/if/ov2/av0/rcv/x/normal" width="10" height="10"></iframe>'; window.challengeRoot = r; } });
 window.nativeAttachShadow = () => Function.prototype.toString.call(Element.prototype.attachShadow).includes('[native code]') && !('__oledNight' in Element.prototype.attachShadow);
 </script></body></html>

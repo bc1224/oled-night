@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.16
+
+- Fix ordinary pages staying white since 0.6.15 because they load bot-detection scripts or mention captchas in inline data (for example 2captcha.com and sites behind Imperva, AWS WAF or Cloudflare bot management). A page is now treated as a full-page challenge only by markers that exist on the interstitial itself.
+- Fix a challenge page being darkened when its only marker is a script near the end of the body; the check now runs again once the page has parsed. Pages whose challenge clears in place are darkened afterwards.
+- Fix site components left undarkened because their class or id contains "captcha" or "challenge": login and sign-up forms wrapped in a "captcha" container, and frames whose query or hash mentions a challenge. Only real provider widgets (Turnstile, reCAPTCHA, hCaptcha, Arkose, GeeTest, HUMAN/PerimeterX, AWS WAF, Friendly Captcha, DataDome, Kasada) and captcha containers without a form of their own are left alone.
+- Skip bot-check matching while walking subtrees that hold no widget.
+- Add regression coverage for each case. No new permissions.
+
 ## 0.6.15
 
 - Fix Cloudflare Turnstile and other human-verification checks failing while OLED Night is on. The experimental "reach inside locked web components" option replaced the page's own `attachShadow` function and forced closed components open, in every frame including verification frames; bot checks detect that as tampering. Closed components are now read through the extension-only API (`chrome.dom.openOrClosedShadowRoot` / `openOrClosedShadowRoot` in Firefox), so no page function is changed and closed components stay closed to the page. Any page script registered by an earlier version is removed.
