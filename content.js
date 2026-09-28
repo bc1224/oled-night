@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.17";
+  const VERSION = "0.6.18";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -434,6 +434,13 @@
         if (!isMedia(node)) return NodeFilter.FILTER_ACCEPT;
         if (node.localName === "svg") icons.add(node);
         else if (node.localName === "img") list.images.add(node);
+        // <picture> is protected media, but its <img> can multiply with the
+        // newly darkened tile beneath it. A rejected picture hides that img
+        // from the walker, so collect it before pruning the subtree.
+        else if (node.localName === "picture") {
+          const image = node.querySelector("img");
+          if (image) list.images.add(image);
+        }
         return NodeFilter.FILTER_REJECT;
       }
     });
@@ -452,6 +459,11 @@
       return;
     }
     if (root.localName === "img") { list.images.add(root); return; }
+    if (root.localName === "picture") {
+      const image = root.querySelector("img");
+      if (image) list.images.add(image);
+      return;
+    }
     if (isMedia(root) || root.closest(MEDIA_SELECTOR)) return;
     visit(root, list, seen);
     walkChildren(root, list, seen, list.icons);

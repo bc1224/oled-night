@@ -236,6 +236,9 @@ try {
   // Shopping-site patterns: multiply-blended product photos and dark logos.
   await page.go(site("127.0.0.1", "shop.html"), 1800);
   check("multiply-blended product photos stay visible", (await css("product", "mixBlendMode")) === "normal" && (await css("promo", "mixBlendMode")) === "normal");
+  check("picture product photos stay visible", (await css("pictureProduct", "mixBlendMode")) === "normal" && await page.eval("document.getElementById('pictureProduct').hasAttribute('data-oled-night')"));
+  await page.eval("const tile = document.querySelector('.tile:has(picture)').cloneNode(true); tile.querySelector('img').id = 'latePictureProduct'; document.body.append(tile)"); await sleep(100);
+  check("late picture product photos stay visible", (await css("latePictureProduct", "mixBlendMode")) === "normal");
   check("dark transparent logo is flipped light", (await page.eval("document.getElementById('logo').hasAttribute('data-oled-night-logo')")) && /invert/.test(await css("logo", "filter")));
   check("colored logo and photos are left alone", (await css("colorLogo", "filter")) === "none" && (await css("photo", "filter")) === "none");
 

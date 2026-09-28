@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.18
+
+- Keep Amazon-style product photos visible when an `<img>` sits inside `<picture>` and uses `mix-blend-mode: multiply`. The image walker now checks the image before skipping the protected `<picture>` subtree, including pictures added after page load.
+- Add regression coverage for existing and dynamically added picture products. Add an optional CPU profile capture to the isolated benchmark for investigating busy-page overhead. No new permissions or theme changes.
+
 ## 0.6.17
 
 - Give native select options and optgroup labels an explicit dark surface and readable text while OLED Night is active. This fixes transparent options that Chrome painted on a white popup over a dark page, as seen on Glimbo.

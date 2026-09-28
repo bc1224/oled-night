@@ -115,12 +115,18 @@ try {
       const idleBefore=await metrics(), cpuBefore=await processes();const idleStart=performance.now();
       await sleep(2000);
       const idleMs=performance.now()-idleStart,cpuIdle=await processes(), idleAfter=await metrics();
+      const captureProfile=process.env.BENCH_PROFILE==='1' && variant==='oled' && file==='rows.html' && repeat===0;
+      if(captureProfile) { await send('Profiler.enable',{},page.sessionId); await send('Profiler.start',{},page.sessionId); }
       const workStart=performance.now();
       const timing=await page.eval(`(async()=>{const rows=[...document.querySelectorAll('.row')];let ticks=0,worst=0,last=performance.now();const stop=last+3000;
         await new Promise(done=>{const tick=()=>{const now=performance.now();worst=Math.max(worst,now-last);last=now;ticks++;
           for(let k=0;k<Math.min(20,rows.length);k++){const row=rows[(ticks*20+k)%rows.length];if(${JSON.stringify(workload)}==='transforms')row.style.transform='translateX('+(ticks%2)+'px)';else row.classList.toggle('hl');}
           scrollTo(0,(ticks*60)%10000);if(now<stop)setTimeout(tick,16);else done();};tick();});return {ticks,worstMs:Math.round(worst)};})()`);
       const workMs=performance.now()-workStart, cpuAfter=await processes(),workAfter=await metrics();
+      if(captureProfile) {
+        const {result:{profile}}=await send('Profiler.stop',{},page.sessionId);
+        writeFileSync(join(EXT,'dist','benchmark-rows.cpuprofile'),JSON.stringify(profile));
+      }
       const cpuDelta=(before,after)=>after.reduce((sum,p)=>{const old=before.find(v=>v.id===p.id);return sum+(old?Math.max(0,p.cpuTime-old.cpuTime):0);},0)*1000;
       results.push({variant,file,repeat,pageState,privateMiB,jsHeapMiB:+(idleBefore.JSHeapUsedSize/1048576).toFixed(2),idleMs:Math.round(idleMs),workMs:Math.round(workMs),idleBrowserCpuMs:Math.round(cpuDelta(cpuBefore,cpuIdle)),workBrowserCpuMs:Math.round(cpuDelta(cpuIdle,cpuAfter)),idleRendererTaskMs:Math.round((idleAfter.TaskDuration-idleBefore.TaskDuration)*1000),workRendererTaskMs:Math.round((workAfter.TaskDuration-idleAfter.TaskDuration)*1000),...timing});
       console.log(JSON.stringify(results.at(-1)));
