@@ -383,6 +383,9 @@ try {
     for (let i = 0; i < 4; i++) { h.classList.toggle('mouse-mode'); await wait(80); } watch.disconnect();
     return { reenabled, card: getComputedStyle(document.getElementById('card')).backgroundColor, mark: document.getElementById('card').getAttribute('data-oled-night') }; })()`);
   check("color-scheme-dependent page keeps polarity across html class changes", scheme.reenabled === 0 && /bg/.test(scheme.mark || "") && scheme.card !== "rgb(241, 243, 244)", JSON.stringify(scheme));
+  await page.go(site("127.0.0.1", "explicit-light.html"));
+  const explicitLight = await page.eval("({mode:document.documentElement.getAttribute('data-oled-night-page'),title:getComputedStyle(document.getElementById('title')).color,body:getComputedStyle(document.body).backgroundColor})");
+  check("late explicit light theme keeps product text readable", explicitLight.mode !== "none" && lum(explicitLight.title) > 0.45 && lum(explicitLight.body) < 0.1, JSON.stringify(explicitLight));
   // Moving between rows or typing rechecks only elements whose state changed right away; unchanged
   // ancestors are rechecked once interaction pauses (e.g. a :has() rule on an outer wrapper).
   await page.go(site("127.0.0.1", "scope-light.html"));

@@ -29,6 +29,10 @@
     await browser.storage.sync.clear();
     await open('dark.html');
     check('dark page retains cards', await inspect(() => getComputedStyle(document.getElementById('card')).backgroundColor === 'rgb(43, 45, 49)'));
+    await open('explicit-light.html');
+    check('late explicit light theme keeps product text readable', await inspect(() =>
+      parseFloat(getComputedStyle(document.getElementById('title')).color.match(/[\d.]+/)[0]) > 180 &&
+      getComputedStyle(document.body).backgroundColor === 'rgb(0, 0, 0)'));
     await open('dark-dropdowns.html');
     check('dark dropdown native options and group have dark surfaces', await inspect(() => ['first','group','second'].every(id => parseFloat(getComputedStyle(document.getElementById(id)).backgroundColor.match(/[\d.]+/)[0]) < 60)));
     check('dark dropdown custom listbox has light text on dark surface', await inspect(() => {

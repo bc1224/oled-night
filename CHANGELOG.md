@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.20
+
+- Recheck a page's original light or dark theme when its root or body inline styles change after load. Pages such as iFixit can declare a light color scheme late; OLED Night now measures with its forced dark scheme temporarily off so dark text is recolored for the black background.
+- Add Chrome and Firefox regression checks for a delayed light theme. No new permissions or theme changes.
+
 ## 0.6.19
 
 - Preserve dark square app icons with transparent corners. The logo readability filter now inverts sparse dark lettering, while leaving filled icons and their brand colors intact. This fixes the white OLED Night icon on the Mozilla Add-ons developer dashboard.

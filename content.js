@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.19";
+  const VERSION = "0.6.20";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -614,6 +614,9 @@
   // the root elements' own overrides switched off; everything else stays styled.
   function remeasurePolarity(full = schemeSensitive) {
     const root = document.documentElement, roots = [root, document.body].filter(Boolean);
+    // A site can set an explicit light scheme after our first pass. A shallow
+    // measurement still sees our forced dark scheme and mislabels its page dark.
+    if (root.style.colorScheme.trim().toLowerCase() === "light") full = true;
     if (full) root.setAttribute(MEASURE, "");
     else { root.setAttribute(MEASURE_ROOT, ""); for (const node of roots) node.setAttribute(MEASURE_SELF, ""); }
     const dark = detectDarkPage();
@@ -759,6 +762,7 @@
         const signature = inlineSignature(target);
         if (signature !== (inlineStyles.get(target) || "")) {
           inlineStyles.set(target, signature);
+          if (target === document.documentElement || target === document.body) polarityDirty = true;
           // Custom properties and inherited ink can restyle descendants.
           pendingTrees.add(target);
         }
