@@ -398,12 +398,19 @@ try {
 
   // Performance under constant page churn and slider drags.
   await page.go(site("127.0.0.1", "rows.html"), 2500);
-  const churn = await page.eval(`(async () => { const rows = [...document.querySelectorAll('.row')]; let worst = 0, last = performance.now(), frames = 0; const stop = last + 2000;
+  const churnScript = `(async () => { const rows = [...document.querySelectorAll('.row')]; let worst = 0, last = performance.now(), frames = 0; const stop = last + 2000;
     await new Promise((done) => { (function tick() { const now = performance.now(); worst = Math.max(worst, now - last); last = now; frames++;
       for (let k = 0; k < 20; k++) rows[(Math.random() * rows.length) | 0].classList.toggle('hl');
       const p = document.createElement('p'); p.textContent = 'token ' + frames; document.getElementById('list').prepend(p);
-      if (now < stop) setTimeout(tick, 16); else done(); })(); }); return { frames, worst: Math.round(worst) }; })()`);
-  check("stays smooth under constant page changes", churn.frames > 90 && churn.worst < 150, JSON.stringify(churn));
+      if (now < stop) setTimeout(tick, 16); else done(); })(); }); return { frames, worst: Math.round(worst) }; })()`;
+  const churn = await page.eval(churnScript);
+  await setSettings({globalEnabled:false}); await sleep(400);
+  await page.go(site("127.0.0.1", "rows.html"), 2500);
+  const pageOnly = !await page.eval("document.documentElement.hasAttribute('data-oled-night-root')");
+  const pageOnlyChurn = await page.eval(churnScript);
+  check("churn avoids long stalls and retains page-only tick rate", pageOnly && churn.worst < 150 && churn.frames >= pageOnlyChurn.frames * 0.7,
+    JSON.stringify({ withExtension: churn, pageOnly: pageOnlyChurn }));
+  await resetSettings(); await sleep(400);
   await sleep(500);
   await page.eval("window.tuningPasses=0;window.tuningWatch=new MutationObserver(r=>{window.tuningPasses+=r.length});window.tuningWatch.observe(document.documentElement,{attributes:true,subtree:true,attributeFilter:['data-oled-night-measure','data-oled-night-measure-self']})");
   const slider = await ext.eval(`(async () => { const [t] = await chrome.tabs.query({ url: "${site("127.0.0.1", "rows.html")}" }); const start = performance.now();
