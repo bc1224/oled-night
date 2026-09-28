@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.18";
+  const VERSION = "0.6.19";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -362,7 +362,11 @@
         }
         const total = w * h;
         if (clear / total > 0.3 && solid / total > 0.02) {
-          if (light / solid < 0.2 && colorful / solid < 0.25) img.setAttribute(LOGO, "");
+          // A filled app icon can have transparent rounded corners and a dark
+          // face. Inverting its whole bitmap turns that face white. Reserve
+          // inversion for sparse ink (or a wide wordmark), not square badges.
+          const sparseInk = solid / total < 0.4 || img.naturalWidth / img.naturalHeight > 2;
+          if (sparseInk && light / solid < 0.2 && colorful / solid < 0.25) img.setAttribute(LOGO, "");
           else if (namedLogo && light / solid < 0.7) img.setAttribute(LOGO_EDGE, "");
         }
       } catch {

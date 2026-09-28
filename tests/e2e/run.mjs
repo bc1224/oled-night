@@ -241,6 +241,7 @@ try {
   check("late picture product photos stay visible", (await css("latePictureProduct", "mixBlendMode")) === "normal");
   check("dark transparent logo is flipped light", (await page.eval("document.getElementById('logo').hasAttribute('data-oled-night-logo')")) && /invert/.test(await css("logo", "filter")));
   check("colored logo and photos are left alone", (await css("colorLogo", "filter")) === "none" && (await css("photo", "filter")) === "none");
+  check("dark square app icon keeps its original colors", (await css("darkAppIcon", "filter")) === "none" && !(await page.eval("document.getElementById('darkAppIcon').hasAttribute('data-oled-night-logo')")));
 
   // Icons drawn through masks, text-clipped backgrounds, and charts that add shapes later.
   await page.go(site("127.0.0.1", "ink.html"), 2600);

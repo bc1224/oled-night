@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.19
+
+- Preserve dark square app icons with transparent corners. The logo readability filter now inverts sparse dark lettering, while leaving filled icons and their brand colors intact. This fixes the white OLED Night icon on the Mozilla Add-ons developer dashboard.
+- Add Chrome and Firefox regression checks for a dark app icon. No new permissions or theme changes.
+
 ## 0.6.18
 
 - Keep Amazon-style product photos visible when an `<img>` sits inside `<picture>` and uses `mix-blend-mode: multiply`. The image walker now checks the image before skipping the protected `<picture>` subtree, including pictures added after page load.

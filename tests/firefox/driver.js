@@ -49,6 +49,11 @@
     check('Gmail ellipsis visible', await inspect(() => getComputedStyle(document.getElementById('ellipsis')).filter.includes('invert(1)')));
     check('Gmail cross-origin logo edge preserves colors', await inspect(() => { const f=getComputedStyle(document.getElementById('mailLogo')).filter; return f.includes('drop-shadow') && !f.includes('invert'); }));
     check('Gmail ordinary remote image unchanged', await inspect(() => getComputedStyle(document.getElementById('mailPhoto')).filter === 'none'));
+    await open('shop.html');
+    check('dark square app icon keeps its original colors', await inspect(() => {
+      const icon = document.getElementById('darkAppIcon');
+      return icon.complete && icon.naturalWidth === 128 && getComputedStyle(icon).filter === 'none' && !icon.hasAttribute('data-oled-night-logo');
+    }));
     await open('apple-auth.html');
     check('Apple text-fill readable', await inspect(() => parseFloat(getComputedStyle(document.getElementById('password')).webkitTextFillColor.match(/[\d.]+/)[0]) > 180));
     check('Apple field inset black', await inspect(() => getComputedStyle(document.getElementById('email')).boxShadow.includes('rgb(0, 0, 0)')));
