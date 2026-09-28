@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.16";
+  const VERSION = "0.6.17";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -90,6 +90,7 @@
   const SETTLE_MS = 400;
   const INTERACTION_EVENTS = ["pointerover", "pointerout", "pointerdown", "pointerup", "pointercancel", "focusin", "focusout", "input", "change", "keydown", "keyup"];
   const CONTROL = 'a, button, input, textarea, select, option, label, li, [role="option"], [role^="menuitem"], [role="button"], [role="combobox"], [contenteditable="true"], [tabindex]';
+  const DROPDOWN = 'select, [role="listbox"], [role="menu"], [role="combobox"]';
   // Open shadow roots (web components) we style and watch. Page stylesheets
   // never reach inside them, so each gets our rules adopted directly.
   const shadowRoots = new Set();
@@ -254,9 +255,13 @@
     const found = {};
     originalSurface.set(element, surfaceInfo(computed));
     if (ctx.mode === "none") return found;
-    mapSurface(computed, "", ctx.mode, found);
+    // A dark page can still open a light custom menu. Recolor that menu and
+    // its text as a unit instead of preserving a glaring white popup in crush.
+    const dropdownBackdrop = ctx.mode === "crush" && element.closest(DROPDOWN) ? backdropOf(element, ctx) : null;
+    const mode = dropdownBackdrop && !dropdownBackdrop.image && colors.luminance(dropdownBackdrop.color) > 0.5 ? "oled" : ctx.mode;
+    mapSurface(computed, "", mode, found);
     if (element.matches("input, textarea, select")) found.field = "1";
-    if (ctx.mode === "crush") return found;
+    if (mode === "crush") return found;
     if (DARKENING_BLENDS.test(computed.mixBlendMode)) found.blend = "normal";
     for (const [side, key] of SIDES) {
       if (computed[`border${side}Width`] === "0px" || computed[`border${side}Style`] === "none") continue;
@@ -762,6 +767,13 @@
       [${MARK}~="caret"]${on} { caret-color: var(--oln-caret) !important; }
       [${MARK}~="placeholder"]${onPseudo}::placeholder { color: var(--oln-placeholder) !important; -webkit-text-fill-color: var(--oln-placeholder) !important; }
       [${MARK}~="field"]${on} { color-scheme: dark !important; }
+      /* Native popup paint may use white for transparent <option> rows even
+         when the closed select inherits a dark color scheme (Chrome/Windows).
+         Give unmodified rows a real dark surface and readable text. */
+      select[${MARK}~="field"] :is(option, optgroup):not([${MARK}~="bg"]):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) { background-color: #18181c !important; }
+      select[${MARK}~="field"] option:checked:not([${MARK}~="bg"]):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) { background-color: #1b3c60 !important; }
+      select[${MARK}~="field"] :is(option, optgroup):not([${MARK}~="fg"]):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) { color: hsl(0 0% var(--oln-light, 88%)) !important; }
+      select[${MARK}~="field"] :is(option, optgroup):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) { -webkit-text-fill-color: currentColor !important; }
       [${MARK}~="field"]${on}:is(:autofill, :-webkit-autofill) { -webkit-text-fill-color: var(--oln-fg, #ddd) !important; caret-color: var(--oln-fg, #ddd) !important; box-shadow: 0 0 0 1000px var(--oln-bg, #101014) inset !important; }
       [${MARK}~="bt"]${on} { border-top-color: var(--oln-bt) !important; }
       [${MARK}~="br"]${on} { border-right-color: var(--oln-br) !important; }

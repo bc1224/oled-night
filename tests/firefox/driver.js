@@ -29,6 +29,12 @@
     await browser.storage.sync.clear();
     await open('dark.html');
     check('dark page retains cards', await inspect(() => getComputedStyle(document.getElementById('card')).backgroundColor === 'rgb(43, 45, 49)'));
+    await open('dark-dropdowns.html');
+    check('dark dropdown native options and group have dark surfaces', await inspect(() => ['first','group','second'].every(id => parseFloat(getComputedStyle(document.getElementById(id)).backgroundColor.match(/[\d.]+/)[0]) < 60)));
+    check('dark dropdown custom listbox has light text on dark surface', await inspect(() => {
+      const list=getComputedStyle(document.getElementById('list')), option=getComputedStyle(document.getElementById('customOption'));
+      return parseFloat(list.backgroundColor.match(/[\d.]+/)[0]) < 60 && parseFloat(option.color.match(/[\d.]+/)[0]) > 180;
+    }));
     await open('components.html');
     check('shadow root background darkened', await inspect(() => getComputedStyle(document.getElementById('grid').shadowRoot.querySelector('table')).backgroundColor === 'rgb(0, 0, 0)'));
     check('images unchanged', await inspect(() => getComputedStyle(document.getElementById('img')).filter === 'none'));

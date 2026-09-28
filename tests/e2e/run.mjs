@@ -251,6 +251,20 @@ try {
   check("dark site: cards keep their shade", (await css("card", "backgroundColor")) === "rgb(43, 45, 49)");
   check("dark site: brand color and text untouched", (await css("accent", "backgroundColor")) === "rgb(88, 101, 242)" && (await css("card", "color")) === "rgb(219, 222, 225)");
 
+  // Native option popups need opaque dark rows even when the site's option
+  // backgrounds are transparent; custom menus need their text recolored too.
+  await page.go(site("127.0.0.1", "dark-dropdowns.html"));
+  check("dark dropdown: native option and group have dark surfaces", lum(await css("first", "backgroundColor")) < .05 && lum(await css("group", "backgroundColor")) < .05 && lum(await css("second", "backgroundColor")) < .05);
+  check("dark dropdown: native selected row remains distinct", (await css("first", "backgroundColor")) !== (await css("second", "backgroundColor")));
+  check("dark dropdown: native option and group text readable", lum(await css("first", "color")) > .5 && lum(await css("group", "color")) > .5 && lum(await css("second", "color")) > .5);
+  check("dark dropdown: option text fill follows readable color", lum(await css("first", "webkitTextFillColor")) > .5);
+  check("dark dropdown: custom listbox and option readable", lum(await css("list", "backgroundColor")) < .05 && lum(await css("customOption", "color")) > .5);
+  await page.eval("document.getElementById('open').click()"); await sleep(150);
+  check("dark dropdown: late menu and item readable", lum(await css("lateMenu", "backgroundColor")) < .05 && lum(await css("lateItem", "color")) > .5);
+  await setSettings({globalEnabled:false}); await sleep(300);
+  check("dark dropdown: off restores native and custom colors", (await css("first", "backgroundColor")) === "rgba(0, 0, 0, 0)" && (await css("list", "backgroundColor")) === "rgb(255, 255, 255)");
+  await resetSettings();
+
   // Charts and color transitions.
   await page.go(site("127.0.0.1", "chart.html"), 700);
   const samples = [];

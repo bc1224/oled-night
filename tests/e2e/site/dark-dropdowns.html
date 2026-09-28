@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body { background:#101114; color:#ddd; font:14px sans-serif; }
+select { background:rgb(255 255 255 / 10%); color:rgb(255 255 255 / 70%); }
+select option, select optgroup { background:transparent !important; color:rgb(255 255 255 / 70%) !important; -webkit-text-fill-color:#222 !important; appearance:none; }
+[role="listbox"], [role="menu"] { background:#fff !important; color:#222; padding:8px; }
+[role="option"], [role="menuitem"] { color:#222; padding:4px; }
+</style></head><body>
+<label>Sort <select id="sort"><option id="first">Highest net score</option><optgroup id="group" label="Votes"><option id="second">Most 👍</option></optgroup></select></label>
+<div id="list" role="listbox"><div id="customOption" role="option">Custom option</div></div>
+<button id="open" type="button">Open menu</button>
+<script>document.getElementById('open').onclick=()=>{const menu=document.createElement('div');menu.id='lateMenu';menu.setAttribute('role','menu');menu.innerHTML='<div id="lateItem" role="menuitem">Late item</div>';document.body.append(menu)}</script>
+</body></html>

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.17
+
+- Give native select options and optgroup labels an explicit dark surface and readable text while OLED Night is active. This fixes transparent options that Chrome painted on a white popup over a dark page, as seen on Glimbo.
+- Recolor light ARIA menus and listboxes that open over an already dark page, including their text and dynamically added items. Existing dark cards and site accents keep their colors.
+- Add Chrome and Firefox regression coverage for native, grouped, custom and late-opening dropdowns, plus style restoration when the extension is off. No new permissions or theme changes.
+
 ## 0.6.16
 
 - Fix ordinary pages staying white since 0.6.15 because they load bot-detection scripts or mention captchas in inline data (for example 2captcha.com and sites behind Imperva, AWS WAF or Cloudflare bot management). A page is now treated as a full-page challenge only by markers that exist on the interstitial itself.
