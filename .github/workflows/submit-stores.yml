@@ -1,0 +1,62 @@
+name: Submit browser stores
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to submit, for example v0.6.20
+        required: true
+        type: string
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .store-uploader
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build exact tagged packages
+        run: |
+          node tools/package.mjs
+          version=$(node -p "require('./manifest.json').version")
+          git archive --format=zip --output="dist/oled-night-source-${version}.zip" HEAD
+          cp .store-uploader/tools/submit-stores.mjs tools/submit-stores.mjs
+      - name: Submit to Mozilla Add-ons
+        id: amo
+        continue-on-error: true
+        env:
+          AMO_API_KEY: ${{ secrets.AMO_API_KEY }}
+          AMO_API_SECRET: ${{ secrets.AMO_API_SECRET }}
+        run: |
+          if [[ -n "$AMO_API_KEY" && -n "$AMO_API_SECRET" ]]; then
+            node tools/submit-stores.mjs --amo
+          else
+            echo 'AMO submission skipped: API credentials are not configured.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Submit to Chrome Web Store
+        id: chrome
+        continue-on-error: true
+        env:
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+        run: |
+          if [[ -n "$CWS_CLIENT_ID" && -n "$CWS_CLIENT_SECRET" && -n "$CWS_REFRESH_TOKEN" && -n "$CWS_PUBLISHER_ID" ]]; then
+            node tools/submit-stores.mjs --chrome
+          else
+            echo 'Chrome Web Store submission skipped: OAuth credentials or publisher ID are not configured.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Report submission failures
+        if: ${{ steps.amo.outcome == 'failure' || steps.chrome.outcome == 'failure' }}
+        run: exit 1
