@@ -185,9 +185,13 @@ try {
   check("dropdown: hovered option readable", dropdown.dark && dropdown.contrast >= 4.5);
   dropdown = await page.eval("dropdownResult('nativeOption')");
   check("dropdown: native option readable", dropdown.dark && dropdown.contrast >= 4.5);
+  await page.eval(`window.sortAncestorSwitches=0; new MutationObserver(records => { window.sortAncestorSwitches += records.length; }).observe(document.getElementById('sortPath'), {attributes:true,attributeFilter:['data-oled-night-measure','data-oled-night-measure-self','data-oled-night-noanim','data-oled-night-noanim-self']}); document.getElementById('sortFixture').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));`);
+  await sleep(80);
+  check('native select opens without immediate ancestor restyle', (await page.eval('window.sortAncestorSwitches')) === 0 && lum(await css('sortFixture','backgroundColor')) < .05);
   check('color picker and swatch retain original data colors',await page.eval("!document.getElementById('colorPicker').hasAttribute('data-oled-night') && getComputedStyle(document.getElementById('swatch')).backgroundColor === 'rgb(251, 235, 156)' && !document.getElementById('nativeColor').hasAttribute('data-oled-night')"));
   check('Amazon disclosure and close sprites visible', (await css('amazonArrow','filter')) === 'brightness(0) invert(1)' && (await css('amazonClose','filter')) === 'brightness(0) invert(1)');
   check('Amazon border chevron readable; other sprites unchanged', lum(await css('amazonMore','borderRightColor')) > .5 && (await css('amazonOther','filter')) === 'none');
+  check('Amazon collapsed Compare icon dimmed', (await css('amazonCompare','filter')) === 'brightness(0.72)');
   await page.eval("document.getElementById('amazonArrow').className='a-icon a-icon-section-collapse sprite-icon'"); await sleep(80);
   check('Amazon expanded arrow remains visible', (await css('amazonArrow','filter')) === 'brightness(0) invert(1)');
   const amazonHeader=await page.eval("dropdownResult('amazonHeader')");
@@ -228,6 +232,7 @@ try {
   check("dropdown: shadow focus-only surface darkened", await page.eval("getComputedStyle(document.getElementById('shadowInteraction').shadowRoot.querySelector('button')).backgroundColor !== 'rgb(238, 238, 238)'"));
   await setSettings({globalEnabled:false}); await sleep(400);
   check("Amazon off restores icons", (await css("amazonArrow","filter")) === "none" && (await css("amazonMore","borderRightColor")) === "rgb(17, 17, 17)");
+  check('Amazon off restores Compare icon', (await css('amazonCompare','filter')) === 'none');
   check("dropdown: off restores original selection", (await css("promotion", "backgroundColor")) === "rgb(229, 235, 238)");
   await page.eval("document.getElementById('genericField').focus()"); await sleep(80);
   check("fields: off restores focus and text-fill", (await css("genericField", "backgroundColor")) === "rgb(245, 245, 245)" && (await css("genericField", "webkitTextFillColor")) === "rgb(34, 34, 34)");
@@ -237,6 +242,7 @@ try {
   await page.go(site("127.0.0.1", "shop.html"), 1800);
   check("multiply-blended product photos stay visible", (await css("product", "mixBlendMode")) === "normal" && (await css("promo", "mixBlendMode")) === "normal");
   check("picture product photos stay visible", (await css("pictureProduct", "mixBlendMode")) === "normal" && await page.eval("document.getElementById('pictureProduct').hasAttribute('data-oled-night')"));
+  check('image matte preserves product photo', (await css('groceryMatte','backgroundColor')) === 'rgb(248, 247, 245)' && (await css('groceryMatte','mixBlendMode')) === 'darken' && await page.eval("document.getElementById('groceryPhoto').naturalWidth > 0"));
   await page.eval("const tile = document.querySelector('.tile:has(picture)').cloneNode(true); tile.querySelector('img').id = 'latePictureProduct'; document.body.append(tile)"); await sleep(100);
   check("late picture product photos stay visible", (await css("latePictureProduct", "mixBlendMode")) === "normal");
   check("dark transparent logo is flipped light", (await page.eval("document.getElementById('logo').hasAttribute('data-oled-night-logo')")) && /invert/.test(await css("logo", "filter")));

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.21 (local package)
+
+- Preserve pale, darken-blended image mattes positioned above product photos. OLED Night had turned Amazon Grocery's matte black and hidden fully loaded product images.
+- Reduce glare from Amazon's collapsed Compare circles without changing product image files.
+- Defer native select ancestor recoloring until interaction settles so opening a sort menu does not recheck a large ancestor subtree before the popup paints. The select and its options still update immediately.
+- Add Chrome regression checks for the image matte, Compare control, and native select opening path. No new permissions or theme changes.
+
 ## 0.6.20
 
 - Recheck a page's original light or dark theme when its root or body inline styles change after load. Pages such as iFixit can declare a light color scheme late; OLED Night now measures with its forced dark scheme temporarily off so dark text is recolored for the black background.

@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.20";
+  const VERSION = "0.6.21";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -255,6 +255,14 @@
     const found = {};
     originalSurface.set(element, surfaceInfo(computed));
     if (ctx.mode === "none") return found;
+    // Some stores paint a pale, darken-blended matte *above* a product photo.
+    // Turning that matte black hides a fully loaded image (Amazon Grocery).
+    // Keep the store's original matte and blend; the image remains untouched.
+    if (DARKENING_BLENDS.test(computed.mixBlendMode) && computed.position === "absolute") {
+      const matte = colors.parseColor(computed.backgroundColor);
+      if (matte && matte.a >= 0.5 && colors.luminance(matte) > 0.8 &&
+          element.parentElement?.querySelector(":scope > img, :scope > picture")) return found;
+    }
     // A dark page can still open a light custom menu. Recolor that menu and
     // its text as a unit instead of preserving a glaring white popup in crush.
     const dropdownBackdrop = ctx.mode === "crush" && element.closest(DROPDOWN) ? backdropOf(element, ctx) : null;
@@ -673,8 +681,12 @@
     if (!observer) return;
     const path = event.composedPath().filter(node => node instanceof Element);
     const found = path.find(node => node.matches(CONTROL));
-    const control = found && found !== document.body && found !== document.documentElement ? found : null;
-    const stop = firstUnchanged(event, path, control);
+    const nativeSelect = path.find(node => node.localName === "select");
+    const control = nativeSelect || (found && found !== document.body && found !== document.documentElement ? found : null);
+    // The browser paints a native select popup outside the page. Rechecking
+    // inherited colors on its large ancestor subtree in the opening frame can
+    // delay that popup, while only the select/options need immediate paint.
+    const stop = nativeSelect ? nativeSelect.parentElement : firstUnchanged(event, path, control);
     let rest = false, top = null;
     for (const node of path) {
       if (node === document.body || node === document.documentElement) break;
@@ -867,6 +879,11 @@
       }
       ${root}[data-oled-night-site="amazon"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) .a-expander-header :is(.a-icon-extender-expand, .a-icon-extender-collapse) {
         border-color: currentColor !important;
+      }
+      /* Amazon's white Compare SVG sits over darkened product cards. Reduce
+         only the collapsed icon glare; restore full contrast when expanded. */
+      ${root}[data-oled-night-site="amazon"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) .copilot-compare-on-image-button.cp-comparison-button-animated-collapsed {
+        filter: brightness(0.72) !important;
       }
       /* RES adds a light toolbar even on native-dark Reddit. Do not recolor
          unrelated white content or invert images elsewhere on the page. */
