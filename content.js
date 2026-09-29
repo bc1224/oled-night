@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.23";
+  const VERSION = "0.6.24";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -38,7 +38,7 @@
   // "Multiply"-style blends hide a photo's white background on a light page;
   // over black they turn the whole photo black (Amazon product images).
   const DARKENING_BLENDS = /^(multiply|darken|color-burn|plus-darker)$/;
-  const PROPS = ["bg", "img", "shadow", "fg", "ink", "caret", "placeholder", "field", "bt", "br", "bb", "bl", "fill", "stroke", "stop", "blend",
+  const PROPS = ["bg", "img", "shadow", "fg", "ink", "caret", "placeholder", "field", "bt", "br", "bb", "bl", "fill", "stroke", "stop", "blend", "faded-icon",
     "before-bg", "before-img", "before-shadow", "after-bg", "after-img", "after-shadow"];
   const SIDES = [["Top", "bt"], ["Right", "br"], ["Bottom", "bb"], ["Left", "bl"]];
   // Frames that are players, maps, ads or challenges are left exactly as they are.
@@ -96,6 +96,7 @@
   // never reach inside them, so each gets our rules adopted directly.
   const shadowRoots = new Set();
   let shadowSheet = null;
+  let shadowHealthTimer = null;
 
   const colorsApi = () => globalThis.OledNightColors;
   const domApi = globalThis.chrome?.dom;
@@ -163,13 +164,38 @@
   }
 
   function adoptShadowRoot(root) {
-    if (shadowRoots.has(root)) return;
-    shadowRoots.add(root);
+    if (!shadowRoots.has(root)) {
+      shadowRoots.add(root);
+      observer?.observe(root, OBSERVE);
+      // Constructed sheets are not observed by MutationObserver. Some apps
+      // replace the whole adoptedStyleSheets array after our initial pass.
+      if (!shadowHealthTimer) {
+        shadowHealthTimer = setInterval(repairShadowSheets, 1200);
+        document.addEventListener("visibilitychange", repairShadowSheets);
+      }
+    }
+    ensureShadowSheet(root);
+  }
+
+  function ensureShadowSheet(root) {
     try {
       if (!shadowSheet) { shadowSheet = new CSSStyleSheet(); shadowSheet.replaceSync(overrideRules()); }
-      root.adoptedStyleSheets = [...root.adoptedStyleSheets, shadowSheet];
+      const sheets = root.adoptedStyleSheets;
+      if (!sheets.includes(shadowSheet)) root.adoptedStyleSheets = [...sheets, shadowSheet];
     } catch {}
-    observer?.observe(root, OBSERVE);
+  }
+
+  function repairShadowSheets() {
+    if (document.hidden) return;
+    for (const root of shadowRoots) {
+      if (!root.host.isConnected) { shadowRoots.delete(root); continue; }
+      ensureShadowSheet(root);
+    }
+    if (!shadowRoots.size) {
+      clearInterval(shadowHealthTimer);
+      shadowHealthTimer = null;
+      document.removeEventListener("visibilitychange", repairShadowSheets);
+    }
   }
 
   // What an element originally painted behind its children: real imagery,
@@ -601,8 +627,16 @@
     if (recolor) {
       for (const img of list.images) {
         if (!img.isConnected) continue;
-        imageDecisions.push([img, DARKENING_BLENDS.test(ctx.style(img).mixBlendMode) ? { blend: "normal" } : {}]);
+        const computed = ctx.style(img);
+        const found = DARKENING_BLENDS.test(computed.mixBlendMode) ? { blend: "normal" } : {};
         const rect = img.getBoundingClientRect();
+        const opacity = Number(computed.opacity);
+        if (img.alt?.trim() && rect.width >= 12 && rect.height >= 12 && rect.width <= 48 && rect.height <= 48 &&
+            opacity >= 0.12 && opacity <= 0.35) {
+          const backdrop = backdropOf(img, ctx);
+          if (!backdrop.image && colorsApi().luminance(backdrop.color) > 0.65) found["faded-icon"] = "1";
+        }
+        imageDecisions.push([img, found]);
         if (rect.width >= 12 && rect.height >= 12 && rect.width <= 420 && rect.height <= 160) logoCandidates.push(img);
       }
     }
@@ -757,8 +791,11 @@
 
   function onMutations(records) {
     const seenAttributes = new Map();
+    const changedRoots = new Set();
     for (const record of records) {
       const target = record.target;
+      const scope = target.getRootNode();
+      if (scope instanceof ShadowRoot && shadowRoots.has(scope)) changedRoots.add(scope);
       if (record.type === "attributes") {
         let names = seenAttributes.get(target);
         if (!names) seenAttributes.set(target, names = new Set());
@@ -792,6 +829,7 @@
 
       }
     }
+    for (const root of changedRoots) ensureShadowSheet(root);
     if (pendingTrees.size || pendingSelf.size || polarityDirty) schedule();
   }
 
@@ -826,6 +864,9 @@
       [${MARK}~="stroke"]${on} { stroke: var(--oln-stroke) !important; }
       [${MARK}~="stop"]${on} { stop-color: var(--oln-stop) !important; }
       [${MARK}~="blend"]${on} { mix-blend-mode: normal !important; }
+      /* Small, meaningful icons faded for a light page need some contrast
+         after their surrounding light surface becomes black. */
+      img[${MARK}~="faded-icon"]${on} { opacity: 0.65 !important; filter: drop-shadow(0 0 1px #888) !important; }
       [${NOANIM}], [${NOANIM}] *, [${NOANIM}]::before, [${NOANIM}]::after, [${NOANIM}] *::before, [${NOANIM}] *::after { transition: none !important; }
       [${NOANIM_SELF}], [${NOANIM_SELF}]::before, [${NOANIM_SELF}]::after { transition: none !important; }
       [${MARK}~="before-bg"]${onPseudo}::before { background-color: var(--oln-before-bg) !important; }
@@ -951,6 +992,9 @@
     active = false;
     clearInterval(challengeTimer);
     challengeTimer = null;
+    clearInterval(shadowHealthTimer);
+    shadowHealthTimer = null;
+    document.removeEventListener("visibilitychange", repairShadowSheets);
     observer?.disconnect();
     observer = null;
     pendingTrees.clear();

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.24 (local package)
+
+- Restore OLED Night's constructed stylesheet when a web component replaces its `adoptedStyleSheets` after initial styling. This keeps mapped text and its background together in dynamic shadow roots such as Adobe account cards.
+- Raise the contrast of small, labeled icons that the page intentionally fades on a light surface when OLED Night darkens that surface. Normal images and icons on originally dark surfaces retain their appearance.
+- Add Chrome and Firefox regressions for stylesheet replacement and faded icons. No new permissions or theme changes.
+
 ## 0.6.23 (local package)
 
 - Recolor Gmail's light reading pane, authored email tables, search field, and search suggestions as complete regions even when Gmail's surrounding shell is already dark. This fixes white message bodies and black suggestion text on a dark popup.

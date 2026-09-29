@@ -41,6 +41,15 @@
     }));
     await open('components.html');
     check('shadow root background darkened', await inspect(() => getComputedStyle(document.getElementById('grid').shadowRoot.querySelector('table')).backgroundColor === 'rgb(0, 0, 0)'));
+    check('replaced shadow stylesheets restore background and text together', await inspect(() => {
+      const root = document.getElementById('replacing').shadowRoot;
+      const card = getComputedStyle(root.getElementById('card'));
+      return card.backgroundColor === 'rgb(0, 0, 0)' && parseFloat(card.color.match(/[\d.]+/)[0]) > 180 && root.adoptedStyleSheets.length === 2;
+    }));
+    check('small faded icon gains contrast on recolored surface', await inspect(() => {
+      const icon = getComputedStyle(document.getElementById('fadedIcon'));
+      return Number(icon.opacity) >= 0.6 && icon.filter.includes('drop-shadow');
+    }));
     check('images unchanged', await inspect(() => getComputedStyle(document.getElementById('img')).filter === 'none'));
     await browser.storage.sync.set({openClosedShadows:true}); await wait(600);
     check('no page-world script registered', !(await browser.scripting.getRegisteredContentScripts()).length);

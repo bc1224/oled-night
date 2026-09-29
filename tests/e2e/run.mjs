@@ -296,6 +296,10 @@ try {
   check("white glow shadow darkened", (await css("composer", "boxShadow")).startsWith("rgb(0, 0, 0)"));
   const shadow = await page.eval("(() => { const r = document.getElementById('grid').shadowRoot; const s = (el, p) => getComputedStyle(el)[p]; return { table: s(r.querySelector('table'), 'backgroundColor'), cell: s(r.getElementById('cell'), 'color'), late: s(r.getElementById('late'), 'color') }; })()");
   check("web component table darkened", lum(shadow.table) < 0.01 && lum(shadow.cell) > 0.3 && lum(shadow.late) > 0.3, JSON.stringify(shadow));
+  const replaced = await page.eval("(() => { const r = document.getElementById('replacing').shadowRoot; const card = r.getElementById('card'); return { bg: getComputedStyle(card).backgroundColor, fg: getComputedStyle(card).color, sheets: r.adoptedStyleSheets.length }; })()");
+  check("replaced shadow stylesheets regain paired text and background overrides", lum(replaced.bg) < 0.01 && lum(replaced.fg) > 0.3 && replaced.sheets === 2, JSON.stringify(replaced));
+  check("faded icon on recolored light surface remains visible", Number(await css("fadedIcon", "opacity")) >= 0.6 && (await css("fadedIcon", "filter")).includes("drop-shadow"));
+  check("normal icon opacity stays intact", (await css("regularIcon", "opacity")) === "1");
   check("images untouched by default", (await css("img", "filter")) === "none");
 
   // Per-site settings apply live, without reload.
