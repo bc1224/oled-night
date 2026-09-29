@@ -50,8 +50,16 @@
     check('Turnstile-style closed div untouched', await inspect(() => getComputedStyle(document.getElementById('turnstile').openOrClosedShadowRoot.querySelector('div')).backgroundColor === 'rgb(255, 255, 255)'));
     await browser.storage.sync.set({openClosedShadows:false}); await wait(400);
     await open('gmail.html');
+    check('Gmail white reader and authored table become black', await inspect(() => {
+      const dark = id => parseFloat(getComputedStyle(document.getElementById(id)).backgroundColor.match(/[\d.]+/)[0]) < 60;
+      return dark('mailReader') && dark('mailTable') && dark('mailSuggestionOuter') && dark('mailSuggestions');
+    }));
+    check('Gmail system text and search results remain readable', await inspect(() => {
+      const light = id => parseFloat(getComputedStyle(document.getElementById(id)).color.match(/[\d.]+/)[0]) > 140;
+      return light('mailWindowText') && light('mailExplicitText') && light('suggestionText') && light('suggestionHint');
+    }));
     check('Gmail ellipsis visible', await inspect(() => getComputedStyle(document.getElementById('ellipsis')).filter.includes('invert(1)')));
-    check('Gmail cross-origin logo edge preserves colors', await inspect(() => { const f=getComputedStyle(document.getElementById('mailLogo')).filter; return f.includes('drop-shadow') && !f.includes('invert'); }));
+    check('Gmail native-dark shell leaves logo uninverted', await inspect(() => !getComputedStyle(document.getElementById('mailLogo')).filter.includes('invert')));
     check('Gmail ordinary remote image unchanged', await inspect(() => getComputedStyle(document.getElementById('mailPhoto')).filter === 'none'));
     await open('shop.html');
     check('dark square app icon keeps its original colors', await inspect(() => {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.23 (local package)
+
+- Recolor Gmail's light reading pane, authored email tables, search field, and search suggestions as complete regions even when Gmail's surrounding shell is already dark. This fixes white message bodies and black suggestion text on a dark popup.
+- Keep the email's light `color-scheme` for `WindowText` resolution, then map its actual text and background together. Scope the extra work to Gmail's affected regions without a page-wide query on each interaction.
+- Replace the Gmail contrast fixture with a native-dark shell, white email and popup, and dark authored text; verify disabling the extension restores the original colors.
+
 ## 0.6.22 (local package)
 
 - Restore Gmail email paragraphs that use the system `WindowText` color. The extension's dark color scheme made them white on a sender-authored white email canvas; Gmail message content now resolves system colors in a light scheme.

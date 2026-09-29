@@ -134,16 +134,19 @@ try {
   const unreadText = await css("unreadSubject", "color"), readText = await css("readSubject", "color");
   check("gmail: unread text brighter than read", lum(unreadText) > lum(readText) * 1.8 && lum(readText) > 0.1, `${unreadText} vs ${readText}`);
   check("gmail: unread rows get an accent bar", (await css("unread", "boxShadow")).includes("inset") && (await css("read", "boxShadow")) === "none");
-  const mailInk = await css("mailWindowText", "color"), mailCanvas = await css("mailWindowText", "backgroundColor");
-  check("gmail: WindowText remains dark on authored white mail", lum(mailInk) < 0.1 && (await css("mailWindowText", "colorScheme")) === "light", `${mailInk} on ${mailCanvas}`);
-  check("gmail: light suggestions get a dark surface", lum(await css("mailSuggestions", "backgroundColor")) < 0.03 && lum(await css("suggestionText", "color")) > 0.5);
+  const mailInk = await css("mailWindowText", "color"), explicitInk = await css("mailExplicitText", "color");
+  check("gmail: dark shell still recolors the white reading pane and mail tables", lum(await css("mailReader", "backgroundColor")) < 0.03 && lum(await css("mailTable", "backgroundColor")) < 0.03);
+  check("gmail: WindowText and explicit dark mail text remain visible", lum(mailInk) > 0.5 && lum(explicitInk) > 0.5 && (await css("mailWindowText", "colorScheme")) === "light", `${mailInk} / ${explicitInk}`);
+  check("gmail: search field and suggestion surfaces are dark", lum(await css("mailSearch", "backgroundColor")) < 0.03 && lum(await css("mailSuggestionOuter", "backgroundColor")) < 0.03 && lum(await css("mailSuggestions", "backgroundColor")) < 0.03);
+  const suggestionInk = await css("suggestionText", "color"), suggestionHint = await css("suggestionHint", "color"), searchInk = await css("mailSearchInput", "color");
+  check("gmail: primary and secondary suggestions are readable", lum(suggestionInk) > 0.5 && lum(suggestionHint) > 0.3 && lum(searchInk) > 0.25, `${suggestionInk} / ${suggestionHint} / ${searchInk}`);
 
   // Site CSS reproduced from Apple's auth widget and RES on dark Reddit.
   check("gmail: trimmed-content ellipsis visible", (await css("ellipsis", "filter")).includes("invert(1)") && (await css("ellipsis", "opacity")) === "0.85");
-  check("gmail: cross-origin logo gains edge without inversion", (await css("mailLogo", "filter")).includes("drop-shadow") && !(await css("mailLogo", "filter")).includes("invert"));
+  check("gmail: native-dark shell leaves cross-origin logo uninverted", !(await css("mailLogo", "filter")).includes("invert"), await css("mailLogo", "filter"));
   check("gmail: other remote images untouched", (await css("mailPhoto", "filter")) === "none");
   await setSettings({globalEnabled:false}); await sleep(400);
-  check("gmail: disabling restores images", (await css("mailLogo", "filter")) === "none" && (await css("ellipsis", "filter")) === "none");
+  check("gmail: disabling restores mail colors and images", (await css("mailLogo", "filter")) === "none" && (await css("ellipsis", "filter")) === "none" && lum(await css("mailReader", "backgroundColor")) > 0.9 && lum(await css("mailWindowText", "color")) < 0.1);
   await resetSettings();
 
   await page.go(site("127.0.0.1", "apple-auth.html"), 1800);

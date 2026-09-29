@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.22";
+  const VERSION = "0.6.23";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -91,6 +91,7 @@
   const INTERACTION_EVENTS = ["pointerover", "pointerout", "pointerdown", "pointerup", "pointercancel", "focusin", "focusout", "input", "change", "keydown", "keyup"];
   const CONTROL = 'a, button, input, textarea, select, option, label, li, [role="option"], [role^="menuitem"], [role="button"], [role="combobox"], [contenteditable="true"], [tabindex]';
   const DROPDOWN = 'select, [role="listbox"], [role="menu"], [role="combobox"]';
+  const GMAIL_LIGHT_REGIONS = ".nH.a98.iY, .a3s, .gssb_e, form.gb_Pd.gb_2e";
   // Open shadow roots (web components) we style and watch. Page stylesheets
   // never reach inside them, so each gets our rules adopted directly.
   const shadowRoots = new Set();
@@ -247,6 +248,13 @@
     if (shadow) found[`${prefix}shadow`] = shadow;
   }
 
+  function modeForElement(element, ctx) {
+    // Gmail's shell is natively dark, but its message reader and search UI
+    // still paint light surfaces. Recolor each whole region, including text.
+    if (ctx.mode === "crush" && ctx.gmail && element.closest(GMAIL_LIGHT_REGIONS)) return "oled";
+    return ctx.mode;
+  }
+
   // Read-only: decides overrides from original computed styles. No DOM writes
   // happen here, so the whole batch costs a single style recalculation.
   function decide(element, ctx) {
@@ -265,8 +273,9 @@
     }
     // A dark page can still open a light custom menu. Recolor that menu and
     // its text as a unit instead of preserving a glaring white popup in crush.
-    const dropdownBackdrop = ctx.mode === "crush" && element.closest(DROPDOWN) ? backdropOf(element, ctx) : null;
-    const mode = dropdownBackdrop && !dropdownBackdrop.image && colors.luminance(dropdownBackdrop.color) > 0.5 ? "oled" : ctx.mode;
+    const localMode = modeForElement(element, ctx);
+    const dropdownBackdrop = localMode === "crush" && element.closest(DROPDOWN) ? backdropOf(element, ctx) : null;
+    const mode = dropdownBackdrop && !dropdownBackdrop.image && colors.luminance(dropdownBackdrop.color) > 0.5 ? "oled" : localMode;
     mapSurface(computed, "", mode, found);
     if (element.matches("input, textarea, select")) found.field = "1";
     if (mode === "crush") return found;
@@ -278,7 +287,7 @@
     }
     for (const pseudo of ["before", "after"]) {
       const pseudoStyle = getComputedStyle(element, `::${pseudo}`);
-      if (pseudoStyle.content && pseudoStyle.content !== "none" && pseudoStyle.content !== "normal") mapSurface(pseudoStyle, `${pseudo}-`, ctx.mode, found);
+      if (pseudoStyle.content && pseudoStyle.content !== "none" && pseudoStyle.content !== "normal") mapSurface(pseudoStyle, `${pseudo}-`, mode, found);
     }
     // Text over real imagery keeps its own color; everything else is
     // lightened, keeping its original primary/secondary/muted emphasis.
@@ -311,13 +320,14 @@
   // and gradient stops (App Store Connect sparklines) are darkened instead,
   // while colored lines and bars keep their color.
   function decideSvg(svg, ctx, out) {
-    if (ctx.mode !== "oled" && ctx.mode !== "soft") return;
+    const mode = modeForElement(svg, ctx);
+    if (mode !== "oled" && mode !== "soft") return;
     const rect = svg.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     const colors = colorsApi();
     const icon = rect.width <= 64 && rect.height <= 64;
     const paleToDark = (color) => (color && color.a >= 0.08 && colors.luminance(color) > 0.6 && colors.chroma(color) < 0.25
-      ? colors.mapBackground(color, ctx.mode) : null);
+      ? colors.mapBackground(color, mode) : null);
     for (const part of [svg, ...svg.querySelectorAll(icon ? ICON_PARTS : CHART_PARTS)]) {
       const computed = getComputedStyle(part);
       const found = {};
@@ -574,6 +584,7 @@
     const ctx = {
       mode: modeFor(),
       pageColor,
+      gmail: document.documentElement.getAttribute("data-oled-night-site") === "gmail",
       backdrop: new Map(),
       style(node) {
         let computed = styles.get(node);
@@ -907,11 +918,6 @@
          hiding whole paragraphs in mail with a white background. */
       ${root}[data-oled-night-site="gmail"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) .a3s {
         color-scheme: light !important;
-      }
-      /* Search suggestions keep Gmail's white surface while their descendants
-         are recolored light. Match that surface to the light text. */
-      ${root}[data-oled-night-site="gmail"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) .gssb_m {
-        background-color: #15171b !important;
       }
       ${root}[data-oled-night-site="gmail"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) :is(.ajR, .ajV)[role="button"] img.ajT { filter: brightness(0) invert(1) !important; opacity: .85 !important; }
       ${root}[data-oled-night-site="gmail"] tr.zA.zE td, ${root}[data-oled-night-site="gmail"] tr.zA.zE td * { color: hsl(0 0% var(--oln-light, 88%)) !important; }
