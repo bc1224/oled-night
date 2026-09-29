@@ -40,7 +40,7 @@ Download [`oled-night.zip`](https://github.com/bc1224/oled-night/releases/latest
 
 **Want Chrome itself black too?** The extension darkens websites, but only a theme can change Chrome's own window. Grab [`oled-night-theme.zip`](https://github.com/bc1224/oled-night/releases/latest/download/oled-night-theme.zip) and load it the same way. See [theme/README.md](theme/README.md).
 
-**Firefox desktop:** A Firefox preview ZIP is available in GitHub releases and CI artifacts. See [Firefox installation](FIREFOX.md). It currently installs temporarily for testing; the Mozilla Add-ons submission is awaiting review. The Chrome theme is not compatible with Firefox.
+**Firefox desktop:** Version 0.6.23 is approved on Mozilla Add-ons; version 0.6.24 is submitted for review. A Firefox ZIP is also available in GitHub releases and CI artifacts. See [Firefox installation](FIREFOX.md). The Chrome theme is not compatible with Firefox.
 
 ## Using it
 Click the toolbar icon on any site:
