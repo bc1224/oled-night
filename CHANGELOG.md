@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.22 (local package)
+
+- Restore Gmail email paragraphs that use the system `WindowText` color. The extension's dark color scheme made them white on a sender-authored white email canvas; Gmail message content now resolves system colors in a light scheme.
+- Darken Gmail's search suggestion panel so recolored light suggestion text remains readable.
+- Add Chrome regression checks for both contrast failures. No new permissions or theme changes.
+
 ## 0.6.21 (local package)
 
 - Preserve pale, darken-blended image mattes positioned above product photos. OLED Night had turned Amazon Grocery's matte black and hidden fully loaded product images.

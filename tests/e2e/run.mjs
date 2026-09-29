@@ -134,6 +134,9 @@ try {
   const unreadText = await css("unreadSubject", "color"), readText = await css("readSubject", "color");
   check("gmail: unread text brighter than read", lum(unreadText) > lum(readText) * 1.8 && lum(readText) > 0.1, `${unreadText} vs ${readText}`);
   check("gmail: unread rows get an accent bar", (await css("unread", "boxShadow")).includes("inset") && (await css("read", "boxShadow")) === "none");
+  const mailInk = await css("mailWindowText", "color"), mailCanvas = await css("mailWindowText", "backgroundColor");
+  check("gmail: WindowText remains dark on authored white mail", lum(mailInk) < 0.1 && (await css("mailWindowText", "colorScheme")) === "light", `${mailInk} on ${mailCanvas}`);
+  check("gmail: light suggestions get a dark surface", lum(await css("mailSuggestions", "backgroundColor")) < 0.03 && lum(await css("suggestionText", "color")) > 0.5);
 
   // Site CSS reproduced from Apple's auth widget and RES on dark Reddit.
   check("gmail: trimmed-content ellipsis visible", (await css("ellipsis", "filter")).includes("invert(1)") && (await css("ellipsis", "opacity")) === "0.85");
