@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.24";
+  const VERSION = "0.6.25";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -39,7 +39,7 @@
   // over black they turn the whole photo black (Amazon product images).
   const DARKENING_BLENDS = /^(multiply|darken|color-burn|plus-darker)$/;
   const PROPS = ["bg", "img", "shadow", "fg", "ink", "caret", "placeholder", "field", "bt", "br", "bb", "bl", "fill", "stroke", "stop", "blend", "faded-icon",
-    "before-bg", "before-img", "before-shadow", "after-bg", "after-img", "after-shadow"];
+    "before-bg", "before-img", "before-shadow", "before-fg", "after-bg", "after-img", "after-shadow", "after-fg"];
   const SIDES = [["Top", "bt"], ["Right", "br"], ["Bottom", "bb"], ["Left", "bl"]];
   // Frames that are players, maps, ads or challenges are left exactly as they are.
   const UNTOUCHED_FRAMES = /(youtube(-nocookie)?\.com|vimeo\.com|player\.|twitch\.tv|spotify\.com|soundcloud\.com|maps\.google|google\.[a-z.]+\/maps|doubleclick\.net|googlesyndication\.com)/i;
@@ -229,6 +229,23 @@
       chain.push(node);
       const surface = originalSurface.has(node) ? originalSurface.get(node) : surfaceInfo(ctx.style(node));
       if (surface) { result = surface; break; }
+      // A full-bleed image in a preceding sibling can paint behind a text
+      // overlay (retail cards and hero sections). It is still real imagery
+      // even though no ancestor has a CSS background-image.
+      const sibling = node.previousElementSibling;
+      const media = sibling?.matches("img, picture, video") ? sibling : sibling?.firstElementChild;
+      if (node.parentElement?.childElementCount <= 4 && media?.matches("img, picture, video")) {
+        const frame = node.parentElement?.getBoundingClientRect();
+        const underlay = sibling.getBoundingClientRect();
+        const content = node.getBoundingClientRect();
+        const overlapWidth = Math.max(0, Math.min(underlay.right, content.right) - Math.max(underlay.left, content.left));
+        const overlapHeight = Math.max(0, Math.min(underlay.bottom, content.bottom) - Math.max(underlay.top, content.top));
+        if (frame && underlay.width >= frame.width * 0.7 && underlay.height >= frame.height * 0.7 &&
+            overlapWidth >= content.width * 0.7 && overlapHeight >= content.height * 0.7) {
+          result = { image: true };
+          break;
+        }
+      }
     }
     for (const node of chain) ctx.backdrop.set(node, result);
     return result;
@@ -313,7 +330,17 @@
     }
     for (const pseudo of ["before", "after"]) {
       const pseudoStyle = getComputedStyle(element, `::${pseudo}`);
-      if (pseudoStyle.content && pseudoStyle.content !== "none" && pseudoStyle.content !== "normal") mapSurface(pseudoStyle, `${pseudo}-`, mode, found);
+      if (pseudoStyle.content && pseudoStyle.content !== "none" && pseudoStyle.content !== "normal") {
+        mapSurface(pseudoStyle, `${pseudo}-`, mode, found);
+        // Icon fonts and generated labels may set their own color, so the
+        // element's mapped foreground does not necessarily reach them.
+        const ink = colors.parseColor(pseudoStyle.color);
+        if (ink && ink.a >= 0.08 && colors.luminance(ink) < 0.4) {
+          const backdrop = backdropOf(element, ctx);
+          if (!backdrop.image && colors.luminance(backdrop.color) > 0.5)
+            found[`${pseudo}-fg`] = colors.mapForeground(ink, colors.textTier(ink, backdrop.color));
+        }
+      }
     }
     // Text over real imagery keeps its own color; everything else is
     // lightened, keeping its original primary/secondary/muted emphasis.
@@ -725,13 +752,13 @@
   function onInteraction(event) {
     if (!observer) return;
     const path = event.composedPath().filter(node => node instanceof Element);
-    const found = path.find(node => node.matches(CONTROL));
     const nativeSelect = path.find(node => node.localName === "select");
-    const control = nativeSelect || (found && found !== document.body && found !== document.documentElement ? found : null);
-    // The browser paints a native select popup outside the page. Rechecking
-    // inherited colors on its large ancestor subtree in the opening frame can
-    // delay that popup, while only the select/options need immediate paint.
-    const stop = nativeSelect ? nativeSelect.parentElement : firstUnchanged(event, path, control);
+    // The browser owns the open popup. Its static option rules are already
+    // installed; synchronous select event restyles delay native opening.
+    if (nativeSelect) return;
+    const found = path.find(node => node.matches(CONTROL));
+    const control = found && found !== document.body && found !== document.documentElement ? found : null;
+    const stop = firstUnchanged(event, path, control);
     let rest = false, top = null;
     for (const node of path) {
       if (node === document.body || node === document.documentElement) break;
@@ -872,9 +899,11 @@
       [${MARK}~="before-bg"]${onPseudo}::before { background-color: var(--oln-before-bg) !important; }
       [${MARK}~="before-img"]${onPseudo}::before { background-image: var(--oln-before-img) !important; }
       [${MARK}~="before-shadow"]${onPseudo}::before { box-shadow: var(--oln-before-shadow) !important; }
+      [${MARK}~="before-fg"]${onPseudo}::before { color: var(--oln-before-fg) !important; }
       [${MARK}~="after-bg"]${onPseudo}::after { background-color: var(--oln-after-bg) !important; }
       [${MARK}~="after-img"]${onPseudo}::after { background-image: var(--oln-after-img) !important; }
       [${MARK}~="after-shadow"]${onPseudo}::after { box-shadow: var(--oln-after-shadow) !important; }
+      [${MARK}~="after-fg"]${onPseudo}::after { color: var(--oln-after-fg) !important; }
       input[${MARK}~="bg"], textarea[${MARK}~="bg"], select[${MARK}~="bg"], button[${MARK}~="bg"] { color-scheme: dark !important; accent-color: #66a3ff; }
     `;
   }

@@ -34,7 +34,7 @@ function page(dark) {
   .menu [role=menuitem]{padding:6px;color:var(--text)} .menu [role=menuitem].hl{background:#4752c4;color:#fff}
   .editor{min-height:40px;background:var(--panel);color:var(--text);margin:8px;padding:8px}
   ${rules}</style></head><body><nav class="side"><div class="t">Sidebar</div></nav>
-  <main id="main"><ol id="list">${rows}</ol><div class="editor" contenteditable="true" role="textbox" id="ed">draft</div></main></body></html>`;
+  <main id="main"><select id="sort"><option>Featured</option><option>Best Sellers</option></select><ol id="list">${rows}</ol><div class="editor" contenteditable="true" role="textbox" id="ed">draft</div></main></body></html>`;
 }
 
 const server = http.createServer((req, res) => {
@@ -83,6 +83,8 @@ async function inPage(expectExt, quick) {
   const settle = async () => { await frame(); countAnims(); await frame(); countAnims(); await sleep(700); await frame(); };
   const ed = document.getElementById("ed"), msg = document.querySelector(".msg .t"), results = { cost: {}, snaps: {}, elements: document.querySelectorAll("*").length };
   results.cost.htmlModalityClass = await med(() => h.classList.toggle("modality"), quick ? 31 : 15);
+  const sort = document.getElementById("sort");
+  results.cost.nativeSelectPointer = await med(() => sort.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })), quick ? 31 : 15);
   if (quick) return results;
   h.classList.remove("modality"); await settle();
   results.cost.leafClass = await med(() => msg.classList.toggle("x1"));
@@ -109,7 +111,7 @@ async function inPage(expectExt, quick) {
 
 if (QUICK) {
   const rows = [];
-  for (const name of ORDER) { const r = await runVariant(name, EXTS[name]); rows.push({ name, dark: r.pages.dark.cost.htmlModalityClass, light: r.pages.light.cost.htmlModalityClass }); }
+  for (const name of ORDER) { const r = await runVariant(name, EXTS[name]); rows.push({ name, dark: r.pages.dark.cost, light: r.pages.light.cost }); }
   server.close(); console.log(JSON.stringify(rows)); writeFileSync(process.env.OUT || "interaction-ab.json", JSON.stringify(rows, null, 2)); process.exit(0);
 }
 const VARIANTS = EXTS;

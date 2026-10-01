@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.25
+
+- Keep text legible on light photographs used as full-bleed sibling media behind promotional and hero copy. This addresses the observed Walmart and Microsoft overlays without changing the image files.
+- Recolor dark generated icon glyphs on newly darkened headers, including Ralph Lauren's search icon.
+- Leave the browser's native select opening path alone during pointer and keyboard interaction. The static dark option styling remains active. This removes one extension handler cost, but the reported Amazon delay is not yet proven resolved.
+- Add Chrome regression fixtures for image overlays, generated icons, and native select events. Audit 52 live Chrome pages and document both findings and coverage limits in `AUDIT-2026-10-01.md`. No new permissions or theme changes.
+
 ## 0.6.24 (local package)
 
 - Restore OLED Night's constructed stylesheet when a web component replaces its `adoptedStyleSheets` after initial styling. This keeps mapped text and its background together in dynamic shadow roots such as Adobe account cards.

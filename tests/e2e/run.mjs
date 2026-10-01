@@ -191,9 +191,16 @@ try {
   check("dropdown: hovered option readable", dropdown.dark && dropdown.contrast >= 4.5);
   dropdown = await page.eval("dropdownResult('nativeOption')");
   check("dropdown: native option readable", dropdown.dark && dropdown.contrast >= 4.5);
+  const generatedInk = await css("inkIcon", "color", "::after");
+  check("generated icon font stays visible on mapped dark surface", (lum(generatedInk) + 0.05) / 0.05 >= 4.5, `${generatedInk} / ${await page.eval("document.getElementById('inkIcon').getAttribute('data-oled-night')")}`);
+  check("original text color retained over sibling photo", (await css("photoText", "color")) === "rgb(0, 30, 96)");
+  check("original text color retained over relative hero media", (await css("heroText", "color")) === "rgb(32, 33, 36)");
   await page.eval(`window.sortAncestorSwitches=0; new MutationObserver(records => { window.sortAncestorSwitches += records.length; }).observe(document.getElementById('sortPath'), {attributes:true,attributeFilter:['data-oled-night-measure','data-oled-night-measure-self','data-oled-night-noanim','data-oled-night-noanim-self']}); document.getElementById('sortFixture').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));`);
   await sleep(80);
   check('native select opens without immediate ancestor restyle', (await page.eval('window.sortAncestorSwitches')) === 0 && lum(await css('sortFixture','backgroundColor')) < .05);
+  await page.eval(`window.sortSelectWrites=0; new MutationObserver(records => { window.sortSelectWrites += records.length; }).observe(document.getElementById('sortFixture'), {attributes:true,attributeFilter:['data-oled-night','data-oled-night-measure','data-oled-night-measure-self','data-oled-night-noanim','data-oled-night-noanim-self']}); for (const type of ['pointerdown','pointerup','focusin','keydown','keyup']) document.getElementById('sortFixture').dispatchEvent(type.startsWith('pointer') ? new PointerEvent(type,{bubbles:true}) : new Event(type,{bubbles:true}));`);
+  await sleep(80);
+  check('native select interactions skip extension recolor writes', (await page.eval('window.sortSelectWrites')) === 0);
   check('color picker and swatch retain original data colors',await page.eval("!document.getElementById('colorPicker').hasAttribute('data-oled-night') && getComputedStyle(document.getElementById('swatch')).backgroundColor === 'rgb(251, 235, 156)' && !document.getElementById('nativeColor').hasAttribute('data-oled-night')"));
   check('Amazon disclosure and close sprites visible', (await css('amazonArrow','filter')) === 'brightness(0) invert(1)' && (await css('amazonClose','filter')) === 'brightness(0) invert(1)');
   check('Amazon border chevron readable; other sprites unchanged', lum(await css('amazonMore','borderRightColor')) > .5 && (await css('amazonOther','filter')) === 'none');
