@@ -8,6 +8,12 @@ on:
         description: Release tag to submit, for example v0.6.20
         required: true
         type: string
+      store:
+        description: Store to submit on a manual run
+        required: true
+        default: both
+        type: choice
+        options: [both, amo, chrome]
 
 jobs:
   submit:
@@ -32,6 +38,7 @@ jobs:
           git archive --format=zip --output="dist/oled-night-source-${version}.zip" HEAD
           cp .store-uploader/tools/submit-stores.mjs tools/submit-stores.mjs
       - name: Submit to Mozilla Add-ons
+        if: ${{ github.event_name == 'release' || inputs.store == 'both' || inputs.store == 'amo' }}
         id: amo
         continue-on-error: true
         env:
@@ -44,6 +51,7 @@ jobs:
             echo 'AMO submission skipped: API credentials are not configured.' >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Submit to Chrome Web Store
+        if: ${{ github.event_name == 'release' || inputs.store == 'both' || inputs.store == 'chrome' }}
         id: chrome
         continue-on-error: true
         env:

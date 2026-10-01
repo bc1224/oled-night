@@ -18,4 +18,4 @@ As of October 1, Firefox 0.6.24 is approved on Mozilla Add-ons. Chrome 0.6.27 wa
 
 Firefox 0.6.27 has not yet been submitted. The workflow skipped Mozilla because `AMO_API_KEY` and `AMO_API_SECRET` are not configured. The Mozilla API Credentials page requires email confirmation before it offers key generation. Local Chrome and Firefox checks are documented in [the audit](AUDIT-2026-10-01.md).
 
-Once the Mozilla secrets are configured, run `gh workflow run submit-stores.yml --repo bc1224/oled-night -f tag=v0.6.27`. The workflow rebuilds packages from that exact tag; no manual ZIP selection is needed. Verify each provider receipt after the run rather than treating workflow success alone as store publication.
+Once the Mozilla secrets are configured, run `gh workflow run submit-stores.yml --repo bc1224/oled-night -f tag=v0.6.27 -f store=amo`. The workflow rebuilds packages from that exact tag and submits Firefox only, so it does not repeat the pending Chrome submission. No manual ZIP selection is needed. Verify the Mozilla receipt after the run rather than treating workflow success alone as store publication.
