@@ -37,7 +37,9 @@ async function json(response, label) {
   try { result = await response.json(); } catch { result = {}; }
   if (!response.ok) {
     // API error messages can contain user data. Keep stdout free of secrets.
-    throw new Error(`${label}: HTTP ${response.status}${result?.error?.code ? ` (${result.error.code})` : ""}`);
+    const oauthError = label === "Google OAuth refresh" && typeof result?.error === "string"
+      ? ` (${result.error.replace(/[^a-z_]/g, "").slice(0, 40)})` : "";
+    throw new Error(`${label}: HTTP ${response.status}${oauthError}${result?.error?.code ? ` (${result.error.code})` : ""}`);
   }
   return result;
 }
