@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.26";
+  const VERSION = "0.6.27";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -338,6 +338,10 @@
       const border = colors.mapBorder(colors.parseColor(computed[`border${side}Color`]));
       if (border) found[key] = border;
     }
+    if (computed.outlineWidth !== "0px") {
+      const outline = colors.mapBorder(colors.parseColor(computed.outlineColor));
+      if (outline) found.outline = outline;
+    }
     for (const pseudo of ["before", "after"]) {
       const pseudoStyle = getComputedStyle(element, `::${pseudo}`);
       if (pseudoStyle.content && pseudoStyle.content !== "none" && pseudoStyle.content !== "normal") {
@@ -584,6 +588,15 @@
     return false;
   }
 
+  function isTransparentFrame() {
+    if (isTopFrame || !document.body) return false;
+    return [document.documentElement, document.body].every((node) => {
+      const style = getComputedStyle(node);
+      const color = colorsApi().parseColor(style.backgroundColor);
+      return (!color || color.a < 0.08) && style.backgroundImage === "none";
+    });
+  }
+
   function modeFor() {
     if (Settings.prefersNativeColors(hostname())) return "native";
     const appearance = resolvedAppearance(settings);
@@ -727,9 +740,11 @@
     if (full) root.setAttribute(MEASURE, "");
     else { root.setAttribute(MEASURE_ROOT, ""); for (const node of roots) node.setAttribute(MEASURE_SELF, ""); }
     const dark = detectDarkPage();
+    const transparent = isTransparentFrame();
     root.removeAttribute(MEASURE);
     root.removeAttribute(MEASURE_ROOT);
     for (const node of roots) node.removeAttribute(MEASURE_SELF);
+    root.toggleAttribute("data-oled-night-transparent-frame", transparent);
     return dark;
   }
 
@@ -922,6 +937,7 @@
       [${MARK}~="br"]${on} { border-right-color: var(--oln-br) !important; }
       [${MARK}~="bb"]${on} { border-bottom-color: var(--oln-bb) !important; }
       [${MARK}~="bl"]${on} { border-left-color: var(--oln-bl) !important; }
+      [${MARK}~="outline"]${on} { outline-color: var(--oln-outline) !important; }
       [${MARK}~="fill"]${on} { fill: var(--oln-fill) !important; }
       [${MARK}~="stroke"]${on} { stroke: var(--oln-stroke) !important; }
       [${MARK}~="stop"]${on} { stop-color: var(--oln-stop) !important; }
@@ -945,6 +961,9 @@
 
   // Painted before the page has any content, so a white page never flashes.
   function installEarly() {
+    // A transparent embed must be allowed to show the host's backdrop.
+    // Its paint cannot be classified before <body> and stylesheets exist.
+    if (!isTopFrame) return;
     if (Settings.prefersNativeColors(hostname())) return;
     // Wait for the parsed form/provider on auth URLs before touching the page.
     if (AUTH_PATH.test(location.pathname)) return;
@@ -968,6 +987,7 @@
     sheet.textContent = `
       ${root}:not([data-oled-night-page="none"]), ${root}:not([data-oled-night-page="none"]) body { color-scheme: dark !important; }
       ${surface}:not([data-oled-night-page="none"]), ${surface}:not([data-oled-night-page="none"]) body { background: var(--oled-night-page, #000) !important; }
+      ${surface}[data-oled-night-transparent-frame]:not([data-oled-night-page="none"]), ${surface}[data-oled-night-transparent-frame]:not([data-oled-night-page="none"]) body { background: transparent !important; }
       ${overrideRules()}
       html[data-oled-night-root] :focus-visible { outline-color: #66a3ff !important; }
       ${root}:not([data-oled-night-page="none"]) * { scrollbar-color: rgb(58 58 66) transparent; }
@@ -1070,7 +1090,7 @@
     textTiers = new WeakMap();
     removeEarly();
     const root = document.documentElement;
-    for (const name of ["data-oled-night-root", "data-oled-night-youtube", "data-oled-night-page", "data-oled-night-dim", "data-oled-night-invert", "data-oled-night-site"]) root.removeAttribute(name);
+    for (const name of ["data-oled-night-root", "data-oled-night-youtube", "data-oled-night-page", "data-oled-night-transparent-frame", "data-oled-night-dim", "data-oled-night-invert", "data-oled-night-site"]) root.removeAttribute(name);
     for (const name of ["--oled-night-page", "--oled-night-youtube-primary", "--oled-night-youtube-secondary", "--oln-light", "--oln-strength"]) root.style.removeProperty(name);
     document.getElementById("oled-night-sheet")?.remove();
     logoChecked = new WeakSet();
@@ -1121,12 +1141,14 @@
     }
     const site = currentSiteMode();
     // Read the page's own background before any of our rules paint over it.
+    const transparentFrame = isTransparentFrame();
     darkPage = !colorsApi().usesNativeSafeMode(hostname()) && detectDarkPage();
     installSheet();
     active = true;
     const root = document.documentElement;
     root.setAttribute("data-oled-night-root", "");
     root.setAttribute("data-oled-night-version", VERSION);
+    if (transparentFrame) root.setAttribute("data-oled-night-transparent-frame", "");
     const profile = colorsApi().siteProfile(location.hostname) || colorsApi().siteProfile(hostname());
     if (profile) root.setAttribute("data-oled-night-site", profile);
     applyTuning();

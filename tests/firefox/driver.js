@@ -40,11 +40,15 @@
       return parseFloat(list.backgroundColor.match(/[\d.]+/)[0]) < 60 && parseFloat(option.color.match(/[\d.]+/)[0]) > 180;
     }));
     await open('components.html');
-    check('shadow root background darkened', await inspect(() => getComputedStyle(document.getElementById('grid').shadowRoot.querySelector('table')).backgroundColor === 'rgb(0, 0, 0)'));
+    check('shadow root background darkened', await inspect(() => {
+      const value = parseFloat(getComputedStyle(document.getElementById('grid').shadowRoot.querySelector('table')).backgroundColor.match(/[\d.]+/)[0]);
+      return value > 8 && value < 40;
+    }));
     check('replaced shadow stylesheets restore background and text together', await inspect(() => {
       const root = document.getElementById('replacing').shadowRoot;
       const card = getComputedStyle(root.getElementById('card'));
-      return card.backgroundColor === 'rgb(0, 0, 0)' && parseFloat(card.color.match(/[\d.]+/)[0]) > 180 && root.adoptedStyleSheets.length === 2;
+      const channel = parseFloat(card.backgroundColor.match(/[\d.]+/)[0]);
+      return channel > 8 && channel < 40 && parseFloat(card.color.match(/[\d.]+/)[0]) > 180 && root.adoptedStyleSheets.length === 2;
     }));
     check('small faded icon gains contrast on recolored surface', await inspect(() => {
       const icon = getComputedStyle(document.getElementById('fadedIcon'));
@@ -54,10 +58,26 @@
     await browser.storage.sync.set({openClosedShadows:true}); await wait(600);
     check('no page-world script registered', !(await browser.scripting.getRegisteredContentScripts()).length);
     await open('components.html');
-    check('closed shadow opt-in works', await inspect(() => getComputedStyle(document.getElementById('closed').openOrClosedShadowRoot.querySelector('div')).backgroundColor === 'rgb(0, 0, 0)'));
+    check('closed shadow opt-in works', await inspect(() => {
+      const value = parseFloat(getComputedStyle(document.getElementById('closed').openOrClosedShadowRoot.querySelector('div')).backgroundColor.match(/[\d.]+/)[0]);
+      return value > 8 && value < 40;
+    }));
     check('closed root stays closed to the page', await inspect(() => document.getElementById('closed').wrappedJSObject.shadowRoot === null));
     check('Turnstile-style closed div untouched', await inspect(() => getComputedStyle(document.getElementById('turnstile').openOrClosedShadowRoot.querySelector('div')).backgroundColor === 'rgb(255, 255, 255)'));
     await browser.storage.sync.set({openClosedShadows:false}); await wait(400);
+    await open('surfaces.html');
+    check('raised card remains separate from true-black page', await inspect(() => {
+      const card = parseFloat(getComputedStyle(document.getElementById('card')).backgroundColor.match(/[\d.]+/)[0]);
+      return getComputedStyle(document.body).backgroundColor === 'rgb(0, 0, 0)' && card > 8 && card < 40;
+    }));
+    check('authored container outline remains visible', await inspect(() => {
+      const style = getComputedStyle(document.getElementById('outlined'));
+      return style.outlineStyle === 'solid' && parseFloat(style.outlineColor.match(/[\d.]+/)[0]) > 120;
+    }));
+    check('transparent canvas frame preserves host backdrop', await inspect(() => {
+      const frame = document.getElementById('transparentFrame').contentDocument;
+      return frame.documentElement.hasAttribute('data-oled-night-transparent-frame') && getComputedStyle(frame.body).backgroundColor === 'rgba(0, 0, 0, 0)';
+    }));
     await open('gmail.html');
     check('Gmail white reader and authored table become black', await inspect(() => {
       const dark = id => parseFloat(getComputedStyle(document.getElementById(id)).backgroundColor.match(/[\d.]+/)[0]) < 60;

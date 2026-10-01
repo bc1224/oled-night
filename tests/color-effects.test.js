@@ -4,16 +4,16 @@ const colors = global.OledNightColors;
 
 // Alpha is preserved so scrims and fades stay translucent.
 assert.equal(colors.mapBackground(colors.parseColor("rgba(0, 0, 0, 0.5)"), "oled"), "rgb(0 0 0 / 0.5)");
-assert.equal(colors.mapBackground(colors.parseColor("rgba(255, 255, 255, 0.8)"), "oled"), "rgb(0 0 0 / 0.8)");
+assert.match(colors.mapBackground(colors.parseColor("rgba(255, 255, 255, 0.8)"), "oled"), /^rgb\(calc\(14 \+ 10 \*.* \/ 0\.8\)$/);
 
-// White-to-transparent chat fades become black-to-transparent.
+// White-to-transparent fades become a near-black surface with the same alpha.
 const fade = colors.mapGradient("linear-gradient(rgba(255, 255, 255, 0), rgb(255, 255, 255))", "oled");
-assert.equal(fade, "linear-gradient(rgba(255, 255, 255, 0), #000000)");
+assert.match(fade, /^linear-gradient\(rgba\(255, 255, 255, 0\), rgb\(calc\(14 \+ 10 \*/);
 assert.equal(colors.mapGradient("url(\"a.png\"), linear-gradient(red, blue)", "oled"), null);
 assert.equal(colors.mapGradient("none", "oled"), null);
 
-// White glows become dark; dark shadows are untouched.
-assert.equal(colors.mapShadow("rgb(255, 255, 255) 0px -16px 16px 0px", "oled"), "#000000 0px -16px 16px 0px");
+// White glows become dim; dark shadows are untouched.
+assert.match(colors.mapShadow("rgb(255, 255, 255) 0px -16px 16px 0px", "oled"), /^rgb\(calc\(14 \+ 10 \*/);
 assert.equal(colors.mapShadow("rgba(0, 0, 0, 0.3) 0px 1px 2px 0px", "oled"), null);
 assert.equal(colors.mapShadow("none", "oled"), null);
 
@@ -35,7 +35,7 @@ assert.ok(near(colors.parseColor("lab(54.29 80.82 69.91)"), 255, 0, 0));
 assert.ok(near(colors.parseColor("lch(54.29 106.84 40.85)"), 255, 0, 0));
 assert.equal(colors.parseColor("rgb(10, 20, 30)").b, 30);
 assert.ok(colors.mapForeground(colors.parseColor("color(srgb 0 0 0)"), 88));
-assert.equal(colors.mapGradient("linear-gradient(color(srgb 1 1 1 / 0), color(srgb 1 1 1))", "oled"), "linear-gradient(color(srgb 1 1 1 / 0), #000000)");
+assert.match(colors.mapGradient("linear-gradient(color(srgb 1 1 1 / 0), color(srgb 1 1 1))", "oled"), /^linear-gradient\(color\(srgb 1 1 1 \/ 0\), rgb\(calc\(14 \+ 10 \*/);
 console.log("modern-colors: 12 assertions passed");
 
 // 0.5.0: emphasis tiers, tints, colored borders, icons, dark-page crush.

@@ -304,11 +304,26 @@ try {
   const outlineIcon = await page.eval("(() => { const svg = document.getElementById('outlineIcon'), use = document.getElementById('outlineUse'), style = getComputedStyle(svg); return { bg: style.backgroundColor, ink: style.color, svgMark: svg.getAttribute('data-oled-night') || '', useMark: use.getAttribute('data-oled-night') || '' }; })()");
   check("outline SVG keeps a dark tile and visible currentColor stroke", lum(outlineIcon.bg) < .05 && lum(outlineIcon.ink) > .5 && !outlineIcon.svgMark.includes('fill') && !outlineIcon.useMark.includes('fill'), JSON.stringify(outlineIcon));
 
+  // A white card over a pale page must remain distinguishable after both are
+  // darkened. Keep authored outlines and gradient depth, and let a transparent
+  // canvas iframe show the host's colored surface instead of a black rectangle.
+  await page.go(site("127.0.0.1", "surfaces.html"), 1800);
+  const surfaces = await page.eval("(() => { const style = id => getComputedStyle(document.getElementById(id)); const frame = document.getElementById('transparentFrame').contentDocument; return { page: getComputedStyle(document.body).backgroundColor, card: style('card').backgroundColor, shadow: style('card').boxShadow, outline: style('outlined').outlineColor, outlineStyle: style('outlined').outlineStyle, brand: style('brand').backgroundImage, brandText: style('brand').color, frameBody: getComputedStyle(frame.body).backgroundColor, frameRoot: frame.documentElement.hasAttribute('data-oled-night-transparent-frame'), canvasMarked: frame.getElementById('scene').hasAttribute('data-oled-night') }; })()");
+  check("raised card remains visible against black page", lum(surfaces.page) < .001 && lum(surfaces.card) > .005 && lum(surfaces.card) < .025, JSON.stringify(surfaces));
+  check("authored container outline stays visible", surfaces.outlineStyle === "solid" && lum(surfaces.outline) > .1, surfaces.outline);
+  const gradientStops = [...surfaces.brand.matchAll(/rgb\(\d+, \d+, \d+\)/g)].map(m => m[0]);
+  check("colored panel gradient retains depth and readable text", gradientStops.length >= 2 && Math.abs(lum(gradientStops[0]) - lum(gradientStops[1])) > .02 && lum(surfaces.brandText) > .5, JSON.stringify(gradientStops));
+  check("transparent canvas iframe keeps host backdrop", surfaces.frameRoot && surfaces.frameBody === "rgba(0, 0, 0, 0)" && !surfaces.canvasMarked, JSON.stringify(surfaces));
+  await page.eval("document.getElementById('transparentFrame').contentDocument.body.style.backgroundColor='#fff'");
+  await sleep(400);
+  const opaqueFrame = await page.eval("(() => { const d=document.getElementById('transparentFrame').contentDocument; return { bg:getComputedStyle(d.body).backgroundColor, transparent:d.documentElement.hasAttribute('data-oled-night-transparent-frame') }; })()");
+  check("frame becoming opaque is recolored again", opaqueFrame.bg !== "rgba(0, 0, 0, 0)" && !opaqueFrame.transparent && lum(opaqueFrame.bg) < .025, JSON.stringify(opaqueFrame));
+
   // Web components, modern color syntax, gradients, shadows.
   await page.go(site("127.0.0.1", "components.html"), 1800);
   check("modern color syntax text readable", lum(await css("pill", "color")) > 0.5 && lum(await css("title", "color")) > 0.5);
-  check("white fade gradient darkened", /rgb\(0, 0, 0\)\)$/.test(await css("chat", "backgroundImage", "::after")));
-  check("white glow shadow darkened", (await css("composer", "boxShadow")).startsWith("rgb(0, 0, 0)"));
+  check("white fade gradient darkened", lum((await css("chat", "backgroundImage", "::after")).match(/rgb\(\d+, \d+, \d+\)(?=\)$)/)?.[0] || "rgb(255, 255, 255)") < .025);
+  check("white glow shadow darkened", lum((await css("composer", "boxShadow")).match(/rgb\(\d+, \d+, \d+\)/)?.[0] || "rgb(255, 255, 255)") < .025);
   const shadow = await page.eval("(() => { const r = document.getElementById('grid').shadowRoot; const s = (el, p) => getComputedStyle(el)[p]; return { table: s(r.querySelector('table'), 'backgroundColor'), cell: s(r.getElementById('cell'), 'color'), late: s(r.getElementById('late'), 'color') }; })()");
   check("web component table darkened", lum(shadow.table) < 0.01 && lum(shadow.cell) > 0.3 && lum(shadow.late) > 0.3, JSON.stringify(shadow));
   const replaced = await page.eval("(() => { const r = document.getElementById('replacing').shadowRoot; const card = r.getElementById('card'); return { bg: getComputedStyle(card).backgroundColor, fg: getComputedStyle(card).color, sheets: r.adoptedStyleSheets.length }; })()");
@@ -391,7 +406,7 @@ try {
     const panel=document.createElement('section');panel.style.background='#fff';panel.style.color='#222';panel.textContent='New dynamic section';document.body.append(panel);
     queueMicrotask(()=>requestAnimationFrame(()=>resolve(getComputedStyle(panel).backgroundColor)));
   },0))`);
-  check('new sections recolored in the next pre-paint batch',newPanel==='rgb(0, 0, 0)',newPanel);
+  check('new sections recolored in the next pre-paint batch',lum(newPanel)<.025,newPanel);
 
   await page.go(site("127.0.0.1", "efficiency.html"));
   const efficiency = await page.eval("(async () => {\n const wait = () => new Promise(r=>setTimeout(r,150));\n const p=document.getElementById('parent'), c=document.getElementById('child'), v=document.getElementById('variable');\n const dark = node => { const c=getComputedStyle(node); return c.backgroundColor.match(/[0-9.]+/g).slice(0,3).every(n=>+n<30) && +c.color.match(/[0-9.]+/)[0]>180; };\n const results={}; let batches=0;\n const watch=new MutationObserver(records=>{batches+=records.some(r=>r.oldValue===null)?1:0});\n watch.observe(p,{attributes:true,subtree:true,attributeOldValue:true,attributeFilter:['data-oled-night-measure','data-oled-night-measure-self']});\n p.style.transform='translateX(1px)'; await wait(); batches=0;\n for(let i=0;i<20;i++)p.style.transform='translateX('+i+'px)';\n await wait(); results.transformSkips=batches===0;\n batches=0; c.classList.add('changed');p.classList.add('changed');c.dispatchEvent(new Event('focusin',{bubbles:true,composed:true}));\n await wait();results.coalesced=batches===1;\n p.style.setProperty('--surface','#eee'); await wait();results.variableDark=dark(v);\n p.setAttribute('style','--surface:#ddd;background:white');await wait();results.resetInheritance=dark(v);\n const sheet=document.createElement('style');sheet.textContent='#late{background:#eee!important;color:#222}';document.head.append(sheet);await wait();results.lateSheet=dark(document.getElementById('late'));\n sheet.firstChild.data='#late{background:rgb(230,230,230)!important;color:#111}';await wait();results.editedSheet=dark(document.getElementById('late'));\n batches=0;await wait();results.noFeedback=batches===0;watch.disconnect();return results;\n})()");

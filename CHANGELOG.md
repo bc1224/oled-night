@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.27
+
+- Keep white cards distinct from the true-black page and retain authored outlines. Sketchfab's white Getting Started card previously collapsed into the same black as its surrounding page.
+- Preserve the depth of colored gradients and the brightness of their white labels. Flat colored controls retain their existing dark mapping for contrast.
+- Preserve intentionally transparent embedded frames, so a canvas viewer can show the host page's backdrop instead of an extension-painted black rectangle.
+- Add Chrome regressions for card separation, outline visibility, gradient depth, and transparent canvas frames. The reported Amazon sort delay remains unresolved.
+
 ## 0.6.26
 
 - Leave password sign-in pages with an active CAPTCHA provider entirely native so OLED Night cannot interfere with token generation or form submission. The Industrie Australia login page uses Shopify's CAPTCHA bootstrap. This safeguards the form; the exact provider-side failure is not directly observable without submitting credentials.

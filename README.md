@@ -27,7 +27,7 @@ Every dark mode extension I tried either left everything grey, or made sites dar
 - **Readable text, with emphasis kept.** Primary, secondary and muted text stay distinct, and Gmail's read and unread emails stay easy to tell apart.
 - **Respects dark sites.** On a site that's already dark, it only deepens its greys to true black.
 - **Modern web apps.** Charts, web components, embedded chat widgets and frames, and modern CSS colors (`oklch`, `lab`, `color()`).
-- **No white flash, and no lag.** Pages go black before they draw, and updates are batched.
+- **No white flash.** Pages go black before they draw, and updates are batched.
 - **Per-site modes:** automatic, full recolor, deepen blacks only, invert (canvas apps), or off. Each site can also have its own brightness, contrast and image dimming.
 - **Schedule, keyboard shortcut (<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>), settings backup, and a "report a broken site" button.**
 - **Private.** No servers, no analytics, no tracking. See the [privacy policy](store/PRIVACY.md).
@@ -40,7 +40,7 @@ Download [`oled-night.zip`](https://github.com/bc1224/oled-night/releases/latest
 
 **Want Chrome itself black too?** The extension darkens websites, but only a theme can change Chrome's own window. Grab [`oled-night-theme.zip`](https://github.com/bc1224/oled-night/releases/latest/download/oled-night-theme.zip) and load it the same way. See [theme/README.md](theme/README.md).
 
-**Firefox desktop:** Version 0.6.24 is approved on Mozilla Add-ons. Version 0.6.26 is available in [GitHub Releases](https://github.com/bc1224/oled-night/releases/tag/v0.6.26) and awaits store submission. See [Firefox installation](FIREFOX.md). The Chrome theme is not compatible with Firefox.
+**Firefox desktop:** Version 0.6.24 is approved on Mozilla Add-ons. Version 0.6.27 is available in [GitHub Releases](https://github.com/bc1224/oled-night/releases/tag/v0.6.27) and awaits store submission. See [Firefox installation](FIREFOX.md). The Chrome theme is not compatible with Firefox.
 
 ## Using it
 Click the toolbar icon on any site:

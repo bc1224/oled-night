@@ -151,7 +151,7 @@
 
   // Modes: "oled" / "soft" recolor a light page; "crush" only pushes the dark
   // greys of an already-dark page to true black; "none" changes nothing.
-  function mapBackground(color, mode) {
+  function mapBackground(color, mode, gradientStop = false) {
     if (!color || color.a < 0.08 || mode === "none") return null;
     const hsl = rgbToHsl(color);
     const lum = luminance(color);
@@ -160,7 +160,10 @@
     // ones) go to true black, so lighter cards keep their outline.
     if (mode === "crush") return c < 0.1 && lum < 0.02 ? withAlpha("#000000", color.a) : null;
     if (c > 0.12 && lum > 0.08) {
-      return withAlpha(`hsl(${Math.round(hsl.h)} ${Math.round(Math.min(hsl.s, 0.82) * 100)}% calc(16% + 10% * ${STRENGTH}))`, color.a);
+      // Flat saturated controls stay dark enough for their text. Gradients
+      // also retain the light/dark difference between authored color stops.
+      const base = gradientStop ? Math.round(7 + 30 * hsl.l) : 16;
+      return withAlpha(`hsl(${Math.round(hsl.h)} ${Math.round(Math.min(hsl.s, 0.82) * 100)}% calc(${base}% + 10% * ${STRENGTH}))`, color.a);
     }
     // Pale tints (info/alert/selected rows) keep a hint of their hue.
     if (c > 0.03 && lum > 0.3) {
@@ -171,7 +174,10 @@
       if (lum > 0.24) return withAlpha(grey(22, 6, 4), color.a);
       return withAlpha("rgb(13 13 17)", color.a);
     }
-    if (lum > 0.93 || lum < 0.025) return withAlpha("#000000", color.a);
+    // The document itself is forced to true black. White cards above a pale
+    // page need a raised near-black surface or their edges disappear entirely.
+    if (lum > 0.93) return withAlpha(grey(14, 10, 3), color.a);
+    if (lum < 0.025) return withAlpha("#000000", color.a);
     return withAlpha(lum > 0.62 ? grey(4, 6, 3) : grey(7, 11, 3), color.a);
   }
 
@@ -185,7 +191,7 @@
     const x = luminance(seen), y = luminance(base);
     const ratio = (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
     // Light text on a colored/dark surface (button labels, badges) is primary.
-    if (x > y && ratio >= 3) return 1;
+    if (x > y && (ratio >= 3 || (x > 0.8 && chroma(base) > 0.12))) return 1;
     return ratio >= 9 ? 1 : ratio >= 4.5 ? 0.82 : 0.66;
   }
 
@@ -224,7 +230,7 @@
     if (!/gradient\(/i.test(text) || /url\(/i.test(text)) return null;
     let changed = false;
     const out = text.replace(COLOR_TOKEN, (token) => {
-      const mapped = mapBackground(parseColor(token), mode);
+      const mapped = mapBackground(parseColor(token), mode, true);
       if (!mapped) return token;
       changed = true;
       return mapped;
