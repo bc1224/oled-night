@@ -23,6 +23,8 @@ div.audit-page div.audit-table div.audit-active { background-color: #fbeb9c !imp
 .sprite-icon {background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M3 7L10 14L17 7' fill='none' stroke='%23111' stroke-width='2'/%3E%3C/svg%3E")}
 .a-icon-extender-expand {width:6px;height:6px;border:solid #111;border-width:0 2px 2px 0;transform:rotate(45deg)}
 #inkIcon::after {content:"⌕";color:#041e3a;font-size:22px}
+.mega-menu:not([open]) .mega-menu__content {display:none}
+.mega-menu[open] .menu-tile-label {background:#fff}
 </style></head><body>
 <ul role="menu" aria-label="Objective">
 <li id="traffic" role="menuitemradio" aria-checked="false" class="MenuListItem-radio MenuListItem" tabindex="-1"><span>Traffic</span></li>
@@ -32,6 +34,7 @@ div.audit-page div.audit-table div.audit-active { background-color: #fbeb9c !imp
 <div id="hoverOption" class="hover-option" role="option" tabindex="0">Hover selection</div>
 <select id="native"><option id="nativeOption">Native selection</option><option>Other</option></select>
 <div id="sortPath" style="background:#fff;color:#182024"><select id="sortFixture"><option>Featured</option><option>Best Sellers</option></select><span>Sort products</span></div>
+<div id="megaFixture" class="mega-menu"><a id="megaTrigger" role="button" aria-expanded="false" aria-controls="megaContent">Open menu</a><div id="megaContent" class="mega-menu__content"><h3 id="megaLabel" class="menu-tile-label">Hoodies &amp; Sweats</h3></div></div>
 <button id="inkIcon" style="background:#fff;color:#041e3a">Search</button>
 <div id="photoCard" style="position:relative;width:300px;height:120px;background:#fff"><div style="position:absolute;inset:0"><img width="300" height="120" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='120'%3E%3Crect width='300' height='120' fill='%23ded6c6'/%3E%3C/svg%3E"></div><section style="position:relative"><p id="photoText" style="color:#001e60">Text over a real image</p></section></div>
 <div id="hero" style="position:relative;width:300px;height:120px;background:#fff"><store-media style="position:relative;display:block;width:300px;height:120px"><img width="300" height="120" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='120'%3E%3Crect width='300' height='120' fill='%23fff9f5'/%3E%3C/svg%3E"></store-media><section style="position:absolute;inset:0"><h2 id="heroText" style="color:#202124">Text over relative media</h2></section></div>

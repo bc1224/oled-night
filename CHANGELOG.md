@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.26
+
+- Leave password sign-in pages with an active CAPTCHA provider entirely native so OLED Night cannot interfere with token generation or form submission. The Industrie Australia login page uses Shopify's CAPTCHA bootstrap. This safeguards the form; the exact provider-side failure is not directly observable without submitting credentials.
+- Recheck the controlled menu and existing contents when a trigger expands, and observe `open` state changes. This fixes Industrie Australia's white mega-menu labels after the menu appears.
+- Preserve outline SVG geometry and recolor its root tile. This fixes the white square header icons on Industrie Australia.
+- Add Chrome regressions for all three cases. Amazon's reported 5–10 second native sort delay remains unresolved; a Chrome-control click is not an input-to-paint measurement.
+
 ## 0.6.25
 
 - Keep text legible on light photographs used as full-bleed sibling media behind promotional and hero copy. This addresses the observed Walmart and Microsoft overlays without changing the image files.

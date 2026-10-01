@@ -191,6 +191,10 @@ try {
   check("dropdown: hovered option readable", dropdown.dark && dropdown.contrast >= 4.5);
   dropdown = await page.eval("dropdownResult('nativeOption')");
   check("dropdown: native option readable", dropdown.dark && dropdown.contrast >= 4.5);
+  await page.eval("document.getElementById('megaFixture').setAttribute('open','true'); document.getElementById('megaTrigger').setAttribute('aria-expanded','true')");
+  await sleep(120);
+  dropdown = await page.eval("dropdownResult('megaLabel')");
+  check("dropdown: expanded sibling menu tile readable", dropdown.dark && dropdown.contrast >= 4.5 && dropdown.marked.includes('bg'), JSON.stringify(dropdown));
   const generatedInk = await css("inkIcon", "color", "::after");
   check("generated icon font stays visible on mapped dark surface", (lum(generatedInk) + 0.05) / 0.05 >= 4.5, `${generatedInk} / ${await page.eval("document.getElementById('inkIcon').getAttribute('data-oled-night')")}`);
   check("original text color retained over sibling photo", (await css("photoText", "color")) === "rgb(0, 30, 96)");
@@ -296,6 +300,10 @@ try {
   check("chart fills darkened", lum(await css("s1", "stopColor")) < 0.1 && lum(await css("s2", "stopColor")) < 0.01 && lum(await css("solid", "fill")) < 0.05);
   check("chart line keeps color", (await css("line", "stroke")) === "rgb(0, 112, 201)");
 
+  await page.go(site("127.0.0.1", "svg-outline.html"));
+  const outlineIcon = await page.eval("(() => { const svg = document.getElementById('outlineIcon'), use = document.getElementById('outlineUse'), style = getComputedStyle(svg); return { bg: style.backgroundColor, ink: style.color, svgMark: svg.getAttribute('data-oled-night') || '', useMark: use.getAttribute('data-oled-night') || '' }; })()");
+  check("outline SVG keeps a dark tile and visible currentColor stroke", lum(outlineIcon.bg) < .05 && lum(outlineIcon.ink) > .5 && !outlineIcon.svgMark.includes('fill') && !outlineIcon.useMark.includes('fill'), JSON.stringify(outlineIcon));
+
   // Web components, modern color syntax, gradients, shadows.
   await page.go(site("127.0.0.1", "components.html"), 1800);
   check("modern color syntax text readable", lum(await css("pill", "color")) > 0.5 && lum(await css("title", "color")) > 0.5);
@@ -331,6 +339,9 @@ try {
   check("bot check: challenge marked only by a late body script left alone", (await challenge.eval("getComputedStyle(document.body).backgroundColor")) === "rgb(255, 255, 255)" && (await challenge.eval("document.querySelectorAll('[data-oled-night], #oled-night-sheet, #oled-night-early').length")) === 0);
   await challenge.go(site("localhost", "protected.html"), 600);
   check("bot check: ordinary page mentioning captchas still darkened", lum(await challenge.eval("getComputedStyle(document.body).backgroundColor")) < 0.01);
+  await challenge.go(site("localhost", "account/login"), 600);
+  const auth = await challenge.eval("(() => ({ body: getComputedStyle(document.body).backgroundColor, form: getComputedStyle(document.querySelector('form')).backgroundColor, marks: document.querySelectorAll('[data-oled-night], #oled-night-sheet, #oled-night-early, [data-oled-night-root]').length }))()");
+  check("CAPTCHA-protected sign-in page remains completely native", auth.body === "rgb(255, 255, 255)" && auth.form === "rgb(255, 255, 255)" && auth.marks === 0, JSON.stringify(auth));
 
   // Experimental: reach closed web components through the extension API only.
   await setSettings({ openClosedShadows: true });

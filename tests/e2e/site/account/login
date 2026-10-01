@@ -1,0 +1,4 @@
+<!doctype html><html><head><style>body{background:#fff;color:#222;font:16px sans-serif}form{background:#fff;padding:24px}input{display:block;margin:12px}</style>
+<script id="captcha-bootstrap" type="application/json">{"provider":"hcaptcha"}</script></head><body>
+<h1>Sign in</h1><form id="customer_login"><input name="email" type="email"><input name="password" type="password"><button>Sign in</button></form>
+</body></html>

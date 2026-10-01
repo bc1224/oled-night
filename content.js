@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.25";
+  const VERSION = "0.6.26";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -50,6 +50,7 @@
   // are matched on origin and path only, so a query or hash that merely
   // mentions a challenge doesn't leave a normal embed white.
   const BOT_CHECK_URL = /captcha|challenges\.cloudflare\.com|challenge-platform|turnstile|arkoselabs|funcaptcha|geetest|perimeterx|px-cloud\.net|px-cdn\.net|humansecurity|datadome|awswaf|kasada|friendlycaptcha|frcapi|\/cdn-cgi\//i;
+  const AUTH_PATH = /\/(?:account\/)?(?:login|signin|sign-in|register|signup)(?:\/|$)/i;
   const frameUrl = (src) => { try { const url = new URL(src, location.href); return url.origin + url.pathname; } catch { return ""; } };
   // Provider widgets by their own markup. A site's own element that merely has
   // "captcha" in its name counts only while it holds no form of its own, so a
@@ -57,7 +58,7 @@
   const BOT_CHECK = ':is([data-sitekey], .cf-turnstile, [id^="cf-chl-"], [id^="cf-turnstile"], .g-recaptcha, .grecaptcha-badge, .h-captcha, .frc-captcha, .frc-container, #px-captcha, [class^="geetest_"], [class*=" geetest_"], [id^="arkose"], [id^="funcaptcha"], awswaf-captcha, :is([class*="captcha" i], [id*="captcha" i]):not(:has(form, input:not([type="hidden"]), select, button, textarea:not([name*="response" i]))), iframe[src*="captcha" i], iframe[src*="challenges.cloudflare.com"], iframe[src*="/challenge-platform/"], iframe[src*="arkoselabs"], iframe[src*="geetest"], iframe[src*="perimeterx"], iframe[src*="px-cloud.net"], iframe[src*="px-cdn.net"], iframe[src*="datadome"], iframe[src*="awswaf"], iframe[src*="kasada"], iframe[src*="frcapi"]):not(html, body)';
   // Subtrees we never recolor: color data and verification widgets.
   const PRESERVE = `${COLOR_CONTROL}, ${BOT_CHECK}`;
-  const STATE_ATTRIBUTES = ["aria-selected", "aria-checked", "aria-expanded", "aria-disabled", "data-state", "data-highlighted", "selected", "disabled"];
+  const STATE_ATTRIBUTES = ["aria-selected", "aria-checked", "aria-expanded", "aria-disabled", "data-state", "data-highlighted", "selected", "disabled", "open"];
   const OBSERVE = { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "href", "media", MARK, ...STATE_ATTRIBUTES] };
   const isTopFrame = (() => { try { return typeof window === "undefined" || window.top === window; } catch { return false; } })();
 
@@ -151,6 +152,15 @@
       }
     } catch {}
     return false;
+  }
+
+  // CAPTCHA providers can reject an authentication form after any third-party
+  // DOM/style intervention, even when their own frames are untouched. Keep the
+  // complete form page native when a provider guards a password form.
+  function isCaptchaProtectedAuth() {
+    if (!AUTH_PATH.test(location.pathname)) return false;
+    const form = document.querySelector('form:has(input[type="password"])');
+    return !!form && !!document.querySelector('#captcha-bootstrap, #captcha-provider, script[src*="hcaptcha"], script[src*="recaptcha"], [data-sitekey]');
   }
 
   function isMedia(element) {
@@ -379,15 +389,32 @@
     if (!rect.width || !rect.height) return;
     const colors = colorsApi();
     const icon = rect.width <= 64 && rect.height <= 64;
+    const use = svg.querySelector("use");
+    const href = use?.getAttribute("href") || use?.getAttribute("xlink:href") || "";
+    const referenced = href.startsWith("#") ? document.getElementById(href.slice(1)) : null;
+    const outline = svg.getAttribute("fill") === "none" || referenced?.getAttribute("fill") === "none";
     const paleToDark = (color) => (color && color.a >= 0.08 && colors.luminance(color) > 0.6 && colors.chroma(color) < 0.25
       ? colors.mapBackground(color, mode) : null);
     for (const part of [svg, ...svg.querySelectorAll(icon ? ICON_PARTS : CHART_PARTS)]) {
       const computed = getComputedStyle(part);
       const found = {};
       if (icon) {
+        // SVG backgrounds are ordinary painted surfaces. Stores commonly put
+        // a white tile behind a dark outline icon; recoloring only its stroke
+        // leaves a glaring white square on a darkened header.
+        if (part === svg) {
+          mapSurface(computed, "", mode, found);
+          if (outline) {
+            const currentColor = colors.parseColor(computed.color);
+            if (currentColor) found.fg = colors.mapForeground(currentColor, 1);
+          }
+        }
         const fill = colors.mapIconPaint(colors.parseColor(computed.fill));
         const stroke = colors.mapIconPaint(colors.parseColor(computed.stroke));
-        if (fill) found.fill = fill;
+        // A <use> referencing <symbol fill="none"> must stay unfilled. Its
+        // inherited computed fill looks dark even though the authored symbol
+        // deliberately draws only strokes.
+        if (fill && !(outline && (part === svg || part.localName === "use"))) found.fill = fill;
         if (stroke) found.stroke = stroke;
       } else if (part.localName === "stop") {
         const stop = paleToDark(colors.parseColor(computed.stopColor));
@@ -841,6 +868,14 @@
         if (target === document.documentElement || target === document.body) polarityDirty = true;
         // Class changes can restyle the whole subtree through descendant selectors.
         pendingTrees.add(target);
+        // Expanded controls commonly reveal a sibling menu. Its existing
+        // descendants can acquire a new surface without their own mutation.
+        if (record.attributeName === "aria-expanded") {
+          const controlled = target.getAttribute("aria-controls");
+          const menu = controlled && target.getRootNode().getElementById?.(controlled);
+          if (menu) pendingTrees.add(menu);
+          else if (target.parentElement && target.parentElement !== document.body && target.parentElement !== document.documentElement && target.parentElement.children.length <= 20) pendingTrees.add(target.parentElement);
+        }
       } else if (!overridesIntact(target)) {
         // Frameworks can replace style/attributes without changing any page
         // color property. The cached decision is not proof it is still applied.
@@ -911,6 +946,8 @@
   // Painted before the page has any content, so a white page never flashes.
   function installEarly() {
     if (Settings.prefersNativeColors(hostname())) return;
+    // Wait for the parsed form/provider on auth URLs before touching the page.
+    if (AUTH_PATH.test(location.pathname)) return;
     if (document.getElementById("oled-night-early")) return;
     const early = document.createElement("style");
     early.id = "oled-night-early";
@@ -1071,6 +1108,7 @@
 
   function enable() {
     disable();
+    if (isCaptchaProtectedAuth()) { active = true; return; }
     // A design editor's UI and canvas share color-bearing elements. Preserve
     // the entire document even for explicit recolor/invert overrides.
     if (Settings.prefersNativeColors(hostname())) { active = true; return; }
@@ -1136,6 +1174,10 @@
     const enabled = isEnabled(settings);
     if (!enabled) { disable(); return; }
     if (!domReady) return; // enable() runs on DOMContentLoaded; the early sheet covers until then
+    // A body may appear before the auth form and its CAPTCHA bootstrap. Do not
+    // enable from the asynchronous settings callback until parsing finishes.
+    if (AUTH_PATH.test(location.pathname) && document.readyState === "loading") return;
+    if (isCaptchaProtectedAuth()) { if (!active || observer) enable(); return; }
     // Slider moves, per-site tuning and image dimming only retune variables; no page re-scan.
     if (active && structureKey(previous) === structureKey(settings)) { if (!Settings.prefersNativeColors(hostname())) applyTuning(); return; }
     enable();
@@ -1213,17 +1255,18 @@
       if (domReady) return;
       domReady = true;
       bodyWatch.disconnect();
-      if (isEnabled(settings) && revision > 0) enable();
+      if (isEnabled(settings) && revision > 0 && !AUTH_PATH.test(location.pathname)) enable();
     };
     const bodyWatch = new MutationObserver(() => { if (document.body) start(); });
     bodyWatch.observe(document.documentElement, { childList: true });
     if (document.body) start();
     document.addEventListener("DOMContentLoaded", () => {
       start();
+      if (AUTH_PATH.test(location.pathname) && isEnabled(settings)) enable();
       // Challenge markers usually arrive after <body> opens, when darkening
       // already began; enable() now leaves the parsed challenge alone.
       if (active && isChallengePage()) enable();
-      else if (active) { polarityDirty = true; schedule(); }
+      else if (active && observer) { polarityDirty = true; schedule(); }
     }, { once: true });
     addEventListener("load", () => { if (active) { polarityDirty = true; schedule(); } }, { once: true });
   }
