@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.29
+
+- Fix YouTube's white masthead and nearly black text when its native theme is Light (issue #1). Automatic mode now reads YouTube's native dark color palette, including its renamed tokens, and keeps page surfaces OLED black.
+- Apply the palette through CSS without changing YouTube's saved theme, traversing its player components, or inverting video. Delayed styles are handled by watching stylesheet changes in the document head only. Pausing OLED Night restores the original light or dark colors.
+- Add Chrome and Firefox regressions for header/text contrast, theater layout and media preservation, native-theme restoration and shortcut toggling, plus Chrome coverage for late styles, brightness and inverse buttons. No new permissions; companion theme unchanged.
+
 ## 0.6.28
 
 - Add **Alt+Shift+E** to turn OLED Night on or off everywhere, including sites with forced modes (issue #2). Resume restores saved site rules, tuning, appearance and schedule.

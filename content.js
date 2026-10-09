@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.28";
+  const VERSION = "0.6.29";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -63,6 +63,7 @@
   const isTopFrame = (() => { try { return typeof window === "undefined" || window.top === window; } catch { return false; } })();
 
   let observer = null;
+  let stopYouTubeTheme = null;
   let challengeTimer = null;
   let active = false;
   let darkPage = false;
@@ -1053,7 +1054,7 @@
       html[data-oled-night-root][data-oled-night-youtube] body,
       html[data-oled-night-root][data-oled-night-youtube] ytd-app,
       html[data-oled-night-root][data-oled-night-youtube] #content,
-      html[data-oled-night-root][data-oled-night-youtube] ytd-page-manager { background-color: #000 !important; }
+      html[data-oled-night-root][data-oled-night-youtube] ytd-page-manager { background-color: var(--oled-night-page) !important; }
       html[data-oled-night-root][data-oled-night-youtube] ytd-app {
         --yt-spec-text-primary: var(--oled-night-youtube-primary) !important;
         --yt-spec-text-secondary: var(--oled-night-youtube-secondary) !important;
@@ -1063,6 +1064,8 @@
   }
 
   function disable() {
+    stopYouTubeTheme?.();
+    stopYouTubeTheme = null;
     document.removeEventListener("load", onSheetLoad, true);
     for (const type of INTERACTION_EVENTS) document.removeEventListener(type, onInteraction, true);
     if (flushHandle !== null) {
@@ -1162,10 +1165,11 @@
     const mode = modeFor();
     if (mode === "none") root.setAttribute("data-oled-night-page", "none");
     root.style.setProperty("--oled-night-page", mode === "soft" ? "#101014" : "#000");
-    // YouTube watch pages hydrate incrementally. Never traverse or mutate their
-    // custom elements and never replace their structural background tokens.
+    // YouTube watch pages hydrate incrementally. Apply its native color palette
+    // through CSS only; never traverse or mutate its custom elements/player.
     if (colorsApi().usesNativeSafeMode(hostname())) {
       root.setAttribute("data-oled-night-youtube", "");
+      stopYouTubeTheme = globalThis.OledNightYouTube.start();
       return;
     }
     // Observer first so shadow roots found during the first pass get watched too.

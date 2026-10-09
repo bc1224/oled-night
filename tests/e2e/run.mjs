@@ -105,6 +105,34 @@ try {
   const page = await openTab();
   const css = (id, prop, pseudo) => page.eval(`getComputedStyle(document.getElementById(${JSON.stringify(id)})${pseudo ? `, ${JSON.stringify(pseudo)}` : ""})[${JSON.stringify(prop)}]`);
 
+  // Select the real safe-mode branch on a local fixture (YouTube enforces HTTPS).
+  // Host matching itself is covered by the unit tests. This hook is test-only,
+  // lives in the extension's isolated world, and disappears on navigation.
+  await setSettings({extensionEnabled:false});
+  await page.go(site("127.0.0.1", "youtube.html"));
+  await ext.eval(`(async () => { const [t] = await chrome.tabs.query({url:${JSON.stringify(site("127.0.0.1", "youtube.html"))}}); await chrome.scripting.executeScript({target:{tabId:t.id},func:() => { globalThis.OledNightColors.usesNativeSafeMode = () => true; }}); })()`);
+  await setSettings({extensionEnabled:true}); await sleep(250);
+  check("YouTube safe mode activates without changing native theme", await page.eval("document.documentElement.hasAttribute('data-oled-night-youtube') && !document.documentElement.hasAttribute('dark') && !document.querySelector('[data-oled-night]')"));
+  check("YouTube light masthead and chips become OLED black", (await css("background", "backgroundColor")) === "rgb(0, 0, 0)" && (await css("chips-wrapper", "backgroundColor")) === "rgb(0, 0, 0)");
+  check("YouTube renamed and legacy text tokens stay readable", lum(await css("title", "color")) > 0.5 && lum(await css("secondary", "color")) > 0.25 && lum(await css("legacy", "color")) > 0.5);
+  check("YouTube inverse button retains contrast", lum(await css("subscribe", "backgroundColor")) > 0.5 && lum(await css("subscribe", "color")) < 0.05);
+  await page.eval("document.getElementById('watch').setAttribute('theater','')");
+  check("YouTube theater player geometry and media remain native", (await css("player-container", "height")) === "300px" && (await css("player", "filter")) === "none" && (await css("player", "backgroundColor")) === "rgb(10, 90, 180)" && (await css("caption", "color")) === "rgb(255, 255, 255)");
+  check("YouTube theater comments and recommendations remain visible", lum(await css("comments", "color")) > 0.5 && (await css("recommendations", "display")) !== "none");
+  await page.eval("const late=document.createElement('style');late.id='late-palette';late.textContent=':root{--t111aaa:#0f0f0f;--t222aaa:#fff}[dark]{--t111aaa:#f1f1f1;--t222aaa:#0f0f0f}';document.head.append(late)");
+  await sleep(200);
+  check("YouTube delayed native palette is applied", lum(await css("late", "color")) > 0.5 && (await css("late", "backgroundColor")) === "rgb(0, 0, 0)");
+  await setSettings({brightness:70}); await sleep(250);
+  check("YouTube renamed text tokens follow brightness", (await css("title", "color")) === "rgb(179, 179, 179)");
+  await setSettings({extensionEnabled:false}); await sleep(250);
+  check("YouTube pause restores native light palette", (await css("background", "backgroundColor")) === "rgb(255, 255, 255)" && (await css("title", "color")) === "rgb(15, 15, 15)" && !(await page.eval("document.getElementById('oled-night-youtube-sheet')")));
+  await page.eval("document.documentElement.setAttribute('dark','')");
+  await resetSettings(); await sleep(250);
+  check("YouTube native dark theme also uses OLED surfaces", (await css("background", "backgroundColor")) === "rgb(0, 0, 0)" && lum(await css("title", "color")) > 0.5);
+  await setSettings({extensionEnabled:false}); await sleep(250);
+  check("YouTube pause preserves native dark selection", (await css("background", "backgroundColor")) === "rgb(15, 15, 15)" && await page.eval("document.documentElement.hasAttribute('dark')"));
+  await resetSettings();
+
   // Light page: recolor, text emphasis, icons, borders, tints, frames, streaming.
   await page.go(site("127.0.0.1", "light.html"), 1800);
   check("version stamped", (await page.eval("document.documentElement.dataset.oledNightVersion")) === JSON.parse(readFileSync(join(EXT, "manifest.json"), "utf8")).version);

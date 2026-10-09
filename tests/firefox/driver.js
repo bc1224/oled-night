@@ -11,6 +11,24 @@
   const inspect = async func => (await browser.scripting.executeScript({target:{tabId:tab.id},func}))[0].result;
   try {
     await browser.storage.sync.clear();
+    await browser.storage.sync.set({extensionEnabled:false});
+    await open('youtube.html');
+    // Test-only host selection; exercise the real content-script safe mode.
+    await inspect(() => { globalThis.OledNightColors.usesNativeSafeMode = () => true; });
+    await browser.storage.sync.set({extensionEnabled:true}); await wait(300);
+    check('YouTube automatic mode darkens light header and renamed text', await inspect(() => {
+      const css = id => getComputedStyle(document.getElementById(id));
+      return document.documentElement.hasAttribute('data-oled-night-youtube') && !document.documentElement.hasAttribute('dark') && css('background').backgroundColor === 'rgb(0, 0, 0)' && parseFloat(css('title').color.match(/[\d.]+/)[0]) > 180;
+    }));
+    check('YouTube theater mode preserves media and comments', await inspect(() => {
+      document.getElementById('watch').setAttribute('theater','');
+      const css = id => getComputedStyle(document.getElementById(id));
+      return css('player-container').height === '300px' && css('player').filter === 'none' && css('player').backgroundColor === 'rgb(10, 90, 180)' && parseFloat(css('comments').color.match(/[\d.]+/)[0]) > 180 && !document.querySelector('[data-oled-night]');
+    }));
+    await queueCommand('toggle-extension'); await wait(300);
+    check('YouTube master shortcut restores native light theme', await inspect(() => getComputedStyle(document.getElementById('background')).backgroundColor === 'rgb(255, 255, 255)' && !document.getElementById('oled-night-youtube-sheet')));
+    await queueCommand('toggle-extension'); await wait(300);
+    check('YouTube master shortcut reapplies palette', await inspect(() => getComputedStyle(document.getElementById('background')).backgroundColor === 'rgb(0, 0, 0)'));
     await open('light.html');
     check('light page becomes black', await inspect(() => getComputedStyle(document.body).backgroundColor === 'rgb(0, 0, 0)'));
     const state = await browser.tabs.sendMessage(tab.id, {type:'oled-night-status'});

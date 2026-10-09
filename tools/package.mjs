@@ -11,7 +11,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));
 
 // Runtime files only: manifest, scripts, pages, styles and the toolbar icons.
-const RUNTIME = ["manifest.json", "settings.js", "color-utils.js", "content.js", "background.js",
+const RUNTIME = ["manifest.json", "settings.js", "color-utils.js", "youtube-theme.js", "content.js", "background.js",
   "popup.html", "popup.css", "popup.js", "options.html", "options.css", "options.js",
   "assets/icon-16.png", "assets/icon-32.png", "assets/icon-48.png", "assets/icon-128.png", "INSTALL.md", "LICENSE"];
 

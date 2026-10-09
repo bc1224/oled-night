@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta charset="utf-8"><title>YouTube theme regression</title>
+<style>
+/* The token indirection and selectors observed on YouTube, October 2026.
+   Synthetic content only; no account data or player/network dependencies. */
+:root { --t3e41d7b17b187f69:#fff; --tffc2fd3a644f6275:#0f0f0f; --tabc123:#606060; --tdef456:#f2f2f2; --t987abc:#0f0f0f; --t654abc:#fff; --yt-spec-base-background:#fff; --yt-spec-text-primary:#0f0f0f; }
+[dark] { --t3e41d7b17b187f69:#0f0f0f; --tffc2fd3a644f6275:#f1f1f1; --tabc123:#aaa; --tdef456:#272727; --t987abc:#f1f1f1; --t654abc:#0f0f0f; --yt-spec-base-background:#0f0f0f; --yt-spec-text-primary:#f1f1f1; }
+body { margin:0; background:var(--t3e41d7b17b187f69); color:var(--tffc2fd3a644f6275); font:16px sans-serif; }
+ytd-app,ytd-masthead,ytd-page-manager,ytd-watch-flexy {display:block}
+#background.ytd-masthead,#chips-wrapper {background:var(--t3e41d7b17b187f69);padding:16px}
+.title,.ytLockupMetadataViewModelTitle {color:var(--tffc2fd3a644f6275)}
+#secondary {color:var(--tabc123)}
+#chip {background:var(--tdef456);color:var(--tffc2fd3a644f6275)}
+#subscribe {background:var(--t987abc);color:var(--t654abc)}
+#legacy {background:var(--yt-spec-base-background);color:var(--yt-spec-text-primary)}
+#player-container {height:200px;background:#000;color:white}
+ytd-watch-flexy[theater] #player-container {height:300px}
+#player {width:320px;height:180px;background:rgb(10,90,180)}
+#late {color:var(--t111aaa,#0f0f0f);background:var(--t222aaa,#fff)}
+#content {padding:20px}
+</style></head><body><ytd-app>
+<ytd-masthead><div id="background" class="ytd-masthead"><span id="header" class="title">YouTube masthead</span></div></ytd-masthead>
+<div id="chips-wrapper"><button id="chip">Topics</button><button id="subscribe">Subscribe</button></div>
+<ytd-page-manager><div id="content"><a id="title" class="ytLockupMetadataViewModelTitle">Video title</a><p id="secondary">Channel and views</p>
+<ytd-watch-flexy id="watch"><div id="player-container"><video id="player"></video><span id="caption">Player caption</span></div><p id="comments" class="title">Comments load normally</p><aside id="recommendations" class="title">Recommended videos</aside></ytd-watch-flexy>
+<p id="legacy">Legacy YouTube tokens</p><p id="late">Late stylesheet text</p>
+</div></ytd-page-manager></ytd-app></body></html>
