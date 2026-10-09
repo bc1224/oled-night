@@ -12,6 +12,16 @@ Follow Google's [Chrome Web Store API setup](https://developer.chrome.com/docs/w
 
 ## Current release
 
+Version **0.6.29** fixes issue #1: YouTube's white masthead and dark titles with its native Light theme. It reads native dark color declarations, including renamed tokens, without changing YouTube's saved theme or traversing player components. It includes the global shortcut from 0.6.28. No new permissions; theme 1.0.2 is unchanged.
+
+- Source/tag: `d4ce59bc4cab77acb751e49494ce30f9d25c112b`, [v0.6.29 release](https://github.com/bc1224/oled-night/releases/tag/v0.6.29), all seven versioned/stable assets and reviewer source published.
+- [Tests 37865243894](https://github.com/bc1224/oled-night/actions/runs/37865243894) passed: 194 Chrome checks, 74 Firefox checks, all units, Firefox lint 0 errors/warnings. Local Chrome passed 193 checks; CI includes an additional system-theme branch. [Pages deployment 37865243210](https://github.com/bc1224/oled-night/actions/runs/37865243210) succeeded.
+- Firefox: [version 6556956](https://addons.mozilla.org/en-US/developers/addon/oled-night/versions/6556956), file `5101095`, was submitted with source and approved on October 9 UTC (October 8 Pacific). The version page confirms the source attachment `/firefox/downloads/source/6556956` and listed version 0.6.29. Mozilla's upload validation had no errors or warnings.
+- Chrome: [store workflow 37865627282](https://github.com/bc1224/oled-night/actions/runs/37865627282) failed at the upload endpoint with HTTP 400. **0.6.29 is not confirmed uploaded or submitted to Chrome.** The previous 0.6.28 submission was pending review; whether that caused this rejection is unverified. Browser access to the developer console was refused, and access was requested before further dashboard work. Do not claim Chrome 0.6.29 is pending review until a successful submission receipt exists.
+- Verification boundary: the reported failure was reproduced on live YouTube with installed 0.6.27, and the relevant old source was unchanged in 0.6.28. The new fix passed controlled Chrome/Firefox fixtures using observed YouTube CSS patterns; it has not yet been verified on live YouTube with the store-updated package.
+
+## Previous release: 0.6.28
+
 Version **0.6.28** implements the global activation shortcut from issue #2. **Alt+Shift+E** and the popup master switch pause or resume OLED Night everywhere while preserving site rules, tuning, appearance and schedule. **Alt+Shift+D** remains site-specific. No new permissions; theme 1.0.2 is unchanged.
 
 - Source/tag: `1e1a0ad1fadc157adceecdcfc986a58b8b64dc5b`, [v0.6.28 release](https://github.com/bc1224/oled-night/releases/tag/v0.6.28), seven assets including stable download aliases and reviewer source.
