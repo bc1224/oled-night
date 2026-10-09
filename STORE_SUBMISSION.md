@@ -12,6 +12,16 @@ Follow Google's [Chrome Web Store API setup](https://developer.chrome.com/docs/w
 
 ## Current release
 
+Version **0.6.28** implements the global activation shortcut from issue #2. **Alt+Shift+E** and the popup master switch pause or resume OLED Night everywhere while preserving site rules, tuning, appearance and schedule. **Alt+Shift+D** remains site-specific. No new permissions; theme 1.0.2 is unchanged.
+
+- Source/tag: `1e1a0ad1fadc157adceecdcfc986a58b8b64dc5b`, [v0.6.28 release](https://github.com/bc1224/oled-night/releases/tag/v0.6.28), seven assets including stable download aliases and reviewer source.
+- [Tests 37863436639](https://github.com/bc1224/oled-night/actions/runs/37863436639) passed: 183 Chrome checks, 70 Firefox checks, units and Firefox lint. Local Chrome passed 182 checks (the system-color-scheme branch adds one check on CI). [Pages deployment](https://github.com/bc1224/oled-night/actions/runs/37863436043) passed and the live website documents the global shortcut.
+- Chrome: [store workflow 37863823670](https://github.com/bc1224/oled-night/actions/runs/37863823670) uploaded and submitted 0.6.28; the API reported `PENDING_REVIEW` on October 9 UTC (October 8 Pacific).
+- Firefox: [version 6556930](https://addons.mozilla.org/en-US/developers/addon/oled-night/versions/6556930) was uploaded and submitted through the developer dashboard with release notes, reproducible-build notes and source archive. Validation reported no errors or warnings; version status is **Awaiting Review**. AMO API credentials remain absent, so the workflow's Mozilla skip is expected.
+- [Issue #2 reply](https://github.com/bc1224/oled-night/issues/2#issuecomment-6071615865) confirms the implementation and pending store rollout. Store publication remains subject to review; do not resubmit this version merely because publication is pending.
+
+## Previous release and credential setup
+
 Version 0.6.27 is tagged and published on [GitHub Releases](https://github.com/bc1224/oled-night/releases/tag/v0.6.27). The release includes Chrome, Firefox, and Mozilla source ZIPs, plus stable download aliases. It keeps light cards distinct from the black page, preserves authored outlines and colored gradients, and leaves transparent embeds transparent. The reported Amazon sort delay remains unresolved. The companion Chrome theme remains version 1.0.2 and does not need another store upload.
 
 As of October 1, [Firefox 0.6.27 is approved and listed on Mozilla Add-ons](https://addons.mozilla.org/en-US/firefox/addon/oled-night/). The Firefox ZIP and source archive were uploaded through the Mozilla developer dashboard; [version management](https://addons.mozilla.org/en-US/developers/addon/oled-night/versions/6533105) shows the source attachment and approved listed version. Chrome 0.6.27 was submitted through [the successful store workflow](https://github.com/bc1224/oled-night/actions/runs/36937944066); the Chrome Web Store API reported `PENDING_REVIEW`. Chrome approval and publication are still pending. Google Cloud OAuth is in production, and the four Chrome GitHub Actions secrets are configured with a production refresh token. The older OAuth client secret is disabled.
