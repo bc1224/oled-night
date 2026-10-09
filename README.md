@@ -29,7 +29,8 @@ Every dark mode extension I tried either left everything grey, or made sites dar
 - **Modern web apps.** Charts, web components, embedded chat widgets and frames, and modern CSS colors (`oklch`, `lab`, `color()`).
 - **No white flash.** Pages go black before they draw, and updates are batched.
 - **Per-site modes:** automatic, full recolor, deepen blacks only, invert (canvas apps), or off. Each site can also have its own brightness, contrast and image dimming.
-- **Schedule, keyboard shortcut (<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>), settings backup, and a "report a broken site" button.**
+- **Keyboard shortcuts:** <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> turns OLED Night on or off everywhere; <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> toggles the current site. Both are customizable in your browser's extension shortcut settings.
+- **Schedule, settings backup, and a "report a broken site" button.**
 - **Private.** No servers, no analytics, no tracking. See the [privacy policy](store/PRIVACY.md).
 
 ## Install
@@ -40,10 +41,12 @@ Download [`oled-night.zip`](https://github.com/bc1224/oled-night/releases/latest
 
 **Want Chrome itself black too?** The extension darkens websites, but only a theme can change Chrome's own window. Grab [`oled-night-theme.zip`](https://github.com/bc1224/oled-night/releases/latest/download/oled-night-theme.zip) and load it the same way. See [theme/README.md](theme/README.md).
 
-**Firefox desktop:** Version 0.6.24 is approved on Mozilla Add-ons. Version 0.6.27 is available in [GitHub Releases](https://github.com/bc1224/oled-night/releases/tag/v0.6.27) and awaits store submission. See [Firefox installation](FIREFOX.md). The Chrome theme is not compatible with Firefox.
+**Firefox desktop:** Install from [Mozilla Add-ons](https://addons.mozilla.org/en-US/firefox/addon/oled-night/) or see [Firefox installation](FIREFOX.md) for manual builds. The Chrome theme is not compatible with Firefox.
 
 ## Using it
 Click the toolbar icon on any site:
+
+The switch beside **OLED Night** and **Alt+Shift+E** pause or resume the extension everywhere, including sites with a forced mode. Your site rules, tuning, appearance and schedule are preserved; resuming restores them, so sites saved as Off stay off. The existing **All sites** switch controls the default for sites without their own rule. The site shortcut leaves rules unchanged while the extension is paused. If a shortcut is unassigned or conflicts with another extension, use **Settings & defaults → Change shortcuts** to assign it.
 
 <img src="store/images/screenshot-2-popup.png" alt="The OLED Night popup" width="720">
 

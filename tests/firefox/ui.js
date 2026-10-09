@@ -6,6 +6,7 @@ setTimeout(async () => {
     check('options modes render', $('newMode').options.length === 5);
     check('Chrome theme hidden in Firefox', $('getTheme').closest('section').hidden);
     $('shortcuts').click(); check('Firefox shortcut instructions', !$('shortcutHelp').hidden);
+    check('master shortcut displayed in settings', $('extensionShortcut').textContent !== 'not set');
     $('newHost').value = 'example.test';
     $('addRule').requestSubmit();
     await new Promise(r => setTimeout(r,300));
@@ -18,6 +19,9 @@ setTimeout(async () => {
     $('globalEnabled').checked = false; $('globalEnabled').dispatchEvent(new Event('change'));
     await new Promise(r => setTimeout(r,300));
     check('popup persists switch', (await browser.storage.sync.get('globalEnabled')).globalEnabled === false);
+    $('extensionEnabled').click();
+    await new Promise(r => setTimeout(r,300));
+    check('popup master switch persists', (await browser.storage.sync.get('extensionEnabled')).extensionEnabled === false);
   }
   await browser.runtime.sendMessage({type:'firefox-ui-test',checks});
 }, 1500);

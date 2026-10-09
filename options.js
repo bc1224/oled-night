@@ -154,8 +154,10 @@
     settings = Settings.normalize(await chrome.storage.sync.get(Settings.DEFAULTS));
     render();
     try {
-      const shortcut = (await chrome.commands.getAll()).find((command) => command.name === "toggle-site")?.shortcut;
+      const commands = await chrome.commands.getAll();
+      const shortcut = commands.find((command) => command.name === "toggle-site")?.shortcut;
       $("shortcut").textContent = shortcut || "not set";
+      $("extensionShortcut").textContent = commands.find((command) => command.name === "toggle-extension")?.shortcut || "not set";
     } catch {}
   })();
   chrome.storage.onChanged.addListener(async (changes, area) => {

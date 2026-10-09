@@ -3,6 +3,7 @@
 
   // Everything lives in chrome.storage.sync so it follows the user's Chrome profile.
   const DEFAULTS = {
+    extensionEnabled: true,        // master switch; preserves defaults and site overrides
     globalEnabled: true,
     appearance: "oled",            // "oled" | "soft" | "auto" (auto = follow the OS theme)
     brightness: 88,                // text lightness, 40..100
@@ -31,6 +32,7 @@
     const number = (value, low, high, fallback) => typeof value === "number" && Number.isFinite(value) ? Math.min(high, Math.max(low, value)) : fallback;
     const boolean = (value, fallback) => typeof value === "boolean" ? value : fallback;
     const merged = {
+      extensionEnabled: boolean(source.extensionEnabled, DEFAULTS.extensionEnabled),
       globalEnabled: boolean(source.globalEnabled, DEFAULTS.globalEnabled),
       appearance: ["oled", "soft", "auto"].includes(source.appearance) ? source.appearance : DEFAULTS.appearance,
       brightness: number(source.brightness, 40, 100, DEFAULTS.brightness),
@@ -87,6 +89,7 @@
   const prefersNativeColors = host => /(^|\.)figma\.com$/i.test(String(host || ""));
 
   function isEnabled(config, host, prefersDark = true, now = new Date()) {
+    if (config.extensionEnabled === false) return false;
     const mode = siteMode(config, host);
     if (mode === "off" || (mode === "global" && prefersNativeColors(host))) return false;
     if (!inSchedule(config.schedule, now)) return false;

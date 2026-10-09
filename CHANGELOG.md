@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.28
+
+- Add **Alt+Shift+E** to turn OLED Night on or off everywhere, including sites with forced modes (issue #2). Resume restores saved site rules, tuning, appearance and schedule.
+- Add a master switch beside the popup title and show both customizable shortcuts in the popup and Settings. **Alt+Shift+D** keeps toggling the current site; while paused everywhere, it leaves saved rules unchanged.
+- Verify global pause/resume across tabs and embedded frames, new page loads while paused, preserved site settings, rapid shortcut presses, and Chrome/Firefox shortcut registration. No new permissions; companion theme unchanged.
+
 ## 0.6.27
 
 - Keep white cards distinct from the true-black page and retain authored outlines. Sketchfab's white Getting Started card previously collapsed into the same black as its surrounding page.

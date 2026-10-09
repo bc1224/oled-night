@@ -31,13 +31,14 @@
   const siteMode = () => Settings.siteMode(settings, host);
   const figma = () => Settings.prefersNativeColors(host);
   const followsDefault = () => settings.globalEnabled && !figma();
-  const siteOn = () => { const mode = siteMode(); return mode !== "off" && (mode !== "global" || followsDefault()); };
+  const siteOn = () => { const mode = siteMode(); return settings.extensionEnabled && mode !== "off" && (mode !== "global" || followsDefault()); };
   function prefersDark() {
     try { return matchMedia("(prefers-color-scheme: dark)").matches; } catch { return true; }
   }
 
   // Why settings keep this site off right now, or null when they turn it on.
   function offReason() {
+    if (!settings.extensionEnabled) return "Paused everywhere · Turn OLED Night on above";
     const mode = siteMode();
     if (mode === "off") return "Off on this site";
     if (mode === "global" && figma()) return "Off by default on Figma to keep design colors exact";
@@ -67,10 +68,11 @@
   function render() {
     const tuning = Settings.tuningFor(settings, host);
     const mode = siteMode();
+    $("extensionEnabled").checked = settings.extensionEnabled;
     $("globalEnabled").checked = settings.globalEnabled;
     $("globalHelp").textContent = `${settings.globalEnabled ? "On" : "Off"} for every site you haven't set yourself`;
     $("siteEnabled").checked = siteOn();
-    $("siteEnabled").disabled = !host || page === "blocked";
+    $("siteEnabled").disabled = !settings.extensionEnabled || !host || page === "blocked";
     $("siteRule").value = ["recolor", "deepen", "invert"].includes(mode) ? mode : "auto";
     for (const key of ["brightness", "contrast"]) { $(key).value = tuning[key]; $(`${key}Value`).value = `${tuning[key]}%`; }
     $("dimImages").checked = !!tuning.dimImages;
@@ -176,9 +178,11 @@
       const commands = await chrome.commands.getAll();
       const shortcut = commands.find((command) => command.name === "toggle-site")?.shortcut;
       $("shortcut").textContent = shortcut || "Set a shortcut";
+      $("extensionShortcut").textContent = commands.find((command) => command.name === "toggle-extension")?.shortcut || "Set in Settings";
     } catch {}
   }
 
+  $("extensionEnabled").addEventListener("change", event => persist({ extensionEnabled: event.target.checked }));
   $("globalEnabled").addEventListener("change", event => persist({ globalEnabled: event.target.checked }));
   // Turning a site on returns it to the default when the default is on, so later
   // default changes (appearance, schedule) keep applying to it.
@@ -221,5 +225,10 @@
     $("status").textContent = "Report saved to Downloads. Send that file along with a screenshot.";
   });
   $("siteSettings").addEventListener("click", () => chrome?.runtime?.openOptionsPage());
+  chrome?.storage?.onChanged?.addListener(async (changes, area) => {
+    if (area !== "sync" || !changes.extensionEnabled) return;
+    settings = Settings.normalize(await chrome.storage.sync.get(Settings.DEFAULTS));
+    refreshStatus();
+  });
   init();
 })();

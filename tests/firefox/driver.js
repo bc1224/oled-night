@@ -20,6 +20,14 @@
       return values[0]>values[1] && values[1]>values[2];
     }));
     check('embedded frame darkened', await inspect(() => getComputedStyle(document.getElementById('frame').contentDocument.body).backgroundColor === 'rgb(0, 0, 0)'));
+    await browser.storage.sync.set({siteRules:{'127.0.0.1':'recolor'}});
+    await queueCommand('toggle-extension'); await wait(500);
+    check('master shortcut disables forced site and embedded frame', await inspect(() =>
+      !document.documentElement.hasAttribute('data-oled-night-root') &&
+      !document.getElementById('frame').contentDocument.documentElement.hasAttribute('data-oled-night-root')));
+    await queueCommand('toggle-extension'); await wait(500);
+    check('master shortcut restores saved forced site', (await browser.tabs.sendMessage(tab.id,{type:'oled-night-status'})).active && (await browser.storage.sync.get('siteRules')).siteRules['127.0.0.1'] === 'recolor');
+    await browser.storage.sync.clear(); await wait(400);
     await browser.storage.sync.set({globalEnabled:false}); await wait(400);
     check('global off restores page', await inspect(() => !document.documentElement.hasAttribute('data-oled-night-root')));
     await browser.storage.sync.set({globalEnabled:true}); await wait(400);
@@ -166,6 +174,7 @@
     for(const [name,ok] of Object.entries(efficiency)) check('efficiency: '+name,ok,JSON.stringify(efficiency));
 
     check('keyboard shortcut registered', (await browser.commands.getAll()).some(c => c.name === 'toggle-site' && c.shortcut));
+    check('master keyboard shortcut registered', (await browser.commands.getAll()).some(c => c.name === 'toggle-extension' && c.shortcut));
     for (const page of ['options.html', 'popup.html']) {
       let resolveUI;
       const uiResult = new Promise(r => { resolveUI = r; });

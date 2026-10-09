@@ -125,6 +125,27 @@ try {
   check("report lists frames", Array.isArray(report?.frames) && report.frames.length === 1 && report.frames[0].darkened === true, JSON.stringify(report?.frames));
   check("report finds no unreadable text", report?.lowContrast?.length === 0, JSON.stringify(report?.lowContrast?.slice(0, 3)));
 
+  // Run the registered command's handler in the real extension service worker.
+  const workerTarget = (await send("Target.getTargets")).result.targetInfos.find(t => t.type === "service_worker" && t.url === `chrome-extension://${extId}/background.js`);
+  const workerSession = (await send("Target.attachToTarget", { targetId: workerTarget.targetId, flatten: true })).result.sessionId;
+  const masterShortcut = async () => {
+    const result = await send("Runtime.evaluate", { expression: "queueCommand('toggle-extension').then(() => true)", awaitPromise: true, returnByValue: true }, workerSession);
+    if (result.error || result.result.exceptionDetails) throw Error("master shortcut handler failed");
+    await sleep(500);
+  };
+  check("master shortcut registered in Chrome", await ext.eval("chrome.commands.getAll().then(commands => commands.some(c => c.name === 'toggle-extension' && c.shortcut))"));
+  const secondSite = await openTab(site("localhost", "light.html"));
+  await setSettings({ siteRules: { "127.0.0.1": "recolor" }, siteTuning: { "127.0.0.1": { brightness: 65 } } });
+  await masterShortcut();
+  check("master shortcut pauses forced site, other tab and iframe", !(await page.eval("document.documentElement.hasAttribute('data-oled-night-root') || document.getElementById('frame').contentDocument.documentElement.hasAttribute('data-oled-night-root')")) && !(await secondSite.eval("document.documentElement.hasAttribute('data-oled-night-root')")));
+  await secondSite.go(site("localhost", "light.html"));
+  check("new navigations stay native while master is off", !(await secondSite.eval("document.documentElement.hasAttribute('data-oled-night-root')")));
+  await masterShortcut();
+  check("master shortcut resumes both tabs and keeps tuning", await page.eval("document.documentElement.hasAttribute('data-oled-night-root') && document.documentElement.style.getPropertyValue('--oln-light') === '65%' ") && await secondSite.eval("document.documentElement.hasAttribute('data-oled-night-root')"));
+  check("master shortcut preserves site rules", await ext.eval("chrome.storage.sync.get('siteRules').then(s => s.siteRules['127.0.0.1'] === 'recolor')"));
+  await send("Target.closeTarget", { targetId: secondSite.targetId });
+  await resetSettings();
+
   await page.go(site("127.0.0.1", "report-fields.html"));
   const fieldReport=await ext.eval(`(async()=>{const [t]=await chrome.tabs.query({url:"${site("127.0.0.1", "report-fields.html")}"});return chrome.tabs.sendMessage(t.id,{type:'oled-night-report'});})()`);
   check('reports diagnose field text-fill contrast without field contents', fieldReport.lowContrast.filter(e=>e.element.includes('private')).length===4 && !JSON.stringify(fieldReport).includes('SENTINEL') && !fieldReport.lowContrast.some(e=>e.element.includes('transparentIcon')));
@@ -506,6 +527,13 @@ try {
   await popupFor("light.html");
   let state = await ui();
   check("popup: recolored page reports recoloring with sliders", state.status === "On · recoloring this page" && state.sliders && !state.reset && state.mode === "auto", JSON.stringify(state));
+  const popupSize = await popup.eval("({ height: document.body.getBoundingClientRect().height, width: document.body.scrollWidth })");
+  check("popup fits browser height with master switch", popupSize.height <= 600 && popupSize.width <= 360, JSON.stringify(popupSize));
+  await click("extensionEnabled");
+  state = await ui();
+  check("popup master switch pauses and explains disabled site controls", !(await rootHas("data-oled-night-root")) && /Paused everywhere/.test(state.status) && !state.controls && await popup.eval("document.getElementById('siteEnabled').disabled"));
+  await masterShortcut();
+  check("open popup reflects master shortcut resume", await rootHas("data-oled-night-root") && await popup.eval("document.getElementById('extensionEnabled').checked && !document.getElementById('siteEnabled').disabled"));
   await click("dimImages");
   const dimmed = await rootHas("data-oled-night-dim");
   state = await ui();
