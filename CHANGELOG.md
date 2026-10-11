@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.31
+
+- Keep ratings, progress and nested bar fills visible instead of mapping them to black panel backgrounds. Preserve widths, zero values, hue and transparency; includes narrow layouts and generated progress fills.
+- Keep neutral SVG chart marks and labels readable while darkening the plot background.
+- Skip transition guards on batches that have no transitions, reducing style invalidations during streaming updates. Preserve the conservative path for SVG and generated content.
+- Include invisible data graphics in broken-site reports. Ignore inactive outlines. Add Chrome and Firefox regressions; no new permissions, companion theme unchanged.
+
 ## 0.6.30
 
 - Leave password-manager inline menus untouched when they use a protected manual popover host. This prevents OLED Night from competing with Bitwarden's own attribute and style guard while preserving normal site popover recoloring (issue #3).

@@ -11,6 +11,20 @@
   const inspect = async func => (await browser.scripting.executeScript({target:{tabId:tab.id},func}))[0].result;
   try {
     await browser.storage.sync.clear();
+    await open('indicators.html');
+    check('ratings, generic bars, generated progress and vertical data remain visible', await inspect(() => {
+      const lum = value => {const c=value.match(/[\d.]+/g).slice(0,3).map(x=>{const v=+x/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return c[0]*.2126+c[1]*.7152+c[2]*.0722};
+      const css=(id,pseudo)=>getComputedStyle(document.getElementById(id),pseudo).backgroundColor;
+      return [['fill','track'],['generic-fill','generic-track'],['vertical-fill','vertical-track'],['pseudo','pseudo','::before']].every(([fill,track,pseudo])=>{const a=lum(css(fill,pseudo)),b=lum(css(track));return (Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=3});
+    }));
+    check('chart marks and labels visible; zero values and native controls preserved',await inspect(()=>{
+      const css=id=>getComputedStyle(document.getElementById(id));
+      return parseFloat(css('svg-bar').fill.match(/[\d.]+/)[0])>180 && parseFloat(css('svg-line').stroke.match(/[\d.]+/)[0])>180 && parseFloat(css('chart-label').fill.match(/[\d.]+/)[0])>180 && document.getElementById('zero').getBoundingClientRect().width===0 && document.getElementById('native').value===40;
+    }));
+    const graphicsReport=await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'});
+    check('diagnostics cover non-text data graphics',Array.isArray(graphicsReport.lowContrastGraphics) && graphicsReport.lowContrastGraphics.length===0,JSON.stringify(graphicsReport.lowContrastGraphics));
+    await inspect(()=>document.getElementById('fill').style.width='70%');await wait(300);
+    check('dynamic bar widths keep visible fill',await inspect(()=>document.getElementById('fill').getBoundingClientRect().width===210 && parseFloat(getComputedStyle(document.getElementById('fill')).backgroundColor.match(/[\d.]+/)[0])>180));
     await browser.storage.sync.set({extensionEnabled:false});
     await open('youtube.html');
     // Test-only host selection; exercise the real content-script safe mode.

@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.30";
+  const VERSION = "0.6.31";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -38,7 +38,7 @@
   // "Multiply"-style blends hide a photo's white background on a light page;
   // over black they turn the whole photo black (Amazon product images).
   const DARKENING_BLENDS = /^(multiply|darken|color-burn|plus-darker)$/;
-  const PROPS = ["bg", "img", "shadow", "fg", "ink", "caret", "placeholder", "field", "bt", "br", "bb", "bl", "fill", "stroke", "stop", "blend", "faded-icon",
+  const PROPS = ["bg", "img", "shadow", "fg", "ink", "caret", "placeholder", "field", "bt", "br", "bb", "bl", "fill", "stroke", "stop", "blend", "faded-icon", "data",
     "before-bg", "before-img", "before-shadow", "before-fg", "after-bg", "after-img", "after-shadow", "after-fg"];
   const SIDES = [["Top", "bt"], ["Right", "br"], ["Bottom", "bb"], ["Left", "bl"]];
   // Frames that are players, maps, ads or challenges are left exactly as they are.
@@ -316,6 +316,28 @@
     return ctx.mode;
   }
 
+  // Painted, empty rectangles sharing a track's short axis are bar values,
+  // including charts without ARIA roles. Read cached styles, not subtree scans
+  // or extra layout measurements. Ordinary panels and standalone separators
+  // do not have this nested thin-track shape.
+  function isDataFill(element, computed, ctx, pseudo = false) {
+    if (computed.backgroundImage !== "none" || paintsInk(computed)) return false;
+    if (!pseudo && (element.childElementCount || element.textContent.trim())) return false;
+    const paint = colorsApi().parseColor(computed.backgroundColor);
+    if (!paint || paint.a < .08) return false;
+    const track = pseudo ? element : element.parentElement;
+    if (!track || track.matches("html, body, svg")) return false;
+    if (pseudo && !track.matches('[role="progressbar"], [role="meter"], [role="img"]')) return false;
+    const trackStyle = ctx.style(track);
+    const base = originalSurface.get(track)?.color || colorsApi().parseColor(trackStyle.backgroundColor);
+    if (!base || base.a < .5) return false;
+    const w = parseFloat(computed.width), h = parseFloat(computed.height);
+    const tw = parseFloat(trackStyle.width), th = parseFloat(trackStyle.height);
+    const horizontal = h > 0 && h <= 24 && tw >= Math.max(24,3*h) && Math.abs(h-th) <= 1 && w >= 0 && w <= tw+1;
+    const vertical = w > 0 && w <= 24 && th >= Math.max(24,3*w) && Math.abs(w-tw) <= 1 && h >= 0 && h <= th+1;
+    return horizontal || vertical;
+  }
+
   // Read-only: decides overrides from original computed styles. No DOM writes
   // happen here, so the whole batch costs a single style recalculation.
   function decide(element, ctx) {
@@ -338,6 +360,10 @@
     const dropdownBackdrop = localMode === "crush" && element.closest(DROPDOWN) ? backdropOf(element, ctx) : null;
     const mode = dropdownBackdrop && !dropdownBackdrop.image && colors.luminance(dropdownBackdrop.color) > 0.5 ? "oled" : localMode;
     mapSurface(computed, "", mode, found);
+    if ((mode === "oled" || mode === "soft") && isDataFill(element, computed, ctx)) {
+      found.bg = colors.mapDataPaint(colors.parseColor(computed.backgroundColor));
+      found.data = "1";
+    }
     if (element.matches("input, textarea, select")) found.field = "1";
     if (mode === "crush") return found;
     if (DARKENING_BLENDS.test(computed.mixBlendMode)) found.blend = "normal";
@@ -346,7 +372,7 @@
       const border = colors.mapBorder(colors.parseColor(computed[`border${side}Color`]));
       if (border) found[key] = border;
     }
-    if (computed.outlineWidth !== "0px") {
+    if (computed.outlineWidth !== "0px" && computed.outlineStyle !== "none") {
       const outline = colors.mapBorder(colors.parseColor(computed.outlineColor));
       if (outline) found.outline = outline;
     }
@@ -354,6 +380,10 @@
       const pseudoStyle = getComputedStyle(element, `::${pseudo}`);
       if (pseudoStyle.content && pseudoStyle.content !== "none" && pseudoStyle.content !== "normal") {
         mapSurface(pseudoStyle, `${pseudo}-`, mode, found);
+        if (isDataFill(element, pseudoStyle, ctx, true)) {
+          found[`${pseudo}-bg`] = colors.mapDataPaint(colors.parseColor(pseudoStyle.backgroundColor));
+          found.data = "1";
+        }
         // Icon fonts and generated labels may set their own color, so the
         // element's mapped foreground does not necessarily reach them.
         const ink = colors.parseColor(pseudoStyle.color);
@@ -401,6 +431,7 @@
     if (!rect.width || !rect.height) return;
     const colors = colorsApi();
     const icon = rect.width <= 64 && rect.height <= 64;
+    const dataChart = !icon && /chart|rating|histogram|distribution|progress|graph/i.test(svg.getAttribute("aria-label") || "");
     const use = svg.querySelector("use");
     const href = use?.getAttribute("href") || use?.getAttribute("xlink:href") || "";
     const referenced = href.startsWith("#") ? document.getElementById(href.slice(1)) : null;
@@ -432,8 +463,15 @@
         const stop = paleToDark(colors.parseColor(computed.stopColor));
         if (stop) found.stop = stop;
       } else {
-        const fill = paleToDark(colors.parseColor(computed.fill));
+        const plotBackground = part.localName === "rect" && part.width.baseVal.value >= .9 * (svg.viewBox.baseVal.width || rect.width) && part.height.baseVal.value >= .9 * (svg.viewBox.baseVal.height || rect.height);
+        const dataMark = dataChart && part !== svg && !plotBackground && /^(rect|path|line|polyline|circle|text)$/.test(part.localName);
+        const fill = dataMark ? colors.mapDataPaint(colors.parseColor(computed.fill)) : paleToDark(colors.parseColor(computed.fill));
         if (fill) found.fill = fill;
+        if (dataMark) {
+          found.data = "1";
+          const stroke = colors.mapDataPaint(colors.parseColor(computed.stroke));
+          if (stroke) found.stroke = stroke;
+        }
       }
       out.push([part, found]);
     }
@@ -665,12 +703,20 @@
       calm.push(icon);
       if (icon.hasAttribute(MARK) || icon.querySelector(`[${MARK}]`)) measured.push(icon);
     }
+    // Most streaming rows have no transitions. Adding/removing subtree-wide
+    // transition guards still invalidates styles across those rows twice per
+    // batch. Keep the guards only when this batch can actually animate; old
+    // pseudo overrides retain the conservative path for generated transitions.
+    const needsCalm = list.icons.size > 0 || [...list, ...list.images].some(node =>
+      PSEUDO_KEYS.test(node.getAttribute(MARK) || "") ||
+      getComputedStyle(node).transitionDuration.split(",").some(duration => parseFloat(duration) > 0));
+    if (!needsCalm) { calm.length = 0; calmSelf.clear(); }
     for (const node of calm) node.setAttribute(NOANIM, "");
     for (const node of calmSelf) node.setAttribute(NOANIM_SELF, "");
     for (const node of measured) node.setAttribute(MEASURE, "");
     for (const node of measuredSelf) node.setAttribute(MEASURE_SELF, "");
     for (const node of measuredPseudo) node.setAttribute(MEASURE_PSEUDO, "");
-    if (scoped) {
+    if (scoped && needsCalm) {
       // Like a subtree switch, finish the page's own color transitions before reading.
       const batch = new Set([...list, ...list.images]);
       for (const animation of document.getAnimations()) {
@@ -724,6 +770,7 @@
     for (const [element, found] of writes) {
       if (unchanged(element, found)) continue;
       changed.add(element);
+      if (!needsCalm && !PSEUDO_KEYS.test(Object.keys(found).join(" "))) continue;
       if (calmSelf.has(element) || element.closest(`[${NOANIM}]`)) continue;
       const keys = `${element.getAttribute(MARK) || ""} ${Object.keys(found).join(" ")}`;
       if (INHERITED_KEYS.test(keys)) calm.push(element); else calmSelf.add(element);
@@ -1222,6 +1269,7 @@
   function report() {
     const colors = colorsApi();
     const lowContrast = [];
+    const lowContrastGraphics = [];
     const up = (node) => node.parentElement || node.parentNode?.host || null;
     const shownBg = (el) => {
       for (let n = el; n; n = up(n)) {
@@ -1238,6 +1286,23 @@
       for (const el of root.querySelectorAll("*")) {
         if (lowContrast.length >= 40) return;
         if (el.shadowRoot) scan(el.shadowRoot);
+        if (lowContrastGraphics.length < 40 && el.getAttribute(MARK)?.split(" ").includes("data")) {
+          const rect = el.getBoundingClientRect();
+          const style = getComputedStyle(el);
+          if (rect.width && rect.height && rect.bottom >= 0 && rect.top <= innerHeight && style.visibility === "visible" && +style.opacity > 0) {
+            const svg = el instanceof SVGElement;
+            const pseudo = el.getAttribute(MARK).includes("before-bg") ? "::before" : el.getAttribute(MARK).includes("after-bg") ? "::after" : null;
+            const paint = colors.parseColor(pseudo ? getComputedStyle(el,pseudo).backgroundColor : svg ? (style.fill === "none" ? style.stroke : style.fill) : style.backgroundColor);
+            const bg = shownBg(pseudo ? el : up(el));
+            if (paint) {
+              const alpha = paint.a * +style.opacity;
+              const seen = {r:paint.r*alpha+bg.r*(1-alpha),g:paint.g*alpha+bg.g*(1-alpha),b:paint.b*alpha+bg.b*(1-alpha)};
+              const a = colors.luminance(seen), b = colors.luminance(bg);
+              const ratio = (Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+              if (ratio < 3) lowContrastGraphics.push({element:describe(el),ratio:+ratio.toFixed(2),mark:el.getAttribute(MARK)});
+            }
+          }
+        }
         const field = el.matches("input, textarea, select") || el.isContentEditable;
         if (!field && ![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
         const rect = el.getBoundingClientRect();
@@ -1274,7 +1339,7 @@
         } catch {}
         return { origin, size: `${Math.round(rect.width)}x${Math.round(rect.height)}`, reachable, darkened };
       }),
-      lowContrast
+      lowContrast, lowContrastGraphics
     };
   }
 

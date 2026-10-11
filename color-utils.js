@@ -223,6 +223,18 @@
     return mapForeground(color, 1);
   }
 
+  // A data mark must contrast with its dark track, rather than become another
+  // panel. Keep hue and alpha, with a lightness floor independent of text dimming.
+  function mapDataPaint(color) {
+    if (!color || color.a < 0.08) return null;
+    const hsl = rgbToHsl(color);
+    if (chroma(color) > 0.15) {
+      if (luminance(color) > 0.3) return withAlpha(`rgb(${color.r} ${color.g} ${color.b})`, color.a);
+      return withAlpha(`hsl(${Math.round(hsl.h)} ${Math.round(hsl.s * 100)}% 72%)`, color.a);
+    }
+    return withAlpha('rgb(190 190 190)', color.a);
+  }
+
   // Rewrites the colors inside a computed gradient. Returns null for url() images
   // (real imagery is never touched) or when nothing changed.
   function mapGradient(value, mode) {
@@ -282,5 +294,5 @@
     return "";
   }
 
-  scope.OledNightColors = { siteProfile, parseColor, luminance, chroma, textTier, mapIconPaint, mapBackground, mapForeground, mapBorder, mapGradient, mapShadow, gradientBackdrop, isProtectedMediaTag, usesNativeSafeMode };
+  scope.OledNightColors = { siteProfile, parseColor, luminance, chroma, textTier, mapIconPaint, mapDataPaint, mapBackground, mapForeground, mapBorder, mapGradient, mapShadow, gradientBackdrop, isProtectedMediaTag, usesNativeSafeMode };
 })(globalThis);

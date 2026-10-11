@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{background:white;color:#222;font:16px sans-serif}.card{background:#f5f5f7;padding:30px;width:500px}
+.track{width:300px;height:4px;background:#ddd;margin:20px 0}.fill{height:4px;background:#000;width:33.333333%}
+.vertical{height:120px;width:12px;background:#eee}.vertical>div{height:60%;width:12px;background:#17326a}
+.progress{width:300px;height:12px;background:#ddd}.progress::before{content:'';display:block;width:40%;height:12px;background:#111}
+.decoration{width:300px;height:4px;background:#ddd}.tile{width:100px;height:100px;background:#222}
+</style></head><body><h1>Rating and progress data</h1><section class="card">
+<div role="img" aria-label="2 Stars 33.3%"><div class="track" id="track"><div class="fill" id="fill"></div></div></div>
+<div role="img" aria-label="1 Star 0%"><div class="track"><div class="fill" id="zero" style="width:0%"></div></div></div>
+<div class="track" id="generic-track"><div class="fill" id="generic-fill"></div></div>
+<div class="track" id="narrow-track" style="width:45.72px"><div class="fill" id="narrow-fill"></div></div>
+<div role="progressbar" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100" class="progress" id="pseudo"></div>
+<div role="img" aria-label="Vertical chart"><div class="vertical" id="vertical-track"><div id="vertical-fill"></div></div></div>
+<div class="decoration" id="decoration"></div><div class="tile" id="tile"></div>
+<svg role="img" aria-label="Ratings chart" width="300" height="100"><rect id="plot-bg" width="300" height="100" fill="white"/><rect id="svg-bar" x="0" y="0" width="150" height="8" fill="#111"/><path id="svg-line" d="M0 60L150 20L300 60" fill="none" stroke="#111" stroke-width="2"/><text id="chart-label" x="0" y="90" fill="#111">Data label</text></svg>
+<progress value="40" max="100" id="native"></progress><meter value="40" max="100" id="meter"></meter>
+</section></body></html>

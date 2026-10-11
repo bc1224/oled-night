@@ -105,6 +105,29 @@ try {
   const page = await openTab();
   const css = (id, prop, pseudo) => page.eval(`getComputedStyle(document.getElementById(${JSON.stringify(id)})${pseudo ? `, ${JSON.stringify(pseudo)}` : ""})[${JSON.stringify(prop)}]`);
 
+  await page.go(site("127.0.0.1", "indicators.html"));
+  const contrast = (a,b) => (Math.max(lum(a),lum(b))+.05)/(Math.min(lum(a),lum(b))+.05);
+  check("ratings: neutral fill contrasts with track", contrast(await css("fill","backgroundColor"),await css("track","backgroundColor")) >= 3);
+  check("generic nested bars preserve data contrast", contrast(await css("generic-fill","backgroundColor"),await css("generic-track","backgroundColor")) >= 3);
+  check("ratings remain visible in narrow layouts", contrast(await css("narrow-fill","backgroundColor"),await css("narrow-track","backgroundColor")) >= 3);
+  check("progress: generated fill contrasts with track", contrast(await css("pseudo","backgroundColor","::before"),await css("pseudo","backgroundColor")) >= 3);
+  check("vertical chart fill remains visible", contrast(await css("vertical-fill","backgroundColor"),await css("vertical-track","backgroundColor")) >= 3);
+  check("SVG neutral bars and lines remain visible", lum(await css("svg-bar","fill")) > .2 && lum(await css("svg-line","stroke")) > .2);
+  check("SVG chart labels stay readable and plot background stays dark", lum(await css("chart-label","fill")) > .2 && lum(await css("plot-bg","fill")) < .05);
+  check("native progress and meter retain values and geometry", await page.eval("['native','meter'].every(id=>{const e=document.getElementById(id);return e.value===40 && e.max===100 && e.getBoundingClientRect().height>0})"));
+  check("ratings: zero fill stays zero and values keep widths", await page.eval("document.getElementById('zero').getBoundingClientRect().width===0 && Math.abs(document.getElementById('fill').getBoundingClientRect().width-100)<1"));
+  check("non-data decorations and tiles stay dark", lum(await css("decoration","backgroundColor")) < .05 && lum(await css("tile","backgroundColor")) < .05);
+  await page.eval("document.getElementById('fill').style.width='70%'"); await sleep(250);
+  check("dynamic ratings keep contrast and new value", contrast(await css("fill","backgroundColor"),await css("track","backgroundColor")) >= 3 && await page.eval("document.getElementById('fill').getBoundingClientRect().width===210"));
+  const healthyGraphics = await ext.eval(`(async()=>{const [t]=await chrome.tabs.query({url:${JSON.stringify(site("127.0.0.1","indicators.html"))}});return chrome.tabs.sendMessage(t.id,{type:'oled-night-report'});})()`);
+  check("diagnostics accept visible data marks", healthyGraphics.lowContrastGraphics.length===0,JSON.stringify(healthyGraphics.lowContrastGraphics));
+  await page.eval("document.getElementById('fill').style.setProperty('background-color','#000','important')");
+  const graphicReport = await ext.eval(`(async()=>{const [t]=await chrome.tabs.query({url:${JSON.stringify(site("127.0.0.1","indicators.html"))}});return chrome.tabs.sendMessage(t.id,{type:'oled-night-report'});})()`);
+  check("diagnostics detect invisible data marks without capturing their labels", graphicReport.lowContrastGraphics.some(g=>g.element.includes('#fill') && g.ratio<3 && !('text' in g)));
+  await setSettings({extensionEnabled:false}); await sleep(250);
+  check("indicators restore original colors when disabled", (await css("fill","backgroundColor"))==='rgb(0, 0, 0)' && (await css("svg-bar","fill"))==='rgb(17, 17, 17)');
+  await resetSettings();
+
   // Select the real safe-mode branch on a local fixture (YouTube enforces HTTPS).
   // Host matching itself is covered by the unit tests. This hook is test-only,
   // lives in the extension's isolated world, and disappears on navigation.
