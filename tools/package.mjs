@@ -2,13 +2,15 @@
 // at runtime. That zip is what gets uploaded to the Chrome Web Store, or shared
 // with people who install it with "Load unpacked".
 //   node tools/package.mjs
-import { copyFileSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { crc32, deflateRawSync } from "node:zlib";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));
+const dist = join(root, "dist");
+if (existsSync(dist) && lstatSync(dist).isSymbolicLink()) throw new Error("dist must not be a symlink");
 
 // Runtime files only: manifest, scripts, pages, styles and the toolbar icons.
 const RUNTIME = ["manifest.json", "settings.js", "color-utils.js", "youtube-theme.js", "content.js", "background.js",
@@ -77,13 +79,23 @@ writeZip(themeDir, ["manifest.json", "README.md", ...Object.values(theme.icons)]
 copyFileSync(join(root, "dist", `oled-night-${manifest.version}.zip`), join(root, "dist", "oled-night.zip"));
 copyFileSync(join(root, "dist", `oled-night-theme-${theme.version}.zip`), join(root, "dist", "oled-night-theme.zip"));
 
-// Firefox shares runtime files; only its manifest/background entry differs.
-const firefoxDir = join(root, "dist", "firefox");
-mkdirSync(firefoxDir, { recursive: true });
-for (const file of RUNTIME) {
-  mkdirSync(dirname(join(firefoxDir, file)), { recursive: true });
-  copyFileSync(join(root, file), join(firefoxDir, file));
+// Rebuild only our generated install folders. Overlaying files leaves stale
+// Chrome _metadata or obsolete scripts behind, even when the ZIP is clean.
+function stageRuntime(browser) {
+  const out = join(dist, browser);
+  if (!["chrome", "firefox"].includes(browser) || dirname(out) !== dist) throw new Error("Invalid staging directory");
+  rmSync(out, { recursive: true, force: true });
+  mkdirSync(out, { recursive: true });
+  for (const file of RUNTIME) {
+    mkdirSync(dirname(join(out, file)), { recursive: true });
+    copyFileSync(join(root, file), join(out, file));
+  }
+  return out;
 }
+stageRuntime("chrome");
+
+// Firefox shares runtime files; only its manifest/background entry differs.
+const firefoxDir = stageRuntime("firefox");
 const firefoxManifest = {
   ...manifest,
   background: { scripts: ["settings.js", "background.js"] },

@@ -224,8 +224,9 @@
           <div class="card">
             <h3>Black browser too <span class="tag">optional</span></h3>
             <p>The extension darkens websites, but no extension can touch Chrome's own window. The companion <b style="color:var(--text)">OLED Night theme</b> makes the tab bar, toolbar, address bar and new-tab page black to match. <a href="https://chromewebstore.google.com/detail/oled-night-chrome-theme/pkdklfocgpcnijiggfddneadmhacbpmf">Install the theme from the Chrome Web Store</a>, or <a href="https://github.com/bc1224/oled-night/releases/latest/download/oled-night-theme.zip">download the theme ZIP</a> and install it the same way, with <b>Load unpacked</b>.</p>
-            <p style="margin-top:14px"><b style="color:var(--text)">Getting updates:</b> Chrome Web Store installs update automatically. For manual installs, on GitHub, click <b>Watch → Custom → Releases</b> to get an email for new versions. To update, unzip the new version over the same folder, then click the reload arrow on OLED Night's card in <code>chrome://extensions</code>.</p>
-            <p style="margin-top:14px"><b style="color:var(--text)">From source:</b> clone the repo and load the folder directly. There's no build step.</p>
+            <p style="margin-top:14px"><b style="color:var(--text)">Getting updates:</b> Chrome Web Store installs update automatically. For manual installs, close Chrome, rename the old install folder as a backup, then unzip the update into an empty folder at the original path. Reopen Chrome and reload OLED Night in <code>chrome://extensions</code>. On GitHub, use <b>Watch → Custom → Releases</b> for release emails.</p>
+            <p style="margin-top:14px"><b style="color:var(--text)">From source:</b> run <code>npm run package</code> and load <code>dist/chrome</code>. Packaging rebuilds clean install folders.</p>
+            <p style="margin-top:14px"><b style="color:var(--text)">An <code>_metadata</code> error?</b> For a manual install, use the clean-folder update steps above. For a store install, try switching OLED Night off and on, then clear the old error. If it returns, <a href="https://github.com/bc1224/oled-night/issues">report your Chrome version and install method</a>. Don't delete files in Chrome's profile.</p>
           </div>
         </div>
       </div>
