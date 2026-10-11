@@ -2,8 +2,8 @@
 // Credentials come only from the process environment; never put them in this repo.
 //   node tools/submit-stores.mjs --status
 //   node tools/submit-stores.mjs --amo | --chrome | --both
-import { createHmac, randomUUID } from "node:crypto";
-import { readFileSync, statSync } from "node:fs";
+import { createHmac, randomUUID, randomBytes, createCipheriv, publicEncrypt } from "node:crypto";
+import { readFileSync, statSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
@@ -32,10 +32,29 @@ function requireEnv(...names) {
   if (missing.length) throw new Error(`Missing credentials: ${missing.join(", ")}. See STORE_SUBMISSION.md.`);
 }
 
+function saveEncryptedDiagnostic(result, label) {
+  if (!label.startsWith("Chrome Web Store") || !process.env.CWS_DIAGNOSTIC_PUBLIC_KEY) return;
+  const key = randomBytes(32);
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const ciphertext = Buffer.concat([cipher.update(JSON.stringify(result), "utf8"), cipher.final()]);
+  const encryptedKey = publicEncrypt({
+    key: Buffer.from(process.env.CWS_DIAGNOSTIC_PUBLIC_KEY, "base64"), oaepHash: "sha256"
+  }, key);
+  const path = join(root, "dist", "cws-error.encrypted.json");
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, JSON.stringify({
+    algorithm: "RSA-OAEP-SHA256/AES-256-GCM", key: encryptedKey.toString("base64"),
+    iv: iv.toString("base64"), tag: cipher.getAuthTag().toString("base64"), data: ciphertext.toString("base64")
+  }));
+  console.log("Chrome Web Store diagnostic saved encrypted for the supplied public key.");
+}
+
 async function json(response, label) {
   let result;
   try { result = await response.json(); } catch { result = {}; }
   if (!response.ok) {
+    saveEncryptedDiagnostic(result, label);
     // API error messages can contain user data. Keep stdout free of secrets.
     const oauthError = label === "Google OAuth refresh" && typeof result?.error === "string"
       ? ` (${result.error.replace(/[^a-z_]/g, "").slice(0, 40)})` : "";
@@ -44,10 +63,7 @@ async function json(response, label) {
     const reasons = Array.isArray(result?.error?.details)
       ? result.error.details.map(detail => typeof detail?.reason === "string"
         ? detail.reason.replace(/[^A-Z_]/g, "").slice(0, 60) : "").filter(Boolean).slice(0, 3) : [];
-    const metadataFields = label.startsWith("Chrome Web Store")
-      ? ["privacy", "screenshot", "icon", "description", "category", "single purpose", "data collection", "permission", "test instruction", "distribution"]
-          .filter(field => JSON.stringify(result?.error || {}).toLowerCase().includes(field)) : [];
-    throw new Error(`${label}: HTTP ${response.status}${oauthError}${apiStatus ? ` (${apiStatus})` : ""}${reasons.length ? ` [${reasons.join(", ")}]` : ""}${metadataFields.length ? `; metadata fields: ${metadataFields.join(", ")}` : ""}`);
+    throw new Error(`${label}: HTTP ${response.status}${oauthError}${apiStatus ? ` (${apiStatus})` : ""}${reasons.length ? ` [${reasons.join(", ")}]` : ""}`);
   }
   return result;
 }
