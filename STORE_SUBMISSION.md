@@ -14,6 +14,16 @@ Follow Google's [Chrome Web Store API setup](https://developer.chrome.com/docs/w
 
 For private Chrome validation details, a manual workflow run can supply `diagnostic_public_key` as a base64-encoded RSA PEM public key. On a Chrome API failure, the workflow saves an AES-256-GCM report with its key encrypted using RSA-OAEP-SHA256, retained for one day. Keep the matching private key outside the repository and delete it after inspection. Public logs contain only sanitized status and reason codes. This option does not change the submission request.
 
+Version **0.6.31** fixes the global rating/progress fill classification failure observed on App Store Connect, preserves labeled SVG chart marks and labels, adds graphic contrast diagnostics, and skips unnecessary transition guards during page updates. No new permissions; theme 1.0.2 is unchanged. See [the audit](AUDIT-2026-10-11.md).
+
+- Source/tag: `8a955ddc8d142967eb472be92c21d44267d86c61`, [v0.6.31 release](https://github.com/bc1224/oled-night/releases/tag/v0.6.31), all seven versioned/stable assets and reviewer source published.
+- [Tests 38162702533](https://github.com/bc1224/oled-night/actions/runs/38162702533) passed: 210 Chrome checks, 78 Firefox checks, all 11 unit test files, Firefox lint zero findings. [Pages deployment 38162702415](https://github.com/bc1224/oled-night/actions/runs/38162702415) succeeded. Local Chrome passed 208 checks before the final narrow-bar addition; CI validates the exact tagged source, including that case and the system-theme branch.
+- Chrome: [store workflow 38162998725](https://github.com/bc1224/oled-night/actions/runs/38162998725) rebuilt the exact tag, uploaded and submitted 0.6.31 on October 11 at 18:15 UTC. Google's API returned **PENDING_REVIEW**. Before upload the API reported published 0.6.30 and no pending submission. Do not duplicate this submission.
+- Firefox: [version 6565643](https://addons.mozilla.org/en-US/developers/addon/oled-night/versions/6565643), file `5109780`, was uploaded and submitted through the developer dashboard with release notes, build instructions and [source attachment](https://addons.mozilla.org/firefox/downloads/source/6565643). Upload validation: no errors or warnings. Version management confirms **Awaiting Review**; public listed version remains 0.6.30. `AMO_API_KEY`/`AMO_API_SECRET` remain absent; the workflow's Mozilla skip is expected and the dashboard submission is complete. Do not duplicate it.
+- Verification boundary: live Apple DOM established the 0.6.30 paint failure; 0.6.31 passes controlled Chrome/Firefox regressions. The store-updated package has not yet been observed on the user's live Apple page. The reported real Amazon sort delay and a real Bitwarden saved-credential fill remain unconfirmed. No issue comments were posted.
+
+## Previous release: 0.6.30
+
 Version **0.6.30** retains the YouTube fix for issue #1 and exempts Bitwarden's injected autofill overlay from OLED Night recoloring for issue #3. No new permissions; theme 1.0.2 is unchanged.
 
 - Source/tag: `1c75d8e6ffa99558b81ec65e7bec37d39d014c58`, [v0.6.30 release](https://github.com/bc1224/oled-night/releases/tag/v0.6.30), all seven versioned/stable assets and reviewer source published.
