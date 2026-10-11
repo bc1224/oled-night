@@ -39,7 +39,12 @@ async function json(response, label) {
     // API error messages can contain user data. Keep stdout free of secrets.
     const oauthError = label === "Google OAuth refresh" && typeof result?.error === "string"
       ? ` (${result.error.replace(/[^a-z_]/g, "").slice(0, 40)})` : "";
-    throw new Error(`${label}: HTTP ${response.status}${oauthError}${result?.error?.code ? ` (${result.error.code})` : ""}`);
+    const apiStatus = typeof result?.error?.status === "string"
+      ? result.error.status.replace(/[^A-Z_]/g, "").slice(0, 40) : "";
+    const reasons = Array.isArray(result?.error?.details)
+      ? result.error.details.map(detail => typeof detail?.reason === "string"
+        ? detail.reason.replace(/[^A-Z_]/g, "").slice(0, 60) : "").filter(Boolean).slice(0, 3) : [];
+    throw new Error(`${label}: HTTP ${response.status}${oauthError}${apiStatus ? ` (${apiStatus})` : ""}${reasons.length ? ` [${reasons.join(", ")}]` : ""}`);
   }
   return result;
 }
@@ -102,6 +107,9 @@ async function submitChrome() {
   const token = (await json(await fetch("https://oauth2.googleapis.com/token", { method: "POST", body: params }), "Google OAuth refresh")).access_token;
   if (!token) throw new Error("Google OAuth did not return an access token.");
   const item = `publishers/${encodeURIComponent(process.env.CWS_PUBLISHER_ID)}/items/${CWS_ITEM_ID}`;
+  const before = await cwsRequest(`/v2/${item}:fetchStatus`, token);
+  const revision = status => `${status?.state || "NONE"}${status?.distributionChannels?.[0]?.crxVersion ? ` ${status.distributionChannels[0].crxVersion}` : ""}`;
+  console.log(`Chrome Web Store before upload: published ${revision(before.publishedItemRevisionStatus)}, submitted ${revision(before.submittedItemRevisionStatus)}.`);
   const uploaded = await cwsRequest(`/upload/v2/${item}:upload`, token, {
     method: "POST", headers: { "Content-Type": "application/zip" }, body: readFileSync(files.chrome)
   });

@@ -220,6 +220,31 @@ try {
 
   // Selected dropdown CSS loaded after our sheet must not win the cascade.
   await page.go(site("127.0.0.1", "dropdowns.html"), 1800);
+  const overlayIsolation = await page.eval(`(async () => {
+    const hosts = [document.createElement('password-menu-test'), document.createElement('div')];
+    let foreignWrites = 0;
+    for (const host of hosts) {
+      host.setAttribute('popover', 'manual');
+      Object.assign(host.style, { all: 'initial', position: 'fixed', display: 'block', zIndex: '2147483647' });
+      host.attachShadow({ mode: 'closed' }).append(document.createElement('iframe'));
+      new MutationObserver(records => { foreignWrites += records.filter(record => record.attributeName?.startsWith('data-oled-night') || record.attributeName === 'style').length; })
+        .observe(host, { attributes: true });
+    }
+    const sitePopover = document.createElement('div');
+    sitePopover.setAttribute('popover', 'manual');
+    sitePopover.style.cssText = 'position:fixed;z-index:500;background:white;color:#222';
+    sitePopover.textContent = 'Site menu';
+    document.body.append(...hosts, sitePopover);
+    await new Promise(resolve => setTimeout(resolve, 350));
+    return {
+      foreignWrites,
+      hostsUntouched: hosts.every(host => !host.hasAttribute('data-oled-night') &&
+        [...host.attributes].every(attribute => ['popover', 'style'].includes(attribute.name))),
+      sitePopoverStyled: sitePopover.hasAttribute('data-oled-night')
+    };
+  })()`);
+  check('password-manager top-layer hosts receive no OLED Night mutations', overlayIsolation.foreignWrites === 0 && overlayIsolation.hostsUntouched, JSON.stringify(overlayIsolation));
+  check('ordinary site popovers remain recolored', overlayIsolation.sitePopoverStyled, JSON.stringify(overlayIsolation));
   let dropdown = await page.eval("dropdownResult('promotion')");
   check("dropdown: late important selection readable", dropdown.dark && dropdown.contrast >= 4.5, JSON.stringify(dropdown));
   check("dropdown: selection distinct from unselected", (await css("promotion", "backgroundColor")) !== (await css("traffic", "backgroundColor")));

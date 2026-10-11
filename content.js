@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.29";
+  const VERSION = "0.6.30";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -58,6 +58,12 @@
   const BOT_CHECK = ':is([data-sitekey], .cf-turnstile, [id^="cf-chl-"], [id^="cf-turnstile"], .g-recaptcha, .grecaptcha-badge, .h-captcha, .frc-captcha, .frc-container, #px-captcha, [class^="geetest_"], [class*=" geetest_"], [id^="arkose"], [id^="funcaptcha"], awswaf-captcha, :is([class*="captcha" i], [id*="captcha" i]):not(:has(form, input:not([type="hidden"]), select, button, textarea:not([name*="response" i]))), iframe[src*="captcha" i], iframe[src*="challenges.cloudflare.com"], iframe[src*="/challenge-platform/"], iframe[src*="arkoselabs"], iframe[src*="geetest"], iframe[src*="perimeterx"], iframe[src*="px-cloud.net"], iframe[src*="px-cdn.net"], iframe[src*="datadome"], iframe[src*="awswaf"], iframe[src*="kasada"], iframe[src*="frcapi"]):not(html, body)';
   // Subtrees we never recolor: color data and verification widgets.
   const PRESERVE = `${COLOR_CONTROL}, ${BOT_CHECK}`;
+  // Password managers inject top-layer menus into the page. Bitwarden's menu
+  // hosts use this manual-popover/fixed/max-z combination and actively remove any
+  // foreign attributes or styles. Marking them causes both extensions to
+  // repeatedly undo each other's mutations and can interrupt autofill.
+  const isExternalOverlay = (element) => element.getAttribute("popover") === "manual" &&
+    element.style.position === "fixed" && element.style.zIndex === "2147483647";
   const STATE_ATTRIBUTES = ["aria-selected", "aria-checked", "aria-expanded", "aria-disabled", "data-state", "data-highlighted", "selected", "disabled", "open"];
   const OBSERVE = { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "href", "media", MARK, ...STATE_ATTRIBUTES] };
   const isTopFrame = (() => { try { return typeof window === "undefined" || window.top === window; } catch { return false; } })();
@@ -137,7 +143,8 @@
   }
 
   function preservesColor(element) {
-    for (let node = element; node; node = parentAcrossShadow(node)) if (node.matches?.(PRESERVE)) return true;
+    for (let node = element; node; node = parentAcrossShadow(node))
+      if (node.matches?.(PRESERVE) || isExternalOverlay(node)) return true;
     return false;
   }
 
@@ -537,7 +544,7 @@
     const guard = root.querySelector(BOT_CHECK) ? PRESERVE : COLOR_CONTROL;
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
       acceptNode: (node) => {
-        if (node.matches(guard)) return NodeFilter.FILTER_REJECT;
+        if (node.matches(guard) || isExternalOverlay(node)) return NodeFilter.FILTER_REJECT;
         if (!isMedia(node)) return NodeFilter.FILTER_ACCEPT;
         if (node.localName === "svg") icons.add(node);
         else if (node.localName === "img") list.images.add(node);
@@ -795,6 +802,7 @@
   function onInteraction(event) {
     if (!observer) return;
     const path = event.composedPath().filter(node => node instanceof Element);
+    if (path.some(isExternalOverlay)) return;
     const nativeSelect = path.find(node => node.localName === "select");
     // The browser owns the open popup. Its static option rules are already
     // installed; synchronous select event restyles delay native opening.

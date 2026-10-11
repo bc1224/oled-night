@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.30
+
+- Leave password-manager inline menus untouched when they use a protected manual popover host. This prevents OLED Night from competing with Bitwarden's own attribute and style guard while preserving normal site popover recoloring (issue #3).
+- Retain the YouTube native Light-theme correction from 0.6.29 (issue #1), which had not reached Chrome because its store upload failed.
+- Add a regression for protected custom-element and div menu hosts. Store submissions now log the Chrome item's published and submitted revision states plus redacted API error codes to make upload failures diagnosable without exposing credentials or user data. No new permissions; companion theme unchanged.
+
 ## 0.6.29
 
 - Fix YouTube's white masthead and nearly black text when its native theme is Light (issue #1). Automatic mode now reads YouTube's native dark color palette, including its renamed tokens, and keeps page surfaces OLED black.
