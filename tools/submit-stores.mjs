@@ -44,7 +44,10 @@ async function json(response, label) {
     const reasons = Array.isArray(result?.error?.details)
       ? result.error.details.map(detail => typeof detail?.reason === "string"
         ? detail.reason.replace(/[^A-Z_]/g, "").slice(0, 60) : "").filter(Boolean).slice(0, 3) : [];
-    throw new Error(`${label}: HTTP ${response.status}${oauthError}${apiStatus ? ` (${apiStatus})` : ""}${reasons.length ? ` [${reasons.join(", ")}]` : ""}`);
+    const metadataFields = label.startsWith("Chrome Web Store")
+      ? ["privacy", "screenshot", "icon", "description", "category", "single purpose", "data collection", "permission", "test instruction", "distribution"]
+          .filter(field => JSON.stringify(result?.error || {}).toLowerCase().includes(field)) : [];
+    throw new Error(`${label}: HTTP ${response.status}${oauthError}${apiStatus ? ` (${apiStatus})` : ""}${reasons.length ? ` [${reasons.join(", ")}]` : ""}${metadataFields.length ? `; metadata fields: ${metadataFields.join(", ")}` : ""}`);
   }
   return result;
 }
@@ -121,14 +124,9 @@ async function submitChrome() {
   }
   if (state !== "SUCCEEDED") throw new Error(`Chrome Web Store upload not confirmed (${state || "unknown"}).`);
   const published = await cwsRequest(`/v2/${item}:publish`, token, {
-    // Chrome's default allows non-blocking listing warnings and returns them in warningInfo.
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blockOnWarnings: false })
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blockOnWarnings: true })
   });
   if (!published.state) throw new Error("Chrome Web Store did not confirm review submission.");
-  const warningReasons = (published.warningInfo?.warnings || []).map(warning =>
-    typeof warning.reason === "string" ? warning.reason.replace(/[^A-Z_]/g, "").slice(0, 60) : ""
-  ).filter(Boolean).slice(0, 10);
-  if (warningReasons.length) console.log(`Chrome Web Store warning reasons: ${warningReasons.join(", ")}.`);
   console.log(`Chrome Web Store ${version}: ${published.state}.`);
 }
 
