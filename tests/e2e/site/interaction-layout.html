@@ -1,0 +1,24 @@
+<!doctype html><html><head><style>
+body{margin:0;background:#fff;color:#202124;font:14px sans-serif}
+.page-content{width:100%;min-height:1800px;background:#fff}
+.card{display:inline-block;width:220px;height:150px;border:1px solid #ddd;border-radius:8px;background:#fff;margin:4px}
+.item{color:#333;padding:2px}
+#trigger{display:inline-block;padding:8px;background:#eee;cursor:pointer}
+#trigger:hover{background:#ddd}
+#menu{position:absolute;top:35px;left:0;background:white;color:#222;padding:10px;z-index:10}
+.menu-icon{display:inline-block;width:20px;height:20px;background-image:url("dark-ui-icon.svg")}
+</style></head><body><main class="page-content" id="largeLayout">
+<span id="trigger" data-action="dropdown-button" tabindex="0">Featured</span>
+<a id="nav-bell"><img id="businessBell" class="nav-bell-icon" width="26" height="26" src="dark-ui-icon.svg"></a>
+<a id="abn-hamburger-menu"><i id="businessMenu" class="abn-hm-icon menu-icon"></i>All</a>
+<button><img id="genericIcon" class="search-icon" width="20" height="20" src="dark-ui-icon.svg"></button>
+<button><i id="genericSprite" class="menu-icon"></i></button>
+<img id="contentPhoto" width="20" height="20" src="ordinary-image.svg">
+<section class="card" id="raisedCard">Raised card</section><div id="rows"></div>
+</main><script>
+document.getElementById('rows').innerHTML=Array.from({length:1000},(_,i)=>`<div class="item"><span>Product ${i}</span><b>Details</b><span>Price</span><a href="#">View</a></div>`).join('');
+document.getElementById('trigger').addEventListener('pointerdown',()=>{
+ const menu=document.createElement('div');menu.id='menu';menu.setAttribute('role','listbox');menu.innerHTML='<div role="option">Featured</div><div role="option">Price: Low to High</div>';document.body.append(menu);
+});
+setTimeout(()=>document.documentElement.setAttribute('data-oled-night-site','amazon'),800);
+</script></body></html>

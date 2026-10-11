@@ -505,6 +505,25 @@ try {
   },0))`);
   check('new sections recolored in the next pre-paint batch',lum(newPanel)<.025,newPanel);
 
+  await page.go(site("127.0.0.1", "interaction-layout.html"),2500);
+  check('broad flat results layout uses black canvas', (await css('largeLayout','backgroundColor')) === 'rgb(0, 0, 0)');
+  check('raised card keeps its surface and border', lum(await css('raisedCard','backgroundColor')) > 0 && (await css('raisedCard','borderTopStyle')) === 'solid');
+  check('Amazon Business bell and hamburger assets visible', (await css('businessBell','filter')) === 'brightness(0) invert(1)' && (await css('businessMenu','filter')) === 'brightness(0) invert(1)');
+  check('generic external UI image and background sprite gain a light edge', (await css('genericIcon','filter')).includes('drop-shadow') && (await css('genericSprite','filter')).includes('drop-shadow'));
+  check('ordinary small content image remains unfiltered', (await css('contentPhoto','filter')) === 'none');
+  const largeInteraction = await page.eval(`(async()=>{
+    const layout=document.getElementById('largeLayout'); let deepSwitches=0;
+    const watch=new MutationObserver(records=>{deepSwitches+=records.filter(r=>r.attributeName==='data-oled-night-measure'||r.attributeName==='data-oled-night-noanim').length});
+    watch.observe(layout,{attributes:true});
+    const start=performance.now();document.getElementById('trigger').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const firstPaintMs=performance.now()-start;await new Promise(r=>setTimeout(r,500));watch.disconnect();
+    return {deepSwitches,firstPaintMs,menuBackground:getComputedStyle(document.getElementById('menu')).backgroundColor};
+  })()`);
+  check('large-page custom dropdown never switches ancestor subtree overrides', largeInteraction.deepSwitches === 0, JSON.stringify(largeInteraction));
+  check('large-page custom dropdown first frames stay responsive', largeInteraction.firstPaintMs < 150, JSON.stringify(largeInteraction));
+  check('large-page inserted dropdown recolored', lum(largeInteraction.menuBackground) < .05, JSON.stringify(largeInteraction));
+
   await page.go(site("127.0.0.1", "efficiency.html"));
   const efficiency = await page.eval("(async () => {\n const wait = () => new Promise(r=>setTimeout(r,150));\n const p=document.getElementById('parent'), c=document.getElementById('child'), v=document.getElementById('variable');\n const dark = node => { const c=getComputedStyle(node); return c.backgroundColor.match(/[0-9.]+/g).slice(0,3).every(n=>+n<30) && +c.color.match(/[0-9.]+/)[0]>180; };\n const results={}; let batches=0;\n const watch=new MutationObserver(records=>{batches+=records.some(r=>r.oldValue===null)?1:0});\n watch.observe(p,{attributes:true,subtree:true,attributeOldValue:true,attributeFilter:['data-oled-night-measure','data-oled-night-measure-self']});\n p.style.transform='translateX(1px)'; await wait(); batches=0;\n for(let i=0;i<20;i++)p.style.transform='translateX('+i+'px)';\n await wait(); results.transformSkips=batches===0;\n batches=0; c.classList.add('changed');p.classList.add('changed');c.dispatchEvent(new Event('focusin',{bubbles:true,composed:true}));\n await wait();results.coalesced=batches===1;\n p.style.setProperty('--surface','#eee'); await wait();results.variableDark=dark(v);\n p.setAttribute('style','--surface:#ddd;background:white');await wait();results.resetInheritance=dark(v);\n const sheet=document.createElement('style');sheet.textContent='#late{background:#eee!important;color:#222}';document.head.append(sheet);await wait();results.lateSheet=dark(document.getElementById('late'));\n sheet.firstChild.data='#late{background:rgb(230,230,230)!important;color:#111}';await wait();results.editedSheet=dark(document.getElementById('late'));\n batches=0;await wait();results.noFeedback=batches===0;watch.disconnect();return results;\n})()");
   for (const [name,ok] of Object.entries(efficiency)) check('efficiency: '+name,ok,JSON.stringify(efficiency));

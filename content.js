@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.31";
+  const VERSION = "0.6.32";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -38,7 +38,7 @@
   // "Multiply"-style blends hide a photo's white background on a light page;
   // over black they turn the whole photo black (Amazon product images).
   const DARKENING_BLENDS = /^(multiply|darken|color-burn|plus-darker)$/;
-  const PROPS = ["bg", "img", "shadow", "fg", "ink", "caret", "placeholder", "field", "bt", "br", "bb", "bl", "fill", "stroke", "stop", "blend", "faded-icon", "data",
+  const PROPS = ["bg", "img", "shadow", "fg", "ink", "caret", "placeholder", "field", "bt", "br", "bb", "bl", "fill", "stroke", "stop", "blend", "faded-icon", "asset-icon", "data",
     "before-bg", "before-img", "before-shadow", "before-fg", "after-bg", "after-img", "after-shadow", "after-fg"];
   const SIDES = [["Top", "bt"], ["Right", "br"], ["Bottom", "bb"], ["Left", "bl"]];
   // Frames that are players, maps, ads or challenges are left exactly as they are.
@@ -97,7 +97,7 @@
   let settleTimer = null;
   const SETTLE_MS = 400;
   const INTERACTION_EVENTS = ["pointerover", "pointerout", "pointerdown", "pointerup", "pointercancel", "focusin", "focusout", "input", "change", "keydown", "keyup"];
-  const CONTROL = 'a, button, input, textarea, select, option, label, li, [role="option"], [role^="menuitem"], [role="button"], [role="combobox"], [contenteditable="true"], [tabindex]';
+  const CONTROL = 'a, button, input, textarea, select, option, label, li, [role="option"], [role^="menuitem"], [role="button"], [role="combobox"], [aria-haspopup], [aria-expanded], [data-action], [contenteditable="true"], [tabindex]';
   const DROPDOWN = 'select, [role="listbox"], [role="menu"], [role="combobox"]';
   const GMAIL_LIGHT_REGIONS = ".nH.a98.iY, .a3s, .gssb_e, form.gb_Pd.gb_2e";
   // Open shadow roots (web components) we style and watch. Page stylesheets
@@ -316,6 +316,28 @@
     return ctx.mode;
   }
 
+  // A page-sized, flat layout is the black canvas, not a raised card. Keep
+  // bordered, rounded, shadowed and smaller panels distinct from that canvas.
+  function isPageLayout(element, computed, color) {
+    if (!color || color.a < 0.95 || colorsApi().chroma(color) > 0.03 || colorsApi().luminance(color) < 0.62) return false;
+    if (!element.matches('main, [role="main"], [class*="layout" i], [class*="content" i], [class*="page" i], [class*="results" i]')) return false;
+    if (element.closest('[role="dialog"], [role="menu"], [role="listbox"], [role="img"], article, table')) return false;
+    if (computed.boxShadow !== "none" || ["TopLeft", "TopRight", "BottomLeft", "BottomRight"].some(corner => parseFloat(computed[`border${corner}Radius`]) > 0) ||
+        SIDES.some(([side]) => computed[`border${side}Style`] !== "none" && parseFloat(computed[`border${side}Width`]) > 0)) return false;
+    return parseFloat(computed.width) >= document.documentElement.clientWidth * 0.7 &&
+      parseFloat(computed.height) >= window.innerHeight * 0.6;
+  }
+
+  // External images and CSS sprites cannot inherit color. Give small named UI
+  // assets a light edge without inverting colored artwork or reading remote
+  // pixels. Photos, charts, swatches and standalone content images stay native.
+  function isControlAsset(element, computed, source) {
+    return /(?:icon|sprite|bell|hamburger|menu|search|cart|bag)(?:[\W_]|$)/i.test(`${element.className} ${source}`) &&
+      parseFloat(computed.width) >= 8 && parseFloat(computed.width) <= 48 &&
+      parseFloat(computed.height) >= 8 && parseFloat(computed.height) <= 48 &&
+      !!element.closest('a, button, [role="button"], [aria-haspopup], [data-action]');
+  }
+
   // Painted, empty rectangles sharing a track's short axis are bar values,
   // including charts without ARIA roles. Read cached styles, not subtree scans
   // or extra layout measurements. Ordinary panels and standalone separators
@@ -360,6 +382,9 @@
     const dropdownBackdrop = localMode === "crush" && element.closest(DROPDOWN) ? backdropOf(element, ctx) : null;
     const mode = dropdownBackdrop && !dropdownBackdrop.image && colors.luminance(dropdownBackdrop.color) > 0.5 ? "oled" : localMode;
     mapSurface(computed, "", mode, found);
+    if (mode === "oled" && isPageLayout(element, computed, colors.parseColor(computed.backgroundColor))) found.bg = "#000000";
+    if ((mode === "oled" || mode === "soft") && !element.childElementCount && !element.textContent.trim() &&
+        computed.backgroundImage.startsWith("url(") && isControlAsset(element, computed, computed.backgroundImage)) found["asset-icon"] = "1";
     if ((mode === "oled" || mode === "soft") && isDataFill(element, computed, ctx)) {
       found.bg = colors.mapDataPaint(colors.parseColor(computed.backgroundColor));
       found.data = "1";
@@ -672,6 +697,10 @@
       if (!seen.has(node) && node.isConnected && !isMedia(node) && !node.closest(MEDIA_SELECTOR) && !preservesColor(node)) { seen.add(node); list.push(node); }
     }
     if (!list.length && !list.icons.size && !list.images.size) return;
+    processBatch(list, trees, selves);
+  }
+
+  function processBatch(list, trees, selves) {
     // Already-styled elements hide their original colors behind our overrides.
     // Read original colors with our overrides switched off (no paint happens in
     // between, so nothing flickers). A subtree switch restyles every descendant,
@@ -692,9 +721,19 @@
       }
       scoped = true;
     } else {
-      const roots = [...trees, ...selves].filter((node) => node instanceof Element && node.isConnected);
+      // A shallow ancestor reread must never turn off every descendant's
+      // overrides. A small click path can include the entire results layout.
+      // Keep subtree switches for actual subtree work, and own-element
+      // switches for ancestors whose hover/focus state needs rechecking.
+      const roots = trees.filter((node) => node instanceof Element && node.isConnected);
       for (const node of roots) if (node.hasAttribute(MARK) || node.querySelector(`[${MARK}]`)) measured.push(node);
       calm.push(...roots);
+      for (const node of selves) {
+        if (!node.hasAttribute(MARK)) continue;
+        measuredSelf.push(node);
+        if (PSEUDO_KEYS.test(node.getAttribute(MARK))) measuredPseudo.push(node);
+        calmSelf.add(node);
+      }
       // "[measure] *" cannot see into shadow trees, so switch those off at their top level too.
       for (const element of list) if (element.parentNode?.host) { calm.push(element); if (element.hasAttribute(MARK)) measured.push(element); }
     }
@@ -752,6 +791,7 @@
         const found = DARKENING_BLENDS.test(computed.mixBlendMode) ? { blend: "normal" } : {};
         const rect = img.getBoundingClientRect();
         const opacity = Number(computed.opacity);
+        if (isControlAsset(img, computed, img.currentSrc || img.src)) found["asset-icon"] = "1";
         if (img.alt?.trim() && rect.width >= 12 && rect.height >= 12 && rect.width <= 48 && rect.height <= 48 &&
             opacity >= 0.12 && opacity <= 0.35) {
           const backdrop = backdropOf(img, ctx);
@@ -857,18 +897,20 @@
     const found = path.find(node => node.matches(CONTROL));
     const control = found && found !== document.body && found !== document.documentElement ? found : null;
     const stop = firstUnchanged(event, path, control);
-    let rest = false, top = null;
+    let rest = false;
     for (const node of path) {
       if (node === document.body || node === document.documentElement) break;
       if (node === stop) rest = true;
       (rest ? settleSelf : pendingSelf).add(node);
-      if (!rest) top = node;
     }
     // Descendant rules of changed elements (".row:hover .label") need their subtree.
     const controlChanged = control && (!stop || path.indexOf(control) < path.indexOf(stop));
     if (controlChanged) pendingTrees.add(control);
     else {
-      if (top) pendingTrees.add(top);
+      // Non-semantic triggers and plain text hover must not promote the
+      // entire page layout to a subtree reread. Ancestor state is checked
+      // shallowly above; actual DOM/class changes still queue their subtree.
+      if (path[0] && path[0] !== stop) pendingTrees.add(path[0]);
       if (control) settleTrees.add(control);
     }
     schedule();
@@ -1001,6 +1043,7 @@
       /* Small, meaningful icons faded for a light page need some contrast
          after their surrounding light surface becomes black. */
       img[${MARK}~="faded-icon"]${on} { opacity: 0.65 !important; filter: drop-shadow(0 0 1px #888) !important; }
+      [${MARK}~="asset-icon"]${on} { filter: drop-shadow(0 0 0.75px #ddd) drop-shadow(0 0 0.75px #ddd) !important; }
       [${NOANIM}], [${NOANIM}] *, [${NOANIM}]::before, [${NOANIM}]::after, [${NOANIM}] *::before, [${NOANIM}] *::after { transition: none !important; }
       [${NOANIM_SELF}], [${NOANIM_SELF}]::before, [${NOANIM_SELF}]::after { transition: none !important; }
       [${MARK}~="before-bg"]${onPseudo}::before { background-color: var(--oln-before-bg) !important; }
@@ -1068,7 +1111,7 @@
       }
       /* Amazon's monochrome disclosure/close sprites do not inherit text color.
          Limit the filter to these controls: the same sheet contains colored art. */
-      ${root}[data-oled-night-site="amazon"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) :is(.a-expander-header .a-icon-section-expand, .a-expander-header .a-icon-section-collapse, .a-popover .a-icon-close) {
+      ${root}[data-oled-night-site="amazon"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) :is(.a-expander-header .a-icon-section-expand, .a-expander-header .a-icon-section-collapse, .a-popover .a-icon-close, #nav-bell .nav-bell-icon, #abn-hamburger-menu .abn-hm-icon) {
         filter: brightness(0) invert(1) !important;
       }
       ${root}[data-oled-night-site="amazon"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) .a-expander-header :is(.a-icon-extender-expand, .a-icon-extender-collapse) {

@@ -11,6 +11,23 @@
   const inspect = async func => (await browser.scripting.executeScript({target:{tabId:tab.id},func}))[0].result;
   try {
     await browser.storage.sync.clear();
+    await open('interaction-layout.html');
+    check('large layout becomes black while bordered cards stay distinct', await inspect(() => {
+      const css=id=>getComputedStyle(document.getElementById(id));
+      return css('largeLayout').backgroundColor==='rgb(0, 0, 0)' && css('raisedCard').backgroundColor!=='rgb(0, 0, 0)' && css('raisedCard').borderTopStyle==='solid';
+    }));
+    check('external UI assets gain contrast without filtering ordinary images',await inspect(()=>{
+      const css=id=>getComputedStyle(document.getElementById(id)).filter;
+      return ['businessBell','businessMenu'].every(id=>css(id).includes('invert(1)')) && ['genericIcon','genericSprite'].every(id=>css(id).includes('drop-shadow')) && css('contentPhoto')==='none';
+    }));
+    check('dropdown interaction avoids disabling the large ancestor subtree',await inspect(async()=>{
+      let switches=0;const large=document.getElementById('largeLayout');
+      const observer=new MutationObserver(records=>{switches+=records.length});
+      observer.observe(large,{attributes:true,attributeFilter:['data-oled-night-measure','data-oled-night-noanim']});
+      document.getElementById('trigger').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));
+      await new Promise(r=>setTimeout(r,400));observer.disconnect();
+      return switches===0 && getComputedStyle(document.getElementById('menu')).backgroundColor!=='rgb(255, 255, 255)';
+    }));
     await open('indicators.html');
     check('ratings, generic bars, generated progress and vertical data remain visible', await inspect(() => {
       const lum = value => {const c=value.match(/[\d.]+/g).slice(0,3).map(x=>{const v=+x/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return c[0]*.2126+c[1]*.7152+c[2]*.0722};

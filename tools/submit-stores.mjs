@@ -18,6 +18,7 @@ const files = {
 const AMO_BASE = "https://addons.mozilla.org/api/v5";
 const CWS_BASE = "https://chromewebstore.googleapis.com";
 const CWS_ITEM_ID = "afffgalhockmjmknnaljghdneaeichbl";
+const CWS_THEME_ID = "pkdklfocgpcnijiggfddneadmhacbpmf";
 const AMO_ADDON = "oled-night";
 
 function requireFiles(...names) {
@@ -114,9 +115,11 @@ async function cwsRequest(path, token, options = {}) {
   return json(response, `Chrome Web Store ${path}`);
 }
 
-async function submitChrome() {
+async function submitChrome(theme = false) {
   requireEnv("CWS_CLIENT_ID", "CWS_CLIENT_SECRET", "CWS_REFRESH_TOKEN", "CWS_PUBLISHER_ID");
-  requireFiles("chrome");
+  const uploadVersion = theme ? JSON.parse(readFileSync(join(root, "theme", "manifest.json"), "utf8")).version : version;
+  const uploadFile = theme ? join(root, "dist", `oled-night-theme-${uploadVersion}.zip`) : files.chrome;
+  if (!statSync(uploadFile, { throwIfNoEntry: false })?.isFile()) throw new Error("Missing Chrome upload package; run node tools/package.mjs first.");
   const params = new URLSearchParams({
     client_id: process.env.CWS_CLIENT_ID,
     client_secret: process.env.CWS_CLIENT_SECRET,
@@ -125,15 +128,15 @@ async function submitChrome() {
   });
   const token = (await json(await fetch("https://oauth2.googleapis.com/token", { method: "POST", body: params }), "Google OAuth refresh")).access_token;
   if (!token) throw new Error("Google OAuth did not return an access token.");
-  const item = `publishers/${encodeURIComponent(process.env.CWS_PUBLISHER_ID)}/items/${CWS_ITEM_ID}`;
+  const item = `publishers/${encodeURIComponent(process.env.CWS_PUBLISHER_ID)}/items/${theme ? CWS_THEME_ID : CWS_ITEM_ID}`;
   const before = await cwsRequest(`/v2/${item}:fetchStatus`, token);
   const revision = status => `${status?.state || "NONE"}${status?.distributionChannels?.[0]?.crxVersion ? ` ${status.distributionChannels[0].crxVersion}` : ""}`;
   console.log(`Chrome Web Store before upload: published ${revision(before.publishedItemRevisionStatus)}, submitted ${revision(before.submittedItemRevisionStatus)}.`);
   const uploaded = await cwsRequest(`/upload/v2/${item}:upload`, token, {
-    method: "POST", headers: { "Content-Type": "application/zip" }, body: readFileSync(files.chrome)
+    method: "POST", headers: { "Content-Type": "application/zip" }, body: readFileSync(uploadFile)
   });
   let state = uploaded.uploadState;
-  if (uploaded.crxVersion && uploaded.crxVersion !== version) throw new Error("Chrome Web Store received a different version.");
+  if (uploaded.crxVersion && uploaded.crxVersion !== uploadVersion) throw new Error("Chrome Web Store received a different version.");
   for (let i = 0; ["IN_PROGRESS", "UPLOAD_IN_PROGRESS"].includes(state) && i < 30; i++) {
     await delay(2000);
     state = (await cwsRequest(`/v2/${item}:fetchStatus`, token)).lastAsyncUploadState;
@@ -143,7 +146,7 @@ async function submitChrome() {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blockOnWarnings: true })
   });
   if (!published.state) throw new Error("Chrome Web Store did not confirm review submission.");
-  console.log(`Chrome Web Store ${version}: ${published.state}.`);
+  console.log(`Chrome Web Store ${theme ? "theme " : ""}${uploadVersion}: ${published.state}.`);
 }
 
 const command = process.argv[2];
@@ -155,8 +158,9 @@ try {
       console.log(`${name}: ${process.env[name] ? "configured" : "missing"}`);
   } else if (command === "--amo") await submitAmo();
   else if (command === "--chrome") await submitChrome();
+  else if (command === "--chrome-theme") await submitChrome(true);
   else if (command === "--both") { await submitAmo(); await submitChrome(); }
-  else throw new Error("Use --status, --amo, --chrome, or --both.");
+  else throw new Error("Use --status, --amo, --chrome, --chrome-theme, or --both.");
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;

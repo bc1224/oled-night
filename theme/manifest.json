@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "OLED Night Chrome Theme",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "OLED-black tab strip and new-tab page, with subtle charcoal tab separators and a distinct active tab.",
   "icons": {
     "16": "assets/icon-16.png",
@@ -13,7 +13,7 @@
     "colors": {
       "frame": [0, 0, 0],
       "frame_inactive": [0, 0, 0],
-      "toolbar": [32, 32, 36],
+      "toolbar": [48, 48, 54],
       "toolbar_text": [238, 238, 242],
       "toolbar_button_icon": [220, 220, 226],
       "tab_text": [255, 255, 255],
@@ -21,8 +21,6 @@
       "bookmark_text": [224, 224, 230],
       "omnibox_background": [10, 10, 12],
       "omnibox_text": [245, 245, 248],
-      "omnibox_results_bg": [10, 10, 12],
-      "omnibox_results_text": [238, 238, 242],
       "button_background": [18, 18, 22],
       "ntp_background": [0, 0, 0],
       "ntp_text": [238, 238, 242],

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.32
+
+- Reduce interaction recoloring globally: hover, focus and clicks reread changed controls and individual ancestors without disabling recoloring across entire page layouts. Recognize custom dropdown triggers using ARIA and data-action attributes.
+- Improve external UI image/sprite visibility, including Amazon Business's bell and All menu. Keep ordinary content images unfiltered.
+- Make broad flat page layouts black while preserving raised cards, borders, gradients and chart fills.
+- Add large-page interaction and external-asset regressions in Chrome and Firefox. No new permissions.
+- Companion theme 1.0.3 strengthens active-tab/toolbar separation and removes two unsupported Chrome color keys. Add a separate theme upload target to store automation.
+
 ## 0.6.31
 
 - Keep ratings, progress and nested bar fills visible instead of mapping them to black panel backgrounds. Preserve widths, zero values, hue and transparency; includes narrow layouts and generated progress fills.

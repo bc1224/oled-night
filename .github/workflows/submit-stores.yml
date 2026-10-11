@@ -13,7 +13,7 @@ on:
         required: true
         default: both
         type: choice
-        options: [both, amo, chrome]
+        options: [both, amo, chrome, chrome-theme]
       diagnostic_public_key:
         description: Optional base64 PEM public key for an encrypted Chrome error report
         required: false
@@ -55,7 +55,7 @@ jobs:
             echo 'AMO submission skipped: API credentials are not configured.' >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Submit to Chrome Web Store
-        if: ${{ github.event_name == 'release' || inputs.store == 'both' || inputs.store == 'chrome' }}
+        if: ${{ github.event_name == 'release' || inputs.store == 'both' || inputs.store == 'chrome' || inputs.store == 'chrome-theme' }}
         id: chrome
         continue-on-error: true
         env:
@@ -64,9 +64,10 @@ jobs:
           CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
           CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
           CWS_DIAGNOSTIC_PUBLIC_KEY: ${{ inputs.diagnostic_public_key }}
+          CWS_TARGET: ${{ inputs.store == 'chrome-theme' && '--chrome-theme' || '--chrome' }}
         run: |
           if [[ -n "$CWS_CLIENT_ID" && -n "$CWS_CLIENT_SECRET" && -n "$CWS_REFRESH_TOKEN" && -n "$CWS_PUBLISHER_ID" ]]; then
-            node tools/submit-stores.mjs --chrome
+            node tools/submit-stores.mjs "$CWS_TARGET"
           else
             echo 'Chrome Web Store submission skipped: OAuth credentials or publisher ID are not configured.' >> "$GITHUB_STEP_SUMMARY"
           fi
