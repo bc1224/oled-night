@@ -150,8 +150,16 @@ try {
   await setSettings({extensionEnabled:false}); await sleep(250);
   check("YouTube pause restores native light palette", (await css("background", "backgroundColor")) === "rgb(255, 255, 255)" && (await css("title", "color")) === "rgb(15, 15, 15)" && !(await page.eval("document.getElementById('oled-night-youtube-sheet')")));
   await page.eval("document.documentElement.setAttribute('dark','')");
-  await resetSettings(); await sleep(250);
-  check("YouTube native dark theme also uses OLED surfaces", (await css("background", "backgroundColor")) === "rgb(0, 0, 0)" && lum(await css("title", "color")) > 0.5);
+  await resetSettings();
+  // Storage change delivery and the native palette rebuild are asynchronous.
+  // Wait for the asserted paint state rather than assuming a 250 ms window.
+  let youtubeDark;
+  for (let i = 0; i < 40; i++) {
+    youtubeDark = { bg: await css("background", "backgroundColor"), text: await css("title", "color") };
+    if (youtubeDark.bg === "rgb(0, 0, 0)" && lum(youtubeDark.text) > 0.5) break;
+    await sleep(50);
+  }
+  check("YouTube native dark theme also uses OLED surfaces", youtubeDark.bg === "rgb(0, 0, 0)" && lum(youtubeDark.text) > 0.5, JSON.stringify(youtubeDark));
   await setSettings({extensionEnabled:false}); await sleep(250);
   check("YouTube pause preserves native dark selection", (await css("background", "backgroundColor")) === "rgb(15, 15, 15)" && await page.eval("document.documentElement.hasAttribute('dark')"));
   await resetSettings();
