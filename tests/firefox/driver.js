@@ -56,6 +56,20 @@
       const css = id => getComputedStyle(document.getElementById(id));
       return css('player-container').height === '300px' && css('player').filter === 'none' && css('player').backgroundColor === 'rgb(10, 90, 180)' && parseFloat(css('comments').color.match(/[\d.]+/)[0]) > 180 && !document.querySelector('[data-oled-night]');
     }));
+    check('YouTube search button retains visible native dark paint',await inspect(()=>{const c=getComputedStyle(document.getElementById('search-submit'));return c.backgroundColor==='rgb(39, 39, 39)' && parseFloat(c.color.match(/[\d.]+/)[0])>180}));
+    check('YouTube inline descriptions and neutral animation paint contrast with their panels',await inspect(()=>{
+      const lum=value=>{const c=value.match(/[\d.]+/g).slice(0,3).map(x=>{const v=+x/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return c[0]*.2126+c[1]*.7152+c[2]*.0722};
+      const ratio=(a,b)=>(Math.max(lum(a),lum(b))+.05)/(Math.min(lum(a),lum(b))+.05);
+      const css=id=>getComputedStyle(document.getElementById(id));document.getElementById('description-details').open=true;
+      return ['snippet','description-text'].every(id=>ratio(css(id).color,css('description').backgroundColor)>=4.5) && ratio(css('like-paint').fill,css('like').backgroundColor)>=3;
+    }));
+    check('YouTube links, colored text, highlighted ink and animation masks are preserved',await inspect(()=>{
+      const css=id=>getComputedStyle(document.getElementById(id));return css('timestamp').color==='rgb(62, 166, 255)' && css('colored-text').color==='rgb(220, 80, 120)' && css('highlighted-text').color==='rgb(19, 19, 19)' && css('nested-highlight').color==='rgb(19, 19, 19)' && css('mask-paint').fill==='rgb(0, 0, 0)' && css('like-accent').fill==='rgb(26, 115, 232)';
+    }));
+    await inspect(()=>{document.getElementById('description-text').style.color='rgb(15,15,15)';document.getElementById('like').setAttribute('aria-pressed','true')});
+    check('YouTube hydrated text remains light while pressed icon remains dark',await inspect(()=>{
+      const css=id=>getComputedStyle(document.getElementById(id));return parseFloat(css('description-text').color.match(/[\d.]+/)[0])>180 && css('like-paint').fill==='rgb(0, 0, 0)';
+    }));
     await queueCommand('toggle-extension'); await wait(300);
     check('YouTube master shortcut restores native light theme', await inspect(() => getComputedStyle(document.getElementById('background')).backgroundColor === 'rgb(255, 255, 255)' && !document.getElementById('oled-night-youtube-sheet')));
     await queueCommand('toggle-extension'); await wait(300);

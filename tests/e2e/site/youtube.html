@@ -17,10 +17,19 @@ ytd-watch-flexy[theater] #player-container {height:300px}
 #player {width:320px;height:180px;background:rgb(10,90,180)}
 #late {color:var(--t111aaa,#0f0f0f);background:var(--t222aaa,#fff)}
 #content {padding:20px}
-</style></head><body><ytd-app>
+#description {background:var(--tdef456);padding:16px;border-radius:12px}
+#description span {white-space:pre-wrap}
+#description a {color:inherit}
+#search-submit {background:#f8f8f8;color:var(--tffc2fd3a644f6275)}
+#like {background:var(--tdef456);color:var(--tffc2fd3a644f6275);border:0;border-radius:12px;padding:8px}
+#like[aria-pressed="true"] {background:#f1f1f1;color:#0f0f0f}
+</style></head><body><ytd-app style="--native-background:#fff">
 <ytd-masthead><div id="background" class="ytd-masthead"><span id="header" class="title">YouTube masthead</span></div></ytd-masthead>
-<div id="chips-wrapper"><button id="chip">Topics</button><button id="subscribe">Subscribe</button></div>
+<button id="search-submit" class="ytSearchboxComponentSearchButton" aria-label="Search">Search</button><div id="chips-wrapper"><button id="chip">Topics</button><button id="subscribe">Subscribe</button></div>
 <ytd-page-manager><div id="content"><a id="title" class="ytLockupMetadataViewModelTitle">Video title</a><p id="secondary">Channel and views</p>
 <ytd-watch-flexy id="watch"><div id="player-container"><video id="player"></video><span id="caption">Player caption</span></div><p id="comments" class="title">Comments load normally</p><aside id="recommendations" class="title">Recommended videos</aside></ytd-watch-flexy>
 <p id="legacy">Legacy YouTube tokens</p><p id="late">Late stylesheet text</p>
+<ytd-watch-metadata><div id="description"><yt-attributed-string><span class="ytAttributedStringHost"><span id="snippet" class="ytAttributedStringLinkInheritColor" style="color:rgb(19,19,19)">Collapsed description</span></span></yt-attributed-string>
+<details id="description-details"><summary>Show more</summary><yt-attributed-string><span class="ytAttributedStringHost"><span id="description-text" class="ytAttributedStringLinkInheritColor" style="color:rgb(19,19,19)">Expanded description and chapter labels</span><span style="color:rgb(6,95,212)"><a id="timestamp" class="ytAttributedStringLinkCallToActionColor" href="#">0:35</a></span><span id="colored-text" style="color:rgb(220,80,120)">Colored annotation</span><span id="highlighted-text" style="color:rgb(19,19,19);background-color:rgb(255,240,140)">Highlighted annotation</span><span style="background-color:rgb(255,240,140)"><span id="nested-highlight" style="color:rgb(19,19,19)">Nested highlight</span></span></span></yt-attributed-string></details></div></ytd-watch-metadata>
+<like-button-view-model><button aria-pressed="false" id="like"><svg viewBox="0 0 24 24" width="24" height="24"><defs><mask id="like-mask"><path id="mask-paint" fill="rgb(0,0,0)" d="M0 0h24v24H0z"/></mask></defs><path id="like-paint" fill="rgb(0,0,0)" d="M4 5h16v14H4z"/><path id="like-accent" fill="rgb(26,115,232)" d="M5 6h2v2H5z"/></svg>Like</button></like-button-view-model>
 </div></ytd-page-manager></ytd-app></body></html>

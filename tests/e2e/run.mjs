@@ -90,6 +90,7 @@ function check(name, ok, detail = "") {
 }
 
 try {
+  suite: {
   const loaded = await send("Extensions.loadUnpacked", { path: EXT });
   const extId = loaded.result?.id;
   check("extension loads", !!extId, loaded.error?.message || "");
@@ -139,6 +140,18 @@ try {
   check("YouTube light masthead and chips become OLED black", (await css("background", "backgroundColor")) === "rgb(0, 0, 0)" && (await css("chips-wrapper", "backgroundColor")) === "rgb(0, 0, 0)");
   check("YouTube renamed and legacy text tokens stay readable", lum(await css("title", "color")) > 0.5 && lum(await css("secondary", "color")) > 0.25 && lum(await css("legacy", "color")) > 0.5);
   check("YouTube inverse button retains contrast", lum(await css("subscribe", "backgroundColor")) > 0.5 && lum(await css("subscribe", "color")) < 0.05);
+  check("YouTube search button stays dark with a readable label", contrast(await css("search-submit","color"),await css("search-submit","backgroundColor")) >= 4.5 && lum(await css("search-submit","backgroundColor")) < .1);
+  check("YouTube collapsed inline description is readable", contrast(await css("snippet","color"),await css("description","backgroundColor")) >= 4.5);
+  await page.eval("document.getElementById('description-details').open=true");
+  check("YouTube expanded inline description is readable", contrast(await css("description-text","color"),await css("description","backgroundColor")) >= 4.5);
+  check("YouTube timestamps use readable native dark blue and colored annotations stay native", (await css("timestamp","color")) === "rgb(62, 166, 255)" && (await css("colored-text","color")) === "rgb(220, 80, 120)");
+  check("YouTube highlighted text retains its contrasting ink", (await css("highlighted-text","color")) === "rgb(19, 19, 19)" && (await css("nested-highlight","color")) === "rgb(19, 19, 19)");
+  check("YouTube animated like paint is visible while masks and accents stay native", contrast(await css("like-paint","fill"),await css("like","backgroundColor")) >= 3 && (await css("mask-paint","fill")) === "rgb(0, 0, 0)" && (await css("like-accent","fill")) === "rgb(26, 115, 232)");
+  await page.eval("document.getElementById('like').setAttribute('aria-pressed','true')");
+  check("YouTube pressed inverse button keeps its dark icon", contrast(await css("like-paint","fill"),await css("like","backgroundColor")) >= 3 && (await css("like-paint","fill")) === "rgb(0, 0, 0)");
+  await page.eval("document.getElementById('like').setAttribute('aria-pressed','false')");
+  await page.eval("document.getElementById('description-text').textContent='Hydrated description';document.getElementById('description-text').style.color='rgb(15,15,15)'");
+  check("YouTube hydrated inline description stays readable", contrast(await css("description-text","color"),await css("description","backgroundColor")) >= 4.5);
   await page.eval("document.getElementById('watch').setAttribute('theater','')");
   check("YouTube theater player geometry and media remain native", (await css("player-container", "height")) === "300px" && (await css("player", "filter")) === "none" && (await css("player", "backgroundColor")) === "rgb(10, 90, 180)" && (await css("caption", "color")) === "rgb(255, 255, 255)");
   check("YouTube theater comments and recommendations remain visible", lum(await css("comments", "color")) > 0.5 && (await css("recommendations", "display")) !== "none");
@@ -147,8 +160,10 @@ try {
   check("YouTube delayed native palette is applied", lum(await css("late", "color")) > 0.5 && (await css("late", "backgroundColor")) === "rgb(0, 0, 0)");
   await setSettings({brightness:70}); await sleep(250);
   check("YouTube renamed text tokens follow brightness", (await css("title", "color")) === "rgb(179, 179, 179)");
+  check("YouTube inline description follows brightness", (await css("description-text","color")) === "rgb(179, 179, 179)");
   await setSettings({extensionEnabled:false}); await sleep(250);
   check("YouTube pause restores native light palette", (await css("background", "backgroundColor")) === "rgb(255, 255, 255)" && (await css("title", "color")) === "rgb(15, 15, 15)" && !(await page.eval("document.getElementById('oled-night-youtube-sheet')")));
+  check("YouTube pause restores original inline text and icon paint", (await css("description-text","color")) === "rgb(15, 15, 15)" && (await css("like-paint","fill")) === "rgb(0, 0, 0)");
   await page.eval("document.documentElement.setAttribute('dark','')");
   await resetSettings();
   // Storage change delivery and the native palette rebuild are asynchronous.
@@ -165,6 +180,7 @@ try {
   await resetSettings();
 
   // Light page: recolor, text emphasis, icons, borders, tints, frames, streaming.
+  if (process.env.OLED_TEST_SCOPE === "youtube") break suite;
   await page.go(site("127.0.0.1", "light.html"), 1800);
   check("version stamped", (await page.eval("document.documentElement.dataset.oledNightVersion")) === JSON.parse(readFileSync(join(EXT, "manifest.json"), "utf8")).version);
   check("page background black", (await page.eval("getComputedStyle(document.body).backgroundColor")) === "rgb(0, 0, 0)");
@@ -711,6 +727,7 @@ try {
   await sleep(1200);
   state = await ui(popup3);
   check("popup: reload reconnects the tab", state.status === "On · recoloring this page" && !state.reload, JSON.stringify(state));
+  }
 } catch (error) {
   failures++;
   console.log(`FAIL  suite aborted: ${error.message}`);

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.33
+
+- Keep YouTube's inline description and chapter text readable, including expanded descriptions and later renderer updates. Preserve colored annotations and highlighted text.
+- Keep the animated like icon visible without changing SVG masks or pressed inverse buttons. Give the search button and chapter links native dark colors.
+- Add Chrome and Firefox regressions based on the live YouTube failure, including ancestor background settings. No new permissions or body observers; companion theme unchanged.
+
 ## 0.6.32
 
 - Reduce interaction recoloring globally: hover, focus and clicks reread changed controls and individual ancestors without disabling recoloring across entire page layouts. Recognize custom dropdown triggers using ARIA and data-action attributes.
