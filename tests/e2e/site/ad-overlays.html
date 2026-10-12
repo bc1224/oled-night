@@ -1,0 +1,14 @@
+<!doctype html><html><head><style>
+body{background:white;color:#202124;font:16px sans-serif}
+.ad{position:relative;width:360px;margin:12px;--ad-ink:#111}
+.art img{display:block;width:360px;height:120px}
+.overlay{position:absolute;inset:0;padding:12px;color:var(--ad-ink)}
+.overlay h2,.overlay p,.overlay a{color:var(--ad-ink);margin:4px}
+.dark{--ad-ink:#fff}.caption{background:white;color:#111;padding:8px}
+</style></head><body>
+<div class="ad" id="brightAd"><div class="art"><div><div><div><div><div><picture><img id="brightArt" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='120'%3E%3Crect width='360' height='120' fill='%23ffcb05'/%3E%3C/svg%3E"></picture></div></div></div></div></div></div><div class="overlay"><section><h2><span id="brightInk">Protein Pack Your Morning</span></h2><p id="brightSub">Four flavors to help fuel your morning.</p><a id="brightLink" href="#">Shop Now</a></section></div></div>
+<div class="ad dark"><div class="art"><div><picture><img id="darkArt" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='120'%3E%3Crect width='360' height='120' fill='%23001230'/%3E%3C/svg%3E"></picture></div></div><div class="overlay"><h2 id="darkInk">Original white ink</h2><a id="darkLink" href="#">See offers</a></div></div>
+<div class="ad"><div class="art"><div><picture><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='120'%3E%3Crect width='360' height='120' fill='%23ffcb05'/%3E%3C/svg%3E"></picture></div></div><section class="caption"><span id="captionInk">Caption below image must recolor</span></section></div>
+<div class="ad"><div class="art"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='120'%3E%3Crect width='360' height='120' fill='%23ffcb05'/%3E%3C/svg%3E"></div><div class="overlay" style="background:white"><span id="opaqueInk" style="color:#111">Opaque panel on top must recolor</span></div></div>
+<script>for(const [link,id] of [['brightLink','brightArrow'],['darkLink','darkArrow']]){document.getElementById(link).insertAdjacentHTML('beforeend',`<svg width="16" height="16" viewBox="0 0 16 16"><path id="${id}" fill="currentColor" d="M0 7h12l-4-4 2-2 6 7-6 7-2-2 4-4H0z"/></svg>`);}</script>
+</body></html>

@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.33";
+  const VERSION = "0.6.34";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -237,6 +237,30 @@
 
   // Nearest original surface behind an element. Originals are remembered when
   // each element is decided, because afterwards our overrides hide them.
+  function mediaUnderlay(sibling, frame, content, ctx) {
+    let candidates = ctx.media.get(sibling);
+    if (!candidates) {
+      candidates = [];
+      // Responsive creative wrappers can be several levels deep. Bound this
+      // local walk so an overlay beside a large application tree stays cheap.
+      const pending = [sibling];
+      for (let visited = 0; pending.length && visited < 48; visited++) {
+        const node = pending.pop();
+        if (node.matches("img, video")) candidates.push(node);
+        else if (node.childElementCount <= 4) pending.push(...Array.from(node.children).reverse());
+      }
+      ctx.media.set(sibling, candidates);
+    }
+    return candidates.some(media => {
+      const underlay = media.getBoundingClientRect();
+      if (!underlay.width || !underlay.height || !content.width || !content.height) return false;
+      const overlapWidth = Math.max(0, Math.min(underlay.right, content.right) - Math.max(underlay.left, content.left));
+      const overlapHeight = Math.max(0, Math.min(underlay.bottom, content.bottom) - Math.max(underlay.top, content.top));
+      return underlay.width >= frame.width * 0.7 && underlay.height >= frame.height * 0.7 &&
+        overlapWidth >= content.width * 0.7 && overlapHeight >= content.height * 0.7;
+    });
+  }
+
   function backdropOf(element, ctx) {
     const chain = [];
     let result = { color: ctx.pageColor };
@@ -251,15 +275,14 @@
       // overlay (retail cards and hero sections). It is still real imagery
       // even though no ancestor has a CSS background-image.
       const sibling = node.previousElementSibling;
-      const media = sibling?.matches("img, picture, video") ? sibling : sibling?.firstElementChild;
-      if (node.parentElement?.childElementCount <= 4 && media?.matches("img, picture, video")) {
+      const directMedia = sibling?.matches("img, picture, video") || sibling?.firstElementChild?.matches("img, picture, video");
+      if (sibling && node.parentElement?.childElementCount <= 4 &&
+          (directMedia || ctx.style(node).position === "absolute")) {
         const frame = node.parentElement?.getBoundingClientRect();
         const underlay = sibling.getBoundingClientRect();
         const content = node.getBoundingClientRect();
-        const overlapWidth = Math.max(0, Math.min(underlay.right, content.right) - Math.max(underlay.left, content.left));
-        const overlapHeight = Math.max(0, Math.min(underlay.bottom, content.bottom) - Math.max(underlay.top, content.top));
         if (frame && underlay.width >= frame.width * 0.7 && underlay.height >= frame.height * 0.7 &&
-            overlapWidth >= content.width * 0.7 && overlapHeight >= content.height * 0.7) {
+            mediaUnderlay(sibling, frame, content, ctx)) {
           result = { image: true };
           break;
         }
@@ -424,7 +447,11 @@
     const text = colors.parseColor(computed.color);
     if (text && text.a >= 0.08) {
       const backdrop = backdropOf(element, ctx);
-      if (!backdrop.image) {
+      if (backdrop.image) {
+        // Pin original ink too: otherwise a transparent creative inherits
+        // the light foreground we applied to its surrounding page container.
+        found.fg = computed.color;
+      } else {
         let tier = colors.textTier(text, backdrop.color);
         // Light text on a light original surface is text that inherited our
         // already-lightened color (e.g. a newly streamed chat line): keep the
@@ -454,6 +481,8 @@
     if (mode !== "oled" && mode !== "soft") return;
     const rect = svg.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
+    // Icons in an image creative share its authored light/dark ink.
+    if (backdropOf(svg, ctx).image) return;
     const colors = colorsApi();
     const icon = rect.width <= 64 && rect.height <= 64;
     const dataChart = !icon && /chart|rating|histogram|distribution|progress|graph/i.test(svg.getAttribute("aria-label") || "");
@@ -772,6 +801,7 @@
       pageColor,
       gmail: document.documentElement.getAttribute("data-oled-night-site") === "gmail",
       backdrop: new Map(),
+      media: new Map(),
       style(node) {
         let computed = styles.get(node);
         if (!computed) { computed = getComputedStyle(node); styles.set(node, computed); }

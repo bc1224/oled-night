@@ -181,6 +181,18 @@ try {
 
   // Light page: recolor, text emphasis, icons, borders, tints, frames, streaming.
   if (process.env.OLED_TEST_SCOPE === "youtube") break suite;
+
+  await page.go(site("127.0.0.1", "ad-overlays.html"));
+  check('nested bright ad heading retains dark ink', (await css('brightInk','color')) === 'rgb(17, 17, 17)');
+  check('nested bright ad subtitle and link retain dark ink', (await css('brightSub','color')) === 'rgb(17, 17, 17)' && (await css('brightLink','color')) === 'rgb(17, 17, 17)');
+  check('nested dark ad retains white text and link', (await css('darkInk','color')) === 'rgb(255, 255, 255)' && (await css('darkLink','color')) === 'rgb(255, 255, 255)');
+  check('ad artwork colors remain unfiltered', (await css('brightArt','filter')) === 'none' && (await css('darkArt','filter')) === 'none');
+  check('ad CTA icons share original contrasting text ink', (await css('brightArrow','fill')) === 'rgb(17, 17, 17)' && (await css('darkArrow','fill')) === 'rgb(255, 255, 255)');
+  check('caption below media still recolors', lum(await css('captionInk','color')) > .5);
+  check('opaque panel above media still recolors', lum(await css('opaqueInk','color')) > .5);
+  await page.eval("document.getElementById('brightInk').style.color='#001e60'"); await sleep(250);
+  check('hydrated ad text keeps its new original color', (await css('brightInk','color')) === 'rgb(0, 30, 96)');
+  if (process.env.OLED_TEST_SCOPE === "overlays") break suite;
   await page.go(site("127.0.0.1", "light.html"), 1800);
   check("version stamped", (await page.eval("document.documentElement.dataset.oledNightVersion")) === JSON.parse(readFileSync(join(EXT, "manifest.json"), "utf8")).version);
   check("page background black", (await page.eval("getComputedStyle(document.body).backgroundColor")) === "rgb(0, 0, 0)");

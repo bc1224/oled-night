@@ -172,6 +172,18 @@
     await open('reddit-res.html');
     check('RES floater dark', await inspect(() => getComputedStyle(document.getElementById('floater')).backgroundColor === 'rgb(0, 0, 0)'));
     check('RES icon visible', await inspect(() => getComputedStyle(document.getElementById('RESAccountSwitcherIcon')).filter === 'invert(1)'));
+    await open('ad-overlays.html');
+    check('nested bright ad heading subtitle and link retain dark original ink', await inspect(() =>
+      ['brightInk','brightSub','brightLink'].every(id => getComputedStyle(document.getElementById(id)).color === 'rgb(17, 17, 17)')));
+    check('nested dark ad retains white text and link', await inspect(() =>
+      ['darkInk','darkLink'].every(id => getComputedStyle(document.getElementById(id)).color === 'rgb(255, 255, 255)')));
+    check('ad CTA arrows retain original light and dark ink', await inspect(() =>
+      getComputedStyle(document.getElementById('brightArrow')).fill === 'rgb(17, 17, 17)' && getComputedStyle(document.getElementById('darkArrow')).fill === 'rgb(255, 255, 255)'));
+    check('ad artwork stays unfiltered and captions and opaque panels recolor', await inspect(() =>
+      ['brightArt','darkArt'].every(id => getComputedStyle(document.getElementById(id)).filter === 'none') &&
+      ['captionInk','opaqueInk'].every(id => parseFloat(getComputedStyle(document.getElementById(id)).color.match(/[\d.]+/)[0]) > 180)));
+    await inspect(() => document.getElementById('brightInk').style.color='#001e60'); await wait(250);
+    check('hydrated ad ink retains new original color', await inspect(() => getComputedStyle(document.getElementById('brightInk')).color === 'rgb(0, 30, 96)'));
     await open('dropdowns.html');
     check('dropdown selected important background dark', await inspect(() => {
       const s=getComputedStyle(document.getElementById('promotion'));
