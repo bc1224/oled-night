@@ -19,3 +19,11 @@ Local evidence: `D:\Temp\oled-0634-overlays-red.log`, `oled-0634-overlays-final.
 ## Boundaries and release
 
 The existing personal Chrome tab supplied the actual Ralphs component structure on 0.6.33. Candidate live-site navigation in isolated Chrome failed with `ERR_HTTP2_PROTOCOL_ERROR`; candidate rendering is confirmed on controlled fixtures, not on the live rotated ad. Mozilla's connected developer dashboard returned `ERR_INTERNET_DISCONNECTED`. Store and owner-install receipts are recorded in `STORE_SUBMISSION.md` after release. Companion theme remains 1.0.3.
+
+Exact-source CI passed 236 Chrome and 90 Firefox checks plus units/lint; Pages succeeded. GitHub v0.6.34 has all seven assets with matching digests. Chrome submission 38273690389 is PENDING_REVIEW; Firefox upload remains blocked. The user's unpacked 0.6.34 was reloaded and verified using the approved personal MCP.
+
+## Additional Chrome error report
+
+The user reported the reserved `_metadata` warning on their store copy plus a `font-src` CSP warning. Downloading the current public Google-signed CRX confirmed 0.6.33 and only expected `_metadata/verified_contents.json`; packaging regression checks confirm our submitted archives have no reserved metadata. [Chromium's validator](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/extensions/common/file_util.cc) records illegal root filenames as install warnings. This inspection does not prove the user's installer warning is resolved. Do not edit installed profile metadata.
+
+OLED Night contains no embedded fonts, font-face rules, or CSP changes; its YouTube stylesheet reader copies supported color tokens only. The font warning blocks a data URL under a site's font policy. The user does not know the originating website and no repeat or source URL is available, so causation remains unconfirmed. No workaround that weakens CSP was introduced. Evidence: `D:\Temp\oled-0634-store-public-inspection.json` and the attached error screenshot.
