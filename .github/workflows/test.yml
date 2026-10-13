@@ -3,6 +3,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      candidates:
+        description: Capture screenshot candidates for explicit review (cannot deploy)
+        type: boolean
+        default: false
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -11,8 +17,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - run: npm ci
       - name: Unit tests
-        run: for t in tests/*.test.js; do node "$t"; done
+        run: for t in tests/*.test.js tests/lab/*.test.js; do node "$t" || exit 1; done
       - name: End-to-end tests (real extension in headless Chrome)
         run: node tests/e2e/run.mjs
         env:
@@ -20,10 +27,47 @@ jobs:
       - name: Package
         run: node tools/package.mjs
       - uses: browser-actions/setup-firefox@v1
-      - run: npm ci
       - run: npm run lint:firefox
       - run: npm run test:firefox
+      - name: Component states, performance and reviewed visuals in Chrome
+        run: node tests/lab/run-chrome.mjs ${{ inputs.candidates && '--candidates' || '' }}
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+      - name: Component states and performance in Firefox
+        run: npm run test:lab:firefox
+      - name: Build browsable lab with passing evidence
+        if: ${{ !inputs.candidates }}
+        run: |
+          npm run build:lab
+          node tools/lab-report.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oled-night-lab-evidence
+          path: dist/lab-results/
+          if-no-files-found: warn
+      - uses: actions/upload-pages-artifact@v3
+        if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+        with:
+          path: dist/site
       - uses: actions/upload-artifact@v4
         with:
           name: oled-night-zip
           path: dist/*.zip
+  deploy:
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy verified website and lab
+        id: deployment
+        uses: actions/deploy-pages@v4

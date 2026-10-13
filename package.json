@@ -3,10 +3,16 @@
   "private": true,
   "scripts": {
     "package": "node tools/package.mjs",
+    "build:lab": "node tools/build-lab.mjs",
+    "test:lab:chrome": "node tests/lab/run-chrome.mjs",
+    "test:lab:firefox": "node tests/lab/run-firefox.mjs",
+    "test:lab:live": "node tests/lab/live-smoke.mjs",
     "test:firefox": "node tests/firefox/run.mjs",
     "lint:firefox": "web-ext lint --source-dir dist/firefox --warnings-as-errors"
   },
   "devDependencies": {
+    "pixelmatch": "7.1.0",
+    "pngjs": "7.0.0",
     "web-ext": "10.7.0"
   }
 }

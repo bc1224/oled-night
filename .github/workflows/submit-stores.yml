@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,12 +36,28 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Require passing tests for the exact tagged source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node .store-uploader/tools/verify-release-gate.mjs
       - name: Build exact tagged packages
         run: |
           node tools/package.mjs
           version=$(node -p "require('./manifest.json').version")
           git archive --format=zip --output="dist/oled-night-source-${version}.zip" HEAD
           cp .store-uploader/tools/submit-stores.mjs tools/submit-stores.mjs
+      - name: Verify public site navigation before extension submission
+        if: ${{ inputs.store != 'chrome-theme' }}
+        run: node .store-uploader/tests/lab/live-smoke.mjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+          OLED_LAB_PACKAGE_ROOT: ${{ github.workspace }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-site-smoke-evidence
+          path: .store-uploader/dist/lab-results/live-smoke.json
+          if-no-files-found: ignore
       - name: Submit to Mozilla Add-ons
         if: ${{ github.event_name == 'release' || inputs.store == 'both' || inputs.store == 'amo' }}
         id: amo

@@ -1,0 +1,22 @@
+name: Screenshot candidates
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  candidates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: node tools/package.mjs
+      - run: node tests/lab/run-chrome.mjs --candidates
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reviewed-candidates-needed
+          path: dist/lab-results/
