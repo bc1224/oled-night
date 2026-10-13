@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.34";
+  const VERSION = "0.6.35";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -16,6 +16,7 @@
   // Set while we swap overrides in and out, so site CSS transitions on colors
   // never animate between our dark value and the original light one.
   const NOANIM = "data-oled-night-noanim";
+  const MOTION = "data-oled-night-motion";
   // Element-only variants. Toggling the subtree forms on a large ancestor
   // restyles every descendant, which is expensive on any large page.
   const MEASURE_SELF = "data-oled-night-measure-self";
@@ -83,6 +84,7 @@
   let revision = 0;
   let applied = new WeakMap();
   let originalSurface = new WeakMap();
+  let mediaCopies = new WeakMap();
   let textTiers = new WeakMap();
   let logoChecked = new WeakSet();
   let logoBudget = 80;
@@ -98,7 +100,12 @@
   const SETTLE_MS = 400;
   const INTERACTION_EVENTS = ["pointerover", "pointerout", "pointerdown", "pointerup", "pointercancel", "focusin", "focusout", "input", "change", "keydown", "keyup"];
   const CONTROL = 'a, button, input, textarea, select, option, label, li, [role="option"], [role^="menuitem"], [role="button"], [role="combobox"], [aria-haspopup], [aria-expanded], [data-action], [contenteditable="true"], [tabindex]';
+  // A row's hover/focus paints sibling cells, even when the event originates
+  // inside a nested button or a checkbox's shadow root. Keep that state unit
+  // local; a table or results layout must never become an interaction scan.
+  const STATE_GROUP = 'tr, [role="row"]';
   const DROPDOWN = 'select, [role="listbox"], [role="menu"], [role="combobox"]';
+  const LIGHT_UI = `${CONTROL}, ${STATE_GROUP}, form, [role="dialog"], [role="listbox"], [role="menu"]`;
   const GMAIL_LIGHT_REGIONS = ".nH.a98.iY, .a3s, .gssb_e, form.gb_Pd.gb_2e";
   // Open shadow roots (web components) we style and watch. Page stylesheets
   // never reach inside them, so each gets our rules adopted directly.
@@ -237,7 +244,7 @@
 
   // Nearest original surface behind an element. Originals are remembered when
   // each element is decided, because afterwards our overrides hide them.
-  function mediaUnderlay(sibling, frame, content, ctx) {
+  function mediaUnderlay(sibling, frame, content, ctx, copy) {
     let candidates = ctx.media.get(sibling);
     if (!candidates) {
       candidates = [];
@@ -247,9 +254,19 @@
       for (let visited = 0; pending.length && visited < 48; visited++) {
         const node = pending.pop();
         if (node.matches("img, video")) candidates.push(node);
+        // Responsive <picture> sources are metadata, not separate branches.
+        // They must not push its actual image past the wrapper fanout bound.
+        else if (node.localName === "picture") pending.push(...Array.from(node.children).filter(child => child.localName === "img"));
         else if (node.childElementCount <= 4) pending.push(...Array.from(node.children).reverse());
       }
       ctx.media.set(sibling, candidates);
+    }
+    // A video may have no dimensions on the first pass. Remember only the
+    // local copies that depend on it, so readiness can repair those copies.
+    for (const media of candidates) for (let node = media; node && node !== sibling.parentElement; node = node.parentElement) {
+      let copies = mediaCopies.get(node);
+      if (!copies) mediaCopies.set(node, copies = new Set());
+      copies.add(copy);
     }
     return candidates.some(media => {
       const underlay = media.getBoundingClientRect();
@@ -271,22 +288,27 @@
       chain.push(node);
       const surface = originalSurface.has(node) ? originalSurface.get(node) : surfaceInfo(ctx.style(node));
       if (surface) { result = surface; break; }
-      // A full-bleed image in a preceding sibling can paint behind a text
+      // Full-bleed media in either adjacent sibling can paint behind a text
       // overlay (retail cards and hero sections). It is still real imagery
       // even though no ancestor has a CSS background-image.
-      const sibling = node.previousElementSibling;
-      const directMedia = sibling?.matches("img, picture, video") || sibling?.firstElementChild?.matches("img, picture, video");
-      if (sibling && node.parentElement?.childElementCount <= 4 &&
-          (directMedia || ctx.style(node).position === "absolute")) {
+      for (const sibling of [node.previousElementSibling, node.nextElementSibling]) {
+        // Most text siblings contain no media. Avoid style/layout reads for
+        // them on every streaming update.
+        if (!sibling || (!sibling.matches("img, video") && !sibling.childElementCount)) continue;
+        const directMedia = sibling?.matches("img, picture, video") || sibling?.firstElementChild?.matches("img, picture, video");
+        if (!sibling || node.parentElement?.childElementCount > 4 ||
+            !(directMedia || ctx.style(node).position === "absolute" || ctx.style(sibling).position === "absolute")) continue;
         const frame = node.parentElement?.getBoundingClientRect();
         const underlay = sibling.getBoundingClientRect();
         const content = node.getBoundingClientRect();
+        const media = frame && mediaUnderlay(sibling, frame, content, ctx, node);
         if (frame && underlay.width >= frame.width * 0.7 && underlay.height >= frame.height * 0.7 &&
-            mediaUnderlay(sibling, frame, content, ctx)) {
+            media) {
           result = { image: true };
           break;
         }
       }
+      if (result.image) break;
     }
     for (const node of chain) ctx.backdrop.set(node, result);
     return result;
@@ -399,13 +421,24 @@
       if (matte && matte.a >= 0.5 && colors.luminance(matte) > 0.8 &&
           element.parentElement?.querySelector(":scope > img, :scope > picture")) return found;
     }
-    // A dark page can still open a light custom menu. Recolor that menu and
-    // its text as a unit instead of preserving a glaring white popup in crush.
+    // Document polarity is only a default. A native dark page can still have
+    // light hover cells, fields or popups. Decide their surface and inherited
+    // ink together from the local original backdrop, not the site's mode.
+    // Actual imagery remains protected by the same backdrop classification.
     const localMode = modeForElement(element, ctx);
-    const dropdownBackdrop = localMode === "crush" && element.closest(DROPDOWN) ? backdropOf(element, ctx) : null;
-    const mode = dropdownBackdrop && !dropdownBackdrop.image && colors.luminance(dropdownBackdrop.color) > 0.5 ? "oled" : localMode;
+    const nativeBackdrop = localMode === "crush" && element.closest(ctx.recolorLightRegions ? LIGHT_UI : DROPDOWN) ? backdropOf(element, ctx) : null;
+    const mode = nativeBackdrop && !nativeBackdrop.image && colors.luminance(nativeBackdrop.color) > 0.5 ? "oled" : localMode;
     mapSurface(computed, "", mode, found);
     if (mode === "oled" && isPageLayout(element, computed, colors.parseColor(computed.backgroundColor))) found.bg = "#000000";
+    // Full-width neutral navigation is page chrome, rather than a raised card.
+    // Paint it opaque black so translucent flyouts cannot reveal a white page.
+    if (mode === "oled" && !paintsInk(computed) && computed.backgroundImage === "none") {
+      const bg = colors.parseColor(computed.backgroundColor);
+      if (bg?.a >= 0.5 && colors.chroma(bg) <= 0.03) {
+        const nav = element.closest('nav, [role="navigation"]');
+        if (nav && element.getBoundingClientRect().width >= nav.getBoundingClientRect().width * 0.7) found.bg = "#000000";
+      }
+    }
     if ((mode === "oled" || mode === "soft") && !element.childElementCount && !element.textContent.trim() &&
         computed.backgroundImage.startsWith("url(") && isControlAsset(element, computed, computed.backgroundImage)) found["asset-icon"] = "1";
     if ((mode === "oled" || mode === "soft") && isDataFill(element, computed, ctx)) {
@@ -536,7 +569,12 @@
   // is dark and colorless, flip its lightness. Cross-origin images can't be
   // sampled (the browser forbids it). Explicit compact logo assets get a light
   // edge instead: it reveals dark lettering without changing brand colors.
-  function checkLogo(img) {
+  function checkLogo(img, ctx) {
+    if (backdropOf(img, ctx).image) {
+      img.removeAttribute(LOGO);
+      img.removeAttribute(LOGO_EDGE);
+      return;
+    }
     if (logoChecked.has(img) || logoBudget <= 0) return;
     const namedLogo = /(?:^|[\s_./#-])logo(?:[\s_./?#-]|$)/i.test(`${img.alt} ${img.currentSrc || img.src}`);
     logoChecked.add(img);
@@ -764,7 +802,13 @@
         calmSelf.add(node);
       }
       // "[measure] *" cannot see into shadow trees, so switch those off at their top level too.
-      for (const element of list) if (element.parentNode?.host) { calm.push(element); if (element.hasAttribute(MARK)) measured.push(element); }
+      for (const element of list) if (element.parentNode?.host) {
+        calm.push(element);
+        // A transparent shadow wrapper can contain styled controls. Outside
+        // subtree guards do not cross this boundary; measure their native
+        // paint too, or crush mode alternately removes and reapplies black.
+        if (element.hasAttribute(MARK) || element.querySelector(`[${MARK}]`)) measured.push(element);
+      }
     }
     for (const icon of list.icons) {
       if (!icon.isConnected) continue;
@@ -779,6 +823,26 @@
       PSEUDO_KEYS.test(node.getAttribute(MARK) || "") ||
       getComputedStyle(node).transitionDuration.split(",").some(duration => parseFloat(duration) > 0));
     if (!needsCalm) { calm.length = 0; calmSelf.clear(); }
+    // Suppress paint transitions without canceling the page's layout motion.
+    // Retain list timing/delays; commas inside cubic-bezier() are not separators.
+    const motion = [];
+    if (needsCalm) for (const node of new Set([...list, ...list.images])) {
+      const style = getComputedStyle(node);
+      const split = value => value.split(/,(?![^()]*\))/).map(part => part.trim());
+      const properties = split(style.transitionProperty), durations = split(style.transitionDuration);
+      const easing = split(style.transitionTimingFunction), delays = split(style.transitionDelay);
+      const retained = [];
+      properties.forEach((property, index) => {
+        if (parseFloat(durations[index % durations.length]) <= 0) return;
+        const props = property === "all" ? ["opacity", "transform", "translate", "rotate", "scale", "height", "width", "max-height", "max-width", "min-height", "min-width", "top", "right", "bottom", "left", "grid-template-rows", "grid-template-columns", "clip-path"] : [property];
+        for (const prop of props) if (prop !== "none" && !COLOR_TRANSITION.test(prop)) retained.push(`${prop} ${durations[index % durations.length]} ${easing[index % easing.length]} ${delays[index % delays.length]}`);
+      });
+      if (retained.length) {
+        node.style.setProperty("--oln-motion", retained.join(", "));
+        node.setAttribute(MOTION, "");
+        motion.push(node);
+      }
+    }
     for (const node of calm) node.setAttribute(NOANIM, "");
     for (const node of calmSelf) node.setAttribute(NOANIM_SELF, "");
     for (const node of measured) node.setAttribute(MEASURE, "");
@@ -798,6 +862,8 @@
     const styles = new Map();
     const ctx = {
       mode: modeFor(),
+      // Explicit "Deepen blacks only" keeps the user's native light content.
+      recolorLightRegions: currentSiteMode() !== "deepen",
       pageColor,
       gmail: document.documentElement.getAttribute("data-oled-night-site") === "gmail",
       backdrop: new Map(),
@@ -847,12 +913,13 @@
       element.setAttribute(INHERITED_KEYS.test(keys) ? NOANIM : NOANIM_SELF, "");
     }
     for (const [element, found] of writes) write(element, found, !changed.has(element));
-    for (const img of logoCandidates) checkLogo(img);
+    for (const img of logoCandidates) checkLogo(img, ctx);
     // Commit the new colors with transitions still off, then restore them.
     const first = calm[0] || calmSelf.values().next().value;
     if (first) getComputedStyle(first).color;
     for (const node of calm) node.removeAttribute(NOANIM);
     for (const node of calmSelf) node.removeAttribute(NOANIM_SELF);
+    for (const node of motion) { node.removeAttribute(MOTION); node.style.removeProperty("--oln-motion"); }
   }
 
   // Re-reads the page's original polarity with only the page background and
@@ -943,6 +1010,8 @@
       if (path[0] && path[0] !== stop) pendingTrees.add(path[0]);
       if (control) settleTrees.add(control);
     }
+    const group = path.find(node => node.matches(STATE_GROUP));
+    if (group && (!stop || path.indexOf(group) < path.indexOf(stop))) pendingTrees.add(group);
     schedule();
     if (settleSelf.size || settleTrees.size) {
       clearTimeout(settleTimer);
@@ -979,8 +1048,21 @@
     return node instanceof Element && node.matches('style, link[rel~="stylesheet"]') && !node.id.startsWith("oled-night-");
   }
 
+  function queueMediaCopies(copies) {
+    for (const copy of copies) {
+      if (!copy.isConnected) { copies.delete(copy); continue; }
+      pendingTrees.add(copy);
+      // Native copy can inherit its color from above the tile. Measure those
+      // ancestors individually, without switching off their other descendants.
+      for (let parent = parentAcrossShadow(copy); parent; parent = parentAcrossShadow(parent)) pendingSelf.add(parent);
+    }
+  }
+
   function onSheetLoad(event) {
-    if (!observer || !isPageSheet(event.target)) return;
+    if (!observer) return;
+    const copies = mediaCopies.get(event.target);
+    if (copies) { queueMediaCopies(copies); schedule(); }
+    if (!isPageSheet(event.target)) return;
     polarityDirty = true;
     pendingTrees.add(document.documentElement);
     schedule();
@@ -991,6 +1073,11 @@
     const changedRoots = new Set();
     for (const record of records) {
       const target = record.target;
+      const copies = mediaCopies.get(target);
+      if (copies && (record.type === "childList" || record.attributeName === "class" ||
+          (record.attributeName === "style" && inlineSignature(target) !== (inlineStyles.get(target) || "")))) {
+        queueMediaCopies(copies);
+      }
       const scope = target.getRootNode();
       if (scope instanceof ShadowRoot && shadowRoots.has(scope)) changedRoots.add(scope);
       if (record.type === "attributes") {
@@ -1076,6 +1163,7 @@
       [${MARK}~="asset-icon"]${on} { filter: drop-shadow(0 0 0.75px #ddd) drop-shadow(0 0 0.75px #ddd) !important; }
       [${NOANIM}], [${NOANIM}] *, [${NOANIM}]::before, [${NOANIM}]::after, [${NOANIM}] *::before, [${NOANIM}] *::after { transition: none !important; }
       [${NOANIM_SELF}], [${NOANIM_SELF}]::before, [${NOANIM_SELF}]::after { transition: none !important; }
+      [${NOANIM}][${MOTION}], [${NOANIM}] [${MOTION}], [${NOANIM_SELF}][${MOTION}] { transition: var(--oln-motion) !important; }
       [${MARK}~="before-bg"]${onPseudo}::before { background-color: var(--oln-before-bg) !important; }
       [${MARK}~="before-img"]${onPseudo}::before { background-image: var(--oln-before-img) !important; }
       [${MARK}~="before-shadow"]${onPseudo}::before { box-shadow: var(--oln-before-shadow) !important; }
@@ -1195,6 +1283,7 @@
     stopYouTubeTheme?.();
     stopYouTubeTheme = null;
     document.removeEventListener("load", onSheetLoad, true);
+    document.removeEventListener("loadeddata", onSheetLoad, true);
     for (const type of INTERACTION_EVENTS) document.removeEventListener(type, onInteraction, true);
     if (flushHandle !== null) {
       if (flushTimer) clearTimeout(flushHandle); else cancelAnimationFrame(flushHandle);
@@ -1218,6 +1307,7 @@
     pendingSelf.clear();
     applied = new WeakMap();
     originalSurface = new WeakMap();
+    mediaCopies = new WeakMap();
     textTiers = new WeakMap();
     removeEarly();
     const root = document.documentElement;
@@ -1310,6 +1400,7 @@
     observer = new MutationObserver(onMutations);
     observer.observe(root, OBSERVE);
     document.addEventListener("load", onSheetLoad, true);
+    document.addEventListener("loadeddata", onSheetLoad, true);
     for (const type of INTERACTION_EVENTS) document.addEventListener(type, onInteraction, true);
     process([root], []);
     observer.takeRecords();

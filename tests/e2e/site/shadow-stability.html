@@ -1,0 +1,4 @@
+<!doctype html><html><head><style>body{background:#0e1113;color:#ddd}.row{background:#181c1f;padding:2px}main{background:#0e1113}</style></head><body><main id="thread"><section id="rows"></section><comment-controls id="controls"></comment-controls></main><script>
+document.getElementById("rows").innerHTML=Array.from({length:170},(_,i)=>`<div class="row">Comment ${i}</div>`).join("");
+document.getElementById("controls").attachShadow({mode:"open"}).innerHTML='<style>button,.bar{background:#181c1f;color:#ddd;border:1px solid #444;transition:background-color .15s linear}.wrap{display:flex;gap:8px}</style><div class="wrap"><button id="votes">Vote</button><button id="search">Search Comments</button><div id="sort" class="bar">Sort by: Best</div></div>';
+</script></body></html>

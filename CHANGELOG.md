@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.35
+
+- Keep native text and logos legible over full-bleed images and videos that follow the copy in the DOM, including Apple heroes. Preserve opaque child panels and image captions.
+- Make full-width neutral navigation and flyouts opaque OLED black without flattening raised cards.
+- Keep dark shadow components stable through large ancestor updates. Recolor hovered/focused table rows as a unit, including sibling cells; handle bright interactive regions on native dark pages without overriding Deepen blacks only or ordinary content.
+- Preserve layout and opacity transitions while suppressing color flashes during recoloring. Add Chrome and Firefox media/navigation regressions. No new permissions; companion theme unchanged.
+
 ## 0.6.33
 
 - Keep YouTube's inline description and chapter text readable, including expanded descriptions and later renderer updates. Preserve colored annotations and highlighted text.

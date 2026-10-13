@@ -28,6 +28,35 @@
       await new Promise(r=>setTimeout(r,400));observer.disconnect();
       return switches===0 && getComputedStyle(document.getElementById('menu')).backgroundColor!=='rgb(255, 255, 255)';
     }));
+    await open('media-navigation.html');
+    check('following full-bleed media retains authored text and native logo',await inspect(()=>{
+      const css=id=>getComputedStyle(document.getElementById(id));
+      return css('heroInk').color==='rgb(17, 17, 17)' && css('heroSub').color==='rgb(17, 17, 17)' && css('heroLogo').filter==='none' && css('darkHeroInk').color==='rgb(255, 255, 255)' && css('solidInk').color!=='rgb(17, 17, 17)' && css('captionInk').color!=='rgb(17, 17, 17)';
+    }));
+    await inspect(()=>document.getElementById('lateMedia').classList.add('ready'));await wait(300);
+    check('late media repairs inherited native ink',await inspect(()=>getComputedStyle(document.getElementById('lateInk')).color==='rgb(29, 29, 31)'));
+    check('navigation opens black without canceling its height animation',await inspect(async()=>{
+      const nav=document.getElementById('nav'),fly=document.getElementById('flyout'),frames=[],until=performance.now()+450;
+      const closed=getComputedStyle(nav).backgroundColor;document.getElementById('trigger').click();
+      while(performance.now()<until){await new Promise(requestAnimationFrame);frames.push({bg:getComputedStyle(fly).backgroundColor,h:fly.getBoundingClientRect().height})}
+      return closed==='rgb(0, 0, 0)' && frames.every(f=>f.bg==='rgb(0, 0, 0)') && frames.some(f=>f.h>0&&f.h<239) && frames.at(-1).h>239 && !document.querySelector('[data-oled-night-motion]');
+    }));
+    await open('shadow-stability.html');
+    check('dark comment controls remain black through large ancestor updates',await inspect(async()=>{
+      const thread=document.getElementById('thread'),root=document.getElementById('controls').shadowRoot,items=['votes','search','sort'].map(id=>root.getElementById(id));
+      for(let cycle=0;cycle<6;cycle++){thread.classList.toggle('hydrated');for(let frame=0;frame<4;frame++){await new Promise(requestAnimationFrame);if(items.some(e=>getComputedStyle(e).backgroundColor!=='rgb(0, 0, 0)'))return false}}
+      return true;
+    }));
+    await open('state-surfaces.html');
+    check('keyboard focus inside a row recolors sibling cells together',await inspect(async()=>{
+      document.getElementById('nested').focus();await new Promise(r=>setTimeout(r,160));
+      return [...document.getElementById('row').children].every(e=>parseFloat(getComputedStyle(e).backgroundColor.match(/[\d.]+/)[0])<40);
+    }));
+    await open('state-surfaces.html?dark');
+    check('bright focused cells on native dark pages receive dark surfaces and light ink',await inspect(async()=>{
+      document.getElementById('nested').focus();await new Promise(r=>setTimeout(r,160));
+      return [...document.getElementById('row').children].every(e=>{const s=getComputedStyle(e);return parseFloat(s.backgroundColor.match(/[\d.]+/)[0])<40&&parseFloat(s.color.match(/[\d.]+/)[0])>180});
+    }));
     await open('indicators.html');
     check('ratings, generic bars, generated progress and vertical data remain visible', await inspect(() => {
       const lum = value => {const c=value.match(/[\d.]+/g).slice(0,3).map(x=>{const v=+x/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return c[0]*.2126+c[1]*.7152+c[2]*.0722};

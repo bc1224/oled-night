@@ -193,6 +193,45 @@ try {
   await page.eval("document.getElementById('brightInk').style.color='#001e60'"); await sleep(250);
   check('hydrated ad text keeps its new original color', (await css('brightInk','color')) === 'rgb(0, 30, 96)');
   if (process.env.OLED_TEST_SCOPE === "overlays") break suite;
+
+  await page.go(site('127.0.0.1','media-navigation.html'));
+  check('hero over following media retains dark authored ink',await css('heroInk','color')==='rgb(17, 17, 17)'&&await css('heroSub','color')==='rgb(17, 17, 17)');
+  check('logo over media retains native dark pixels',await css('heroLogo','filter')==='none');
+  check('following dark creative retains white ink',await css('darkHeroInk','color')==='rgb(255, 255, 255)');
+  check('solid child panel still recolors',lum(await css('solidInk','color'))>.5);
+  check('caption outside image still recolors',lum(await css('captionInk','color'))>.5);
+  check('unloaded hero copy initially recolors',lum(await css('lateInk','color'))>.4);
+  await page.eval("document.getElementById('lateMedia').classList.add('ready')");await sleep(250);
+  check('late media repairs inherited native copy without page rescan',await css('lateInk','color')==='rgb(29, 29, 31)');
+  check('neutral navigation is OLED black',await css('nav','backgroundColor')==='rgb(0, 0, 0)');
+  const frames=await page.eval("(async()=>{const nav=document.getElementById('nav'),fly=document.getElementById('flyout'),motion=document.getElementById('motion'),out=[],until=performance.now()+400;document.getElementById('trigger').click();for(let i=0;performance.now()<until;i++){await new Promise(requestAnimationFrame);out.push({bg:getComputedStyle(fly).backgroundColor,h:fly.getBoundingClientRect().height,opacity:+getComputedStyle(motion).opacity,width:motion.getBoundingClientRect().width,motionBg:getComputedStyle(motion).backgroundColor,t:performance.now(),transition:getComputedStyle(fly).transition,ink:getComputedStyle(document.getElementById('menuText')).color})}return out})()");
+
+  check('opening menu has no white frame',frames.every(f=>lum(f.bg)<.05));
+  check('expanded menu is OLED black',await css('flyout','backgroundColor')==='rgb(0, 0, 0)');
+  check('menu retains height animation',frames.some(f=>f.h>0&&f.h<239)&&frames.at(-1).h>239);
+  check('all transitions preserve opacity and width without white paint',frames.every(f=>lum(f.motionBg)<.05)&&frames.some(f=>f.opacity>.4&&f.opacity<1)&&frames.at(-1).opacity===.4&&frames.at(-1).width===180);
+  check('menu text stays readable',lum(await css('menuText','color'))>.4);
+  check('temporary motion guards are cleaned up',await page.eval("!document.querySelector('[data-oled-night-motion], [data-oled-night-noanim], [data-oled-night-noanim-self]')"));
+  await setSettings({extensionEnabled:false});await sleep(400);
+  check('disable restores native surfaces and ink',await css('flyout','backgroundColor')==='rgb(250, 250, 250)'&&await css('heroInk','color')==='rgb(17, 17, 17)');
+
+  await setSettings({extensionEnabled:true});
+  await page.go(site('127.0.0.1','shadow-stability.html'));
+  const shadowFrames=await page.eval(`(async()=>{const thread=document.getElementById('thread'),root=document.getElementById('controls').shadowRoot,items=['votes','search','sort'].map(id=>root.getElementById(id)),out=[];for(let cycle=0;cycle<6;cycle++){thread.classList.toggle('hydrated');for(let frame=0;frame<4;frame++){await new Promise(requestAnimationFrame);out.push(items.map(e=>getComputedStyle(e).backgroundColor))}}return out})()`);
+  check('dark comment controls stay black across large ancestor updates',shadowFrames.every(row=>row.every(bg=>bg==='rgb(0, 0, 0)')),JSON.stringify([...new Set(shadowFrames.map(row=>row.join(';')))]));
+  if (['navigation','shadow'].includes(process.env.OLED_TEST_SCOPE)) break suite;
+  await page.go(site('127.0.0.1','state-surfaces.html'));
+  const stateRect=await page.eval("(()=>{const r=document.getElementById('target').getBoundingClientRect();return {x:r.x+5,y:r.y+5}})()");
+  await send('Input.dispatchMouseEvent',{type:'mouseMoved',...stateRect},page.sessionId);
+  const rowFrames=await page.eval("(async()=>{const cells=[...document.getElementById('row').children],out=[],until=performance.now()+450;do{await new Promise(requestAnimationFrame);out.push(cells.map(e=>getComputedStyle(e).backgroundColor))}while(performance.now()<until);return out})()");
+  check('hover recolors all sibling table cells without white frames',rowFrames.every(row=>row.every(bg=>lum(bg)<.05)),JSON.stringify([...new Set(rowFrames.map(row=>row.join(';')))]));
+  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:990,y:790},page.sessionId);
+  await page.go(site('127.0.0.1','state-surfaces.html?dark'));
+  const darkStateRect=await page.eval("(()=>{const r=document.getElementById('target').getBoundingClientRect();return {x:r.x+5,y:r.y+5}})()");
+  await send('Input.dispatchMouseEvent',{type:'mouseMoved',...darkStateRect},page.sessionId);await sleep(160);
+  const darkCells=await page.eval("[...document.getElementById('row').children].map(e=>({bg:getComputedStyle(e).backgroundColor,fg:getComputedStyle(e).color}))");
+  check('bright hover islands on native dark pages recolor with contrasting ink',darkCells.every(c=>lum(c.bg)<.05&&lum(c.fg)>.4),JSON.stringify(darkCells));
+  if(process.env.OLED_TEST_SCOPE==='states') break suite;
   await page.go(site("127.0.0.1", "light.html"), 1800);
   check("version stamped", (await page.eval("document.documentElement.dataset.oledNightVersion")) === JSON.parse(readFileSync(join(EXT, "manifest.json"), "utf8")).version);
   check("page background black", (await page.eval("getComputedStyle(document.body).backgroundColor")) === "rgb(0, 0, 0)");
