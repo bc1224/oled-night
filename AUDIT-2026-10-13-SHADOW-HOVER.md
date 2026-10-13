@@ -13,7 +13,8 @@ A real-pointer nested-component regression failed before the repair: second and 
 - Live public CVS in a fresh isolated Chrome profile: six successive visible header links stayed dark with readable ink. Log `D:\Temp\oled-0636-live-cvs.log`, screenshot `D:\Temp\oled-0636-cvs.png`. This does not prove the owner's existing Chrome instance has reloaded.
 - Earlier Chrome run caught the stale runtime version stamp during the version bump; it was corrected and the complete final suite rerun. Keep that failed log as evidence, not a passing release gate.
 - The local final run passed 256/257 checks but missed the churn tick-rate target (60 extension ticks versus 110 page-only; longest gap 42 ms). A sequential focused comparison passed the unchanged threshold for both 0.6.35 (93/107 ticks, 33 ms longest gap) and 0.6.36 (108/103 ticks, 26 ms). This suggests timing variation, not proof that the failure can never recur. The exact source's complete CI suite must pass before release. The separate quick benchmark is synthetic and reports one sample per variant, not a reliable speedup claim.
-- Full release test totals, clean package hashes, store receipts and remaining owner-browser limits are recorded in `STORE_SUBMISSION.md` after verification.
+- Exact-source CI [38476973035](https://github.com/bc1224/oled-night/actions/runs/38476973035) passed 258 Chrome checks, 99 Firefox checks, all 11 unit files and lint with zero findings. Final staged Chrome package passed 5/5 live CVS hover checks (`D:\Temp\oled-0636-live-cvs-final.log`). No performance threshold was weakened.
+- Seven release asset digests verified. Chrome submitted 0.6.36 and returned PENDING_REVIEW in run 38477509918. Firefox approved version 6574479/file 5118614; public API confirms 0.6.36 is public, and reviewer source attachment is present. Full package details and remaining owner-browser limits are in `STORE_SUBMISSION.md`.
 
 ## Boundaries
 
