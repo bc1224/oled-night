@@ -37,7 +37,7 @@ node tools/capture-component.mjs --url https://public.example/ --selector .navig
 
 The tool uses an anonymous profile. It exports only an allowlist of computed appearance/layout properties and synthetic labels, with rest/hover/focus snapshots. It omits source text, passwords, IDs, attributes, scripts, links and original images. It rejects whole-page selectors and components over 300 elements. Outputs stay in ignored `dist/captures`; they are never published automatically. Review them and reconstruct the relevant interaction CSS/JavaScript before adding a committed fixture and an expectation that first reproduces the failure. Snapshots alone cannot reproduce hydration, site code or authentication.
 
-Add cases to `catalog.mjs`. Public build copies only checked-in HTML/SVG fixture files, the matrix and audit code. Each catalog entry states its coverage and limitation. Historical cases without matrix annotations show a note; they do not receive a generic passing contrast badge.
+Add cases to `catalog.mjs`. Public build requires a Git checkout and copies only tracked website files, checked-in HTML/SVG fixtures, the matrix and audit code. Untracked captures are excluded; unexpected files in an existing output directory stop the build, so use a fresh directory rather than publishing stale output. Each catalog entry states its coverage and limitation. Historical cases without matrix annotations show a note; they do not receive a generic passing contrast badge.
 
 ## Release / live evidence
 

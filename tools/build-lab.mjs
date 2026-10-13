@@ -1,17 +1,27 @@
 import {cpSync, mkdirSync, readFileSync, writeFileSync, readdirSync} from 'node:fs';
 import {resolve, join} from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {execFileSync} from 'node:child_process';
 import {cases} from '../tests/lab/catalog.mjs';
 const root = resolve(import.meta.dirname, '..');
 export function buildLab({output = join(root, 'dist/site')} = {}) {
+  const tracked=execFileSync('git',['ls-files','-z','--','docs','tests/e2e/site'],{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean);
+  const docs=tracked.filter(p=>p.startsWith('docs/')&&!/^docs\/lab\/(fixtures|catalog\.json|results\.json)/.test(p));
+  const fixtures=tracked.filter(p=>/^tests\/e2e\/site\/[-a-z]+\.(html|svg)$/.test(p));
+  const expected=new Set([...docs.map(p=>p.slice(5)),...fixtures.map(p=>'lab/fixtures/'+p.split('/').at(-1)),'lab/fixtures/matrix.html','lab/fixtures/audit.js','lab/catalog.json','lab/results.json']);
+  function inspect(directory,prefix=''){
+    for(const entry of readdirSync(directory,{withFileTypes:true})){
+      const name=prefix+entry.name;
+      if(entry.isDirectory())inspect(join(directory,entry.name),name+'/');
+      else if(!entry.isFile()||!expected.has(name))throw Error('Unexpected public output: '+name+'. Use a fresh build directory; never publish stale captures.');
+    }
+  }
   mkdirSync(output, {recursive:true});
-  cpSync(join(root,'docs'),output,{recursive:true,filter:p=>!/[\\/]lab[\\/](fixtures|catalog\.json|results\.json)/.test(p)});
+  inspect(output);
+  for(const path of docs){const target=join(output,path.slice(5));mkdirSync(resolve(target,'..'),{recursive:true});cpSync(join(root,path),target);}
   const lab=join(output,'lab'); mkdirSync(join(lab,'fixtures'),{recursive:true});
   // Only checked-in synthetic HTML/SVG fixtures; no captures, reports, profiles or credentials.
-  for(const entry of readdirSync(join(root,'tests/e2e/site'),{withFileTypes:true})){
-    if(!entry.isFile()||!/^[-a-z]+\.(html|svg)$/.test(entry.name))continue;
-    cpSync(join(root,'tests/e2e/site',entry.name),join(lab,'fixtures',entry.name));
-  }
+  for(const path of fixtures)cpSync(join(root,path),join(lab,'fixtures',path.split('/').at(-1)));
   cpSync(join(root,'tests/lab/matrix.html'),join(lab,'fixtures/matrix.html'));
   cpSync(join(root,'docs/lab/audit.js'),join(lab,'fixtures/audit.js'));
   const version=JSON.parse(readFileSync(join(root,'manifest.json'))).version;
