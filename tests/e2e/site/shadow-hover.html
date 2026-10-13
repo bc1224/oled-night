@@ -1,0 +1,9 @@
+<!doctype html><html><head><style>body{background:#fff;color:#222;margin:30px}nested-header{display:block}</style></head><body><p>Outside the navigation</p><nested-header id="header"></nested-header><script>
+const outer=document.getElementById('header').attachShadow({mode:'open'});
+outer.innerHTML='<nav-links id="links"></nav-links>';
+const inner=outer.getElementById('links').attachShadow({mode:'open'});
+const sheet=new CSSStyleSheet();
+sheet.replaceSync('nav{display:flex;gap:12px}a{display:block;padding:20px;color:#013f7c;background:transparent;border:1px solid transparent}a:hover,a:focus{background:rgb(227,241,255);color:rgb(1,63,124);border-color:transparent}');
+inner.adoptedStyleSheets=[sheet];
+inner.innerHTML='<nav><a id="first" href="#one">Schedule a Vaccine</a><a id="second" href="#two">Prescriptions</a><a id="third" href="#three">Shop</a></nav>';
+</script></body></html>

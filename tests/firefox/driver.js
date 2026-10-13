@@ -47,6 +47,24 @@
       for(let cycle=0;cycle<6;cycle++){thread.classList.toggle('hydrated');for(let frame=0;frame<4;frame++){await new Promise(requestAnimationFrame);if(items.some(e=>getComputedStyle(e).backgroundColor!=='rgb(0, 0, 0)'))return false}}
       return true;
     }));
+    await open('shadow-hover.html');
+    check('focus between nested shadow navigation links stays dark and readable',await inspect(async()=>{
+      const root=document.getElementById('header').shadowRoot.getElementById('links').shadowRoot;
+      for(const id of ['first','second','third']){
+        const e=root.getElementById(id);e.focus();await new Promise(r=>setTimeout(r,100));
+        const s=getComputedStyle(e);
+        if(!e.matches(':focus')||parseFloat(s.backgroundColor.match(/[\d.]+/)[0])>40||parseFloat(s.color.match(/[\d.]+/)[0])<140)return false;
+      }
+      return true;
+    }));
+    await browser.storage.sync.set({extensionEnabled:false});await wait(250);
+    check('disable restores native shadow focus colors',await inspect(()=>{
+      const e=document.getElementById('header').shadowRoot.getElementById('links').shadowRoot.getElementById('second');e.focus();return getComputedStyle(e).backgroundColor==='rgb(227, 241, 255)';
+    }));
+    await browser.storage.sync.set({extensionEnabled:true});await wait(250);
+    check('reenable restores shadow focus handling',await inspect(async()=>{
+      const e=document.getElementById('header').shadowRoot.getElementById('links').shadowRoot.getElementById('first');e.focus();await new Promise(r=>setTimeout(r,100));return parseFloat(getComputedStyle(e).backgroundColor.match(/[\d.]+/)[0])<40;
+    }));
     await open('state-surfaces.html');
     check('keyboard focus inside a row recolors sibling cells together',await inspect(async()=>{
       document.getElementById('nested').focus();await new Promise(r=>setTimeout(r,160));

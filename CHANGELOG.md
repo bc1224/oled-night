@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.36
+
+- Handle hover and focus changes inside nested shadow components, where browsers hide internal moves from the document listener. This fixes pale CVS navigation hover backgrounds and other component-based controls.
+- Process composed events once, remove component listeners on disable/detachment, and restore them when reenabled. Keep interaction scans local and leave native select popups alone.
+- Add real-pointer Chrome and keyboard Chrome/Firefox regressions. No new permissions; companion theme unchanged.
+
 ## 0.6.35
 
 - Keep native text and logos legible over full-bleed images and videos that follow the copy in the DOM, including Apple heroes. Preserve opaque child panels and image captions.

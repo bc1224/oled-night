@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.35";
+  const VERSION = "0.6.36";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -110,6 +110,7 @@
   // Open shadow roots (web components) we style and watch. Page stylesheets
   // never reach inside them, so each gets our rules adopted directly.
   const shadowRoots = new Set();
+  let handledInteractions = new WeakSet();
   let shadowSheet = null;
   let shadowHealthTimer = null;
 
@@ -192,6 +193,10 @@
     if (!shadowRoots.has(root)) {
       shadowRoots.add(root);
       observer?.observe(root, OBSERVE);
+      // Moving between children retargets target and relatedTarget to the
+      // same host outside a shadow tree, so those events never reach document.
+      // Listen inside every managed root; composed events are handled once.
+      for (const type of INTERACTION_EVENTS) root.addEventListener(type, onInteraction, true);
       // Constructed sheets are not observed by MutationObserver. Some apps
       // replace the whole adoptedStyleSheets array after our initial pass.
       if (!shadowHealthTimer) {
@@ -213,7 +218,11 @@
   function repairShadowSheets() {
     if (document.hidden) return;
     for (const root of shadowRoots) {
-      if (!root.host.isConnected) { shadowRoots.delete(root); continue; }
+      if (!root.host.isConnected) {
+        for (const type of INTERACTION_EVENTS) root.removeEventListener(type, onInteraction, true);
+        shadowRoots.delete(root);
+        continue;
+      }
       ensureShadowSheet(root);
     }
     if (!shadowRoots.size) {
@@ -984,7 +993,8 @@
   // Read their final styles before the next paint, only along the changed path
   // and inside the nearest control, rather than traversing the entire page.
   function onInteraction(event) {
-    if (!observer) return;
+    if (!observer || handledInteractions.has(event)) return;
+    handledInteractions.add(event);
     const path = event.composedPath().filter(node => node instanceof Element);
     if (path.some(isExternalOverlay)) return;
     const nativeSelect = path.find(node => node.localName === "select");
@@ -1317,6 +1327,7 @@
     logoChecked = new WeakSet();
     logoBudget = 80;
     for (const scope of [document, ...shadowRoots]) {
+      if (scope !== document) for (const type of INTERACTION_EVENTS) scope.removeEventListener(type, onInteraction, true);
       for (const node of scope.querySelectorAll(`[${MEASURE}], [${NOANIM}], [${MEASURE_SELF}], [${NOANIM_SELF}], [${MEASURE_PSEUDO}], [${MEASURE_ROOT}], [${LOGO}], [${LOGO_EDGE}]`)) {
         for (const name of [MEASURE, NOANIM, MEASURE_SELF, NOANIM_SELF, MEASURE_PSEUDO, MEASURE_ROOT, LOGO, LOGO_EDGE]) node.removeAttribute(name);
       }
@@ -1329,6 +1340,7 @@
       }
     }
     shadowRoots.clear();
+    handledInteractions = new WeakSet();
   }
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, Number(value) || 0));

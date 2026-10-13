@@ -219,6 +219,29 @@ try {
   await page.go(site('127.0.0.1','shadow-stability.html'));
   const shadowFrames=await page.eval(`(async()=>{const thread=document.getElementById('thread'),root=document.getElementById('controls').shadowRoot,items=['votes','search','sort'].map(id=>root.getElementById(id)),out=[];for(let cycle=0;cycle<6;cycle++){thread.classList.toggle('hydrated');for(let frame=0;frame<4;frame++){await new Promise(requestAnimationFrame);out.push(items.map(e=>getComputedStyle(e).backgroundColor))}}return out})()`);
   check('dark comment controls stay black across large ancestor updates',shadowFrames.every(row=>row.every(bg=>bg==='rgb(0, 0, 0)')),JSON.stringify([...new Set(shadowFrames.map(row=>row.join(';')))]));
+  await page.go(site('127.0.0.1','shadow-hover.html'));
+  const shadowLink = id => `document.getElementById('header').shadowRoot.getElementById('links').shadowRoot.getElementById('${id}')`;
+  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:5,y:5},page.sessionId);
+  const shadowHoverSamples=[];
+  for(const id of ['first','second','third','first']){
+    const point=await page.eval(`(()=>{const r=${shadowLink(id)}.getBoundingClientRect();return {x:r.x+10,y:r.y+10}})()`);
+    await send('Input.dispatchMouseEvent',{type:'mouseMoved',...point},page.sessionId);await sleep(100);
+    shadowHoverSamples.push(await page.eval(`(()=>{const e=${shadowLink(id)},s=getComputedStyle(e);return {hover:e.matches(':hover'),bg:s.backgroundColor,fg:s.color}})()`));
+  }
+  check('hover between nested shadow links stays dark with readable ink',shadowHoverSamples.every(s=>s.hover&&lum(s.bg)<.05&&lum(s.fg)>.4),JSON.stringify(shadowHoverSamples));
+  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:5,y:5},page.sessionId);
+  const shadowFocusSamples=[];
+  for(const id of ['first','second','third']){
+    await page.eval(`${shadowLink(id)}.focus()`);await sleep(100);
+    shadowFocusSamples.push(await page.eval(`(()=>{const e=${shadowLink(id)},s=getComputedStyle(e);return {focus:e.matches(':focus'),bg:s.backgroundColor,fg:s.color}})()`));
+  }
+  check('focus between nested shadow links stays dark with readable ink',shadowFocusSamples.every(s=>s.focus&&lum(s.bg)<.05&&lum(s.fg)>.4),JSON.stringify(shadowFocusSamples));
+  await setSettings({extensionEnabled:false});await sleep(250);
+  await page.eval(`${shadowLink('second')}.focus()`);await sleep(100);
+  check('disable restores nested shadow focus colors',await page.eval(`getComputedStyle(${shadowLink('second')}).backgroundColor`)==='rgb(227, 241, 255)');
+  await setSettings({extensionEnabled:true});await sleep(250);
+  await page.eval(`${shadowLink('first')}.focus()`);await sleep(100);
+  check('reenable restores internal shadow interaction handling',lum(await page.eval(`getComputedStyle(${shadowLink('first')}).backgroundColor`))<.05);
   if (['navigation','shadow'].includes(process.env.OLED_TEST_SCOPE)) break suite;
   await page.go(site('127.0.0.1','state-surfaces.html'));
   const stateRect=await page.eval("(()=>{const r=document.getElementById('target').getBoundingClientRect();return {x:r.x+5,y:r.y+5}})()");
