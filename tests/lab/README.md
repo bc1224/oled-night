@@ -21,7 +21,7 @@ Chrome checks light/dark originals, desktop/mobile rendering, real pointer hover
 
 Text checks use 4.5:1 contrast (3:1 for disabled examples); data fills use 3:1 against their track. The 1.25:1 boundary threshold is a regression heuristic, not a WCAG conformance claim. Transparent solid backgrounds are composited over their ancestors. Image/gradient backdrops, text shadows and closed roots need their targeted regressions or visual review.
 
-Paint samples verify animated navigation stays dark. The synthetic menu budget is 250 ms per sample, median overhead under 80 ms versus the same page with the extension off, and content-update event-loop stalls below 120 ms absolute / +80 ms versus native. These budgets detect regressions on the test machine; they do not promise every website opens in that time.
+CSS samples check animated navigation stays dark; completed-frame hover samples and resting screenshots provide additional evidence. These are not a recording of every displayed frame. The synthetic menu budget is 250 ms per sample, median overhead under 80 ms versus the same page with the extension off, and content-update event-loop stalls below 120 ms absolute / +80 ms versus native. These budgets detect regressions on the test machine; they do not promise every website opens in that time.
 
 ## Reviewed screenshots
 
