@@ -21,7 +21,13 @@ export function buildLab({output = join(root, 'dist/site')} = {}) {
   for(const path of docs){const target=join(output,path.slice(5));mkdirSync(resolve(target,'..'),{recursive:true});cpSync(join(root,path),target);}
   const lab=join(output,'lab'); mkdirSync(join(lab,'fixtures'),{recursive:true});
   // Only checked-in synthetic HTML/SVG fixtures; no captures, reports, profiles or credentials.
-  for(const path of fixtures)cpSync(join(root,path),join(lab,'fixtures',path.split('/').at(-1)));
+  for(const path of fixtures){
+    const name=path.split('/').at(-1),target=join(lab,'fixtures',name);
+    // The original regression deliberately uses a second loopback origin.
+    // Static Pages has no test server: keep its gallery artwork same-origin.
+    if(name==='gmail.html')writeFileSync(target,readFileSync(join(root,path),'utf8').replace('`http://localhost:${location.port}/mixed-logo.svg`',"new URL('mixed-logo.svg',location.href).href"));
+    else cpSync(join(root,path),target);
+  }
   cpSync(join(root,'tests/lab/matrix.html'),join(lab,'fixtures/matrix.html'));
   cpSync(join(root,'docs/lab/audit.js'),join(lab,'fixtures/audit.js'));
   const version=JSON.parse(readFileSync(join(root,'manifest.json'))).version;
