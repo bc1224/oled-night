@@ -39,15 +39,16 @@
     <p class="hint"><span><kbd id="extensionShortcut">not set</kbd> turns OLED Night on or off everywhere</span></p>
     <p class="hint"><span><kbd id="shortcut">not set</kbd> turns this site on or off</span><a id="theme" href="https://chromewebstore.google.com/detail/oled-night-chrome-theme/pkdklfocgpcnijiggfddneadmhacbpmf" target="_blank" rel="noopener">Black Chrome theme</a></p>
   </main>
-  <dialog id="reportPreview" aria-labelledby="reportTitle">
+  <dialog id="reportPreview" aria-labelledby="reportTitle" aria-describedby="reportDisclosure">
     <h2 id="reportTitle">Report a broken site</h2>
-    <p>This opens a public GitHub issue draft. Review the domain and diagnostics below. Page text, field values, URL paths and screenshots are excluded.</p>
+    <p id="reportDisclosure">Send this domain, extension settings and technical diagnostics to a GitHub draft? Page text, form values, URL paths and screenshots are excluded. No browsing-history log is collected.</p>
     <pre id="reportDiagnostics"></pre>
-    <p>You can describe the problem on GitHub, then submit it. Keep private information out.</p>
+    <p>You review and submit the issue on GitHub. Submitted issues are public and retained by GitHub; OLED Night keeps no separate report database. Keep personal information out of your description.</p>
+    <p>Reports can start an automated attempt to reproduce, fix and test the bug. Releases require passing tests and independent review; a fix is not guaranteed.</p>
       <p>Firefox asks permission to share the domain and technical diagnostics. Declining does not change dark mode.</p>
       <p id="reportConsentStatus" role="status"></p>
-    <button id="reportCancel" type="button">Cancel</button>
-    <button id="reportSubmit" type="button" class="primary-button">Open GitHub draft</button>
+    <button id="reportCancel" type="button" autofocus>Cancel</button>
+    <button id="reportSubmit" type="button" class="primary-button">Send to GitHub draft</button>
     <button id="reportDownload" type="button" class="text-button">Save full report locally</button>
     <p class="control-help">The full local report can include page text and identifiers. It is never uploaded by this button.</p>
   </dialog>

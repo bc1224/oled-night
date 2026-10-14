@@ -2,11 +2,19 @@
 <style>body{background:white;color:#222;font:16px system-ui;margin:24px}pre{white-space:pre-wrap;border:1px solid #888;padding:12px;max-width:650px}button{padding:12px}</style>
 <h1 data-lab-check="text">Public report preview</h1>
 <p data-lab-check="text">Synthetic diagnostics only. Opening a draft requires a click; submitting it still happens on GitHub.</p>
-<pre id="preview" data-lab-check="text border"></pre><button id="draft" data-lab-check="text surface">Open GitHub draft</button>
+<button id="draft" data-lab-check="text surface">Report a broken site</button>
+<dialog id="confirm" aria-labelledby="confirmation-title" aria-describedby="disclosure">
+<h2 id="confirmation-title">Send a bug report?</h2>
+<p id="disclosure">This sends the domain, extension settings and technical diagnostics shown below to a GitHub draft. No browsing history log, page text, field values, screenshots or URL paths are included. Review and submit it on GitHub. Submitted issues are public and retained by GitHub; OLED Night keeps no separate report database. Automation may reproduce, fix and test the bug; releases require passing tests and independent review.</p>
+<pre id="preview" data-lab-check="text border"></pre><button id="cancel" autofocus>Cancel</button><button id="send">Send to GitHub draft</button></dialog>
 <p id="privacy-result" data-lab-check="text"></p>
 <script src="../report-utils.js"></script><script>
 const raw={host:'example.com',version:'0.6.39',mode:'oled',active:true,userAgent:'PRIVATE_AGENT',settings:{brightness:88,contrast:72},lowContrast:[{text:'PRIVATE_TEXT',element:'#PRIVATE_ID',color:'rgb(34, 34, 34)',background:'rgb(255, 255, 255)',ratio:1.32}]};
 document.getElementById('preview').textContent=JSON.stringify(OledNightReport.scrub(raw),null,2);
 document.getElementById('privacy-result').textContent=/PRIVATE/.test(document.getElementById('preview').textContent)?'FAIL: private information exposed':'PASS: private text and identifiers excluded';
-document.getElementById('draft').onclick=()=>window.open(OledNightReport.issueUrl(raw),'_blank','noopener');
+const dialog=document.getElementById('confirm'),send=document.getElementById('send');let session;
+const close=()=>{session?.cancel();session=null;dialog.close()};
+document.getElementById('draft').onclick=()=>{session=OledNightReport.createDraftSession(raw,{requestConsent:()=>true,openTab:({url})=>{if(document.dispatchEvent(new CustomEvent('oled-lab-draft',{detail:url,cancelable:true})))window.open(url,'_blank','noopener')}});send.disabled=false;dialog.showModal()};
+document.getElementById('cancel').onclick=close;dialog.addEventListener('cancel',()=>session?.cancel());
+send.onclick=async()=>{if(!session||send.disabled)return;send.disabled=true;try{if(await session.send())close()}finally{send.disabled=false}};
 </script></html>

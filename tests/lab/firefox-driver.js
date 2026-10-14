@@ -44,9 +44,35 @@
     tab=await browser.tabs.create({url:TEST_ORIGIN+'/generated-style.html'});await sleep(900);
     await browser.scripting.executeScript({target:{tabId:tab.id},files:['lab-audit.js']});
     out.push(...await proof('generated-style',await inspect(generatedStyleScenario)));await browser.tabs.remove(tab.id);
+    await browser.storage.sync.set({extensionEnabled:true,siteRules:{}});
+    tab=await browser.tabs.create({url:TEST_ORIGIN+'/checkout.html'});await sleep(900);
+    await browser.scripting.executeScript({target:{tabId:tab.id},files:['lab-audit.js']});
+    out.push(...await proof('checkout',await inspect(checkoutScenario)));
+    await browser.storage.sync.set({extensionEnabled:false});await sleep(400);
+    out.push({name:'checkout / disabling restores native icons',ok:await inspect(()=>getComputedStyle(document.querySelector('#checkout-back svg')).filter==='none'&&getComputedStyle(document.getElementById('checkout-crypto-icon')).filter==='none')});
+    await browser.tabs.remove(tab.id);
+    await browser.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'recolor'}});
+    tab=await browser.tabs.create({url:TEST_ORIGIN+'/paint-updates.html'});await sleep(900);
+    await browser.scripting.executeScript({target:{tabId:tab.id},files:['lab-audit.js']});
+    out.push(...await proof('paint-updates',await inspect(paintUpdatesScenario)));
+    const pairs=[];
+    for(const order of [[true,false],[false,true],[true,false]]) {
+      const pair={pageOnly:true};for(const enabled of order) {
+        await browser.storage.sync.set({extensionEnabled:enabled});await browser.tabs.reload(tab.id);await sleep(700);
+        pair.pageOnly&&=(await inspect(()=>document.documentElement.hasAttribute('data-oled-night-root')))===enabled;
+        pair[enabled?'active':'native']=await inspect(frameWorkload);
+      }pairs.push(pair);
+    }
+    out.push(...frameChecks(pairs).map(c=>({...c,fixture:'paint-updates',kind:'assertion'})));
+    await browser.storage.sync.set({extensionEnabled:true});await sleep(400);
+    for(let cycle=0;cycle<6;cycle++) {
+      await inspect(mountComponents);await sleep(200);const mounted=(await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts;
+      await inspect(removeComponents);await sleep(80);const removed=(await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts;
+      out.push({name:'removed mail components released / cycle '+cycle,ok:mounted.shadowRoots>=160&&removed.shadowRoots===0,detail:JSON.stringify({mounted:mounted.shadowRoots,removed:removed.shadowRoots})});
+    }
+    await browser.tabs.remove(tab.id);
     tab=await browser.tabs.create({url:TEST_ORIGIN+'/report-preview.html'});await sleep(900);
-    out.push({name:'public report preview omits private text and identifiers',ok:await inspect(()=>document.getElementById('privacy-result').textContent.startsWith('PASS')&&!/PRIVATE/.test(document.getElementById('preview').textContent))});
-    out.push({name:'public report draft requires a click',ok:await inspect(()=>document.getElementById('draft').textContent==='Open GitHub draft'&&location.pathname.endsWith('/report-preview.html'))});
+    out.push(...await inspect(reportPreviewScenario));
     await browser.tabs.remove(tab.id);
     completed=true;
   }catch(e){out.push({name:'Firefox lab execution',ok:false,detail:String(e)})}

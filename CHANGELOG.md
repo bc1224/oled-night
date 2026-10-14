@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.40
+
+- Update only changed paint overrides instead of rewriting every property; preserve repair after frameworks replace inline styles. Avoid extra computed-style passes when unrelated CSS transitions cannot affect a batch.
+- Release detached shadow components and queued elements immediately on removal, including background tabs.
+- Keep small monochrome checkout icons visible on native dark pages without changing colored payment brands or ordinary artwork. Add fake Stripe-style checkout coverage.
+- Add a public mail-update performance case and required Chrome/Firefox native-versus-active animation tests. Gate frame throughput, p95 gaps and stalls; also gate Chrome script/style work and collected heap growth, plus component lifetime in both engines. Existing performance and screenshot limits remain unchanged.
+- Explain report payload and GitHub retention before explicit Send; prevent duplicate drafts and sharing after cancellation. Add confirmation and cancellation regression checks without sending test reports.
+
 ## 0.6.39
 
 - Discover late custom-element shadow roots without waiting for hover/focus. Add a cold-load regression and bounded discovery workload to the performance checks.

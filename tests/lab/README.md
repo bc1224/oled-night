@@ -2,7 +2,7 @@
 
 Public gallery: https://bc1224.github.io/oled-night/lab/
 
-43 synthetic cases cover the component matrix and previous site failures. The current gallery is built from the same committed fixtures used by the browser regressions. It contains no copied accounts or private report uploads.
+45 synthetic cases cover the component matrix and previous site failures. The current gallery is built from the same committed fixtures used by the browser regressions. It contains no copied accounts or private report uploads.
 
 ## Every reported bug becomes a regression
 
@@ -15,6 +15,10 @@ The booking-form case checks primary filled-value ink, distinct readable placeho
 Cold-shadow coverage attaches roots after the host has already been processed, then checks resting controls before pointer/focus input. Both engines must discover the roots without waiting for interaction. The performance workload includes 400 custom hosts that never attach roots. The report-preview case and popup regression check consent, public-data exclusions and cancel behavior; raw reports are never published in this lab.
 
 ## Run
+
+The **Mail-style animated updates** case (`/lab/#paint-updates`) and **Checkout** case (`/lab/#checkout`) reproduce resource and payment-control regressions using fake data. The mail page has a manual frame measurement and component mount/remove controls. CI performs three counterbalanced native/active animation runs in each browser: median frame throughput ≥70% of native, p95 gap ≤max(34ms, native×1.5), and no active frame gap ≥150ms. Chrome additionally requires at most 2.25 style passes per animation tick and under 8ms script work per tick. After one warm-up, five mount/remove cycles must grow collected JS heap by less than 1MiB and collected DOM node count by fewer than 512. Both browsers must release all 160 detached shadow roots within 80ms on each of six cycles. These resource checks are part of the required lab commands, so failing them blocks website and extension deployment. Heap figures describe the disposable renderer, not total browser process RAM or every real site.
+
+Checkout assertions cover monochrome SVG/raster payment icons, preserved brand colors and imagery, enabled input contrast, native restoration, desktop/mobile layout and height animation without pale opening frames. No payment is submitted. Reporting assertions verify the disclosure, Cancel, explicit Send and duplicate-click handling without contacting GitHub.
 
 ```sh
 npm ci

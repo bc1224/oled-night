@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.39";
+  const VERSION = "0.6.40";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -221,21 +221,31 @@
     } catch {}
   }
 
-  function repairShadowSheets() {
-    if (document.hidden) return;
+  function releaseDetachedComponents() {
     for (const root of shadowRoots) {
       if (!root.host.isConnected) {
         for (const type of INTERACTION_EVENTS) root.removeEventListener(type, onInteraction, true);
         shadowRoots.delete(root);
-        continue;
       }
-      ensureShadowSheet(root);
+    }
+    for (const host of unresolvedShadowHosts) if (!host.isConnected) unresolvedShadowHosts.delete(host);
+    for (const set of [pendingTrees, pendingSelf, settleTrees, settleSelf])
+      for (const node of set) if (!node.isConnected) set.delete(node);
+    if (!unresolvedShadowHosts.size && shadowDiscoveryFrame !== null) {
+      cancelAnimationFrame(shadowDiscoveryFrame);
+      shadowDiscoveryFrame = null;
     }
     if (!shadowRoots.size) {
       clearInterval(shadowHealthTimer);
       shadowHealthTimer = null;
       document.removeEventListener("visibilitychange", repairShadowSheets);
     }
+  }
+
+  function repairShadowSheets() {
+    releaseDetachedComponents();
+    if (document.hidden) return;
+    for (const root of shadowRoots) ensureShadowSheet(root);
   }
 
   // What an element originally painted behind its children: real imagery,
@@ -392,10 +402,13 @@
   // assets a light edge without inverting colored artwork or reading remote
   // pixels. Photos, charts, swatches and standalone content images stay native.
   function isControlAsset(element, computed, source) {
-    return /(?:icon|sprite|bell|hamburger|menu|search|cart|bag)(?:[\W_]|$)/i.test(`${element.className} ${source}`) &&
+    const named = /(?:icon|sprite|bell|hamburger|menu|search|cart|bag)(?:[\W_]|$)/i.test(`${element.className} ${source}`);
+    const labelledImage = element.localName === "img" &&
+      /\b(?:payment|card|crypto|currency|back|icon|menu|notification|search|cart|bag)\b/i.test(element.alt || "");
+    return (named || labelledImage) &&
       parseFloat(computed.width) >= 8 && parseFloat(computed.width) <= 48 &&
       parseFloat(computed.height) >= 8 && parseFloat(computed.height) <= 48 &&
-      !!element.closest('a, button, [role="button"], [aria-haspopup], [data-action]');
+      !!element.closest('a, button, [role="button"], [role="radio"], [aria-haspopup], [data-action]');
   }
 
   // Painted, empty rectangles sharing a track's short axis are bar values,
@@ -545,13 +558,34 @@
   // while colored lines and bars keep their color.
   function decideSvg(svg, ctx, out) {
     const mode = modeForElement(svg, ctx);
-    if (mode !== "oled" && mode !== "soft") return;
+    const nativeIcon = mode === "crush" && ctx.recolorLightRegions &&
+      svg.closest('a, button, [role="button"], [role="radio"]');
+    if (mode !== "oled" && mode !== "soft" && !nativeIcon) return;
     const rect = svg.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     // Icons in an image creative share its authored light/dark ink.
     if (backdropOf(svg, ctx).image) return;
     const colors = colorsApi();
     const icon = rect.width <= 64 && rect.height <= 64;
+    if (nativeIcon) {
+      // Native dark applications can ship fixed black payment/navigation
+      // glyphs. An edge preserves the badge interior and colored brand paint;
+      // inverting or whitening every path would erase white-on-black details.
+      if (icon) {
+        const bg = colors.luminance(backdropOf(svg, ctx).color);
+        const unreadable = [...svg.querySelectorAll(ICON_PARTS)].some(part => {
+          const s = ctx.style(part);
+          return [s.fill, s.stroke].some(paint => {
+            const c = colors.parseColor(paint);
+            if (!c || c.a < .5 || colors.chroma(c) > .1) return false;
+            const ink = colors.luminance(c);
+            return bg < .2 && (Math.max(bg, ink) + .05) / (Math.min(bg, ink) + .05) < 3;
+          });
+        });
+        out.push([svg, unreadable ? {"asset-icon":"1"} : {}]);
+      }
+      return;
+    }
     const dataChart = !icon && /chart|rating|histogram|distribution|progress|graph/i.test(svg.getAttribute("aria-label") || "");
     const use = svg.querySelector("use");
     const href = use?.getAttribute("href") || use?.getAttribute("xlink:href") || "";
@@ -671,9 +705,24 @@
     if (same) return;
     const keys = Object.keys(found);
     const signature = signatureOf(found);
-    for (const key of PROPS) if (!(key in found)) element.style.removeProperty(`--oln-${key}`);
-    for (const key of keys) element.style.setProperty(`--oln-${key}`, found[key]);
-    if (keys.length) element.setAttribute(MARK, keys.join(" ")); else element.removeAttribute(MARK);
+    // Most updates change one paint value. Avoid dozens of native CSSOM calls
+    // for absent properties and unchanged ink. Retain the previous applied
+    // keys even when a framework removes our marker or replaces style entirely.
+    const previous = new Set((element.getAttribute(MARK) || "").split(" "));
+    for (const part of (applied.get(element) || "").split(";")) {
+      const end = part.indexOf("=");
+      if (end > 0) previous.add(part.slice(0, end));
+    }
+    for (const key of previous) if (PROPS.includes(key) && !(key in found)) element.style.removeProperty(`--oln-${key}`);
+    for (const key of keys) {
+      const name = `--oln-${key}`;
+      if (element.style.getPropertyValue(name) !== String(found[key]) || element.style.getPropertyPriority(name))
+        element.style.setProperty(name, found[key]);
+    }
+    if (keys.length) {
+      const mark = keys.join(" ");
+      if (element.getAttribute(MARK) !== mark) element.setAttribute(MARK, mark);
+    } else if (element.hasAttribute(MARK)) element.removeAttribute(MARK);
     applied.set(element, signature);
   }
 
@@ -832,11 +881,20 @@
   // Unreadable, imported, large and slotted scopes retain the conservative path.
   function hasAuthoredRules(root, feature) {
     let count = 0;
+    const selectors = [];
     const inspect = rules => {
       for (const rule of rules) {
         if (++count > 256 || rule.type === 3) return true;
-        if (feature === "generated" ? /:before\b|:after\b/i.test(rule.selectorText || "") :
-            rule.style?.getPropertyValue("transition-duration") || rule.style?.getPropertyValue("transition")) return true;
+        if (feature === "generated") {
+          if (/:before\b|:after\b/i.test(rule.selectorText || "")) return true;
+        } else if (rule.style?.getPropertyValue("transition-duration") || rule.style?.getPropertyValue("transition")) {
+          // An unrelated menu animation must not force a pre-measurement
+          // computed-style pass on every streamed mail row. This remains a
+          // per-batch CSSOM inspection; uncertain scopes stay conservative.
+          const selector = rule.selectorText;
+          if (!selector || /::part|::slotted/i.test(selector)) return true;
+          selectors.push(selector.replace(/::?(?:before|after)\b/g, ""));
+        }
         if (rule.cssRules && inspect(rule.cssRules)) return true;
       }
       return false;
@@ -850,7 +908,7 @@
         if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith("oled-night-")) continue;
         if (inspect(sheet.cssRules)) return true;
       }
-      return false;
+      return feature === "generated" ? false : selectors.join(",");
     } catch { return true; }
   }
 
@@ -917,7 +975,11 @@
         node.style.transition || node.style.transitionDuration;
       if (!uncertain) {
         if (!transitionScopes.has(root)) transitionScopes.set(root, hasAuthoredRules(root, "transition"));
-        if (!transitionScopes.get(root)) return false;
+        const rules = transitionScopes.get(root);
+        if (!rules) return false;
+        if (typeof rules === "string") {
+          try { if (!node.matches(rules)) return false; } catch {} // Unknown selectors retain the native read.
+        }
       }
       return getComputedStyle(node).transitionDuration.split(",").some(duration => parseFloat(duration) > 0);
     };
@@ -989,11 +1051,11 @@
     const recolor = ctx.mode === "oled" || ctx.mode === "soft";
     const imageDecisions = [];
     const logoCandidates = [];
-    if (recolor) {
+    if (recolor || (ctx.mode === "crush" && ctx.recolorLightRegions)) {
       for (const img of list.images) {
         if (!img.isConnected) continue;
         const computed = ctx.style(img);
-        const found = DARKENING_BLENDS.test(computed.mixBlendMode) ? { blend: "normal" } : {};
+        const found = recolor && DARKENING_BLENDS.test(computed.mixBlendMode) ? { blend: "normal" } : {};
         const rect = img.getBoundingClientRect();
         const opacity = Number(computed.opacity);
         if (isControlAsset(img, computed, img.currentSrc || img.src)) found["asset-icon"] = "1";
@@ -1003,7 +1065,7 @@
           if (!backdrop.image && colorsApi().luminance(backdrop.color) > 0.65) found["faded-icon"] = "1";
         }
         imageDecisions.push([img, found]);
-        if (rect.width >= 12 && rect.height >= 12 && rect.width <= 420 && rect.height <= 160) logoCandidates.push(img);
+        if (recolor && rect.width >= 12 && rect.height >= 12 && rect.width <= 420 && rect.height <= 160) logoCandidates.push(img);
       }
     }
     for (const node of measured) node.removeAttribute(MEASURE);
@@ -1211,6 +1273,7 @@
   function onMutations(records, scheduleBatch = true) {
     const seenAttributes = new Map();
     const changedRoots = new Set();
+    let removed = false;
     for (const record of records) {
       const target = record.target;
       const copies = mediaCopies.get(target);
@@ -1230,6 +1293,7 @@
         polarityDirty = true;
         pendingTrees.add(document.documentElement);
       } else if (record.type === "childList") {
+        if (record.removedNodes.length) removed = true;
         const changedSheets = [...record.addedNodes, ...record.removedNodes].some(node => isPageSheet(node) || (node instanceof Element && [...node.querySelectorAll('style, link[rel~="stylesheet"]')].some(isPageSheet)));
         if (changedSheets) { polarityDirty = true; pendingTrees.add(document.documentElement); }
         for (const node of record.addedNodes) if (node.nodeType === Node.ELEMENT_NODE) pendingTrees.add(node);
@@ -1261,7 +1325,11 @@
 
       }
     }
-    for (const root of changedRoots) ensureShadowSheet(root);
+    // Navigation and virtualized lists discard entire component trees. Release
+    // our strong references on that mutation, including in background tabs,
+    // rather than waiting for the sheet health timer or frame polling.
+    if (removed) releaseDetachedComponents();
+    for (const root of changedRoots) if (shadowRoots.has(root)) ensureShadowSheet(root);
     if (scheduleBatch && (pendingTrees.size || pendingSelf.size || polarityDirty)) schedule(true);
   }
 

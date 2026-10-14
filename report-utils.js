@@ -35,5 +35,25 @@
     await openTab({url:issueUrl(report)});
     return true;
   }
-  scope.OledNightReport = {scrub,issueUrl,openDraft};
+  function createDraftSession(report, {requestConsent,openTab}) {
+    // Capture only the previewed public payload. Cancellation during the
+    // native consent prompt must not open a tab, and a double click sends once.
+    const clean = scrub(report);
+    let cancelled = false, busy = false, opened = false;
+    return {
+      cancel() { cancelled = true; },
+      async send() {
+        if (cancelled || busy || opened) return false;
+        busy = true;
+        try {
+          if (requestConsent && !await requestConsent()) return false;
+          if (cancelled) return false;
+          await openTab({url:issueUrl(clean)});
+          opened = true;
+          return true;
+        } finally { busy = false; }
+      }
+    };
+  }
+  scope.OledNightReport = {scrub,issueUrl,openDraft,createDraftSession};
 })(globalThis);

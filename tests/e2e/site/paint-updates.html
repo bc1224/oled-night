@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta name="viewport" content="width=device-width"><style>
+body{background:white;color:#202124;font:15px Arial}.row{background:white;color:#333;border-bottom:1px solid #ddd;padding:8px}.row.hl{background:#e3f1ff}
+.unrelated-motion{transition:transform .2s} </style></head><body><h1>Mail-style animated updates</h1><div id="list"></div><script>
+for(let i=0;i<800;i++){const r=document.createElement('div');r.className='row';r.innerHTML='<b>Example sender</b> <span>Fake message subject</span>';document.getElementById('list').append(r)}
+</script><aside style="position:fixed;right:12px;top:12px;background:white;border:1px solid;padding:12px;max-width:300px">
+<h2>Frame pacing & component lifetime</h2>
+<p>Fake mail rows only. CI compares three runs with OLED Night on and off, checks CPU/style work and heap growth, and verifies removed components are released.</p>
+<button id="measure">Measure this mode</button><button id="mount">Mount 160 components</button><button id="remove" disabled>Remove components</button><pre id="performance-result" style="white-space:pre-wrap"></pre>
+</aside><script type="module">
+import {frameWorkload,mountComponents,removeComponents} from '../performance.js';
+const result=document.getElementById('performance-result'),measure=document.getElementById('measure'),mount=document.getElementById('mount'),remove=document.getElementById('remove');
+measure.onclick=async()=>{measure.disabled=true;try{result.textContent=JSON.stringify(await frameWorkload(),null,2)}finally{measure.disabled=false}};
+mount.onclick=()=>{mountComponents();mount.disabled=true;remove.disabled=false};
+remove.onclick=()=>{removeComponents();mount.disabled=false;remove.disabled=true};
+</script></body></html>

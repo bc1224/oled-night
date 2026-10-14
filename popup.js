@@ -214,20 +214,27 @@
     persist({ siteTuning });
   });
   let pendingReport = null;
+  let reportSession = null;
+  $("reportPreview").addEventListener("close", () => {
+    reportSession?.cancel();
+    reportSession = null;
+    pendingReport = null;
+  });
+  $("reportPreview").addEventListener("cancel", () => reportSession?.cancel());
   $("reportCancel").addEventListener("click", () => $("reportPreview").close());
   $("reportDownload").addEventListener("click", () => { if (pendingReport) saveReport(pendingReport); });
   $("reportSubmit").addEventListener("click", async () => {
-    if (!pendingReport) return;
+    if (!reportSession || $("reportSubmit").disabled) return;
+    const session = reportSession;
+    $("reportSubmit").disabled = true;
     try {
-      const shared = await OledNightReport.openDraft(pendingReport, {
-        requestConsent: isFirefox ? () => chrome.permissions.request({data_collection:["browsingActivity","technicalAndInteraction"]}) : null,
-        openTab: tab => chrome.tabs.create(tab)
-      });
+      const shared = await session.send();
+      if (session !== reportSession) return;
       if (shared) $("reportPreview").close();
       else $("reportConsentStatus").textContent = "Sharing declined. OLED Night still works; you can save a report locally.";
     } catch {
-      $("reportConsentStatus").textContent = "Could not authorize sharing. Nothing was sent. You can save a report locally.";
-    }
+      if (session === reportSession) $("reportConsentStatus").textContent = "Could not open the GitHub draft. You can retry or save a report locally.";
+    } finally { $("reportSubmit").disabled = false; }
   });
   $("report").addEventListener("click", async () => {
     if (!tabId || !chrome?.tabs) return;
@@ -238,6 +245,12 @@
       return;
     }
     pendingReport = report;
+    reportSession?.cancel();
+    reportSession = OledNightReport.createDraftSession(report, {
+      requestConsent: isFirefox ? () => chrome.permissions.request({data_collection:["browsingActivity","technicalAndInteraction"]}) : null,
+      openTab: tab => chrome.tabs.create(tab)
+    });
+    $("reportSubmit").disabled = false;
     $("reportConsentStatus").textContent = "";
     $("reportDiagnostics").textContent = JSON.stringify(OledNightReport.scrub(report), null, 2);
     $("reportPreview").showModal();

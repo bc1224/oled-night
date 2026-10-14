@@ -12,12 +12,18 @@ import {mixedSurfaceScenario,mixedSurfaceOriginal,mixedSurfaceDeepen} from './mi
 import {bookingScenario} from './booking-scenario.mjs';
 import {coldShadowScenario} from './cold-shadow-scenario.mjs';
 import {generatedStyleScenario} from './generated-style-scenario.mjs';
+import {checkoutScenario} from './checkout-scenario.mjs';
+import {paintUpdatesScenario} from './paint-updates-scenario.mjs';
+import {reportPreviewScenario} from './report-preview-scenario.mjs';
+import {visibleIconPixels} from './checkout-paint.mjs';
+import {frameWorkload,frameChecks,mountComponents,removeComponents} from '../../docs/lab/performance.js';
 import {runtimeDigest,regressionChecks} from './runtime-proof.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/lab-results');mkdirSync(output,{recursive:true});
+const packageRoot=resolve(process.env.OLED_LAB_PACKAGE_ROOT||root);
 const checks=[],add=(name,ok,detail='')=>checks.push({name,ok:!!ok,detail});
 const site=buildLab().output,server=await serveLab(site);let browser,completed=false;
 try {
-  browser=await launchChrome();const {id}=await browser.send('Extensions.loadUnpacked',{path:join(root,'dist/chrome')});
+  browser=await launchChrome();const {id}=await browser.send('Extensions.loadUnpacked',{path:join(packageRoot,'dist/chrome')});
   const options=await browser.open(`chrome-extension://${id}/options.html`);
   const settings=async enabled=>{await options.eval(`chrome.storage.sync.set({extensionEnabled:${enabled},globalEnabled:true,siteRules:{'127.0.0.1':'recolor'}})`);await wait(500)};
   await settings(true);const page=await browser.open();
@@ -70,9 +76,57 @@ try {
   await page.go(`${server.origin}/lab/fixtures/generated-style.html`);await wait(400);
   await page.eval(readFileSync(join(root,'docs/lab/audit.js'),'utf8'));
   checks.push(...await proof('generated-style',await page.eval(`(${generatedStyleScenario.toString()})()`)));
+  for(const width of [1200,390]) {
+    await page.size(width,1000);await options.eval("chrome.storage.sync.set({extensionEnabled:true,siteRules:{}})");await wait(400);
+    await page.go(`${server.origin}/lab/fixtures/checkout.html`);await wait(500);
+    await page.eval(readFileSync(join(root,'docs/lab/audit.js'),'utf8'));
+    checks.push(...(await proof('checkout',await page.eval(`(${checkoutScenario.toString()})()`))).map(c=>({...c,name:'checkout-'+width+' / '+c.name})));
+    const iconPaint=[];
+    for(const icon of ['checkout-back','checkout-card-icon','checkout-crypto-icon']) {
+      const rect=await page.eval(`(()=>{const parent=document.getElementById(${JSON.stringify(icon)}),e=parent.querySelector('svg')||parent;e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}})()`);await wait(100);
+      const bytes=await page.screenshot();writeFileSync(join(output,icon+'-'+width+'-active.png'),bytes);
+      iconPaint.push({icon,active:visibleIconPixels(bytes,rect)});
+    }
+    await settings(false);
+    add('checkout-'+width+' / disabling restores native icons',await page.eval("getComputedStyle(document.querySelector('#checkout-back svg')).filter==='none'&&getComputedStyle(document.getElementById('checkout-crypto-icon')).filter==='none'"));
+    for(const sample of iconPaint) {
+      const rect=await page.eval(`(()=>{const parent=document.getElementById(${JSON.stringify(sample.icon)}),e=parent.querySelector('svg')||parent;e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}})()`);await wait(100);
+      const bytes=await page.screenshot();writeFileSync(join(output,sample.icon+'-'+width+'-native.png'),bytes);sample.native=visibleIconPixels(bytes,rect);
+      checks.push({fixture:'checkout',kind:'assertion',name:'checkout-'+width+' / '+sample.icon+' gains visible painted icon pixels',ok:sample.active-sample.native>=8,detail:JSON.stringify(sample)});
+    }
+  }
+  await settings(true);await page.size(1200,1000);await page.go(`${server.origin}/lab/fixtures/paint-updates.html`);await wait(500);
+  await page.eval(readFileSync(join(root,'docs/lab/audit.js'),'utf8'));
+  checks.push(...await proof('paint-updates',await page.eval(`(${paintUpdatesScenario.toString()})()`)));
+  await browser.send('Performance.enable',{},page.sessionId);
+  const metrics=async()=>Object.fromEntries((await browser.send('Performance.getMetrics',{},page.sessionId)).metrics.map(m=>[m.name,m.value]));
+  const pairs=[],resources=[];
+  for(const order of [[true,false],[false,true],[true,false]]) {
+    const pair={pageOnly:true};for(const enabled of order) {
+      await settings(enabled);await page.go(`${server.origin}/lab/fixtures/paint-updates.html`);await wait(500);
+      pair.pageOnly&&=await page.eval(`document.documentElement.hasAttribute('data-oled-night-root')===${enabled}`);
+      const before=await metrics();pair[enabled?'active':'native']=await page.eval(`(${frameWorkload.toString()})()`);const after=await metrics();
+      if(enabled)resources.push({frames:pair.active.frames,script:after.ScriptDuration-before.ScriptDuration,styles:after.RecalcStyleCount-before.RecalcStyleCount});
+    }pairs.push(pair);
+  }
+  // Every pair verifies extension activation and complete native restoration.
+  checks.push(...frameChecks(pairs).map(c=>({...c,fixture:'paint-updates',kind:'assertion'})));
+  add('mail updates use at most 2.25 style passes per animation tick',resources.every(r=>r.styles<=2.25*(r.frames+1)+3),JSON.stringify(resources));
+  add('mail updates spend at most 8ms of script work per animation tick',resources.every(r=>r.script/(r.frames+1)<.008),JSON.stringify(resources));
+  await settings(true);await page.go(`${server.origin}/lab/fixtures/paint-updates.html`);await wait(500);
+  const counts=()=>options.eval(`(async()=>{const [t]=await chrome.tabs.query({url:${JSON.stringify(server.origin+'/lab/fixtures/paint-updates.html')}});const r=await chrome.tabs.sendMessage(t.id,{type:'oled-night-report'});return r.counts})()`);
+  let baselineHeap,baselineNodes;const heaps=[],nodes=[];
+  for(let cycle=0;cycle<6;cycle++) {
+    await page.eval(`(${mountComponents.toString()})()`);await wait(200);const mounted=await counts();
+    await page.eval(`(${removeComponents.toString()})()`);await wait(80);const removed=await counts();
+    add('removed mail components released / cycle '+cycle,mounted.shadowRoots>=160&&removed.shadowRoots===0,JSON.stringify({mounted:mounted.shadowRoots,removed:removed.shadowRoots}));
+    await browser.send('HeapProfiler.collectGarbage',{},page.sessionId);const sample=await metrics(),heap=sample.JSHeapUsedSize;
+    if(cycle===0){baselineHeap=heap;baselineNodes=sample.Nodes}else {heaps.push(heap);nodes.push(sample.Nodes)}
+  }
+  add('repeated component removal grows collected JS heap by less than 1MiB',heaps.every(h=>h-baselineHeap<1048576),JSON.stringify({baselineHeap,heaps}));
+  add('removed components do not accumulate more than 512 collected DOM nodes',nodes.every(n=>n-baselineNodes<512),JSON.stringify({baselineNodes,nodes}));
   await page.go(`${server.origin}/lab/fixtures/report-preview.html`);await wait(400);
-  add('public report preview omits private text and identifiers',await page.eval("document.getElementById('privacy-result').textContent.startsWith('PASS')&&!/PRIVATE/.test(document.getElementById('preview').textContent)"));
-  add('public report draft requires a click',await page.eval("document.getElementById('draft').textContent==='Open GitHub draft'&&location.pathname.endsWith('/report-preview.html')"));
+  checks.push(...await page.eval(`(${reportPreviewScenario.toString()})()`));
   const lab=await browser.open(`${server.origin}/lab/`);await wait(500);add('gallery lists all '+cases.length+' cases',await lab.eval(`document.querySelectorAll('#cases button').length===${cases.length}`));
   add('gallery search filters cases',await lab.eval(`(()=>{const s=document.getElementById('search');s.value='Reddit';s.dispatchEvent(new Event('input'));return document.querySelectorAll('#cases button').length>0&&document.querySelectorAll('#cases button').length<${cases.length}})()`));await lab.eval(`document.getElementById('search').value='';document.getElementById('search').dispatchEvent(new Event('input'))`);
   await lab.size(390,850);add('mobile gallery has no horizontal overflow',await lab.eval(`document.documentElement.scrollWidth<=innerWidth`));writeFileSync(join(output,'gallery-mobile.png'),await lab.screenshot());
@@ -80,5 +134,5 @@ try {
   add('no uncaught page exceptions',browser.errors.length===0,browser.errors.join('; '));
   completed=true;
 }catch(e){add('Chrome lab execution',false,e.stack)}finally{await browser?.close();await server.close()}
-const report={engine:'Chrome',completed,runtimeHash:runtimeDigest(file=>readFileSync(join(root,'dist/chrome',file))),candidate:process.argv.includes('--candidates'),version:JSON.parse(execFileSync('node',['-p',"JSON.stringify(require('./manifest.json').version)"],{cwd:root,encoding:'utf8'})),sha:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),checks};
+const report={engine:'Chrome',completed,runtimeHash:runtimeDigest(file=>readFileSync(join(packageRoot,'dist/chrome',file))),candidate:process.argv.includes('--candidates'),version:JSON.parse(readFileSync(join(packageRoot,'dist/chrome/manifest.json'))).version,sha:execFileSync('git',['rev-parse','HEAD'],{cwd:packageRoot,encoding:'utf8'}).trim(),checks};
 writeFileSync(join(output,'chrome.json'),JSON.stringify(report,null,2));for(const c of checks.filter(c=>!c.ok))console.log('FAIL '+c.name+': '+c.detail);console.log(`${checks.filter(c=>c.ok).length}/${checks.length} Chrome lab checks passed`);if(checks.some(c=>!c.ok))process.exitCode=1;

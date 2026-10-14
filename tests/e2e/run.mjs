@@ -744,9 +744,14 @@ try {
   await click("report");
   const reportPreview=await popup.eval("({open:document.getElementById('reportPreview').open,text:document.getElementById('reportDiagnostics').textContent,policy:document.getElementById('reportPreview').textContent})");
   check("report preview opens locally without sending data",reportPreview.open && await ext.eval("chrome.tabs.query({}).then(t=>t.length)")===beforeReportTabs);
-  check("report preview excludes private page text and selectors",!/PRIVATE|SENTINEL|element|userAgent|origins/.test(reportPreview.text) && reportPreview.policy.includes('public GitHub issue draft'),reportPreview.text);
+  check("report preview excludes private page text and selectors",!/PRIVATE|SENTINEL|element|userAgent|origins/.test(reportPreview.text) && reportPreview.policy.includes('retained by GitHub')&&reportPreview.policy.includes('No browsing-history log'),reportPreview.text);
   await click("reportCancel");
   check("report cancel sends nothing",await popup.eval("!document.getElementById('reportPreview').open") && await ext.eval("chrome.tabs.query({}).then(t=>t.length)")===beforeReportTabs);
+  await popup.eval("window.__originalCreate=chrome.tabs.create;window.__drafts=[];chrome.tabs.create=async tab=>{window.__drafts.push(tab);return {id:999}};");
+  await click('report');
+  await popup.eval("document.getElementById('reportSubmit').click();document.getElementById('reportSubmit').click()");await sleep(100);
+  check('popup explicit Send opens one scrubbed GitHub draft',await popup.eval("window.__drafts.length===1&&!/PRIVATE|SENTINEL/.test(window.__drafts[0].url)&&!document.getElementById('reportPreview').open"));
+  await popup.eval("chrome.tabs.create=window.__originalCreate;delete window.__originalCreate;delete window.__drafts");
   const reportDraft=await popup.eval("OledNightReport.issueUrl({host:'example.com',version:'0.6.39',text:'PRIVATE_TEXT'})");
   check("report draft goes only to repository issue form without private text",reportDraft.startsWith('https://github.com/bc1224/oled-night/issues/new?') && !reportDraft.includes('PRIVATE'));
   await click("extensionEnabled");
