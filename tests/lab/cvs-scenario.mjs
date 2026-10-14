@@ -2,7 +2,6 @@ import {sampleNavigationPaint,navigationPaint} from './smoke-policy.mjs';
 // Arm inside the page before dispatching native input: waiting 200ms after input
 // loses the entry interval. Keep every sample; never average away a pale one.
 export async function watchHover(tab,point){
-  await tab.eval(`window.__cvsHoverInput=0;document.addEventListener('pointermove',()=>{window.__cvsHoverInput=performance.now()},{once:true,capture:true});true`);
   await tab.eval(`window.__cvsHoverWatch=(${sampleNavigationPaint.toString()})(${JSON.stringify(point)},(${navigationPaint.toString()}),{frames:24});true`);
   await tab.hover(point.x,point.y);
   return tab.eval('window.__cvsHoverWatch');

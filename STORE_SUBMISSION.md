@@ -14,10 +14,18 @@ Follow Google's [Chrome Web Store API setup](https://developer.chrome.com/docs/w
 
 For private Chrome validation details, a manual workflow run can supply `diagnostic_public_key` as a base64-encoded RSA PEM public key. On a Chrome API failure, the workflow saves an AES-256-GCM report with its key encrypted using RSA-OAEP-SHA256, retained for one day. Keep the matching private key outside the repository and delete it after inspection. Public logs contain only sanitized status and reason codes. This option does not change the submission request.
 
+Version **0.6.38** batches frame-created surfaces before paint and includes site event-handler writes before draining observer records. It retains the late-root interaction fix. No new permissions; theme remains 1.0.3.
+
+- Deterministic frame-insertion reproduction failed in all three Chrome viewports on 0.6.37. The new behavior is covered in Chrome and Firefox and in the browsable `frame-mutation` case.
+- Local checks and exact-source Linux/live gates are in progress. Both changed packages will use the store APIs. Provider submissions are not yet confirmed.
+- Owner Chrome reload remains unverified. Updated unpacked files do not prove the owner browser is running the release.
+
+## Previous build: 0.6.37 (prerelease; stores blocked)
+
 Version **0.6.37** fixes discovery of nested shadow roots attached after scanning and restores replaced component stylesheets on interaction. No new permissions; theme remains 1.0.3. See [the late-root audit](AUDIT-2026-10-13-LATE-SHADOW.md).
 
 - Local validation: 22 unit files, Chrome 257/257, Firefox 99/99, Chrome lab 1221/1221, Firefox lab 826/826, CVS stress 33/33, Firefox lint zero findings. Live CVS 20 hovers, Apple 5 and Amazon 4 passed; Reddit remains unverified because of its challenge. Reviewed Linux screenshots and exact-source CI remain required before publishing.
-- Mozilla API credentials are now configured as encrypted GitHub Actions secrets, activated with explicit approval. Both changed extension packages will be submitted through store APIs after exact-source CI succeeds. Provider outcomes are not yet confirmed.
+- Mozilla API credentials are now configured as encrypted GitHub Actions secrets, activated with explicit approval. Tests 38498056800 passed the component suite and reviewed Linux images, but recorded a live CVS pale frame. Store run 38498662829 blocked both uploads before their API steps. GitHub 0.6.37 is a prerelease; neither store received it.
 - Owner Chrome reload remains unverified; canonical unpacked files are 0.6.37, but browser policy has blocked extension management. Do not equate local files with a running owner-browser version.
 
 ## Previous release: 0.6.36

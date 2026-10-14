@@ -9,9 +9,7 @@ export function navigationPaint(point){
   for(let node=e;node;node=node.parentElement||node.getRootNode().host){
     const color=getComputedStyle(node).backgroundColor,n=(color.match(/[\d.]+/g)||[]).map(Number);
     if(color==='transparent'||n.length<3||(n.length>3&&n[3]<.5))continue;
-    const root=node.getRootNode(),sheets=root.adoptedStyleSheets||[],ancestry=[];
-    for(let p=e;p&&ancestry.length<8;p=p.parentElement||p.getRootNode().host)ancestry.push({tag:p.tagName,classes:p.className,mark:p.getAttribute?.('data-oled-night'),bg:getComputedStyle(p).backgroundColor});
-    return {pale:n.slice(0,3).every(x=>x>220),color,tag:node.tagName,hit:e.tagName,ancestry,hovered:e.matches(':hover'),time:performance.now(),inputTime:window.__cvsHoverInput||0,sheetCount:sheets.length,extensionSheet:sheets.some(s=>[...s.cssRules].some(r=>r.selectorText?.includes('data-oled-night'))),marked:node.getAttribute?.('data-oled-night'),measured:node.hasAttribute?.('data-oled-night-measure')||node.hasAttribute?.('data-oled-night-measure-self')||document.documentElement?.hasAttribute('data-oled-night-measure')};
+    return {pale:n.slice(0,3).every(x=>x>220),color,tag:node.tagName,marked:node.getAttribute?.('data-oled-night'),measured:node.hasAttribute?.('data-oled-night-measure')||node.hasAttribute?.('data-oled-night-measure-self')||document.documentElement?.hasAttribute('data-oled-night-measure')};
   }
   return {pale:false};
 }

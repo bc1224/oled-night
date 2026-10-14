@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.37";
+  const VERSION = "0.6.38";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -94,6 +94,8 @@
   let flushScheduled = false;
   let flushHandle = null;
   let flushTimer = false;
+  let flushMicrotask = false;
+  let flushEpoch = 0;
   const settleSelf = new Set();
   const settleTrees = new Set();
   let settleTimer = null;
@@ -951,8 +953,12 @@
 
   function flush() {
     flushScheduled = false;
+    flushMicrotask = false;
     flushHandle = null;
     if (!observer) { pendingTrees.clear(); pendingSelf.clear(); return; }
+    // Capture handlers queue us before the site's own event handler. Include
+    // its DOM writes even when our microtask precedes observer delivery.
+    onMutations(observer.takeRecords(), false);
     if (polarityDirty) {
       polarityDirty = false;
       const nowDark = remeasurePolarity();
@@ -968,7 +974,22 @@
 
   // Batch mutations before the next paint. Idle callbacks run after painting,
   // allowing newly inserted white sections to flash for up to 250 ms.
-  function schedule() {
+  function schedule(beforePaint = false) {
+    // Mutations inside a frame callback cannot wait for another rAF: the
+    // browser paints their native surface in the current frame. Batch at the
+    // microtask checkpoint instead, after the site's synchronous updates.
+    if (beforePaint && !document.hidden) {
+      if (flushScheduled && flushMicrotask) return;
+      if (flushHandle !== null) {
+        if (flushTimer) clearTimeout(flushHandle); else cancelAnimationFrame(flushHandle);
+      }
+      flushHandle = null;
+      flushScheduled = true;
+      flushMicrotask = true;
+      const epoch = ++flushEpoch;
+      queueMicrotask(() => { if (epoch === flushEpoch) flush(); });
+      return;
+    }
     if (flushScheduled) return;
     flushScheduled = true;
     flushTimer = document.hidden;
@@ -1033,7 +1054,7 @@
     }
     const group = path.find(node => node.matches(STATE_GROUP));
     if (group && (!stop || path.indexOf(group) < path.indexOf(stop))) pendingTrees.add(group);
-    schedule();
+    schedule(true);
     if (settleSelf.size || settleTrees.size) {
       clearTimeout(settleTimer);
       settleTimer = setTimeout(settle, SETTLE_MS);
@@ -1089,7 +1110,7 @@
     schedule();
   }
 
-  function onMutations(records) {
+  function onMutations(records, scheduleBatch = true) {
     const seenAttributes = new Map();
     const changedRoots = new Set();
     for (const record of records) {
@@ -1143,7 +1164,7 @@
       }
     }
     for (const root of changedRoots) ensureShadowSheet(root);
-    if (pendingTrees.size || pendingSelf.size || polarityDirty) schedule();
+    if (scheduleBatch && (pendingTrees.size || pendingSelf.size || polarityDirty)) schedule(true);
   }
 
   function overrideRules() {
@@ -1311,6 +1332,8 @@
     }
     flushHandle = null;
     flushScheduled = false;
+    flushMicrotask = false;
+    flushEpoch++;
     clearTimeout(settleTimer);
     settleTimer = null;
     settleSelf.clear();

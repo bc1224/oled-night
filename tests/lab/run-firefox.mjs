@@ -6,6 +6,7 @@ import {execFileSync} from 'node:child_process';
 import webExt from 'web-ext';
 import {matrixStates,responsiveness,performanceChecks} from './scenarios.mjs';
 import {lateShadowScenario} from './late-shadow-scenario.mjs';
+import {frameMutationScenario} from './frame-mutation-scenario.mjs';
 const root=resolve(import.meta.dirname,'../..'),temp=mkdtempSync(join(tmpdir(),'oled-night-firefox-lab-'));let runner,timer;
 let receive;const result=new Promise(r=>receive=r);
 const server=createServer((req,res)=>{
@@ -19,7 +20,7 @@ try{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${server.address().port}`;
   cpSync(join(root,'dist/firefox'),temp,{recursive:true});cpSync(join(root,'docs/lab/audit.js'),join(temp,'lab-audit.js'));
   const manifest=JSON.parse(readFileSync(join(temp,'manifest.json')));manifest.background.scripts.push('lab-driver.js');writeFileSync(join(temp,'manifest.json'),JSON.stringify(manifest));
-  const driver=`const TEST_ORIGIN=${JSON.stringify(origin)}; const matrixStates=${matrixStates.toString()}; const responsiveness=${responsiveness.toString()}; const performanceChecks=${performanceChecks.toString()}; const lateShadowScenario=${lateShadowScenario.toString()};`+readFileSync(join(root,'tests/lab/firefox-driver.js'),'utf8');
+  const driver=`const TEST_ORIGIN=${JSON.stringify(origin)}; const matrixStates=${matrixStates.toString()}; const responsiveness=${responsiveness.toString()}; const performanceChecks=${performanceChecks.toString()}; const lateShadowScenario=${lateShadowScenario.toString()}; const frameMutationScenario=${frameMutationScenario.toString()};`+readFileSync(join(root,'tests/lab/firefox-driver.js'),'utf8');
   writeFileSync(join(temp,'lab-driver.js'),driver);
   runner=await webExt.cmd.run({sourceDir:temp,artifactsDir:temp,firefox:process.env.FIREFOX_PATH||(process.platform==='win32'?'C:/Program Files/Mozilla Firefox/firefox.exe':'firefox'),args:['-headless'],noReload:true,noInput:true},{shouldExitProgram:false});
   checks=await Promise.race([result,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Firefox lab timed out')),120000)})]);

@@ -18,6 +18,7 @@ jobs:
     timeout-minutes: 20
     outputs:
       cvs_stress: ${{ steps.cvs_stress.outcome }}
+      cvs_live: ${{ steps.cvs_receipt.outputs.status }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -54,6 +55,10 @@ jobs:
         run: node tests/lab/live-smoke.mjs --cvs
         env:
           CHROME_PATH: /usr/bin/google-chrome
+      - name: Classify live CVS result without hiding an observed regression
+        id: cvs_receipt
+        run: |
+          node --input-type=module -e "import {readFileSync} from 'node:fs'; import {summarizeLive} from './tools/live-report.mjs'; console.log('status='+summarizeLive(JSON.parse(readFileSync('dist/lab-results/live-smoke.json'))).status)" >> "$GITHUB_OUTPUT"
       - name: Build browsable lab with passing evidence
         if: ${{ !inputs.candidates }}
         run: |
@@ -82,9 +87,14 @@ jobs:
       - name: Require the known synthetic regression to pass for store submission
         env:
           CVS_OUTCOME: ${{ needs.test.outputs.cvs_stress }}
+          CVS_LIVE: ${{ needs.test.outputs.cvs_live }}
         run: |
           if [ "$CVS_OUTCOME" != "success" ]; then
             echo "CVS regression is unresolved. Tester can publish evidence; extension store submission is blocked."
+            exit 1
+          fi
+          if [ "$CVS_LIVE" = "fail" ]; then
+            echo "Live CVS navigation caught a pale frame. Extension store submission is blocked."
             exit 1
           fi
   deploy:

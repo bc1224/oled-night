@@ -7,6 +7,7 @@ import {serveLab} from './server.mjs';
 import {matrixStates,responsiveness,performanceChecks} from './scenarios.mjs';
 import {checkScreenshot} from './visual.mjs';
 import {cases} from './catalog.mjs';
+import {frameMutationScenario} from './frame-mutation-scenario.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/lab-results');mkdirSync(output,{recursive:true});
 const checks=[],add=(name,ok,detail='')=>checks.push({name,ok:!!ok,detail});
 const site=buildLab().output,server=await serveLab(site);let browser;
@@ -18,6 +19,7 @@ try {
   for(const [theme,width] of [['light',1200],['dark',1200],['light',390]]){
     const label=`${theme}-${width}`;await page.size(width,1000);await page.go(`${server.origin}/lab/fixtures/matrix.html?theme=${theme}`);await wait(800);
     const stateChecks=await page.eval(`(${matrixStates.toString()})()`);checks.push(...stateChecks.map(c=>({...c,name:label+' / '+c.name})));
+    checks.push(...(await page.eval(`(${frameMutationScenario.toString()})()`)).map(c=>({...c,name:label+' / '+c.name})));
     await page.eval('scrollTo(0,0)');await page.hover(1,1);await wait(150);checks.push(checkScreenshot({name:`chrome-${label}`,actual:await page.screenshot(),directory:join(root,'tests/lab/baselines',process.platform),artifacts:output,candidate:process.argv.includes('--candidates')}));
     if(width===1200){for(const target of ['primary','cell-a','shadow-first','shadow-second','shadow-third']){
       const point=await page.eval(`(()=>{const e=window.OLEDLabAudit.elements(document).find(e=>e.id===${JSON.stringify(target)});e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`);
