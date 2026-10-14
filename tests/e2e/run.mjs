@@ -726,6 +726,16 @@ try {
   check("popup: recolored page reports recoloring with sliders", state.status === "On · recoloring this page" && state.sliders && !state.reset && state.mode === "auto", JSON.stringify(state));
   const popupSize = await popup.eval("({ height: document.body.getBoundingClientRect().height, width: document.body.scrollWidth })");
   check("popup fits browser height with master switch", popupSize.height <= 600 && popupSize.width <= 360, JSON.stringify(popupSize));
+  await page.eval("document.body.append(Object.assign(document.createElement('span'),{id:'PRIVATE_ID',textContent:'PRIVATE_PAGE_TEXT'}))");
+  const beforeReportTabs=await ext.eval("chrome.tabs.query({}).then(t=>t.length)");
+  await click("report");
+  const reportPreview=await popup.eval("({open:document.getElementById('reportPreview').open,text:document.getElementById('reportDiagnostics').textContent,policy:document.getElementById('reportPreview').textContent})");
+  check("report preview opens locally without sending data",reportPreview.open && await ext.eval("chrome.tabs.query({}).then(t=>t.length)")===beforeReportTabs);
+  check("report preview excludes private page text and selectors",!/PRIVATE|SENTINEL|element|userAgent|origins/.test(reportPreview.text) && reportPreview.policy.includes('public GitHub issue draft'),reportPreview.text);
+  await click("reportCancel");
+  check("report cancel sends nothing",await popup.eval("!document.getElementById('reportPreview').open") && await ext.eval("chrome.tabs.query({}).then(t=>t.length)")===beforeReportTabs);
+  const reportDraft=await popup.eval("OledNightReport.issueUrl({host:'example.com',version:'0.6.39',text:'PRIVATE_TEXT'})");
+  check("report draft goes only to repository issue form without private text",reportDraft.startsWith('https://github.com/bc1224/oled-night/issues/new?') && !reportDraft.includes('PRIVATE'));
   await click("extensionEnabled");
   state = await ui();
   check("popup master switch pauses and explains disabled site controls", !(await rootHas("data-oled-night-root")) && /Paused everywhere/.test(state.status) && !state.controls && await popup.eval("document.getElementById('siteEnabled').disabled"));

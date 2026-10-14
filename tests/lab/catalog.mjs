@@ -1,11 +1,14 @@
 const groups = {
-  'Interactions': ['dropdowns','dark-dropdowns','state-surfaces','shadow-hover','interaction-layout','media-navigation','frame-mutation'],
+  'Interactions': ['dropdowns','dark-dropdowns','state-surfaces','shadow-hover','cold-shadow','interaction-layout','media-navigation','frame-mutation'],
   'Text & surfaces': ['light','dark','explicit-light','ink','surfaces','scope-light','scope-dark','scope-scheme','svg-outline'],
   'Media & data': ['indicators','chart','canvas','shop','ad-overlays'],
   'App reproductions': ['youtube','gmail','email-newsletter','native-banner','booking-form','reddit-res','shadow-stability','apple-auth'],
-  'Isolation & loading': ['components','protected','challenge','challenge-inline','frame','transparent-frame','slow','efficiency','report-fields']
+  'Isolation & loading': ['components','protected','challenge','challenge-inline','frame','transparent-frame','slow','efficiency','report-fields','report-preview','generated-style']
 };
 const descriptions = {
+  'generated-style':'Late CSSOM generated labels in document, adopted shadow sheets and exported parts; authored scopes are reconsidered after updates',
+  'report-preview':'Public issue preview omits private text, field values, selectors, frame origins and URL paths; nothing sends before a click',
+  'cold-shadow':'Roots attached after their hosts were scanned: resting nested controls become readable without hover or focus',
   'email-newsletter':'Gmail-style dark reader: authored HTML headings, paragraphs, nested light panels and preserved artwork',
   'native-banner':'Robinhood-style native dark application with a light onboarding banner and tour controls',
   'booking-form':'SynXis-style filled fields, placeholders, focus outlines, colored hotel logo and back icon',

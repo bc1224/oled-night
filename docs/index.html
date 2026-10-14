@@ -246,7 +246,7 @@
               <li><b>Appearance</b>OLED Black (pure black), Soft Dark (near-black), or Auto (follows your system's dark mode).</li>
               <li><b>Brightness &amp; Contrast</b>Brightness sets how light text is. Contrast sets how far panels stand out from the black page. The top sliders change only the current site. All sites contains the defaults; site choices take priority.</li>
               <li><b>Dim images on this site</b>Takes glare off bright photos and illustrations.</li>
-              <li><b>Report a broken site</b>Saves a small diagnostic file you can attach to a bug report.</li>
+              <li><b>Report a broken site</b>Previews scrubbed diagnostics before opening a public GitHub issue draft.</li>
             </ul>
           </div>
           <img class="shot" src="assets/popup.png" width="1280" height="800" alt="The OLED Night popup: main switch, site mode menu, appearance options, brightness and contrast sliders, and per-site options.">
@@ -272,7 +272,7 @@
       <div class="wrap">
         <div class="kicker">FAQ</div>
         <h2>Questions</h2>
-        <details><summary>A site still looks wrong. What should I try?</summary><p>Open the popup on that site and try <b>Deepen blacks only</b> if the site already has its own dark design, <b>Invert</b> if it draws its content on a canvas (spreadsheets, design tools), or <b>Off</b>. If it's still broken, click <b>Report a broken site</b> and <a href="https://github.com/bc1224/oled-night/issues/new">open an issue</a> with the saved file and a screenshot.</p></details>
+        <details><summary>A site still looks wrong. What should I try?</summary><p>Open the popup on that site and try <b>Deepen blacks only</b> if the site already has its own dark design, <b>Invert</b> if it draws its content on a canvas (spreadsheets, design tools), or <b>Off</b>. If it's still broken, click <b>Report a broken site</b> to review scrubbed diagnostics and open a public GitHub issue draft. Keep private information out of your description.</p></details>
         <details><summary>How is this different from Dark Reader?</summary><p>Dark Reader is great and does a lot. OLED Night is narrower on purpose: it aims for pure black backgrounds while keeping text readable and images, charts and product photos intact, and it's tested against the specific ways dark modes break sites. That includes unreadable text, white fades and glows, blank chart fills, black product photos, web components and chat widgets. If Dark Reader already looks perfect on your sites, keep it. If you want deeper blacks, or it breaks something you use, try this.</p></details>
         <details><summary>How is this different from Chrome's built-in "Auto Dark Mode"?</summary><p>Chrome's flag runs one filter over the whole page. It produces grey instead of black, can't be tuned per site, and often mangles images and charts. OLED Night decides each element's color separately: backgrounds, text, borders, icons, gradients and shadows each get their own treatment, and images are left alone.</p></details>
         <details><summary>Why don't images get darker?</summary><p>That's on purpose: photos and artwork should look the way they were made. If a bright image is too much on a black page, turn on <b>Dim images on this site</b>, or set it as the default in Settings.</p></details>

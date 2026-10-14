@@ -39,7 +39,18 @@
     <p class="hint"><span><kbd id="extensionShortcut">not set</kbd> turns OLED Night on or off everywhere</span></p>
     <p class="hint"><span><kbd id="shortcut">not set</kbd> turns this site on or off</span><a id="theme" href="https://chromewebstore.google.com/detail/oled-night-chrome-theme/pkdklfocgpcnijiggfddneadmhacbpmf" target="_blank" rel="noopener">Black Chrome theme</a></p>
   </main>
+  <dialog id="reportPreview" aria-labelledby="reportTitle">
+    <h2 id="reportTitle">Report a broken site</h2>
+    <p>This opens a public GitHub issue draft. Review the domain and diagnostics below. Page text, field values, URL paths and screenshots are excluded.</p>
+    <pre id="reportDiagnostics"></pre>
+    <p>You can describe the problem on GitHub, then submit it. Keep private information out.</p>
+    <button id="reportCancel" type="button">Cancel</button>
+    <button id="reportSubmit" type="button" class="primary-button">Open GitHub draft</button>
+    <button id="reportDownload" type="button" class="text-button">Save full report locally</button>
+    <p class="control-help">The full local report can include page text and identifiers. It is never uploaded by this button.</p>
+  </dialog>
   <script src="settings.js"></script>
+  <script src="report-utils.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

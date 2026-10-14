@@ -10,6 +10,8 @@ import {cases} from './catalog.mjs';
 import {frameMutationScenario} from './frame-mutation-scenario.mjs';
 import {mixedSurfaceScenario,mixedSurfaceOriginal,mixedSurfaceDeepen} from './mixed-surface-scenario.mjs';
 import {bookingScenario} from './booking-scenario.mjs';
+import {coldShadowScenario} from './cold-shadow-scenario.mjs';
+import {generatedStyleScenario} from './generated-style-scenario.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/lab-results');mkdirSync(output,{recursive:true});
 const checks=[],add=(name,ok,detail='')=>checks.push({name,ok:!!ok,detail});
 const site=buildLab().output,server=await serveLab(site);let browser;
@@ -20,6 +22,7 @@ try {
   await settings(true);const page=await browser.open();
   for(const [theme,width] of [['light',1200],['dark',1200],['light',390]]){
     const label=`${theme}-${width}`;await page.size(width,1000);await page.go(`${server.origin}/lab/fixtures/matrix.html?theme=${theme}`);await wait(800);
+    checks.push(...(await page.eval(`(${coldShadowScenario.toString()})()`)).map(c=>({...c,name:label+' / '+c.name})));
     const stateChecks=await page.eval(`(${matrixStates.toString()})()`);checks.push(...stateChecks.map(c=>({...c,name:label+' / '+c.name})));
     checks.push(...(await page.eval(`(${frameMutationScenario.toString()})()`)).map(c=>({...c,name:label+' / '+c.name})));
     await page.eval('scrollTo(0,0)');await page.hover(1,1);await wait(150);checks.push(checkScreenshot({name:`chrome-${label}`,actual:await page.screenshot(),directory:join(root,'tests/lab/baselines',process.platform),artifacts:output,candidate:process.argv.includes('--candidates')}));
@@ -62,6 +65,12 @@ try {
     add('booking-'+width+' / disable restores field ink and logo',await page.eval("getComputedStyle(document.getElementById('booking-value')).webkitTextFillColor==='rgb(119, 119, 119)'&&getComputedStyle(document.getElementById('booking-logo')).filter==='none'"));
     await settings(true);
   }
+  await page.go(`${server.origin}/lab/fixtures/generated-style.html`);await wait(400);
+  await page.eval(readFileSync(join(root,'docs/lab/audit.js'),'utf8'));
+  checks.push(...await page.eval(`(${generatedStyleScenario.toString()})()`));
+  await page.go(`${server.origin}/lab/fixtures/report-preview.html`);await wait(400);
+  add('public report preview omits private text and identifiers',await page.eval("document.getElementById('privacy-result').textContent.startsWith('PASS')&&!/PRIVATE/.test(document.getElementById('preview').textContent)"));
+  add('public report draft requires a click',await page.eval("document.getElementById('draft').textContent==='Open GitHub draft'&&location.pathname.endsWith('/report-preview.html')"));
   const lab=await browser.open(`${server.origin}/lab/`);await wait(500);add('gallery lists all '+cases.length+' cases',await lab.eval(`document.querySelectorAll('#cases button').length===${cases.length}`));
   add('gallery search filters cases',await lab.eval(`(()=>{const s=document.getElementById('search');s.value='Reddit';s.dispatchEvent(new Event('input'));return document.querySelectorAll('#cases button').length>0&&document.querySelectorAll('#cases button').length<${cases.length}})()`));await lab.eval(`document.getElementById('search').value='';document.getElementById('search').dispatchEvent(new Event('input'))`);
   await lab.size(390,850);add('mobile gallery has no horizontal overflow',await lab.eval(`document.documentElement.scrollWidth<=innerWidth`));writeFileSync(join(output,'gallery-mobile.png'),await lab.screenshot());

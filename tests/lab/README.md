@@ -2,7 +2,7 @@
 
 Public gallery: https://bc1224.github.io/oled-night/lab/
 
-40 synthetic cases cover the component matrix and previous site failures. The current gallery is built from the same committed fixtures used by the browser regressions. It contains no copied accounts or private report uploads.
+43 synthetic cases cover the component matrix and previous site failures. The current gallery is built from the same committed fixtures used by the browser regressions. It contains no copied accounts or private report uploads.
 
 ## Every reported bug becomes a regression
 
@@ -11,6 +11,8 @@ For each reported rendering failure, reconstruct the relevant markup and states 
 The email-newsletter and native-banner cases reproduce dark newsletter text and light tour text on a white onboarding banner. Both are included in the required component checks in Automatic and Recolor modes; explicit Deepen keeps native light content. The fixtures model the reported symptoms, not authenticated Gmail or Robinhood sessions.
 
 The booking-form case checks primary filled-value ink, distinct readable placeholders, focus, masked icons, named colored logos, disabled fields, ordinary-image preservation and native restoration. It contains only fake guest information.
+
+Cold-shadow coverage attaches roots after the host has already been processed, then checks resting controls before pointer/focus input. Both engines must discover the roots without waiting for interaction. The performance workload includes 400 custom hosts that never attach roots. The report-preview case and popup regression check consent, public-data exclusions and cancel behavior; raw reports are never published in this lab.
 
 ## Run
 

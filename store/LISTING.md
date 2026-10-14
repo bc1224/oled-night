@@ -23,7 +23,7 @@ Upload `dist/oled-night-<version>.zip` (build it with `node tools/package.mjs`).
 > • No analytics, no telemetry, no ads, no accounts and no servers. The extension makes no network requests of its own.
 > • Your settings live in Chrome's own sync storage. The developer never sees them.
 > • It reads page colors only to recolor them, inside your browser. Page content is never saved or sent anywhere.
-> • "Report a broken site" saves a small file to your own computer. It goes nowhere unless you choose to share it.
+> • "Report a broken site" previews scrubbed diagnostics and opens a GitHub issue draft only when you choose. Full reports can still be saved locally.
 >
 > 100% OPEN SOURCE (GPL-3.0)
 > Every line of code is public on GitHub: https://github.com/bc1224/oled-night

@@ -213,6 +213,14 @@
     if (!Object.keys(own).length) delete siteTuning[host];
     persist({ siteTuning });
   });
+  let pendingReport = null;
+  $("reportCancel").addEventListener("click", () => $("reportPreview").close());
+  $("reportDownload").addEventListener("click", () => { if (pendingReport) saveReport(pendingReport); });
+  $("reportSubmit").addEventListener("click", () => {
+    if (!pendingReport) return;
+    chrome.tabs.create({url: OledNightReport.issueUrl(pendingReport)});
+    $("reportPreview").close();
+  });
   $("report").addEventListener("click", async () => {
     if (!tabId || !chrome?.tabs) return;
     let report = null;
@@ -221,8 +229,9 @@
       $("status").textContent = page === "reload" ? "Reload this tab first, then report." : "Your browser doesn't let extensions read this page, so there is nothing to report.";
       return;
     }
-    saveReport(report);
-    $("status").textContent = "Report saved to Downloads. Send that file along with a screenshot.";
+    pendingReport = report;
+    $("reportDiagnostics").textContent = JSON.stringify(OledNightReport.scrub(report), null, 2);
+    $("reportPreview").showModal();
   });
   $("siteSettings").addEventListener("click", () => chrome?.runtime?.openOptionsPage());
   chrome?.storage?.onChanged?.addListener(async (changes, area) => {

@@ -47,6 +47,11 @@ input[type="range"]::-webkit-slider-thumb { appearance: none; width: 16px; heigh
 .check input { width: 15px; height: 15px; margin: 0; accent-color: #9b8cff; }
 .check input:disabled + span { color: #5c5c64; }
 .actions { display: flex; justify-content: space-between; gap: 12px; }
+dialog { color:#e0e0e0; background:#000; border:1px solid #666; border-radius:12px; max-width:300px; max-height:85vh; overflow:auto; }
+dialog::backdrop { background:rgb(0 0 0 / 80%); }
+dialog p { font-size:12px; line-height:1.5; }
+dialog pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:160px; overflow:auto; font-size:11px; }
+dialog button { margin:5px 0; }
 .actions .settings-link { margin-top: 10px; }
 .hint { margin: 8px 0 0; color: #858590; font-size: 11px; }
 kbd { padding: 2px 6px; border: 1px solid #34343c; border-radius: 5px; background: #0b0b0f; color: #d5d5da; font: 11px ui-monospace, "Cascadia Mono", monospace; }

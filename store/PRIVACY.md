@@ -1,16 +1,18 @@
 # OLED Night privacy policy
 
-_Last updated: September 22, 2026_
+_Last updated: October 14, 2026_
 
 OLED Night is a browser extension that makes web pages dark. It is built to work entirely inside your browser.
 
-**What it collects:** nothing. OLED Night has no servers, no analytics, no advertising and no tracking. The developer does not receive your data. Browser-account syncing is described below.
+**Automatic collection:** none. OLED Night has no servers, analytics, advertising or tracking. Optional public bug reports and browser-account syncing are described below.
 
 **What it stores:** your settings (on/off, appearance, brightness, contrast, schedule and per-site choices). They are kept in your browser's sync storage, so your browser can sync them between your signed-in browsers. The developer cannot see them.
 
 **Page content:** to recolor a page, OLED Night reads the colors of the elements on it, inside your browser. It does not save or transmit page content.
 
-**Diagnostic reports:** if you click "Report a broken site", the extension saves a small file to your own computer. It contains the site's address, the extension's settings, and short text snippets (30 characters or fewer) from any text it found hard to read. No screenshot is captured. The file goes nowhere unless you choose to send it to someone; review it before sharing.
+**Diagnostic reports:** "Report a broken site" first shows a preview. If you choose "Open GitHub draft", the domain, extension version, mode, brightness/contrast settings, element counts and computed contrast colors/ratios are sent to GitHub in an issue draft. Page text, field values, URL paths/query strings, selectors/identifiers, frame origins, browser identifiers and screenshots are excluded. The issue becomes public only when you submit it on GitHub. The developer and automated development tools can read submitted public issues to reproduce, test and fix bugs. Do not add private information to your description.
+
+**Full local report:** "Save full report locally" downloads the original diagnostics to your computer. This file can contain short page text snippets and element identifiers. No screenshot is captured; field contents are omitted. It is not uploaded by the extension. Review it before sharing it yourself.
 
 **Permissions:** OLED Night runs on every site because recoloring pages is its purpose. The `storage` permission saves your settings, `activeTab` identifies the current site for the popup and keyboard shortcut, and `scripting` lets the popup check whether the current tab can be reached. No code is injected into the page's own scripts.
 

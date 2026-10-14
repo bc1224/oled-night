@@ -1,0 +1,5 @@
+<!doctype html><html><head><meta name="viewport" content="width=device-width"><style>body{background:#fff;color:#222;font:18px Arial;padding:24px}.card{background:#fafafa;padding:24px;border:1px solid #bbb}</style></head><body>
+<h1>Cold component hydration</h1><p>These nested components attach after their hosts were scanned, without hover, focus or a light-DOM mutation.</p><section class="card"><cold-navigation id="navigation"></cold-navigation></section>
+<script>
+setTimeout(()=>{const outer=document.getElementById('navigation').attachShadow({mode:'open'});outer.innerHTML='<cold-links></cold-links>';const inner=outer.firstElementChild.attachShadow({mode:'open'}),sheet=new CSSStyleSheet();sheet.replaceSync('a{display:inline-block;padding:16px;background:white;color:#013f7c}');inner.adoptedStyleSheets=[sheet];inner.innerHTML='<a data-lab-check="text surface" href="#one">First</a><a data-lab-check="text surface" href="#two">Second</a><a data-lab-check="text surface" href="#three">Third</a>'},150);
+</script></body></html>

@@ -112,6 +112,10 @@
   // Open shadow roots (web components) we style and watch. Page stylesheets
   // never reach inside them, so each gets our rules adopted directly.
   const shadowRoots = new Set();
+  // Hosts can attach roots after their light-DOM scan without a mutation.
+  // Poll only unresolved custom hosts, with a fixed per-frame work bound.
+  const unresolvedShadowHosts = new Set();
+  let shadowDiscoveryFrame = null;
   let handledInteractions = new WeakSet();
   let shadowSheet = null;
   let shadowHealthTimer = null;
@@ -486,7 +490,7 @@
       const outline = colors.mapBorder(colors.parseColor(computed.outlineColor));
       if (outline) found.outline = outline;
     }
-    for (const pseudo of ["before", "after"]) {
+    for (const pseudo of (ctx.generated(element) ? ["before", "after"] : [])) {
       const pseudoStyle = getComputedStyle(element, `::${pseudo}`);
       if (pseudoStyle.content && pseudoStyle.content !== "none" && pseudoStyle.content !== "normal") {
         mapSurface(pseudoStyle, `${pseudo}-`, mode, found);
@@ -679,8 +683,12 @@
     list.push(element);
     const root = shadowOf(element);
     if (root) {
+      unresolvedShadowHosts.delete(element);
       adoptShadowRoot(root);
       walkChildren(root, list, seen, list.icons);
+    } else if (element.localName.includes("-")) {
+      unresolvedShadowHosts.add(element);
+      scheduleShadowDiscovery();
     }
   }
 
@@ -698,6 +706,26 @@
     if (element.matches(BOT_CHECK) || root.querySelector(BOT_CHECK)) return null;
     for (const frame of root.querySelectorAll("iframe")) if (BOT_CHECK_URL.test(frameUrl(frame.src))) return null;
     return root;
+  }
+
+  function scheduleShadowDiscovery() {
+    if (!observer || document.hidden || !unresolvedShadowHosts.size || shadowDiscoveryFrame !== null) return;
+    shadowDiscoveryFrame = requestAnimationFrame(() => {
+      shadowDiscoveryFrame = null;
+      if (!observer || document.hidden) return;
+      const count = Math.min(unresolvedShadowHosts.size, 16);
+      let discovered = false;
+      for (let i = 0; i < count; i++) {
+        const host = unresolvedShadowHosts.values().next().value;
+        unresolvedShadowHosts.delete(host);
+        if (!host.isConnected) continue;
+        const root = shadowOf(host);
+        if (root) { pendingTrees.add(host); discovered = true; }
+        else unresolvedShadowHosts.add(host);
+      }
+      if (discovered) schedule(true);
+      scheduleShadowDiscovery();
+    });
   }
 
   function walkChildren(root, list, seen, icons) {
@@ -798,6 +826,32 @@
     processBatch(list, trees, selves);
   }
 
+  // Skip empty generated-paint reads only when the complete, small authored
+  // scope proves there are no before/after selectors. Re-scan each batch:
+  // insertRule and adoptedStyleSheets can change without a DOM mutation.
+  // Unreadable, imported, large and slotted scopes retain the conservative path.
+  function hasGeneratedRules(root) {
+    let count = 0;
+    const inspect = rules => {
+      for (const rule of rules) {
+        if (++count > 256 || /:before\b|:after\b/i.test(rule.selectorText || "") || rule.type === 3) return true;
+        if (rule.cssRules && inspect(rule.cssRules)) return true;
+      }
+      return false;
+    };
+    try {
+      const sheets = root === document ? [...document.styleSheets] :
+        [...root.querySelectorAll('style, link[rel~="stylesheet"]')].map(node => node.sheet);
+      sheets.push(...root.adoptedStyleSheets);
+      for (const sheet of sheets) {
+        if (!sheet) return true; // An authored sheet is still loading.
+        if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith("oled-night-")) continue;
+        if (inspect(sheet.cssRules)) return true;
+      }
+      return false;
+    } catch { return true; }
+  }
+
   function processBatch(list, trees, selves) {
     // Already-styled elements hide their original colors behind our overrides.
     // Read original colors with our overrides switched off (no paint happens in
@@ -890,7 +944,7 @@
         }
       }
     }
-    const styles = new Map();
+    const styles = new Map(), generatedScopes = new Map();
     const ctx = {
       mode: modeFor(),
       // Explicit "Deepen blacks only" keeps the user's native light content.
@@ -899,6 +953,14 @@
       gmail: document.documentElement.getAttribute("data-oled-night-site") === "gmail",
       backdrop: new Map(),
       media: new Map(),
+      generated: element => {
+        // Native quotes/controls and slotted content may use UA or another
+        // scope's generated paint; never infer those from this scope's sheets.
+        if (element.assignedSlot || element.hasAttribute('part') || element.localName.includes('-') || /^(q|input|button|select|textarea|progress|meter)$/.test(element.localName)) return true;
+        const root = element.getRootNode();
+        if (!generatedScopes.has(root)) generatedScopes.set(root, hasGeneratedRules(root));
+        return generatedScopes.get(root);
+      },
       style(node) {
         let computed = styles.get(node);
         if (!computed) { computed = getComputedStyle(node); styles.set(node, computed); }
@@ -1365,6 +1427,10 @@
     clearInterval(shadowHealthTimer);
     shadowHealthTimer = null;
     document.removeEventListener("visibilitychange", repairShadowSheets);
+    document.removeEventListener("visibilitychange", scheduleShadowDiscovery);
+    if (shadowDiscoveryFrame !== null) cancelAnimationFrame(shadowDiscoveryFrame);
+    shadowDiscoveryFrame = null;
+    unresolvedShadowHosts.clear();
     observer?.disconnect();
     observer = null;
     pendingTrees.clear();
@@ -1465,6 +1531,7 @@
     pageColor = original;
     observer = new MutationObserver(onMutations);
     observer.observe(root, OBSERVE);
+    document.addEventListener("visibilitychange", scheduleShadowDiscovery);
     document.addEventListener("load", onSheetLoad, true);
     document.addEventListener("loadeddata", onSheetLoad, true);
     for (const type of INTERACTION_EVENTS) document.addEventListener(type, onInteraction, true);

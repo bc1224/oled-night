@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Generated labels after stylesheet updates</title>
+<style id="authored">body{background:#fff;color:#222;font:16px system-ui;margin:24px}.card{padding:20px;background:#fff;color:#222;border:1px solid #ddd}button{padding:12px}</style>
+<h1 data-lab-check="text">Late generated labels</h1><p data-lab-check="text">An initially empty pseudo-element gets authored CSS through insertRule. A separate shadow scope uses an adopted sheet.</p>
+<div id="late-label" class="card" data-lab-check="surface text">Document label</div>
+<generated-card id="generated-host"></generated-card>
+<exported-card id="part-host"></exported-card>
+<button id="generate" data-lab-check="surface text">Add generated labels</button>
+<script>
+const inner=document.getElementById('generated-host').attachShadow({mode:'open'}),sheet=new CSSStyleSheet();
+sheet.replaceSync('.card{display:block;padding:20px;background:white;color:#222}');inner.adoptedStyleSheets=[sheet];inner.innerHTML='<div class="card" id="shadow-label">Shadow label</div>';
+const parts=document.getElementById('part-host').attachShadow({mode:'open'});parts.innerHTML='<style>div{padding:20px;background:white;color:#222}</style><div id="part-label" part="caption">Exported label</div>';
+document.getElementById('generate').onclick=()=>{
+ document.getElementById('authored').sheet.insertRule('.generated::before{content:"Document generated label";display:block;background:white;color:#222}',0);
+ sheet.insertRule('.generated::after{content:"Shadow generated label";display:block;background:white;color:#222}',0);
+ document.getElementById('authored').sheet.insertRule('exported-card::part(caption)::before{content:"Exported generated label";display:block;background:white;color:#222}',0);
+ document.getElementById('late-label').classList.add('generated');inner.getElementById('shadow-label').classList.add('generated');
+ parts.getElementById('part-label').classList.add('updated');
+};
+</script></html>

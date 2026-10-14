@@ -14,7 +14,7 @@ if (existsSync(dist) && lstatSync(dist).isSymbolicLink()) throw new Error("dist 
 
 // Runtime files only: manifest, scripts, pages, styles and the toolbar icons.
 const RUNTIME = ["manifest.json", "settings.js", "color-utils.js", "youtube-theme.js", "content.js", "background.js",
-  "popup.html", "popup.css", "popup.js", "options.html", "options.css", "options.js",
+  "popup.html", "popup.css", "popup.js", "report-utils.js", "options.html", "options.css", "options.js",
   "assets/icon-16.png", "assets/icon-32.png", "assets/icon-48.png", "assets/icon-128.png", "INSTALL.md", "LICENSE"];
 
 // Every file the manifest and pages reference must be in the list above.

@@ -1,0 +1,12 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Scrubbed public report preview</title>
+<style>body{background:white;color:#222;font:16px system-ui;margin:24px}pre{white-space:pre-wrap;border:1px solid #888;padding:12px;max-width:650px}button{padding:12px}</style>
+<h1 data-lab-check="text">Public report preview</h1>
+<p data-lab-check="text">Synthetic diagnostics only. Opening a draft requires a click; submitting it still happens on GitHub.</p>
+<pre id="preview" data-lab-check="text border"></pre><button id="draft" data-lab-check="text surface">Open GitHub draft</button>
+<p id="privacy-result" data-lab-check="text"></p>
+<script src="../report-utils.js"></script><script>
+const raw={host:'example.com',version:'0.6.39',mode:'oled',active:true,userAgent:'PRIVATE_AGENT',settings:{brightness:88,contrast:72},lowContrast:[{text:'PRIVATE_TEXT',element:'#PRIVATE_ID',color:'rgb(34, 34, 34)',background:'rgb(255, 255, 255)',ratio:1.32}]};
+document.getElementById('preview').textContent=JSON.stringify(OledNightReport.scrub(raw),null,2);
+document.getElementById('privacy-result').textContent=/PRIVATE/.test(document.getElementById('preview').textContent)?'FAIL: private information exposed':'PASS: private text and identifiers excluded';
+document.getElementById('draft').onclick=()=>window.open(OledNightReport.issueUrl(raw),'_blank','noopener');
+</script></html>

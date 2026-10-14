@@ -1,0 +1,18 @@
+const assert = require('node:assert/strict');
+require('../report-utils.js');
+const r = globalThis.OledNightReport;
+const raw = {host:'example.com',version:'0.6.39',mode:'oled',active:true,darkPage:false,pageColor:'originally-light',siteMode:'auto',userAgent:'SECRET_UA',frames:{origins:['https://PRIVATE/path']},settings:{brightness:88,contrast:72,dimImages:false,siteRules:{secret:'off'}},counts:{styled:50},lowContrast:[{selector:'#PRIVATE_ID',text:'PRIVATE_TEXT',color:'rgb(1, 2, 3)',background:'rgb(255, 255, 255)',ratio:1.2,mark:'fg'}]};
+const clean=r.scrub(raw), json=JSON.stringify(clean);
+assert.equal(clean.host,'example.com');
+assert.equal(clean.lowContrast[0].ratio,1.2);
+assert.ok(!/PRIVATE|SECRET|selector|userAgent|frames|siteRules/.test(json));
+assert.equal(r.scrub({...raw,host:'https://example.com/private?token=PRIVATE'}).host,'');
+assert.equal(r.scrub({...raw,host:'127.0.0.1'}).host,'');
+assert.equal(r.scrub({...raw,lowContrast:[{color:'url(https://PRIVATE)',ratio:Infinity}]}).lowContrast[0].color,undefined);
+const url=new URL(r.issueUrl(clean));
+assert.equal(url.origin,'https://github.com');
+assert.equal(url.pathname,'/bc1224/oled-night/issues/new');
+assert.ok(url.searchParams.get('body').includes('oled-report-v1'));
+assert.ok(!url.searchParams.get('body').includes('PRIVATE'));
+assert.equal(r.scrub({...raw,lowContrast:Array(200).fill(raw.lowContrast[0])}).lowContrast.length,12);
+console.log('PASS public reports allowlist diagnostics and omit private page data');

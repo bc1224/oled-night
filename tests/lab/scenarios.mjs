@@ -20,12 +20,17 @@ export async function matrixStates(){
 // The same workload with OLED Night off and on, measured inside the page.
 export async function responsiveness(){
   const menu=[],stalls=[];const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  // Keep the bounded late-root discovery workload in the native/on comparison.
+  const pending=document.createElement('div');
+  for(let i=0;i<400;i++)pending.append(document.createElement('unhydrated-component'));
+  document.body.append(pending);await sleep(80);
   for(let i=0;i<5;i++){const start=performance.now();document.getElementById('menu-trigger').click();await new Promise(requestAnimationFrame);menu.push(performance.now()-start);document.getElementById('menu-trigger').click();await sleep(70)}
   const host=document.getElementById('live-list'),fragment=document.createDocumentFragment();
   for(let i=0;i<200;i++){const e=document.createElement('div');e.textContent='Synthetic update '+i;e.style.background=i%2?'#fff':'#eee';fragment.append(e)}
   host.append(fragment);
   for(let i=0;i<12;i++){const start=performance.now();await sleep(16);stalls.push(Math.max(0,performance.now()-start-16))}
   while(host.children.length>1)host.lastElementChild.remove();await sleep(400);
+  pending.remove();
   return {menu,maximumStall:Math.max(...stalls)};
 }
 
