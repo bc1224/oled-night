@@ -94,6 +94,7 @@
   // scroll, etc.). Compare to that engine's own color-only declaration.
   const backgroundDefaults = (() => {
     const style = document.createElement('div').style;
+    if (!style) return new Map(); // Reduced non-rendering test documents have no CSSOM.
     style.background = '#000';
     return new Map(Array.from(style, name => [name, style.getPropertyValue(name)]));
   })();
