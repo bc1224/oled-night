@@ -89,6 +89,7 @@
   let nativeInk = new WeakMap();
   let simpleScopeFingerprint = null;
   let simpleScopeEpoch = 0;
+  let recentBackgroundWrites = new Map();
   let originalSurface = new WeakMap();
   let mediaCopies = new WeakMap();
   let textTiers = new WeakMap();
@@ -1312,6 +1313,7 @@
     pendingSelf.clear();
     process(trees, selves);
     observer.takeRecords();
+    recentBackgroundWrites.clear();
   }
 
   // Batch mutations before the next paint. Idle callbacks run after painting,
@@ -1530,12 +1532,26 @@
     // exactly its existing ink tier. No temporary subtree style switch.
     originalSurface.set(node, { color: background });
     const next = { ...found, bg: colors.mapBackground(background, mode) };
-    write(node, next);
+    // The proof above already verified every override and native declaration.
+    // Only this background can differ. Avoid rereading/rebuilding every other
+    // inline property, and recognize this exact write on observer delivery.
+    if (found.bg !== next.bg || node.style.getPropertyPriority('--oln-bg')) {
+      node.style.setProperty('--oln-bg', next.bg);
+      applied.set(node, signatureOf(next));
+      if (recentBackgroundWrites.size < 2048) recentBackgroundWrites.set(node, node.getAttribute('style'));
+    }
     containerPaint.set(node, { found: next, classes: current, scopeEpoch: scope.epoch, inkProof: snapshot.inkProof });
     return true;
   }
 
   function onMutations(records, scheduleBatch = true) {
+    const ownBackgrounds = recentBackgroundWrites;
+    recentBackgroundWrites = new Map();
+    // A later page write changes the complete attribute and must be processed.
+    // Only our still-identical color write is redundant. This map lives for
+    // one delivery, is bounded, and is cleared on disable/flush as well.
+    records = records.filter(record => record.type !== 'attributes' || record.attributeName !== 'style' ||
+      !ownBackgrounds.has(record.target) || ownBackgrounds.get(record.target) !== record.target.getAttribute('style'));
     const seenAttributes = new Map();
     const backgroundScopes = new Map();
     const changedRoots = new Set();
@@ -1813,6 +1829,7 @@
     applied = new WeakMap();
     containerPaint = new WeakMap();
     nativeInk = new WeakMap();
+    recentBackgroundWrites.clear();
     simpleScopeFingerprint = null;
     simpleScopeEpoch = 0;
     originalSurface = new WeakMap();

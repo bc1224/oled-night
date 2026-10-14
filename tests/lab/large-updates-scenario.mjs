@@ -13,6 +13,10 @@ export async function largeUpdatesScenario(){
  let measurements=0;const paintWatch=new MutationObserver(records=>measurements+=records.filter(r=>r.attributeName?.startsWith('data-oled-night-measure')).length);
  paintWatch.observe(rows[0],{subtree:true,attributes:true});rows[0].classList.add('hl');await sleep(80);paintWatch.disconnect();
  check('proven background-only selection avoids native subtree measurement',measurements===0&&window.OLEDLabAudit.lum(getComputedStyle(rows[0]).backgroundColor)<.16,String(measurements));
+ let pageWrote=false;const followingWrite=new MutationObserver(records=>{if(!pageWrote&&records.some(r=>r.attributeName==='style')){pageWrote=true;rows[2].style.color='#111'}});
+ followingWrite.observe(rows[2],{attributes:true});rows[2].classList.add('hl');await sleep(160);followingWrite.disconnect();
+ check('page style writes following owned background writes are still repaired',pageWrote&&window.OLEDLabAudit.lum(getComputedStyle(rows[2]).color)>.4);
+ rows[2].style.removeProperty('color');rows[2].classList.remove('hl');await sleep(80);
  rows[0].classList.remove('hl');await sleep(80);
  let descendantReads=0;const descendantWatch=new MutationObserver(records=>descendantReads+=records.filter(r=>r.target===rows[0]&&r.attributeName?.startsWith('data-oled-night-measure')).length);
  descendantWatch.observe(rows[0],{subtree:true,attributes:true});
