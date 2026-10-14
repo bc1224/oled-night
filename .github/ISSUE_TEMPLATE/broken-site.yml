@@ -1,13 +1,13 @@
 name: A site looks wrong
 description: Text you can't read, white boxes, missing images, lag, or anything else broken with OLED Night on
-labels: [site]
+labels: [site, oled-report]
 body:
   - type: input
     id: site
     attributes:
       label: Site address
-      description: The page where it happens (leave out anything private).
-      placeholder: https://example.com/some/page
+      description: Use only the public domain. Leave out private paths, query strings and account details.
+      placeholder: example.com
     validations:
       required: true
   - type: textarea
@@ -21,14 +21,14 @@ body:
     id: screenshot
     attributes:
       label: Screenshot
-      description: Drag a screenshot in here. One with OLED Night on and one with it off for the site is ideal.
+      description: Optional. Issues are public. Remove private page text, account details and entered values before attaching an image.
     validations:
-      required: true
+      required: false
   - type: textarea
     id: report
     attributes:
       label: Report file
-      description: In the OLED Night popup on that page, click "Report a broken site". Drag the saved .json file here.
+      description: Use "Report a broken site" in the popup to preview scrubbed diagnostics and open a GitHub draft. Do not attach full local reports, which may contain page text and identifiers.
   - type: input
     id: version
     attributes:
@@ -39,4 +39,4 @@ body:
     id: browser
     attributes:
       label: Browser
-      options: [Chrome, Edge, Brave, Arc, Opera, Vivaldi, Other]
+      options: [Chrome, Firefox, Edge, Brave, Arc, Opera, Vivaldi, Other]
