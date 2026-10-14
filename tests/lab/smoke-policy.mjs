@@ -9,7 +9,7 @@ export function navigationPaint(point){
   for(let node=e;node;node=node.parentElement||node.getRootNode().host){
     const color=getComputedStyle(node).backgroundColor,n=(color.match(/[\d.]+/g)||[]).map(Number);
     if(color==='transparent'||n.length<3||(n.length>3&&n[3]<.5))continue;
-    return {pale:n.slice(0,3).every(x=>x>220)};
+    return {pale:n.slice(0,3).every(x=>x>220),color,tag:node.tagName,marked:node.getAttribute?.('data-oled-night'),measured:node.hasAttribute?.('data-oled-night-measure')||node.hasAttribute?.('data-oled-night-measure-self')||document.documentElement?.hasAttribute('data-oled-night-measure')};
   }
   return {pale:false};
 }
@@ -22,5 +22,5 @@ export async function sampleNavigationPaint(point,read,{frames=4}={}){
     await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
     samples.push(read(point));
   }
-  return {pale:samples.some(sample=>sample.pale),samples:samples.length};
+  return {pale:samples.some(sample=>sample.pale),samples:samples.length,paleSamples:samples.filter(sample=>sample.pale)};
 }

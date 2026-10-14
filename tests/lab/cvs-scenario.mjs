@@ -16,7 +16,7 @@ export async function cvsScenario(page,origin){
     for(let i=0;i<3;i++){
       const point=await page.eval(`(()=>{const e=window.CVSHoverLab.links()[${i}],r=e.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`);
       const result=await watchHover(page,point);
-      add(`CVS stress / hydration ${round+1} sibling ${i+1} no pale sample`,!result.pale&&result.samples===24,`${result.samples} completed-frame CSS samples, including entry`);
+      add(`CVS stress / hydration ${round+1} sibling ${i+1} no pale sample`,!result.pale&&result.samples===24,JSON.stringify(result));
       add(`CVS stress / hydration ${round+1} sibling ${i+1} actually hovered and readable`,await page.eval(`(()=>{const e=window.CVSHoverLab.links()[${i}],a=window.OLEDLabAudit;return e.matches(':hover')&&a.contrast(getComputedStyle(e).color,a.background(e))>=4.5})()`));
     }
   }
