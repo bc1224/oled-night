@@ -16,6 +16,7 @@ export async function cvsScenario(page,origin){
     for(let i=0;i<3;i++){
       const point=await page.eval(`(()=>{const e=window.CVSHoverLab.links()[${i}],r=e.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`);
       const result=await watchHover(page,point);
+      if(result.pale)result.context=await page.eval(`(()=>{const links=window.CVSHoverLab.links(),r=links[0].getRootNode();return {hidden:document.hidden,mode:document.documentElement.getAttribute('data-oled-night-page'),sheets:r.adoptedStyleSheets.map(s=>s.cssRules.length),links:links.map(e=>({marked:e.getAttribute('data-oled-night'),bg:getComputedStyle(e).backgroundColor,variable:e.style.getPropertyValue('--oln-bg')}))}})()`);
       add(`CVS stress / hydration ${round+1} sibling ${i+1} no pale sample`,!result.pale&&result.samples===24,JSON.stringify(result));
       add(`CVS stress / hydration ${round+1} sibling ${i+1} actually hovered and readable`,await page.eval(`(()=>{const e=window.CVSHoverLab.links()[${i}],a=window.OLEDLabAudit;return e.matches(':hover')&&a.contrast(getComputedStyle(e).color,a.background(e))>=4.5})()`));
     }
