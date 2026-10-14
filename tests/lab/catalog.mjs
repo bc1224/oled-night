@@ -2,10 +2,13 @@ const groups = {
   'Interactions': ['dropdowns','dark-dropdowns','state-surfaces','shadow-hover','interaction-layout','media-navigation','frame-mutation'],
   'Text & surfaces': ['light','dark','explicit-light','ink','surfaces','scope-light','scope-dark','scope-scheme','svg-outline'],
   'Media & data': ['indicators','chart','canvas','shop','ad-overlays'],
-  'App reproductions': ['youtube','gmail','reddit-res','shadow-stability','apple-auth'],
+  'App reproductions': ['youtube','gmail','email-newsletter','native-banner','booking-form','reddit-res','shadow-stability','apple-auth'],
   'Isolation & loading': ['components','protected','challenge','challenge-inline','frame','transparent-frame','slow','efficiency','report-fields']
 };
 const descriptions = {
+  'email-newsletter':'Gmail-style dark reader: authored HTML headings, paragraphs, nested light panels and preserved artwork',
+  'native-banner':'Robinhood-style native dark application with a light onboarding banner and tour controls',
+  'booking-form':'SynXis-style filled fields, placeholders, focus outlines, colored hotel logo and back icon',
   'frame-mutation':'Navigation replaced inside an animation callback: dark, readable surfaces before another frame',
   'shadow-hover':'CVS-style nested navigation: sibling pointer moves and focus in adopted stylesheets',
   'state-surfaces':'Apple Ads-style sibling cells and row hover',

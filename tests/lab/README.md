@@ -2,7 +2,15 @@
 
 Public gallery: https://bc1224.github.io/oled-night/lab/
 
-36 synthetic cases cover the component matrix and previous site failures. The current gallery is built from the same committed fixtures used by the browser regressions. It contains no copied accounts or private report uploads.
+40 synthetic cases cover the component matrix and previous site failures. The current gallery is built from the same committed fixtures used by the browser regressions. It contains no copied accounts or private report uploads.
+
+## Every reported bug becomes a regression
+
+For each reported rendering failure, reconstruct the relevant markup and states using synthetic text and artwork. Add that fixture to this public gallery and run its behavioral assertions against the packaged extension in Chrome and Firefox. Prove the assertion fails on the affected old runtime before fixing it. Include Automatic mode on native dark pages, the triggering hover/focus or dynamic update, media preservation and disable restoration where relevant. A gallery example without executable assertions is not complete regression coverage. Keep private reports, mail and broker account content out of fixtures and release assets.
+
+The email-newsletter and native-banner cases reproduce dark newsletter text and light tour text on a white onboarding banner. Both are included in the required component checks in Automatic and Recolor modes; explicit Deepen keeps native light content. The fixtures model the reported symptoms, not authenticated Gmail or Robinhood sessions.
+
+The booking-form case checks primary filled-value ink, distinct readable placeholders, focus, masked icons, named colored logos, disabled fields, ordinary-image preservation and native restoration. It contains only fake guest information.
 
 ## Run
 
@@ -60,4 +68,4 @@ The original churn benchmark now uses the same seeded row mutations in three fre
 
 Saved Bitwarden credential filling, real CAPTCHA completion, image-backed hero text and authenticated pages still need targeted live QA. The lab reduces manual work; it cannot guarantee compatibility with every changing website.
 
-This update changes testing/deployment tools and the website. Extension 0.6.36 and theme 1.0.3 are unchanged; no new store package is needed.
+The companion theme remains 1.0.3. Extension changes require the full release gates and separate store submission receipts.

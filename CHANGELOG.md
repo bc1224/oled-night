@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.39
+
+- Pair unlabelled light banners and email panels with readable ink on native dark pages in Automatic mode. Repair neutral dark newsletter text on solid dark canvases while preserving readable native text, status colors, artwork and explicit Deepen behavior.
+- Use primary text brightness for enabled form values. Keep placeholders distinct and recognize compact colored logos by CSS and semantic labels without inverting brand colors.
+- Add Gmail-style newsletter, Robinhood-style onboarding and SynXis-style booking regressions to the public lab and required Chrome/Firefox release checks, including mobile layout, focus, dynamic copy, preservation and disable restoration. No new permissions; companion theme unchanged.
+
+## 0.6.38
+
+- Flush interaction-created surfaces before another paint, including mutations still queued in the page's event handlers. Discover late shadow roots and restore replaced adopted stylesheets.
+- Keep deterministic CVS stress failures release-blocking, preserve performance budgets and reduce obsolete CI work. Chrome and Firefox store submissions use their configured APIs.
+
 ## 0.6.36
 
 - Handle hover and focus changes inside nested shadow components, where browsers hide internal moves from the document listener. This fixes pale CVS navigation hover backgrounds and other component-based controls.

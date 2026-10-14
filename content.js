@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.38";
+  const VERSION = "0.6.39";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -437,8 +437,14 @@
     // ink together from the local original backdrop, not the site's mode.
     // Actual imagery remains protected by the same backdrop classification.
     const localMode = modeForElement(element, ctx);
-    const nativeBackdrop = localMode === "crush" && element.closest(ctx.recolorLightRegions ? LIGHT_UI : DROPDOWN) ? backdropOf(element, ctx) : null;
-    const mode = nativeBackdrop && !nativeBackdrop.image && colors.luminance(nativeBackdrop.color) > 0.5 ? "oled" : localMode;
+    const nativeBackdrop = localMode === "crush" && (ctx.recolorLightRegions || element.closest(DROPDOWN)) ? backdropOf(element, ctx) : null;
+    // Automatic mode pairs plain light islands with their ink, including
+    // unlabelled banners and email tables. Restrict colored native surfaces
+    // to the existing UI scope; status colors and artwork keep their meaning.
+    const lightIsland = nativeBackdrop && !nativeBackdrop.image && colors.luminance(nativeBackdrop.color) > 0.5 &&
+      ((colors.chroma(nativeBackdrop.color) < 0.1 && (element.childElementCount || element.textContent.trim())) ||
+        element.closest(ctx.recolorLightRegions ? LIGHT_UI : DROPDOWN));
+    const mode = lightIsland ? "oled" : localMode;
     mapSurface(computed, "", mode, found);
     if (mode === "oled" && isPageLayout(element, computed, colors.parseColor(computed.backgroundColor))) found.bg = "#000000";
     // Full-width neutral navigation is page chrome, rather than a raised card.
@@ -457,7 +463,19 @@
       found.data = "1";
     }
     if (element.matches("input, textarea, select")) found.field = "1";
-    if (mode === "crush") return found;
+    if (mode === "crush") {
+      // Native dark readers sometimes replace the message canvas while
+      // leaving explicit dark HTML ink. Repair only unreadable neutral ink
+      // on a solid dark backdrop; keep readable native text and imagery.
+      const text = colors.parseColor(computed.color);
+      if (ctx.recolorLightRegions && nativeBackdrop && !nativeBackdrop.image && text?.a >= 0.95 &&
+          colors.chroma(text) < 0.1 && colors.luminance(text) < 0.2) {
+        const bg = colors.luminance(nativeBackdrop.color), ink = colors.luminance(text);
+        if (bg < 0.2 && (Math.max(bg, ink) + 0.05) / (Math.min(bg, ink) + 0.05) < 4.5)
+          found.fg = colors.mapForeground(text, 1);
+      }
+      return found;
+    }
     if (DARKENING_BLENDS.test(computed.mixBlendMode)) found.blend = "normal";
     for (const [side, key] of SIDES) {
       if (computed[`border${side}Width`] === "0px" || computed[`border${side}Style`] === "none") continue;
@@ -501,6 +519,7 @@
         // already-lightened color (e.g. a newly streamed chat line): keep the
         // parent's emphasis instead of treating it as faint.
         if (colors.luminance(text) > 0.5 && colors.luminance(backdrop.color) > 0.5) tier = textTiers.get(parentAcrossShadow(element)) ?? 1;
+        if (found.field && !element.matches(':disabled, [aria-disabled="true"]')) tier = 1;
         textTiers.set(element, tier);
         found.fg = colors.mapForeground(text, tier);
       }
@@ -587,7 +606,8 @@
       return;
     }
     if (logoChecked.has(img) || logoBudget <= 0) return;
-    const namedLogo = /(?:^|[\s_./#-])logo(?:[\s_./?#-]|$)/i.test(`${img.alt} ${img.currentSrc || img.src}`);
+    const namedLogo = img.matches('[itemprop~="logo"]') ||
+      /(?:^|[\s_./#-])logo(?:[\s_./?#-]|$)/i.test(`${img.alt} ${img.className} ${img.id} ${img.currentSrc || img.src}`);
     logoChecked.add(img);
     logoBudget--;
     const run = () => {

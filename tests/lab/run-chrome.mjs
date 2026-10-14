@@ -1,4 +1,4 @@
-import {mkdirSync,writeFileSync} from 'node:fs';
+import {mkdirSync,writeFileSync,readFileSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {buildLab} from '../../tools/build-lab.mjs';
@@ -8,6 +8,8 @@ import {matrixStates,responsiveness,performanceChecks} from './scenarios.mjs';
 import {checkScreenshot} from './visual.mjs';
 import {cases} from './catalog.mjs';
 import {frameMutationScenario} from './frame-mutation-scenario.mjs';
+import {mixedSurfaceScenario,mixedSurfaceOriginal,mixedSurfaceDeepen} from './mixed-surface-scenario.mjs';
+import {bookingScenario} from './booking-scenario.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/lab-results');mkdirSync(output,{recursive:true});
 const checks=[],add=(name,ok,detail='')=>checks.push({name,ok:!!ok,detail});
 const site=buildLab().output,server=await serveLab(site);let browser;
@@ -37,6 +39,29 @@ try {
     await settings(true);add(label+' / re-enable reapplies extension',await page.eval(`document.documentElement.hasAttribute('data-oled-night-root')`));
   }
   await page.size(1200,1000);await page.go(`${server.origin}/lab/fixtures/matrix.html`);await settings(false);const native=await page.eval(`(${responsiveness.toString()})()`);await settings(true);const active=await page.eval(`(${responsiveness.toString()})()`);checks.push(...performanceChecks(native,active));
+  for(const width of [1200,390])for(const file of ['email-newsletter','native-banner']){
+    const label=file+'-'+width;await page.size(width,1000);
+    await options.eval("chrome.storage.sync.set({extensionEnabled:true,siteRules:{}})");await wait(400);
+    await page.go(`${server.origin}/lab/fixtures/${file}.html`);await wait(500);
+    // The historical fixtures get the same audit seam as the matrix.
+    await page.eval(readFileSync(join(root,'docs/lab/audit.js'),'utf8'));
+    checks.push(...(await page.eval(`(${mixedSurfaceScenario.toString()})()`)).map(c=>({...c,name:label+' / Automatic / '+c.name})));
+    await options.eval("chrome.storage.sync.set({extensionEnabled:false})");await wait(400);
+    checks.push(...(await page.eval(`(${mixedSurfaceOriginal.toString()})()`)).map(c=>({...c,name:label+' / '+c.name})));
+    await options.eval("chrome.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'deepen'}})");await wait(400);
+    checks.push(...(await page.eval(`(${mixedSurfaceDeepen.toString()})()`)).map(c=>({...c,name:label+' / '+c.name})));
+    await settings(true);
+    checks.push(...(await page.eval(`(${mixedSurfaceScenario.toString()})(false)`)).map(c=>({...c,name:label+' / Recolor / '+c.name})));
+  }
+  await settings(true);
+  for(const width of [1200,390]){
+    await page.size(width,1000);await page.go(`${server.origin}/lab/fixtures/booking-form.html`);await wait(500);
+    await page.eval(readFileSync(join(root,'docs/lab/audit.js'),'utf8'));
+    checks.push(...(await page.eval(`(${bookingScenario.toString()})()`)).map(c=>({...c,name:'booking-'+width+' / '+c.name})));
+    await settings(false);
+    add('booking-'+width+' / disable restores field ink and logo',await page.eval("getComputedStyle(document.getElementById('booking-value')).webkitTextFillColor==='rgb(119, 119, 119)'&&getComputedStyle(document.getElementById('booking-logo')).filter==='none'"));
+    await settings(true);
+  }
   const lab=await browser.open(`${server.origin}/lab/`);await wait(500);add('gallery lists all '+cases.length+' cases',await lab.eval(`document.querySelectorAll('#cases button').length===${cases.length}`));
   add('gallery search filters cases',await lab.eval(`(()=>{const s=document.getElementById('search');s.value='Reddit';s.dispatchEvent(new Event('input'));return document.querySelectorAll('#cases button').length>0&&document.querySelectorAll('#cases button').length<${cases.length}})()`));await lab.eval(`document.getElementById('search').value='';document.getElementById('search').dispatchEvent(new Event('input'))`);
   await lab.size(390,850);add('mobile gallery has no horizontal overflow',await lab.eval(`document.documentElement.scrollWidth<=innerWidth`));writeFileSync(join(output,'gallery-mobile.png'),await lab.screenshot());

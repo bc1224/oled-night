@@ -1,0 +1,9 @@
+<!doctype html><html><head><meta name="viewport" content="width=device-width"><style>
+body{background:#000;color:#fff;font:16px Arial;margin:24px}.banner{background:#fff;color:#111;border-radius:5px;padding:24px;display:flex;gap:24px;align-items:center;max-width:850px}.banner button{background:transparent;color:#333;border:0;font:inherit}.native{background:#111;color:#ddd;padding:24px;margin-top:24px}button:focus{outline:2px solid #276ef1}button:hover{background:#f5f5f5}
+</style></head><body>
+<h1>Native dark application</h1>
+<!-- Synthetic onboarding, no account or financial information. -->
+<div class="banner" id="banner" data-lab-check="surface"><span id="banner-copy" data-lab-check="text">Learn how to use this application.</span><button id="tour" data-lab-check="text"><span id="tour-label" data-lab-check="text">Take the tour</span></button><button id="close" aria-label="Close" data-lab-check="text">×</button></div>
+<div class="native"><p id="native-copy" data-lab-check="text">Already readable native text keeps its emphasis.</p><span id="accent" style="color:#00c805">Positive status</span></div>
+<script>document.getElementById('tour').onclick=()=>document.getElementById('tour').dataset.clicked='yes';document.getElementById('close').onclick=()=>document.getElementById('banner').hidden=true;</script>
+</body></html>

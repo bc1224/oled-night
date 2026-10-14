@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta name="viewport" content="width=device-width"><style>
+body{background:#131416;color:#ddd;font:16px Arial;margin:24px}.reader{max-width:650px;margin:auto}table{width:100%;border-collapse:collapse}h1{font-size:30px}p{line-height:1.6}.authored{color:#222}.light{background:white;color:#222;padding:16px}img{display:block;width:100%;height:180px;object-fit:cover}.cta{display:inline-block;background:#12656a;color:white;padding:14px}.creative{position:relative;height:180px}.creative img{position:absolute;inset:0}.creative p{position:absolute;inset:20px;color:#111}.rest{background:#202125;color:#ddd}
+</style></head><body>
+<header>Email reader · synthetic newsletter</header>
+<!-- A native dark reader can override the canvas without overriding authored ink. -->
+<article class="reader"><table><tr><td><h1 class="authored" id="email-heading" data-lab-check="text">A synthetic newsletter headline</h1><img id="email-photo" data-lab-check="media" src="ordinary-image.svg" alt="Synthetic illustration"><h2 id="email-subhead" data-lab-check="text">A readable subheading</h2><p class="authored" id="email-copy" data-lab-check="text">Newsletter paragraphs can carry explicit dark colors even when the email reader supplies a dark canvas.</p><a id="email-cta" class="cta" href="#" data-lab-check="text">Keep reading</a></td></tr></table>
+<section class="light" id="email-panel" data-lab-check="surface"><h2 id="panel-heading" data-lab-check="text">A light embedded email panel</h2><p id="panel-copy" data-lab-check="text">Its canvas and its text need to change together.</p></section>
+<div class="creative"><img id="email-art" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='650' height='180'%3E%3Crect width='650' height='180' fill='%23ffcb05'/%3E%3C/svg%3E" alt="Synthetic yellow creative"><p id="creative-copy">Authored dark text over real artwork stays dark.</p></div>
+<p class="rest" id="native-copy" data-lab-check="text">Existing readable native text remains readable.</p></article>
+</body></html>
