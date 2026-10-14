@@ -58,6 +58,10 @@ export function validateReproductionArtifacts(p, {
     const activation=fixture.filter(c=>c.kind==='activation');
     const assertion=fixture.filter(c=>c.kind==='assertion' && c.name===browser.check);
     if (!activation.length || activation.some(c=>!c.ok) || assertion.length!==1 || assertion[0].ok!==(stage==='fixed')) throw Error('Matching active-runtime bug failure and fixed pass required');
+    if (stage==='base') {
+      const failures=report.checks.filter(c=>!c.ok);
+      if (failures.length!==1 || failures[0]!==assertion[0]) throw Error('Base report must contain only the named reproduction failure');
+    }
     if (stage==='fixed' && report.checks.some(c=>!c.ok)) throw Error('Fixed browser report still fails');
     // Infrastructure failures are never reproduction, even alongside a bug.
     if (report.checks.some(c=>!c.ok && (c.kind!=='assertion' || !c.fixture))) throw Error('Unverified infrastructure or unclassified failure');

@@ -34,6 +34,8 @@ const {tmpdir}=require('node:os');
       assert.throws(()=>proofGate(candidate,dependencies));bytes.set(original.path,valid);
     };
     for(const change of [r=>r.completed=false,r=>r.engine='other',r=>r.sha='f'.repeat(40),r=>r.runtimeHash='f'.repeat(64),r=>r.candidate=true,r=>r.checks=[],r=>r.checks[0].ok=false,r=>r.checks[1].fixture='wrong-fixture',r=>r.checks[1].name='wrong assertion',r=>r.checks[1].ok=stage==='base',r=>r.checks.push({...r.checks[1]}),r=>r.checks.push({name:'browser launch failed',ok:false}),r=>r.checks[1].ok='false']) failReport(change);
+    for (const fixture of [p.fixture, 'other-fixture'])
+      failReport(r=>r.checks.push({name:'another broken assertion',ok:false,kind:'assertion',fixture}));
     const corrupt=JSON.parse(JSON.stringify(p));corrupt.reproduction.browsers.find(b=>b.engine===engine)[stage].hash='f'.repeat(64);
     assert.throws(()=>proofGate(corrupt,dependencies));
     bytes.delete(original.path);assert.throws(()=>proofGate(p,dependencies));bytes.set(original.path,valid);
