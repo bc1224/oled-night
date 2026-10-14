@@ -9,11 +9,12 @@ const {tmpdir}=require('node:os');const {join,resolve,sep}=require('node:path');
   try{
     buildLab({output:directory});server=await serveLab(directory);browser=await launchChrome();const page=await browser.open();
     for(const ok of [false,true]){
-      const receipt=summarizeLive({sha:'a'.repeat(40),checkedAt:'2026-10-13T00:00:00Z',checks:[{name:'www.cvs.com site',kind:'site',ok:true},{name:'www.cvs.com navigation hover 1',kind:'regression',ok}]});
+      const receipt=summarizeLive({sha:'a'.repeat(40),checkedAt:'2026-10-13T00:00:00Z',checks:[{name:'www.cvs.com site',kind:'site',ok:true},{name:'www.cvs.com navigation hover 1',kind:'regression',ok}]},{sha:'a'.repeat(40),checks:[{ok:false},{ok:true}]});
       writeFileSync(join(directory,'lab/live-results.json'),JSON.stringify(receipt));
       await page.go(server.origin+'/lab/?receipt='+ok+'#cvs-hover');
       const state=await page.eval(`({receipt:document.getElementById('live-receipt').textContent,title:document.getElementById('case-title').textContent,limit:document.getElementById('case-limit').textContent,border:getComputedStyle(document.querySelector('.live-status')).borderTopStyle})`);
       assert(state.receipt.startsWith(ok?'PASS this run only':'FAIL'),JSON.stringify(state));
+      assert(await page.eval("document.getElementById('stress-receipt').textContent.includes('FAIL · 1 passed / 1 failed')"),'known synthetic failure must stay visible separately');
       assert(state.limit.includes('unresolved'));assert(state.title.includes('CVS'));assert.equal(state.border,'solid');
       assert(await page.eval(`(()=>{const f=document.getElementById('frame').contentWindow;return f.CVSHoverLab.links().length===3})()`),'CVS case actually loads the interactive fixture');
     }

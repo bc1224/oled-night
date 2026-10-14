@@ -6,7 +6,6 @@ import {launchChrome,wait} from './browser.mjs';
 import {serveLab} from './server.mjs';
 import {matrixStates,responsiveness,performanceChecks} from './scenarios.mjs';
 import {checkScreenshot} from './visual.mjs';
-import {cvsScenario} from './cvs-scenario.mjs';
 import {cases} from './catalog.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/lab-results');mkdirSync(output,{recursive:true});
 const checks=[],add=(name,ok,detail='')=>checks.push({name,ok:!!ok,detail});
@@ -36,7 +35,6 @@ try {
     await settings(true);add(label+' / re-enable reapplies extension',await page.eval(`document.documentElement.hasAttribute('data-oled-night-root')`));
   }
   await page.size(1200,1000);await page.go(`${server.origin}/lab/fixtures/matrix.html`);await settings(false);const native=await page.eval(`(${responsiveness.toString()})()`);await settings(true);const active=await page.eval(`(${responsiveness.toString()})()`);checks.push(...performanceChecks(native,active));
-  checks.push(...await cvsScenario(page,server.origin));
   const lab=await browser.open(`${server.origin}/lab/`);await wait(500);add('gallery lists all '+cases.length+' cases',await lab.eval(`document.querySelectorAll('#cases button').length===${cases.length}`));
   add('gallery search filters cases',await lab.eval(`(()=>{const s=document.getElementById('search');s.value='Reddit';s.dispatchEvent(new Event('input'));return document.querySelectorAll('#cases button').length>0&&document.querySelectorAll('#cases button').length<${cases.length}})()`));await lab.eval(`document.getElementById('search').value='';document.getElementById('search').dispatchEvent(new Event('input'))`);
   await lab.size(390,850);add('mobile gallery has no horizontal overflow',await lab.eval(`document.documentElement.scrollWidth<=innerWidth`));writeFileSync(join(output,'gallery-mobile.png'),await lab.screenshot());

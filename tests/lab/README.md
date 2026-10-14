@@ -13,6 +13,9 @@ npm run test:lab:chrome
 npm run test:lab:firefox
 npm run build:lab
 node tools/lab-report.mjs
+node tests/lab/run-cvs.mjs
+node tests/lab/live-smoke.mjs --cvs
+node tools/live-report.mjs
 ```
 
 Both adapters load the packaged extension into disposable browser profiles. Their temporary loopback servers are owned by the test process and closed at exit; no persistent watcher or helper is installed. Chrome uses a fresh debugging pipe; this never attaches to everyday Chrome or changes its extension.
@@ -50,6 +53,8 @@ Main-branch **Tests** must pass unit tests, the existing browser suites, Firefox
 Open the **CVS · repeated navigation hover** case (`/lab/#cvs-hover`). It models nested links, delayed hover classes and repeated replacement of links/adopted stylesheets. Chrome runs 5 hydration cycles × 3 real sibling moves, checks actual `:hover` and text contrast, and watches 24 completed-frame CSS samples per move. Sampling is armed **before** native pointer input rather than starting 200 ms afterward. A real-browser injected pale hover and a unit test with one early pale sample prove the monitor can fail. This models the failure pattern; it has **not** reproduced or established the cause of the intermittent real CVS failure.
 
 Every Tests run also performs a separate anonymous `node tests/lab/live-smoke.mjs --cvs`: 5 rounds over up to 5 visible navigation targets with the same entry sampler. The gallery publishes a separate exact-source/time live receipt with PASS-this-run, FAIL or UNVERIFIED. The unresolved warning remains even after a passing run; neither the synthetic check count nor a later live pass erases previously observed failures. CSS sampling is not a pixel/video proof of every rendered frame. The live CVS result does not block publishing improvements to the tester; a failing live check still exits nonzero and blocks extension store upload through the existing live submission gate. No extension binaries change in this update.
+
+The CVS synthetic regression runs separately as `node tests/lab/run-cvs.mjs`. It exits nonzero when any expectation fails. Runs on Windows and Linux exposed native pale hover after nested stylesheet replacement; other runs passed, so this remains an intermittent regression rather than an established explanation for real CVS. Its failures are displayed alongside the live receipt and excluded from the passing component total. Website deployment may publish this evidence, but the separate **CVS extension release gate** fails the overall Tests workflow if the synthetic regression fails. The exact-source store gate still requires that overall workflow to pass; publishing the tester cannot authorize a failing binary release.
 
 Saved Bitwarden credential filling, real CAPTCHA completion, image-backed hero text and authenticated pages still need targeted live QA. The lab reduces manual work; it cannot guarantee compatibility with every changing website.
 

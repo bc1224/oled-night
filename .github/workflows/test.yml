@@ -12,6 +12,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    outputs:
+      cvs_stress: ${{ steps.cvs_stress.outcome }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -35,6 +37,12 @@ jobs:
           CHROME_PATH: /usr/bin/google-chrome
       - name: Component states and performance in Firefox
         run: npm run test:lab:firefox
+      - name: Known CVS synthetic regression (publish failures separately)
+        id: cvs_stress
+        continue-on-error: true
+        run: node tests/lab/run-cvs.mjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
       - name: Separate live CVS repeated hover result (published even when failing)
         id: cvs
         continue-on-error: true
@@ -61,6 +69,19 @@ jobs:
         with:
           name: oled-night-zip
           path: dist/*.zip
+  extension-regression-gate:
+    name: CVS extension release gate
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the known synthetic regression to pass for store submission
+        env:
+          CVS_OUTCOME: ${{ needs.test.outputs.cvs_stress }}
+        run: |
+          if [ "$CVS_OUTCOME" != "success" ]; then
+            echo "CVS regression is unresolved. Tester can publish evidence; extension store submission is blocked."
+            exit 1
+          fi
   deploy:
     if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
     needs: test
