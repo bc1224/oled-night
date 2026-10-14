@@ -88,6 +88,7 @@
   let containerPaint = new WeakMap();
   let nativeInk = new WeakMap();
   let simpleScopeFingerprint = null;
+  let compiledPaintScope = null;
   let simpleScopeEpoch = 0;
   let recentBackgroundWrites = new Map();
   // Browsers serialize shorthand defaults differently (initial vs repeat,
@@ -1038,19 +1039,27 @@
   // and descendant rules keep native measurement. A fingerprint invalidates
   // older snapshots even for CSSOM edits that have no DOM mutation.
   function simplePaintScope() {
-    const rules = [], fingerprint = [];
+    const authored = [], fingerprint = [];
+    const rules = [];
     let count = 0, length = 0, mayAnimate = false, movingPaint = false;
     try {
       for (const sheet of [...document.styleSheets, ...document.adoptedStyleSheets]) {
         if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith("oled-night-")) continue;
         if (!sheet || sheet.disabled || sheet.media?.length) return null;
         for (const rule of sheet.cssRules) {
-          const selectors = rule.selectorText?.split(",").map(selector => selector.trim());
-          if (++count > 256 || rule.type !== 1 || rule.cssRules?.length || !selectors?.every(selector =>
-            /^(?:[a-z][\w-]*|\*)?(?:\.[\w-]+)*$/i.test(selector))) return null;
-          length += rule.cssText.length;
+          if (++count > 256 || rule.type !== 1 || rule.cssRules?.length) return null;
+          const text = rule.cssText;
+          length += text.length;
           if (length > 32768) return null;
-          fingerprint.push(rule.cssText);
+          fingerprint.push(text);
+          authored.push(rule);
+        }
+      }
+      const key = fingerprint.join("\n");
+      if (key === simpleScopeFingerprint && compiledPaintScope) return compiledPaintScope;
+      for (const rule of authored) {
+          const selectors = rule.selectorText?.split(",").map(selector => selector.trim());
+          if (!selectors?.every(selector => /^(?:[a-z][\w-]*|\*)?(?:\.[\w-]+)*$/i.test(selector))) return null;
           const properties = Array.from(rule.style);
           for (const property of properties) {
             if (/^(?:transition|animation)(?:-|$)/.test(property)) mayAnimate = true;
@@ -1068,12 +1077,13 @@
               rule.style.getPropertyPriority('background-color') === 'important' ? 1 : 0,
               classes.length, /^[a-z]/i.test(selector) ? 1 : 0]});
           }
-        }
       }
+      if (key !== simpleScopeFingerprint) { simpleScopeFingerprint = key; simpleScopeEpoch++; }
+      // Cache only compiled strings/colors. Every call still checks the full
+      // CSSOM fingerprint, including insertRule and adopted sheet changes.
+      compiledPaintScope = { epoch: simpleScopeEpoch, rules, mayAnimate, movingPaint };
+      return compiledPaintScope;
     } catch { return null; }
-    const key = fingerprint.join("\n");
-    if (key !== simpleScopeFingerprint) { simpleScopeFingerprint = key; simpleScopeEpoch++; }
-    return { epoch: simpleScopeEpoch, rules, mayAnimate, movingPaint };
   }
 
   function plainDocumentContext(node, cache = new Map()) {
@@ -1098,13 +1108,32 @@
     return safe;
   }
 
+  function inheritsPlainInk(node, scope, contexts) {
+    if (!scope || scope.mayAnimate || node.hasAttribute(MARK) || node.childElementCount || node.style.length ||
+        !/^(p|span|b|strong|em|i|small)$/.test(node.localName) || !plainDocumentContext(node, contexts) ||
+        !node.parentElement?.getAttribute(MARK)?.split(' ').includes('fg') || !overridesIntact(node.parentElement)) return false;
+    if (scope.rules.some(rule => node.matches(rule.selector))) return false;
+    // Complete document CSS, no matching rule and no hidden slot scope:
+    // these ordinary text tags inherit ink. Native controls, explicit styles,
+    // nested/conditional rules and unknown scopes still get measured.
+    originalSurface.set(node, null);
+    applied.set(node, '');
+    inlineStyles.set(node, '');
+    nativeInk.delete(node);
+    textTiers.set(node, textTiers.get(node.parentElement) ?? 1);
+    return true;
+  }
+
   function processBatch(list, trees, selves) {
     // Ordinary already-styled buttons/menus need no scope analysis. Pay for
-    // this proof only for repeated containers.
+    // this proof only for repeated containers or unstyled text leaves.
     const mayReusePaint = list.some(node => paintContainers.has(node) ||
-      (node.childElementCount && node.parentElement?.childElementCount >= 32 && node.getRootNode() === document));
+      (node.childElementCount && node.parentElement?.childElementCount >= 32 && node.getRootNode() === document) ||
+      (!node.hasAttribute(MARK) && /^(p|span|b|strong|em|i|small)$/.test(node.localName) &&
+        node.parentElement?.getAttribute(MARK)?.split(' ').includes('fg')));
     const paintScope = mayReusePaint ? simplePaintScope() : null;
-    const paintList = eagerPaintList(list, trees);
+    const documentContexts = new Map();
+    const paintList = eagerPaintList(list, trees).filter(node => !inheritsPlainInk(node, paintScope, documentContexts));
     if (!paintList.length && !list.images.size && !list.icons.size) return;
     for (const element of paintList) if (deferredPaint.has(element)) forgetDeferredPaint(element);
     const paintTrees = trees.filter(node => !deferredPaint.has(node));
@@ -1242,19 +1271,6 @@
       }
     };
     const decisions = paintList.map((element) => decide(element, ctx));
-    const measuredNodes = new Set(paintList);
-    for (let i = 0; i < paintList.length; i++) {
-      const node = paintList[i], found = decisions[i], parent = node.parentElement;
-      // Measure new text normally, including slot rules and explicit ink.
-      // If its measured color already equals a stable parent's exact mapped
-      // foreground, another inherited-color write changes nothing on screen
-      // but forces a second style pass each streaming frame. Ancestor work,
-      // existing overrides, other paint and differing ink remain conservative.
-      if (!parent || applied.has(node) || node.childElementCount || measuredNodes.has(parent) ||
-          Object.keys(found).length !== 1 || !found.fg || !overridesIntact(parent)) continue;
-      const parentInk = applied.get(parent)?.match(/(?:^|;)fg=([^;]+)(?:;|$)/)?.[1];
-      if (parentInk === found.fg && ctx.style(node).color === ctx.style(parent).color) delete found.fg;
-    }
     const iconDecisions = [];
     for (const icon of list.icons) if (icon.isConnected) decideSvg(icon, ctx, iconDecisions);
     const recolor = ctx.mode === "oled" || ctx.mode === "soft";
@@ -1294,7 +1310,6 @@
     }
     for (const [element, found] of writes) write(element, found, !changed.has(element));
     // Register only repeated, fully styled container rows, never every leaf.
-    const documentContexts = new Map();
     for (const [node, found] of writes) if (node.childElementCount && node.parentElement?.childElementCount >= 32 &&
       node.hasAttribute(MARK) && node.getRootNode() === document && !node.localName.includes("-")) {
       if (!paintContainers.has(node) && paintContainers.size < MAX_OBSERVED_PAINT) {
@@ -1868,6 +1883,7 @@
     nativeInk = new WeakMap();
     recentBackgroundWrites.clear();
     simpleScopeFingerprint = null;
+    compiledPaintScope = null;
     simpleScopeEpoch = 0;
     originalSurface = new WeakMap();
     mediaCopies = new WeakMap();

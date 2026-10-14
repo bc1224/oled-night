@@ -4,7 +4,7 @@ export async function largeUpdatesScenario(){
  const leaf=rows[0].querySelector('b'), paint=rows[0].style.getPropertyValue('--oln-bg');
  check('private row paint does not inherit into every descendant',!!paint&&getComputedStyle(leaf).getPropertyValue('--oln-bg').trim()==='',getComputedStyle(leaf).getPropertyValue('--oln-bg'));
  const plain=document.createElement('p');plain.textContent='Fake streamed inherited text';document.getElementById('list').prepend(plain);await sleep(80);
- check('new streamed text retains readable measured ink',window.OLEDLabAudit.contrast(getComputedStyle(plain).color,getComputedStyle(document.body).backgroundColor)>=4.5);
+ check('new streamed text retains readable ink',window.OLEDLabAudit.contrast(getComputedStyle(plain).color,getComputedStyle(document.body).backgroundColor)>=4.5);
  plain.style.color='#111';await sleep(80);
  check('later explicit ink on a streamed leaf remains readable',window.OLEDLabAudit.lum(getComputedStyle(plain).color)>.4);
  plain.remove();await sleep(80);
