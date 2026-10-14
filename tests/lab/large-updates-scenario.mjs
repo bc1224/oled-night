@@ -4,7 +4,9 @@ export async function largeUpdatesScenario(){
  const leaf=rows[0].querySelector('b'), paint=rows[0].style.getPropertyValue('--oln-bg');
  check('private row paint does not inherit into every descendant',!!paint&&getComputedStyle(leaf).getPropertyValue('--oln-bg').trim()==='',getComputedStyle(leaf).getPropertyValue('--oln-bg'));
  const plain=document.createElement('p');plain.textContent='Fake streamed inherited text';document.getElementById('list').prepend(plain);await sleep(80);
- check('unstyled streamed text inherits readable ink without duplicate paint',!plain.hasAttribute('data-oled-night')&&plain.style.length===0&&window.OLEDLabAudit.contrast(getComputedStyle(plain).color,getComputedStyle(document.body).backgroundColor)>=4.5);
+ check('new streamed text retains readable measured ink',window.OLEDLabAudit.contrast(getComputedStyle(plain).color,getComputedStyle(document.body).backgroundColor)>=4.5);
+ plain.style.color='#111';await sleep(80);
+ check('later explicit ink on a streamed leaf remains readable',window.OLEDLabAudit.lum(getComputedStyle(plain).color)>.4);
  plain.remove();await sleep(80);
  let pointerReads=0;const pointerWatch=new MutationObserver(records=>pointerReads+=records.filter(r=>r.attributeName?.startsWith('data-oled-night-measure')).length);
  pointerWatch.observe(document.documentElement,{subtree:true,attributes:true});
@@ -62,5 +64,22 @@ export async function largeUpdatesScenario(){
  check('late layout rules retain immediate conservative repaint',eagerWrites>0,String(eagerWrites));
  layout.remove();await sleep(100);for(const item of far)item.classList.add('hl');await sleep(80);
  for(const item of far)item.remove();await sleep(80);scrollTo(0,0);
+ const nested=document.createElement('style');nested.textContent='.row { & .nested-new { color:#111 } }';document.head.append(nested);await sleep(100);
+ const nestedInk=document.createElement('span');nestedInk.className='nested-new';nestedInk.textContent='Fake nested style';rows[0].append(nestedInk);await sleep(100);
+ check('nested authored rules retain conservative readable ink',nested.sheet.cssRules[0].cssRules.length>0&&window.OLEDLabAudit.lum(getComputedStyle(nestedInk).color)>.4);
+ nestedInk.remove();nested.remove();await sleep(100);
+ for(const tag of ['mail-fixture','div']){
+ const host=document.createElement(tag);host.attachShadow({mode:'closed'}).innerHTML='<style>::slotted(.fresh-ink){color:#111}</style><slot></slot>';document.body.append(host);await sleep(100);
+ const slottedInk=document.createElement('span');slottedInk.className='fresh-ink';slottedInk.textContent='Fake closed-slot text';host.append(slottedInk);await sleep(160);
+ check(tag+' closed slotted text retains conservative readable ink',window.OLEDLabAudit.lum(getComputedStyle(slottedInk).color)>.4);
+ host.remove();await sleep(100);
+ }
+ const closedRows=document.createElement('div');
+ for(let i=0;i<32;i++){const row=document.createElement('div');row.className='row';row.attachShadow({mode:'closed'}).innerHTML='<style>:host(.hl) ::slotted(span){color:#e31a1c}</style><slot></slot>';row.innerHTML='<span>Fake slotted row</span>';closedRows.append(row)}
+ document.body.append(closedRows);await sleep(200);
+ const selected=closedRows.firstElementChild;selected.classList.add('hl');await sleep(160);
+ const selectedPaint=(getComputedStyle(selected.firstElementChild).color.match(/[\d.]+/g)||[]).map(Number);
+ check('closed ordinary hosts retain measured colored selection ink',selectedPaint.length>=3&&selectedPaint[0]>selectedPaint[1]*1.3&&selectedPaint[0]>selectedPaint[2]*1.3,getComputedStyle(selected.firstElementChild).color);
+ closedRows.remove();await sleep(100);
  return out;
 }

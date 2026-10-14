@@ -90,6 +90,13 @@
   let simpleScopeFingerprint = null;
   let simpleScopeEpoch = 0;
   let recentBackgroundWrites = new Map();
+  // Browsers serialize shorthand defaults differently (initial vs repeat,
+  // scroll, etc.). Compare to that engine's own color-only declaration.
+  const backgroundDefaults = (() => {
+    const style = document.createElement('div').style;
+    style.background = '#000';
+    return new Map(Array.from(style, name => [name, style.getPropertyValue(name)]));
+  })();
   let originalSurface = new WeakMap();
   let mediaCopies = new WeakMap();
   let textTiers = new WeakMap();
@@ -1038,17 +1045,28 @@
         if (!sheet || sheet.disabled || sheet.media?.length) return null;
         for (const rule of sheet.cssRules) {
           const selectors = rule.selectorText?.split(",").map(selector => selector.trim());
-          if (++count > 256 || rule.type !== 1 || !selectors?.every(selector =>
+          if (++count > 256 || rule.type !== 1 || rule.cssRules?.length || !selectors?.every(selector =>
             /^(?:[a-z][\w-]*|\*)?(?:\.[\w-]+)*$/i.test(selector))) return null;
           length += rule.cssText.length;
           if (length > 32768) return null;
           fingerprint.push(rule.cssText);
-          for (const property of Array.from(rule.style)) {
+          const properties = Array.from(rule.style);
+          for (const property of properties) {
             if (/^(?:transition|animation)(?:-|$)/.test(property)) mayAnimate = true;
             if (/^(?:position|transform|translate|rotate|scale|margin(?:-.+)?|float|animation(?:-.+)?|text-indent)$/.test(property) ||
                 (property === "display" && rule.style.display === "contents")) movingPaint = true;
           }
-          for (const selector of selectors) rules.push({ selector, style: rule.style });
+          const backgroundOnly = properties.every(property => property === 'background-color' ||
+            (property.startsWith('background-') && (rule.style.getPropertyValue(property) === 'initial' ||
+              rule.style.getPropertyValue(property) === backgroundDefaults.get(property))) ||
+            (property === 'background-image' && rule.style.backgroundImage === 'none'));
+          const background = colorsApi().parseColor(rule.style.backgroundColor);
+          for (const selector of selectors) {
+            const classes = selector.match(/\.[\w-]+/g) || [];
+            rules.push({selector,classes,backgroundOnly,background,priority:[
+              rule.style.getPropertyPriority('background-color') === 'important' ? 1 : 0,
+              classes.length, /^[a-z]/i.test(selector) ? 1 : 0]});
+          }
         }
       }
     } catch { return null; }
@@ -1057,29 +1075,35 @@
     return { epoch: simpleScopeEpoch, rules, mayAnimate, movingPaint };
   }
 
-  function inheritsPlainInk(node, scope) {
-    if (!scope || node.hasAttribute(MARK) || node.childElementCount || node.style.length ||
-        node.getRootNode() !== document || !/^(p|span|b|strong|em|i|small)$/.test(node.localName) ||
-        node.assignedSlot || node.hasAttribute("part") || !node.parentElement?.getAttribute(MARK)?.split(" ").includes("fg")) return false;
-    if (scope.rules.some(rule => node.matches(rule.selector))) return false;
-    // An unstyled ordinary text leaf already inherits its parent's readable
-    // ink. Avoid forcing a synchronous style/layout pass for every new token.
-    originalSurface.set(node, null);
-    applied.set(node, "");
-    inlineStyles.set(node, "");
-    textTiers.set(node, textTiers.get(node.parentElement) ?? 1);
-    return true;
+  function plainDocumentContext(node, cache = new Map()) {
+    if (node.getRootNode() !== document) return false;
+    const path = [];
+    let safe = true;
+    for (let parent = node; parent; parent = parent.parentElement) {
+      if (cache.has(parent)) { safe = cache.get(parent); break; }
+      path.push(parent);
+      if (parent.localName.includes('-') || parent.assignedSlot || parent.hasAttribute('part')) { safe = false; break; }
+      // Closed ordinary hosts hide slot styles from document.styleSheets and
+      // assignedSlot. Ask only whether a root exists; never inspect or style
+      // an unknown root (including verification widgets). Cache this boolean
+      // only for this delivery: attachShadow need not mutate the document.
+      try {
+        if ('openOrClosedShadowRoot' in parent) { if (parent.openOrClosedShadowRoot) { safe = false; break; } }
+        else if (domApi?.openOrClosedShadowRoot) { if (domApi.openOrClosedShadowRoot(parent)) { safe = false; break; } }
+        else { safe = false; break; }
+      } catch { safe = false; break; }
+    }
+    for (const parent of path) cache.set(parent, safe);
+    return safe;
   }
 
   function processBatch(list, trees, selves) {
     // Ordinary already-styled buttons/menus need no scope analysis. Pay for
-    // this proof only for repeated containers or newly inherited text.
+    // this proof only for repeated containers.
     const mayReusePaint = list.some(node => paintContainers.has(node) ||
-      (node.childElementCount && node.parentElement?.childElementCount >= 32 && node.getRootNode() === document) ||
-      (!node.hasAttribute(MARK) && /^(p|span|b|strong|em|i|small)$/.test(node.localName) &&
-        node.parentElement?.getAttribute(MARK)?.split(" ").includes("fg")));
+      (node.childElementCount && node.parentElement?.childElementCount >= 32 && node.getRootNode() === document));
     const paintScope = mayReusePaint ? simplePaintScope() : null;
-    const paintList = eagerPaintList(list, trees).filter(node => !inheritsPlainInk(node, paintScope));
+    const paintList = eagerPaintList(list, trees);
     if (!paintList.length && !list.images.size && !list.icons.size) return;
     for (const element of paintList) if (deferredPaint.has(element)) forgetDeferredPaint(element);
     const paintTrees = trees.filter(node => !deferredPaint.has(node));
@@ -1217,6 +1241,19 @@
       }
     };
     const decisions = paintList.map((element) => decide(element, ctx));
+    const measuredNodes = new Set(paintList);
+    for (let i = 0; i < paintList.length; i++) {
+      const node = paintList[i], found = decisions[i], parent = node.parentElement;
+      // Measure new text normally, including slot rules and explicit ink.
+      // If its measured color already equals a stable parent's exact mapped
+      // foreground, another inherited-color write changes nothing on screen
+      // but forces a second style pass each streaming frame. Ancestor work,
+      // existing overrides, other paint and differing ink remain conservative.
+      if (!parent || applied.has(node) || node.childElementCount || measuredNodes.has(parent) ||
+          Object.keys(found).length !== 1 || !found.fg || !overridesIntact(parent)) continue;
+      const parentInk = applied.get(parent)?.match(/(?:^|;)fg=([^;]+)(?:;|$)/)?.[1];
+      if (parentInk === found.fg && ctx.style(node).color === ctx.style(parent).color) delete found.fg;
+    }
     const iconDecisions = [];
     for (const icon of list.icons) if (icon.isConnected) decideSvg(icon, ctx, iconDecisions);
     const recolor = ctx.mode === "oled" || ctx.mode === "soft";
@@ -1256,13 +1293,14 @@
     }
     for (const [element, found] of writes) write(element, found, !changed.has(element));
     // Register only repeated, fully styled container rows, never every leaf.
+    const documentContexts = new Map();
     for (const [node, found] of writes) if (node.childElementCount && node.parentElement?.childElementCount >= 32 &&
       node.hasAttribute(MARK) && node.getRootNode() === document && !node.localName.includes("-")) {
       if (!paintContainers.has(node) && paintContainers.size < MAX_OBSERVED_PAINT) {
         paintContainers.add(node);
         observePaint(node);
       }
-      if (paintContainers.has(node) && paintScope && !paintScope.mayAnimate) containerPaint.set(node, {
+      if (paintContainers.has(node) && paintScope && !paintScope.mayAnimate && plainDocumentContext(node, documentContexts)) containerPaint.set(node, {
         found: { ...found }, classes: node.getAttribute("class") || "", scopeEpoch: paintScope.epoch
       });
       else containerPaint.delete(node);
@@ -1470,9 +1508,11 @@
   }
 
   function fastBackgroundState(node, scopes) {
-    const mode = modeFor(), snapshot = containerPaint.get(node);
+    if (!scopes.has('mode')) scopes.set('mode', modeFor());
+    if (!scopes.has('contexts')) scopes.set('contexts', new Map());
+    const mode = scopes.get('mode'), snapshot = containerPaint.get(node);
     if (!["oled", "soft"].includes(mode) || !paintContainers.has(node) || !snapshot ||
-        node.getRootNode() !== document || !overridesIntact(node) || inlineSignature(node) !== "") return false;
+        !plainDocumentContext(node, scopes.get('contexts')) || !overridesIntact(node) || inlineSignature(node) !== "") return false;
     if (!scopes.has(document)) scopes.set(document, simplePaintScope());
     const scope = scopes.get(document);
     if (!scope || scope.mayAnimate || snapshot.scopeEpoch !== scope.epoch) return false;
@@ -1481,23 +1521,18 @@
     const oldClasses = new Set(snapshot.classes.split(/\s+/)), newClasses = new Set(current.split(/\s+/));
     const changed = new Set([...oldClasses, ...newClasses].filter(name => oldClasses.has(name) !== newClasses.has(name)));
     let affected = false, background = null, winner = null;
-    for (const { selector, style } of scope.rules) {
-      const classes = selector.match(/\.[\w-]+/g) || [];
+    for (const { selector, classes, backgroundOnly, background: paint, priority } of scope.rules) {
       if (classes.some(name => changed.has(name.slice(1)))) {
         // Shorthand backgrounds serialize their unused longhands as initial.
         // Any other paint/layout/custom-property change needs a native reread.
-        if (!Array.from(style).every(property => property === "background-color" ||
-            (property.startsWith("background-") && style.getPropertyValue(property) === "initial") ||
-            (property === "background-image" && style.backgroundImage === "none"))) return false;
+        if (!backgroundOnly) return false;
         affected = true;
       }
-      if (style.backgroundColor && node.matches(selector)) {
-        const priority = [style.getPropertyPriority("background-color") === "important" ? 1 : 0,
-          classes.length, /^[a-z]/i.test(selector) ? 1 : 0];
+      if (paint && node.matches(selector)) {
         if (!winner || priority[0] > winner[0] || (priority[0] === winner[0] &&
             (priority[1] > winner[1] || (priority[1] === winner[1] && priority[2] >= winner[2])))) {
           winner = priority;
-          background = colorsApi().parseColor(style.backgroundColor);
+          background = paint;
         }
       }
     }
@@ -1552,6 +1587,7 @@
     // one delivery, is bounded, and is cleared on disable/flush as well.
     records = records.filter(record => record.type !== 'attributes' || record.attributeName !== 'style' ||
       !ownBackgrounds.has(record.target) || ownBackgrounds.get(record.target) !== record.target.getAttribute('style'));
+    if (!records.length) return;
     const seenAttributes = new Map();
     const backgroundScopes = new Map();
     const changedRoots = new Set();
