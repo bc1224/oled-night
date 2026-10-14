@@ -3,6 +3,7 @@ export async function checkoutScenario(){
  for(const id of ['checkout-back','checkout-card-icon','checkout-crypto-icon']){const filter=css($(id).querySelector('svg')||$(id)).filter;check(id+' dark glyph remains visible',id==='checkout-crypto-icon'?filter.includes('drop-shadow'):filter.includes('invert(1)'),filter)}
  check('payment brand keeps its green fill',css($('checkout-brand')).fill==='rgb(5, 199, 107)',css($('checkout-brand')).fill);
  check('colored payment SVG is not inverted',css($('checkout-brand').closest('svg')).filter==='none');
+ for(const id of ['checkout-gradient-brand','checkout-fallback-brand','checkout-translucent-brand'])check(id+' mixed paint is not inverted',css($(id)).filter==='none',css($(id)).filter);
  check('checkout filled value is readable',a.contrast(css($('checkout-email')).webkitTextFillColor||css($('checkout-email')).color,a.background($('checkout-email')))>=4.5);
  check('checkout illustration is not inverted',css($('photo')).filter==='none');
  check('small account artwork is unchanged',css($('checkout-avatar')).filter==='none');

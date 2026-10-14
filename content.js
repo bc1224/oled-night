@@ -574,11 +574,18 @@
       if (icon && !svg.querySelector('use,image,foreignObject')) {
         const bg = colors.luminance(backdropOf(svg, ctx).color);
         let neutral = true;
-        const paints = [...svg.querySelectorAll(ICON_PARTS)].flatMap(part => {
+        const paints = [];
+        for (const part of svg.querySelectorAll(ICON_PARTS)) {
           const s = ctx.style(part);
-          return [s.fill, s.stroke].map(paint => colors.parseColor(paint)).filter(c => c && c.a >= .5);
-        });
-        for (const paint of paints) if (colors.chroma(paint) > .1) neutral = false;
+          for (const paint of [s.fill, s.stroke]) {
+            if (paint === 'none') continue;
+            const color = colors.parseColor(paint);
+            // Gradients/referenced paint and translucent brand colors are not
+            // evidence of a wholly neutral badge. Preserve uncertain artwork.
+            if (!color || /^url\(/i.test(paint) || colors.chroma(color) > .1) neutral = false;
+            if (color && color.a >= .5) paints.push(color);
+          }
+        }
         const unreadable = paints.some(c => {
           const ink = colors.luminance(c);
           return bg < .2 && (Math.max(bg, ink) + .05) / (Math.min(bg, ink) + .05) < 3;
