@@ -4,7 +4,7 @@ The owner explicitly authorized gated automatic releases on October 14, 2026. Th
 
 ## Reporting
 
-The popup previews an allowlisted payload and opens a GitHub issue draft only after a click. GitHub requires the reporter to submit the draft. This uses their own GitHub account and keeps publishing tokens out of the extension. No backend or automatic screenshot upload is added. Full raw reports remain an explicitly chosen local download.
+The popup previews an allowlisted payload and opens a GitHub issue draft only after a click. GitHub requires the reporter to submit the draft. This uses their own GitHub account and keeps publishing tokens out of the extension. No backend or automatic screenshot upload is added. Firefox declares optional browsingActivity and technicalAndInteraction for the domain and error diagnostics and requests native consent before opening a draft. Denial or an unavailable permission fails closed; normal dark mode remains available. Full raw reports remain an explicitly chosen local download.
 
 The public payload includes domain, version, mode, brightness/contrast, element counts and computed contrast colors/ratios. It excludes page text, input values, selectors, IDs/classes, URL paths/queries, frame origins and user-agent strings. A domain can reveal a service someone uses; it is visible before opening the draft. User-written issue descriptions are public and are not automatically scrubbed.
 
@@ -28,3 +28,5 @@ The local trusted lead supplies schema oled-auto-release-v1, repo, issue, base, 
     node tools/report-release-gate.mjs <absolute local receipt path>
 
 This gate validates retained proof and provider state. It does not generate proof, independently judge a bug or substitute for the review worker. Store API secrets stay in encrypted GitHub Actions secrets. Model/provider failures block the process.
+
+The review worker must begin its schema summary with `OLED-REVIEW ` followed by a one-line JSON object containing `sha`, `base`, `tree`, `model:"gpt-6-luna"`, `profile:"review"`, and `independent:true`, then a newline and its assessment. These fields are inside the hashed raw worker artifact, not assertions supplied only by the lead. The gate checks them against the candidate commit and tree. A bare accept verdict is rejected. Preserve the actual router invocation/transcript alongside the raw artifact; do not manufacture or reformat a worker verdict. This is a local trusted-lead gate, not a cryptographic third-party reviewer identity service.

@@ -216,10 +216,18 @@
   let pendingReport = null;
   $("reportCancel").addEventListener("click", () => $("reportPreview").close());
   $("reportDownload").addEventListener("click", () => { if (pendingReport) saveReport(pendingReport); });
-  $("reportSubmit").addEventListener("click", () => {
+  $("reportSubmit").addEventListener("click", async () => {
     if (!pendingReport) return;
-    chrome.tabs.create({url: OledNightReport.issueUrl(pendingReport)});
-    $("reportPreview").close();
+    try {
+      const shared = await OledNightReport.openDraft(pendingReport, {
+        requestConsent: isFirefox ? () => chrome.permissions.request({data_collection:["browsingActivity","technicalAndInteraction"]}) : null,
+        openTab: tab => chrome.tabs.create(tab)
+      });
+      if (shared) $("reportPreview").close();
+      else $("reportConsentStatus").textContent = "Sharing declined. OLED Night still works; you can save a report locally.";
+    } catch {
+      $("reportConsentStatus").textContent = "Could not authorize sharing. Nothing was sent. You can save a report locally.";
+    }
   });
   $("report").addEventListener("click", async () => {
     if (!tabId || !chrome?.tabs) return;
@@ -230,6 +238,7 @@
       return;
     }
     pendingReport = report;
+    $("reportConsentStatus").textContent = "";
     $("reportDiagnostics").textContent = JSON.stringify(OledNightReport.scrub(report), null, 2);
     $("reportPreview").showModal();
   });

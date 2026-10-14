@@ -102,7 +102,7 @@ const firefoxManifest = {
   browser_specific_settings: { gecko: {
     id: "oled-night@bc1224.github.io",
     strict_min_version: "142.0",
-    data_collection_permissions: { required: ["none"] }
+    data_collection_permissions: { required: ["none"], optional: ["browsingActivity", "technicalAndInteraction"] }
   } }
 };
 writeFileSync(join(firefoxDir, "manifest.json"), JSON.stringify(firefoxManifest, null, 2) + "\n");

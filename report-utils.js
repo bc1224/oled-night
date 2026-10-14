@@ -28,5 +28,12 @@
     url.searchParams.set('body', 'What broke? Describe the affected controls and how to reproduce it. Please remove personal information before submitting.\n\nPublic diagnostics (no page text, field values, URL paths or screenshots):\n' + '```json\n' + JSON.stringify(clean,null,2) + '\n```');
     return url.href;
   }
-  scope.OledNightReport = {scrub,issueUrl};
+  async function openDraft(report, {requestConsent,openTab}) {
+    // Invoke the consent request directly in the user gesture. Denial or a
+    // failed request cannot open a tab carrying diagnostics.
+    if (requestConsent && !await requestConsent()) return false;
+    await openTab({url:issueUrl(report)});
+    return true;
+  }
+  scope.OledNightReport = {scrub,issueUrl,openDraft};
 })(globalThis);

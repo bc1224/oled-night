@@ -16,3 +16,13 @@ assert.ok(url.searchParams.get('body').includes('oled-report-v1'));
 assert.ok(!url.searchParams.get('body').includes('PRIVATE'));
 assert.equal(r.scrub({...raw,lowContrast:Array(200).fill(raw.lowContrast[0])}).lowContrast.length,12);
 console.log('PASS public reports allowlist diagnostics and omit private page data');
+(async()=>{
+ const opened=[],openTab=tab=>opened.push(tab);
+ assert.equal(await r.openDraft(raw,{requestConsent:()=>false,openTab}),false);
+ assert.equal(opened.length,0,'denied consent must never send diagnostics');
+ await assert.rejects(r.openDraft(raw,{requestConsent:()=>{throw Error('permission unavailable')},openTab}));
+ assert.equal(opened.length,0,'permission failure must fail closed');
+ assert.equal(await r.openDraft(raw,{requestConsent:()=>true,openTab}),true);
+ assert.equal(opened.length,1);assert.ok(!opened[0].url.includes('PRIVATE'));
+ console.log('PASS optional report sharing fails closed on declined/unavailable consent');
+})().catch(e=>{console.error(e);process.exitCode=1});

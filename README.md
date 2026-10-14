@@ -31,7 +31,7 @@ Every dark mode extension I tried either left everything grey, or made sites dar
 - **Per-site modes:** automatic, full recolor, deepen blacks only, invert (canvas apps), or off. Each site can also have its own brightness, contrast and image dimming.
 - **Keyboard shortcuts:** <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> turns OLED Night on or off everywhere; <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> toggles the current site. Both are customizable in your browser's extension shortcut settings.
 - **Schedule, settings backup, and a "report a broken site" button.**
-- **Private.** No servers, no analytics, no tracking. See the [privacy policy](store/PRIVACY.md).
+- **Private by default.** No background tracking or developer servers. Optional reports preview scrubbed diagnostics before sharing a GitHub draft. See the [privacy policy](store/PRIVACY.md).
 
 ## Install
 Install the [OLED Night extension](https://chromewebstore.google.com/detail/oled-night/afffgalhockmjmknnaljghdneaeichbl) from the Chrome Web Store. For a matching black browser window, install the [OLED Night Chrome theme](https://chromewebstore.google.com/detail/oled-night-chrome-theme/pkdklfocgpcnijiggfddneadmhacbpmf) too. Store installs update automatically.

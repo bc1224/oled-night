@@ -10,7 +10,7 @@ Upload `dist/oled-night-<version>.zip` (build it with `node tools/package.mjs`).
 **Name:** OLED Night
 
 **Summary** (132 characters max). The store shows the `description` from `manifest.json` here, so a new summary goes live with the next package:
-> True-black dark mode for every site. Open source, zero tracking, nothing leaves your browser. Images and text stay intact.
+> True-black dark mode for every site. Keeps images intact, readable text, per-site controls.
 
 **Category:** Accessibility (alternative: Productivity)
 
@@ -19,11 +19,12 @@ Upload `dist/oled-night-<version>.zip` (build it with `node tools/package.mjs`).
 **Description:**
 > OLED Night makes every website true black, the kind of black that switches OLED pixels off, without the usual dark-mode side effects.
 >
-> NO TRACKING. NOTHING LEAVES YOUR BROWSER.
-> • No analytics, no telemetry, no ads, no accounts and no servers. The extension makes no network requests of its own.
+> LOCAL RECOLORING. NO BACKGROUND TRACKING.
+> • No analytics, background telemetry, ads or OLED Night account. Recoloring runs locally.
 > • Your settings live in Chrome's own sync storage. The developer never sees them.
-> • It reads page colors only to recolor them, inside your browser. Page content is never saved or sent anywhere.
+> • Page text and field values are not uploaded. Optional reports share only the previewed domain and technical diagnostics with GitHub.
 > • "Report a broken site" previews scrubbed diagnostics and opens a GitHub issue draft only when you choose. Full reports can still be saved locally.
+> • Firefox asks native permission for optional domain/technical report sharing. Declining keeps dark mode working normally.
 >
 > 100% OPEN SOURCE (GPL-3.0)
 > Every line of code is public on GitHub: https://github.com/bc1224/oled-night

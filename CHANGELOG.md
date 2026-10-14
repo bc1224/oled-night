@@ -8,7 +8,7 @@
 
 - Pair unlabelled light banners and email panels with readable ink on native dark pages in Automatic mode. Repair neutral dark newsletter text on solid dark canvases while preserving readable native text, status colors, artwork and explicit Deepen behavior.
 - Use primary text brightness for enabled form values. Keep placeholders distinct and recognize compact colored logos by CSS and semantic labels without inverting brand colors.
-- Add Gmail-style newsletter, Robinhood-style onboarding and SynXis-style booking regressions to the public lab and required Chrome/Firefox release checks, including mobile layout, focus, dynamic copy, preservation and disable restoration. No new permissions; companion theme unchanged.
+- Add Gmail-style newsletter, Robinhood-style onboarding and SynXis-style booking regressions to the public lab and required Chrome/Firefox release checks, including mobile layout, focus, dynamic copy, preservation and disable restoration. No new website access permissions; Firefox adds optional report-sharing consent. Companion theme unchanged.
 
 ## 0.6.38
 

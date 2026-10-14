@@ -22,7 +22,7 @@ These are minimal synthetic models of the reported symptoms, not copies of priva
 
 The owner explicitly authorized gated automatic releases. Public reporting now previews allowlisted diagnostics and opens a GitHub draft after consent; the reporter submits it on GitHub. Raw reports stay local. The automatic-release contract requires reproduced failure, synthetic regression, independent read-only review, exact-source CI and store API receipts. The owner approved the configured read-only gpt-6-luna reviewer. The hourly automation requires its independent acceptance before any release. End-to-end autonomous repair/release is not yet demonstrated.
 
-No new permissions. The separate theme remains 1.0.3 and is not resubmitted.
+No new website access permissions. Firefox declares optional domain/technical reporting and requests native consent before opening a draft; decline/unavailable consent fails closed without disabling dark mode. The separate theme remains 1.0.3 and is not resubmitted.
 
 ## Cold-root and performance investigation
 
