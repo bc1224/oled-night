@@ -2,7 +2,7 @@
 
 Public gallery: https://bc1224.github.io/oled-night/lab/
 
-45 synthetic cases cover the component matrix and previous site failures. The current gallery is built from the same committed fixtures used by the browser regressions. It contains no copied accounts or private report uploads.
+46 synthetic cases cover the component matrix and previous site failures. The current gallery is built from the same committed fixtures used by the browser regressions. It contains no copied accounts or private report uploads.
 
 ## Every reported bug becomes a regression
 
@@ -71,6 +71,8 @@ Every Tests run performs a separate anonymous `node tests/lab/live-smoke.mjs --c
 The CVS synthetic regression runs separately as `node tests/lab/run-cvs.mjs` and exits nonzero on any failed expectation. Explicit late-root ordering made the old runtime fail all 15 pale-hover expectations. Version 0.6.40 also tests stylesheet edits queued in later event microtasks: Chrome samples deferred native hover and Firefox samples native focus. These edits have no DOM mutation for MutationObserver to see. Interaction styles are read at the frame boundary after handlers; ordinary mutation batches retain their pre-paint microtask path. Failures remain visible beside the live receipt and separate from the component total. Website deployment may publish this evidence, but the **CVS extension release gate** fails the overall Tests workflow if the synthetic regression fails. The exact-source store gate requires that overall workflow to pass; publishing the tester cannot authorize a failing binary release.
 
 The original churn benchmark now uses the same seeded row mutations in three fresh, counterbalanced active/native pairs. Median throughput must remain at least 70% of native throughput; any active stall at or above 150 ms fails. Every pair is logged. This reduces scheduling noise without relaxing either budget or automatically retrying a failing run. Tests on a branch supersede older tests on that same branch; npm downloads are cached, and jobs have a bounded timeout.
+
+The **Large updates** gallery case also runs the unchanged seeded workload over 2,500 fake inbox rows in Chrome and Firefox. It checks offscreen paint retention, viewport refresh, new text, replaced inline styles, late layout-rule fallback and detached queue cleanup. Ordinary already-styled offscreen rows can retain their current dark paint until IntersectionObserver reports them near the viewport. Layout/generated rules, media, custom elements, uncertain sheets and new content remain eager; a jump may briefly retain the previous dark shade, never remove its overrides. Pending work is capped at 2,048 branches and observation at 4,096 containers, without a polling timer. Chrome additionally enforces at most 2.25 style passes and less than 8ms script work per update. The existing animation-frame, collected heap and detached-shadow tests remain mandatory. These fixtures do not prove authenticated Gmail performance.
 
 Saved Bitwarden credential filling, real CAPTCHA completion, image-backed hero text and authenticated pages still need targeted live QA. The lab reduces manual work; it cannot guarantee compatibility with every changing website.
 

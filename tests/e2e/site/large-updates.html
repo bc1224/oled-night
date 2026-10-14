@@ -1,0 +1,7 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Large fake inbox updates</title><style>
+body{background:#fff;color:#202124}.row{display:flex;background:#fff;border-bottom:1px solid #eee}.row.hl{background:#f2f6fc}.c{padding:2px 6px;color:#5f6368}
+</style></head><body><h1>2,500 fake inbox rows</h1><p>CI compares identical seeded updates with OLED Night enabled and disabled. Frame, script, style and detached-component budgets block release. No real mail or account data.</p><button id="measure">Measure frame pacing</button><button id="churn">Measure sustained updates</button><pre id="result"></pre><div id="list"></div><script>
+const list=document.getElementById('list');for(let i=0;i<2500;i++){const row=document.createElement('div');row.className='row';row.innerHTML='<span class="c"><b>Sender '+i+'</b></span><span class="c">Subject '+i+'</span><span class="c">snippet</span>';list.append(row)}
+</script><script type="module">
+import {frameWorkload,churnWorkload} from '../performance.js';for(const [id,run] of [['measure',frameWorkload],['churn',churnWorkload]])document.getElementById(id).onclick=async()=>{const buttons=[...document.querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);try{document.getElementById('result').textContent=JSON.stringify(await run(),null,2)}finally{buttons.forEach(b=>b.disabled=false)}};
+</script></body></html>

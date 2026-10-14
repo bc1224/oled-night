@@ -13,6 +13,8 @@ import {coldShadowScenario} from './cold-shadow-scenario.mjs';
 import {generatedStyleScenario} from './generated-style-scenario.mjs';
 import {checkoutScenario} from './checkout-scenario.mjs';
 import {paintUpdatesScenario} from './paint-updates-scenario.mjs';
+import {largeUpdatesScenario} from './large-updates-scenario.mjs';
+import {churnWorkload,judgeChurn} from '../e2e/churn-benchmark.mjs';
 import {reportPreviewScenario} from './report-preview-scenario.mjs';
 import {deferredCssomScenario} from './deferred-cssom-scenario.mjs';
 import {frameWorkload,frameChecks,mountComponents,removeComponents} from '../../docs/lab/performance.js';
@@ -22,7 +24,7 @@ const packageRoot=resolve(process.env.OLED_LAB_PACKAGE_ROOT||root);
 let receive;const result=new Promise(r=>receive=r);
 const server=createServer((req,res)=>{
   if(req.url==='/result'&&req.method==='POST'){let body='';req.on('data',c=>body+=c);req.on('end',()=>{try{receive(JSON.parse(body));res.end('ok')}catch{res.writeHead(400);res.end()}});return}
-  const file=new URL(req.url,'http://localhost').pathname.slice(1);if(!['matrix.html','audit.js','ordinary-image.svg','email-newsletter.html','native-banner.html','booking-form.html','report-preview.html','generated-style.html','report-utils.js','checkout.html','paint-updates.html','performance.js','cvs-hover.html'].includes(file)){res.writeHead(404);res.end();return}
+  const file=new URL(req.url,'http://localhost').pathname.slice(1);if(!['matrix.html','audit.js','ordinary-image.svg','email-newsletter.html','native-banner.html','booking-form.html','report-preview.html','generated-style.html','report-utils.js','checkout.html','paint-updates.html','large-updates.html','performance.js','cvs-hover.html'].includes(file)){res.writeHead(404);res.end();return}
   const path=file==='report-utils.js'?join(root,file):file==='matrix.html'?join(root,'tests/lab',file):['audit.js','performance.js'].includes(file)?join(root,'docs/lab',file):join(root,'tests/e2e/site',file);
   res.setHeader('content-type',file.endsWith('.js')?'text/javascript':file.endsWith('.svg')?'image/svg+xml':'text/html');res.end(readFileSync(path));
 });
@@ -32,9 +34,9 @@ try{
   cpSync(join(packageRoot,'dist/firefox'),temp,{recursive:true});cpSync(join(root,'docs/lab/audit.js'),join(temp,'lab-audit.js'));
   const manifest=JSON.parse(readFileSync(join(temp,'manifest.json')));manifest.background.scripts.push('lab-driver.js');writeFileSync(join(temp,'manifest.json'),JSON.stringify(manifest));
   const driver=`const TEST_ORIGIN=${JSON.stringify(origin)}; const matrixStates=${matrixStates.toString()}; const responsiveness=${responsiveness.toString()}; const performanceChecks=${performanceChecks.toString()}; const lateShadowScenario=${lateShadowScenario.toString()}; const frameMutationScenario=${frameMutationScenario.toString()}; const mixedSurfaceScenario=${mixedSurfaceScenario.toString()}; const mixedSurfaceOriginal=${mixedSurfaceOriginal.toString()}; const mixedSurfaceDeepen=${mixedSurfaceDeepen.toString()};`+readFileSync(join(root,'tests/lab/firefox-driver.js'),'utf8');
-  writeFileSync(join(temp,'lab-driver.js'),`const deferredCssomScenario=${deferredCssomScenario.toString()};const regressionChecks=${regressionChecks.toString()};const bookingScenario=${bookingScenario.toString()};const coldShadowScenario=${coldShadowScenario.toString()};const generatedStyleScenario=${generatedStyleScenario.toString()};const checkoutScenario=${checkoutScenario.toString()};const paintUpdatesScenario=${paintUpdatesScenario.toString()};const reportPreviewScenario=${reportPreviewScenario.toString()};const frameWorkload=${frameWorkload.toString()};const frameChecks=${frameChecks.toString()};const mountComponents=${mountComponents.toString()};const removeComponents=${removeComponents.toString()};`+driver);
+  writeFileSync(join(temp,'lab-driver.js'),`const largeUpdatesScenario=${largeUpdatesScenario.toString()};const churnWorkload=${churnWorkload.toString()};const judgeChurn=${judgeChurn.toString()};const deferredCssomScenario=${deferredCssomScenario.toString()};const regressionChecks=${regressionChecks.toString()};const bookingScenario=${bookingScenario.toString()};const coldShadowScenario=${coldShadowScenario.toString()};const generatedStyleScenario=${generatedStyleScenario.toString()};const checkoutScenario=${checkoutScenario.toString()};const paintUpdatesScenario=${paintUpdatesScenario.toString()};const reportPreviewScenario=${reportPreviewScenario.toString()};const frameWorkload=${frameWorkload.toString()};const frameChecks=${frameChecks.toString()};const mountComponents=${mountComponents.toString()};const removeComponents=${removeComponents.toString()};`+driver);
   runner=await webExt.cmd.run({sourceDir:temp,artifactsDir:temp,firefox:process.env.FIREFOX_PATH||(process.platform==='win32'?'C:/Program Files/Mozilla Firefox/firefox.exe':'firefox'),args:['-headless'],noReload:true,noInput:true},{shouldExitProgram:false});
-  const report=await Promise.race([result,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Firefox lab timed out')),120000)})]);
+  const report=await Promise.race([result,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Firefox lab timed out')),180000)})]);
   if (!Array.isArray(report.checks)) throw Error('Malformed Firefox lab result');
   checks=report.checks;completed=report.completed===true;
 }catch(e){checks.push({name:'Firefox lab execution',ok:false,detail:String(e)})}finally{clearTimeout(timer);if(runner)await runner.exit();await new Promise(r=>server.close(r));rmSync(temp,{recursive:true,force:true})}

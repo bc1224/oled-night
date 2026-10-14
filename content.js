@@ -112,6 +112,62 @@
   // Open shadow roots (web components) we style and watch. Page stylesheets
   // never reach inside them, so each gets our rules adopted directly.
   const shadowRoots = new Set();
+  // Only fully styled, ordinary offscreen branches can retain their existing
+  // dark paint. New/uncertain content stays eager. Bound observer ownership.
+  const deferredPaint = new Set();
+  const observedPaint = new Set();
+  const nearViewport = new WeakMap();
+  const MAX_DEFERRED_PAINT = 2048;
+  const MAX_OBSERVED_PAINT = 4096;
+  let viewportObserver = null;
+
+  function forgetDeferredPaint(node) {
+    deferredPaint.delete(node);
+  }
+
+  function observePaint(node) {
+    if (observedPaint.has(node)) return;
+    if (observedPaint.size >= MAX_OBSERVED_PAINT || typeof IntersectionObserver === "undefined") return;
+    if (!viewportObserver) {
+      const margin = Math.max(innerWidth, innerHeight);
+      viewportObserver = new IntersectionObserver(entries => {
+        for (const entry of entries) {
+          nearViewport.set(entry.target, entry.isIntersecting);
+          if (entry.target.isConnected && entry.isIntersecting && deferredPaint.has(entry.target)) {
+            forgetDeferredPaint(entry.target);
+            pendingTrees.add(entry.target);
+          }
+        }
+        if (pendingTrees.size) schedule(true);
+      }, { rootMargin: `${margin}px` });
+    }
+    observedPaint.add(node);
+    viewportObserver.observe(node);
+  }
+
+  function eagerPaintList(list, trees) {
+    // IntersectionObserver supplies viewport state without a synchronous full
+    // page layout during each mutation. Retain old dark paint until its next
+    // notification on a jump/layout move; new content is never deferred.
+    if (trees.length < 8 || list.length < 64) return list;
+    const scopes = new Map(), deferred = new Set();
+    for (const root of trees) {
+      if (!(root instanceof Element) || !root.hasAttribute(MARK) || root.getRootNode() !== document ||
+          nearViewport.get(root) !== false || root.matches(MEDIA_SELECTOR) || root.querySelector(MEDIA_SELECTOR) || root.localName.includes("-")) continue;
+      // Generated content can paint beyond its originating element's rect;
+      // inaccessible/imported rules and shadow/custom scopes remain eager.
+      if (!scopes.has(document)) scopes.set(document, hasAuthoredRules(document, "generated") || hasAuthoredRules(document, "viewport"));
+      if (scopes.get(document)) continue;
+      const branch = list.filter(node => node === root || root.contains(node));
+      if (!branch.length || branch.some(node => node.localName.includes("-") || node.shadowRoot ||
+          !applied.has(node) || !overridesIntact(node) || inlineStyles.get(node) !== inlineSignature(node) ||
+          node.matches('input,textarea,select,button') || /position|transform|translate|rotate|scale|margin|float|animation|text-indent/i.test(node.style.cssText.replace(/--oln-[^;]+;?/g, '')))) continue;
+      if (!deferredPaint.has(root) && deferredPaint.size >= MAX_DEFERRED_PAINT) continue;
+      deferredPaint.add(root);
+      for (const node of branch) deferred.add(node);
+    }
+    return deferred.size ? list.filter(node => !deferred.has(node)) : list;
+  }
   // Hosts can attach roots after their light-DOM scan without a mutation.
   // Poll only unresolved custom hosts, with a fixed per-frame work bound.
   const unresolvedShadowHosts = new Set();
@@ -222,6 +278,9 @@
   }
 
   function releaseDetachedComponents() {
+    for (const node of deferredPaint) if (!node.isConnected) forgetDeferredPaint(node);
+    for (const node of observedPaint) if (!node.isConnected) { viewportObserver?.unobserve(node); observedPaint.delete(node); }
+    if (!observedPaint.size) { viewportObserver?.disconnect(); viewportObserver = null; }
     for (const root of shadowRoots) {
       if (!root.host.isConnected) {
         for (const type of INTERACTION_EVENTS) root.removeEventListener(type, onInteraction, true);
@@ -893,6 +952,9 @@
     const inspect = rules => {
       for (const rule of rules) {
         if (++count > 256 || rule.type === 3) return true;
+        if (feature === "viewport" && (rule.type === 7 || (rule.style && Array.from(rule.style).some(property =>
+          /^(?:position|transform|translate|rotate|scale|margin(?:-.+)?|float|animation(?:-.+)?|text-indent)$/.test(property) ||
+          (property === "display" && rule.style.display === "contents"))))) return true;
         if (feature === "generated") {
           if (/:before\b|:after\b/i.test(rule.selectorText || "")) return true;
         } else if (rule.style?.getPropertyValue("transition-duration") || rule.style?.getPropertyValue("transition")) {
@@ -921,6 +983,9 @@
   }
 
   function processBatch(list, trees, selves) {
+    const paintList = eagerPaintList(list, trees);
+    for (const element of paintList) if (deferredPaint.has(element)) forgetDeferredPaint(element);
+    const paintTrees = trees.filter(node => !deferredPaint.has(node));
     // Already-styled elements hide their original colors behind our overrides.
     // Read original colors with our overrides switched off (no paint happens in
     // between, so nothing flickers). A subtree switch restyles every descendant,
@@ -929,7 +994,7 @@
     // restyle their subtree either way, so they keep one switch per root.
     const measured = [], measuredSelf = [], measuredPseudo = [], calm = [], calmSelf = new Set();
     let scoped = false;
-    const marked = [...list, ...list.images].filter((element) => element.isConnected && element.hasAttribute(MARK));
+    const marked = [...paintList, ...list.images].filter((element) => element.isConnected && element.hasAttribute(MARK));
     // Form fields have (almost) no subtree, so their inherited overrides are cheap to switch.
     const deep = (element) => INHERITED_KEYS.test(element.getAttribute(MARK)) && !element.matches("input, textarea, select");
     if (marked.length <= MANY_MARKED && !marked.some(deep)) {
@@ -945,7 +1010,7 @@
       // overrides. A small click path can include the entire results layout.
       // Keep subtree switches for actual subtree work, and own-element
       // switches for ancestors whose hover/focus state needs rechecking.
-      const roots = trees.filter((node) => node instanceof Element && node.isConnected);
+      const roots = paintTrees.filter((node) => node instanceof Element && node.isConnected);
       for (const node of roots) if (node.hasAttribute(MARK) || node.querySelector(`[${MARK}]`)) measured.push(node);
       calm.push(...roots);
       for (const node of selves) {
@@ -955,7 +1020,7 @@
         calmSelf.add(node);
       }
       // "[measure] *" cannot see into shadow trees, so switch those off at their top level too.
-      for (const element of list) if (element.parentNode?.host) {
+      for (const element of paintList) if (element.parentNode?.host) {
         calm.push(element);
         // A transparent shadow wrapper can contain styled controls. Outside
         // subtree guards do not cross this boundary; measure their native
@@ -991,13 +1056,13 @@
       }
       return getComputedStyle(node).transitionDuration.split(",").some(duration => parseFloat(duration) > 0);
     };
-    const needsCalm = list.icons.size > 0 || [...list, ...list.images].some(node =>
+    const needsCalm = list.icons.size > 0 || [...paintList, ...list.images].some(node =>
       PSEUDO_KEYS.test(node.getAttribute(MARK) || "") || mayTransition(node));
     if (!needsCalm) { calm.length = 0; calmSelf.clear(); }
     // Suppress paint transitions without canceling the page's layout motion.
     // Retain list timing/delays; commas inside cubic-bezier() are not separators.
     const motion = [];
-    if (needsCalm) for (const node of new Set([...list, ...list.images])) {
+    if (needsCalm) for (const node of new Set([...paintList, ...list.images])) {
       const style = getComputedStyle(node);
       const split = value => value.split(/,(?![^()]*\))/).map(part => part.trim());
       const properties = split(style.transitionProperty), durations = split(style.transitionDuration);
@@ -1021,7 +1086,7 @@
     for (const node of measuredPseudo) node.setAttribute(MEASURE_PSEUDO, "");
     if (scoped && needsCalm) {
       // Like a subtree switch, finish the page's own color transitions before reading.
-      const batch = new Set([...list, ...list.images]);
+      const batch = new Set([...paintList, ...list.images]);
       for (const animation of document.getAnimations()) {
         const target = animation.effect?.target;
         if (animation instanceof CSSTransition && batch.has(target) && !calmSelf.has(target) && COLOR_TRANSITION.test(animation.transitionProperty)) {
@@ -1053,7 +1118,7 @@
         return computed;
       }
     };
-    const decisions = list.map((element) => decide(element, ctx));
+    const decisions = paintList.map((element) => decide(element, ctx));
     const iconDecisions = [];
     for (const icon of list.icons) if (icon.isConnected) decideSvg(icon, ctx, iconDecisions);
     const recolor = ctx.mode === "oled" || ctx.mode === "soft";
@@ -1079,7 +1144,7 @@
     for (const node of measured) node.removeAttribute(MEASURE);
     for (const node of measuredSelf) node.removeAttribute(MEASURE_SELF);
     for (const node of measuredPseudo) node.removeAttribute(MEASURE_PSEUDO);
-    const writes = [...list.map((element, index) => [element, decisions[index]]), ...iconDecisions, ...imageDecisions];
+    const writes = [...paintList.map((element, index) => [element, decisions[index]]), ...iconDecisions, ...imageDecisions];
     // Elements about to gain, lose or change an override also skip transitions.
     const changed = new Set();
     for (const [element, found] of writes) {
@@ -1092,6 +1157,9 @@
       element.setAttribute(INHERITED_KEYS.test(keys) ? NOANIM : NOANIM_SELF, "");
     }
     for (const [element, found] of writes) write(element, found, !changed.has(element));
+    // Register only repeated, fully styled container rows, never every leaf.
+    for (const node of paintList) if (node.childElementCount && node.parentElement?.childElementCount >= 32 &&
+      node.hasAttribute(MARK) && node.getRootNode() === document && !node.localName.includes("-")) observePaint(node);
     for (const img of logoCandidates) checkLogo(img, ctx);
     // Commit the new colors with transitions still off, then restore them.
     const first = calm[0] || calmSelf.values().next().value;
@@ -1529,6 +1597,10 @@
     unresolvedShadowHosts.clear();
     observer?.disconnect();
     observer = null;
+    viewportObserver?.disconnect();
+    viewportObserver = null;
+    deferredPaint.clear();
+    observedPaint.clear();
     pendingTrees.clear();
     pendingSelf.clear();
     applied = new WeakMap();
@@ -1720,7 +1792,7 @@
       extension: "OLED Night", version: VERSION, host: hostname(), when: new Date().toISOString(), userAgent: navigator.userAgent,
       active, siteMode: currentSiteMode(), mode: active ? modeFor() : "off", darkPage, pageColor,
       settings: { appearance: settings.appearance, ...Settings.tuningFor(settings, hostname()), schedule: settings.schedule },
-      counts: { styled: document.querySelectorAll(`[${MARK}]`).length, shadowRoots: shadowRoots.size, frames: document.querySelectorAll("iframe").length },
+      counts: { styled: document.querySelectorAll(`[${MARK}]`).length, shadowRoots: shadowRoots.size, deferredPaint: deferredPaint.size, observedPaint: observedPaint.size, frames: document.querySelectorAll("iframe").length },
       // Only each frame's origin and state are recorded, never its address path or content.
       frames: [...document.querySelectorAll("iframe")].slice(0, 20).map((frame) => {
         const rect = frame.getBoundingClientRect();

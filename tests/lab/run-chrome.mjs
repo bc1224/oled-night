@@ -14,6 +14,8 @@ import {coldShadowScenario} from './cold-shadow-scenario.mjs';
 import {generatedStyleScenario} from './generated-style-scenario.mjs';
 import {checkoutScenario} from './checkout-scenario.mjs';
 import {paintUpdatesScenario} from './paint-updates-scenario.mjs';
+import {largeUpdatesScenario} from './large-updates-scenario.mjs';
+import {churnWorkload,judgeChurn} from '../e2e/churn-benchmark.mjs';
 import {reportPreviewScenario} from './report-preview-scenario.mjs';
 import {visibleIconPixels} from './checkout-paint.mjs';
 import {frameWorkload,frameChecks,mountComponents,removeComponents} from '../../docs/lab/performance.js';
@@ -125,6 +127,38 @@ try {
   }
   add('repeated component removal grows collected JS heap by less than 1MiB',heaps.every(h=>h-baselineHeap<1048576),JSON.stringify({baselineHeap,heaps}));
   add('removed components do not accumulate more than 512 collected DOM nodes',nodes.every(n=>n-baselineNodes<512),JSON.stringify({baselineNodes,nodes}));
+  await settings(true);await page.go(`${server.origin}/lab/fixtures/large-updates.html`);await wait(2000);
+  await page.eval(readFileSync(join(root,'docs/lab/audit.js'),'utf8'));
+  checks.push(...await proof('large-updates',await page.eval(`(${largeUpdatesScenario.toString()})()`)));
+  const largeCounts=()=>options.eval(`(async()=>{const [t]=await chrome.tabs.query({url:${JSON.stringify(server.origin+'/lab/fixtures/large-updates.html')}});return (await chrome.tabs.sendMessage(t.id,{type:'oled-night-report'})).counts})()`);
+  add('detached queued mail rows are released', (await largeCounts()).deferredPaint===0);
+  const largePairs=[],largeFramePairs=[],largeResources=[];
+  for(const order of [[true,false],[false,true],[true,false]]) {
+    const pair={pageOnly:true},framePair={pageOnly:true};for(const enabled of order) {
+      await settings(enabled);await page.go(`${server.origin}/lab/fixtures/large-updates.html`);await wait(2000);
+      pair.pageOnly&&=await page.eval(`document.documentElement.hasAttribute('data-oled-night-root')===${enabled}`);
+      const before=await metrics();pair[enabled?'active':'native']=await page.eval(`(${churnWorkload.toString()})()`);const after=await metrics();
+      if(enabled){const count=await largeCounts();largeResources.push({workload:'churn',frames:pair.active.frames,script:after.ScriptDuration-before.ScriptDuration,styles:after.RecalcStyleCount-before.RecalcStyleCount,queued:count.deferredPaint,observed:count.observedPaint})}
+      await page.go(`${server.origin}/lab/fixtures/large-updates.html`);await wait(2000);
+      framePair.pageOnly&&=await page.eval(`document.documentElement.hasAttribute('data-oled-night-root')===${enabled}`);
+      const frameBefore=await metrics();framePair[enabled?'active':'native']=await page.eval(`(${frameWorkload.toString()})()`);const frameAfter=await metrics();
+      if(enabled){const count=await largeCounts();largeResources.push({workload:'frames',frames:framePair.active.frames+1,script:frameAfter.ScriptDuration-frameBefore.ScriptDuration,styles:frameAfter.RecalcStyleCount-frameBefore.RecalcStyleCount,queued:count.deferredPaint,observed:count.observedPaint})}
+    }largePairs.push(pair);largeFramePairs.push(framePair);
+  }
+  add('2,500-row churn retains 70% native throughput without 150ms stalls',judgeChurn(largePairs).ok,JSON.stringify(judgeChurn(largePairs)));
+  add('large mail updates use at most 2.25 style passes per tick',largeResources.every(r=>r.styles<=2.25*r.frames+3),JSON.stringify(largeResources));
+  add('large mail updates spend at most 8ms script work per tick',largeResources.every(r=>r.script/r.frames<.008),JSON.stringify(largeResources));
+  add('offscreen observer ownership stays bounded at 2,048 branches',largeResources.every(r=>Number.isInteger(r.queued)&&r.queued<=2048),JSON.stringify(largeResources));
+  add('viewport observation stays bounded at 4,096 containers',largeResources.every(r=>Number.isInteger(r.observed)&&r.observed<=4096),JSON.stringify(largeResources));
+  checks.push(...frameChecks(largeFramePairs).map(c=>({...c,name:'2,500 rows / '+c.name,fixture:'large-updates',kind:'assertion'})));
+  await settings(true);await page.go(`${server.origin}/lab/fixtures/large-updates.html`);await wait(2000);
+  await browser.send('HeapProfiler.collectGarbage',{},page.sessionId);const largeHeapBefore=await metrics();
+  await page.eval("document.getElementById('list').replaceChildren()");await wait(80);
+  const clearedCounts=await largeCounts();
+  add('removing the whole inbox releases viewport and pending ownership',clearedCounts.observedPaint===0&&clearedCounts.deferredPaint===0,JSON.stringify(clearedCounts));
+  await browser.send('HeapProfiler.collectGarbage',{},page.sessionId);const largeHeapAfter=await metrics();
+  add('removed large inbox does not retain more than 1MiB extra heap or 512 extra DOM nodes',largeHeapAfter.JSHeapUsedSize-largeHeapBefore.JSHeapUsedSize<1048576&&largeHeapAfter.Nodes-largeHeapBefore.Nodes<512,JSON.stringify({before:largeHeapBefore.JSHeapUsedSize,after:largeHeapAfter.JSHeapUsedSize,nodesBefore:largeHeapBefore.Nodes,nodesAfter:largeHeapAfter.Nodes}));
+  add('garbage collection releases at least 10,000 removed inbox DOM nodes',largeHeapBefore.Nodes-largeHeapAfter.Nodes>=10000,JSON.stringify({nodesBefore:largeHeapBefore.Nodes,nodesAfter:largeHeapAfter.Nodes}));
   await page.go(`${server.origin}/lab/fixtures/report-preview.html`);await wait(400);
   checks.push(...await page.eval(`(${reportPreviewScenario.toString()})()`));
   const lab=await browser.open(`${server.origin}/lab/`);await wait(500);add('gallery lists all '+cases.length+' cases',await lab.eval(`document.querySelectorAll('#cases button').length===${cases.length}`));
