@@ -29,4 +29,4 @@ The extension darkens websites. To make Chrome's own tab bar, toolbar and new-ta
 ## Using it
 - Click the toolbar icon to switch it on or off, pick a mode for the current site, and adjust brightness and contrast.
 - **Alt+Shift+D** turns the current site on or off.
-- If a site looks wrong, try **Deepen blacks only** or **Invert** for that site. If it still looks wrong, click **Report a broken site** and send the saved file with a screenshot.
+- If a site looks wrong, try **Deepen blacks only** or **Invert** for that site. If it still looks wrong, click **Report a broken site**, preview the scrubbed diagnostics and open a GitHub draft. Issues are public; keep private details and sensitive screenshots out. Full local report downloads can contain visible text and identifiers, so review them before sharing.
