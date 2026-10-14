@@ -40,6 +40,8 @@ Text checks use 4.5:1 contrast (3:1 for disabled examples); data fills use 3:1 a
 
 CSS samples check animated navigation stays dark; completed-frame hover samples and resting screenshots provide additional evidence. These are not a recording of every displayed frame. The synthetic menu budget is 250 ms per sample, median overhead under 80 ms versus the same page with the extension off, and content-update event-loop stalls below 120 ms absolute / +80 ms versus native. These budgets detect regressions on the test machine; they do not promise every website opens in that time.
 
+The large inbox case also checks that private row paint variables do not inherit into every descendant. Only element paint is isolated; the theme controls continue to inherit. This prevents duplicate inherited style data without changing the browser's native text inheritance. The public case exposes frame pacing, sustained updates and six component mount/remove cycles; its optional heap reading is approximate and does not force GC. The browser adapters retain the stricter frame, script, style, collected-heap and detached-root gates described above.
+
 ## Reviewed screenshots
 
 Baselines live under `baselines/win32` and `baselines/linux`. Default test runs compare against them and fail if missing or if over 0.5% of pixels differ (per-pixel threshold 0.15). Dimensions must match. A large light/dark regression is tested against the comparator itself.

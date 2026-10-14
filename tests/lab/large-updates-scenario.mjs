@@ -1,6 +1,8 @@
 export async function largeUpdatesScenario(){
  const out=[],check=(name,ok,detail='')=>out.push({name,ok:!!ok,detail}),sleep=ms=>new Promise(r=>setTimeout(r,ms));
  const rows=[...document.querySelectorAll('.row')], far=rows.slice(-20);
+ const leaf=rows[0].querySelector('b'), paint=rows[0].style.getPropertyValue('--oln-bg');
+ check('private row paint does not inherit into every descendant',!!paint&&getComputedStyle(leaf).getPropertyValue('--oln-bg').trim()==='',getComputedStyle(leaf).getPropertyValue('--oln-bg'));
  const original=far.map(e=>e.style.getPropertyValue('--oln-bg'));
  let writes=0;const observer=new MutationObserver(records=>writes+=records.filter(r=>r.attributeName==='style').length);
  for(const row of far)observer.observe(row,{attributes:true});

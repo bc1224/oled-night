@@ -1419,6 +1419,11 @@
     const on = `:is([${MARK}], #oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}])`;
     const onPseudo = `:is([${MARK}], #oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_PSEUDO}])`;
     return `
+      /* Each paint variable belongs to its marked element (and its pseudos).
+         Inheriting thousands of unused values makes updates invalidate and
+         retain style data throughout unrelated descendants. Theme controls
+         such as --oln-strength still inherit; only private paint is isolated. */
+      ${PROPS.map(key => `@property --oln-${key} { syntax: "*"; inherits: false; }`).join("\n")}
       [${MARK}~="bg"]${on} { background-color: var(--oln-bg) !important; }
       [${MARK}~="img"]${on} { background-image: var(--oln-img) !important; }
       [${MARK}~="shadow"]${on} { box-shadow: var(--oln-shadow) !important; }
