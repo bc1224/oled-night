@@ -62,14 +62,14 @@ Regenerate the images with `node tools/store-assets.mjs`.
 > Makes web pages dark (true black) for comfortable reading, with per-site controls.
 
 **Permission justifications:**
-- `host_permissions: <all_urls>`: The extension recolors the pages the user visits, so its content script must run on every site. It only changes colors on the page; it does not read, store or send page content.
+- `host_permissions: <all_urls>`: The extension reads styles locally to recolor pages. Full local diagnostic downloads may include short visible text snippets. Optional GitHub drafts share only the previewed domain and technical diagnostics after the user chooses; page text and entered values are excluded from those drafts.
 - `storage`: Saves the user's settings and per-site choices in Chrome sync storage.
 - `activeTab`: Lets the popup and the keyboard shortcut identify the current site so its settings can be shown and changed.
 - `scripting`: Lets the popup check whether the current tab can be reached (to offer a Reload button), and removes a page script that versions before 0.6.15 registered for the experimental "reach inside locked web components" setting. No code is injected into pages.
 
 **Remote code:** No, the extension does not use remote code. All code ships in the package.
 
-**Data usage:** Declare that no user data is collected. Check none of the data categories, and confirm all three certifications (no selling, no unrelated use, no creditworthiness use).
+**Data usage:** Disclose Web history for the domain used in settings and optional bug reports, and Website content for local diagnostic snippets. Explain that recoloring and full reports are local, while optional GitHub drafts share only the previewed domain and technical diagnostics. Confirm all three certifications (no selling, no unrelated use, no creditworthiness use). Keep dashboard disclosures consistent with the privacy policy; the upload API does not update these fields.
 
 **Privacy policy URL:** Host `store/PRIVACY.md` somewhere public (for example a GitHub repo or gist, or your own site) and paste the link.
 

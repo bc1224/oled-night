@@ -2,7 +2,7 @@
 
 _Last updated: October 14, 2026_
 
-OLED Night is a browser extension that makes web pages dark. It is built to work entirely inside your browser.
+OLED Night is a browser extension that recolors web pages locally. Sharing a bug report is an optional, explicit action.
 
 **Automatic collection:** none. OLED Night has no servers, analytics, advertising or tracking. Optional public bug reports and browser-account syncing are described below.
 

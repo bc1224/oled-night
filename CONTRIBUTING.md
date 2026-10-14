@@ -3,10 +3,10 @@
 Bug reports and pull requests are welcome.
 
 ## Reporting a site that looks wrong
-1. On the broken page, open the OLED Night popup and click **Report a broken site**. It saves a small `.json` file to your Downloads folder.
-2. [Open an issue](../../issues/new) with the site address, a screenshot, and that file attached.
+1. On the broken page, open the OLED Night popup and click **Report a broken site** to preview scrubbed diagnostics.
+2. Choose **Open GitHub draft**, describe the bug and submit the issue there. Firefox asks for optional sharing consent first. Drafts omit page text, field values, URL paths, identifiers, screenshots and cookies.
 
-The report contains the site address, your OLED Night settings, and short snippets of any text the extension found hard to read. Nothing else is collected.
+**Save full report locally** is a separate download. It can contain short visible text snippets and element identifiers. Review it before sharing; never attach private account data or screenshots of sensitive pages. Normal recoloring stays local, with no analytics or tracking.
 
 ## Working on the code
 No build step and no dependencies are needed beyond Node 20+ and Chrome.

@@ -34,7 +34,7 @@ The test runner uses Mozilla web-ext and a temporary headless Firefox profile, n
 
 ## Permanent installation and distribution
 
-A maintainer must submit `dist/oled-night-firefox-<version>.zip` to Mozilla for signing. The manifest declares a stable add-on ID and no data collection. Review the declarations when changing data handling.
+A maintainer must submit `dist/oled-night-firefox-<version>.zip` to Mozilla for signing. The manifest declares a stable add-on ID, no required data collection, and optional browsingActivity and technicalAndInteraction consent for user-requested scrubbed GitHub reports. Declining consent keeps dark mode working. Review these declarations when changing data handling.
 
 After Mozilla approval, add the actual Add-ons listing URL to README and the website. Do not point an Install for Firefox button at the unsigned ZIP. A signed `.xpi` can also be attached to GitHub releases; self-distributed updates need their own update manifest if they are not served through the listed channel.
 
