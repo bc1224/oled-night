@@ -23,9 +23,13 @@ The public payload includes domain, version, mode, brightness/contrast, element 
 
 ## Machine gate receipt
 
-The local trusted lead supplies schema oled-auto-release-v1, repo, issue, base, sha, fixture, files, permissionsChanged:false, dependenciesChanged:false, reproduction:{baseExit,fixedExit}, review:{verdict:'accept',sha,independent:true,profile:'review',receiptPath,receiptHash}, ci:{sha,conclusion:'success',runId}. Run from a clean candidate checkout:
+The local trusted lead supplies schema oled-auto-release-v2, repo, issue, base, sha, fixture, files, permissionsChanged:false, dependenciesChanged:false, reproduction:{browsers}, review:{verdict:'accept',sha,independent:true,profile:'review',receiptPath,receiptHash}, ci:{sha,conclusion:'success',runId}. Run from a clean candidate checkout:
 
     node tools/report-release-gate.mjs <absolute local receipt path>
+
+`browsers` contains exactly one Chrome and one Firefox entry: `{engine,check,base:{path,hash},fixed:{path,hash}}`. Paths are absolute local retained lab JSON reports; hashes are SHA-256 of their actual bytes. `check` names the same unique assertion in both stages. Exit codes alone are rejected. Both adapters record completion, Git SHA and a digest of the actual packaged runtime modules. The gate recomputes that digest from the immutable Git source, with checkout line endings normalized. Base-runtime proof uses the new fixture/harness against a package built from the base commit; its report SHA remains that base.
+
+New bug fixtures must use `regressionChecks(fixture,active,checks)` from tests/lab/runtime-proof.mjs in both adapters. Activation comes from the page's actual extension root marker; each assertion records its public fixture ID. The named assertion must fail at base and pass at candidate, with activation passing in both reports. Every candidate assertion must pass. Incomplete runs, infrastructure failures, missing/mismatched files or source, candidate visual-baseline runs and unclassified failures block release. Preserve the raw reports, not a lead-written summary of the expected result.
 
 This gate validates retained proof and provider state. It does not generate proof, independently judge a bug or substitute for the review worker. Store API secrets stay in encrypted GitHub Actions secrets. Model/provider failures block the process.
 

@@ -12,14 +12,16 @@ import {mixedSurfaceScenario,mixedSurfaceOriginal,mixedSurfaceDeepen} from './mi
 import {bookingScenario} from './booking-scenario.mjs';
 import {coldShadowScenario} from './cold-shadow-scenario.mjs';
 import {generatedStyleScenario} from './generated-style-scenario.mjs';
+import {runtimeDigest,regressionChecks} from './runtime-proof.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/lab-results');mkdirSync(output,{recursive:true});
 const checks=[],add=(name,ok,detail='')=>checks.push({name,ok:!!ok,detail});
-const site=buildLab().output,server=await serveLab(site);let browser;
+const site=buildLab().output,server=await serveLab(site);let browser,completed=false;
 try {
   browser=await launchChrome();const {id}=await browser.send('Extensions.loadUnpacked',{path:join(root,'dist/chrome')});
   const options=await browser.open(`chrome-extension://${id}/options.html`);
   const settings=async enabled=>{await options.eval(`chrome.storage.sync.set({extensionEnabled:${enabled},globalEnabled:true,siteRules:{'127.0.0.1':'recolor'}})`);await wait(500)};
   await settings(true);const page=await browser.open();
+  const proof=async (fixture,items)=>regressionChecks(fixture,await page.eval("document.documentElement.hasAttribute('data-oled-night-root')"),items);
   for(const [theme,width] of [['light',1200],['dark',1200],['light',390]]){
     const label=`${theme}-${width}`;await page.size(width,1000);await page.go(`${server.origin}/lab/fixtures/matrix.html?theme=${theme}`);await wait(800);
     checks.push(...(await page.eval(`(${coldShadowScenario.toString()})()`)).map(c=>({...c,name:label+' / '+c.name})));
@@ -48,26 +50,26 @@ try {
     await page.go(`${server.origin}/lab/fixtures/${file}.html`);await wait(500);
     // The historical fixtures get the same audit seam as the matrix.
     await page.eval(readFileSync(join(root,'docs/lab/audit.js'),'utf8'));
-    checks.push(...(await page.eval(`(${mixedSurfaceScenario.toString()})()`)).map(c=>({...c,name:label+' / Automatic / '+c.name})));
+    checks.push(...(await proof(file,await page.eval(`(${mixedSurfaceScenario.toString()})()`))).map(c=>({...c,name:label+' / Automatic / '+c.name})));
     await options.eval("chrome.storage.sync.set({extensionEnabled:false})");await wait(400);
     checks.push(...(await page.eval(`(${mixedSurfaceOriginal.toString()})()`)).map(c=>({...c,name:label+' / '+c.name})));
     await options.eval("chrome.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'deepen'}})");await wait(400);
     checks.push(...(await page.eval(`(${mixedSurfaceDeepen.toString()})()`)).map(c=>({...c,name:label+' / '+c.name})));
     await settings(true);
-    checks.push(...(await page.eval(`(${mixedSurfaceScenario.toString()})(false)`)).map(c=>({...c,name:label+' / Recolor / '+c.name})));
+    checks.push(...(await proof(file,await page.eval(`(${mixedSurfaceScenario.toString()})(false)`))).map(c=>({...c,name:label+' / Recolor / '+c.name})));
   }
   await settings(true);
   for(const width of [1200,390]){
     await page.size(width,1000);await page.go(`${server.origin}/lab/fixtures/booking-form.html`);await wait(500);
     await page.eval(readFileSync(join(root,'docs/lab/audit.js'),'utf8'));
-    checks.push(...(await page.eval(`(${bookingScenario.toString()})()`)).map(c=>({...c,name:'booking-'+width+' / '+c.name})));
+    checks.push(...(await proof('booking-form',await page.eval(`(${bookingScenario.toString()})()`))).map(c=>({...c,name:'booking-'+width+' / '+c.name})));
     await settings(false);
     add('booking-'+width+' / disable restores field ink and logo',await page.eval("getComputedStyle(document.getElementById('booking-value')).webkitTextFillColor==='rgb(119, 119, 119)'&&getComputedStyle(document.getElementById('booking-logo')).filter==='none'"));
     await settings(true);
   }
   await page.go(`${server.origin}/lab/fixtures/generated-style.html`);await wait(400);
   await page.eval(readFileSync(join(root,'docs/lab/audit.js'),'utf8'));
-  checks.push(...await page.eval(`(${generatedStyleScenario.toString()})()`));
+  checks.push(...await proof('generated-style',await page.eval(`(${generatedStyleScenario.toString()})()`)));
   await page.go(`${server.origin}/lab/fixtures/report-preview.html`);await wait(400);
   add('public report preview omits private text and identifiers',await page.eval("document.getElementById('privacy-result').textContent.startsWith('PASS')&&!/PRIVATE/.test(document.getElementById('preview').textContent)"));
   add('public report draft requires a click',await page.eval("document.getElementById('draft').textContent==='Open GitHub draft'&&location.pathname.endsWith('/report-preview.html')"));
@@ -76,6 +78,7 @@ try {
   await lab.size(390,850);add('mobile gallery has no horizontal overflow',await lab.eval(`document.documentElement.scrollWidth<=innerWidth`));writeFileSync(join(output,'gallery-mobile.png'),await lab.screenshot());
   await lab.size(1400,950);writeFileSync(join(output,'gallery-desktop.png'),await lab.screenshot());
   add('no uncaught page exceptions',browser.errors.length===0,browser.errors.join('; '));
+  completed=true;
 }catch(e){add('Chrome lab execution',false,e.stack)}finally{await browser?.close();await server.close()}
-const report={engine:'Chrome',candidate:process.argv.includes('--candidates'),version:JSON.parse(execFileSync('node',['-p',"JSON.stringify(require('./manifest.json').version)"],{cwd:root,encoding:'utf8'})),sha:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),checks};
+const report={engine:'Chrome',completed,runtimeHash:runtimeDigest(file=>readFileSync(join(root,'dist/chrome',file))),candidate:process.argv.includes('--candidates'),version:JSON.parse(execFileSync('node',['-p',"JSON.stringify(require('./manifest.json').version)"],{cwd:root,encoding:'utf8'})),sha:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),checks};
 writeFileSync(join(output,'chrome.json'),JSON.stringify(report,null,2));for(const c of checks.filter(c=>!c.ok))console.log('FAIL '+c.name+': '+c.detail);console.log(`${checks.filter(c=>c.ok).length}/${checks.length} Chrome lab checks passed`);if(checks.some(c=>!c.ok))process.exitCode=1;
