@@ -102,11 +102,15 @@ export async function updateAmoListing(request, description, privacy) {
   }
 }
 
+export function amoPrivacyText(markdown) {
+  return markdown.replace(/^#.*\r?\n/, '').replace(/\*\*/g, '').replace(/^_(.*)_$/m, '$1')
+    .replace(/`([^`\r\n]+)`/g, '$1').trim();
+}
+
 async function submitAmoListing() {
   requireEnv('AMO_API_KEY', 'AMO_API_SECRET');
   const description = readFileSync(join(root, 'store', 'FIREFOX-LISTING.txt'), 'utf8').trim();
-  const privacy = readFileSync(join(root, 'store', 'PRIVACY.md'), 'utf8')
-    .replace(/^#.*\r?\n/, '').replace(/\*\*/g, '').replace(/^_(.*)_$/m, '$1').trim();
+  const privacy = amoPrivacyText(readFileSync(join(root, 'store', 'PRIVACY.md'), 'utf8'));
   await updateAmoListing(amoRequest, description, privacy);
   console.log('AMO English listing and privacy policy: saved and read back successfully. No browsing-history log; optional current-domain reports only.');
 }
