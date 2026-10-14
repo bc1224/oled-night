@@ -132,6 +132,8 @@ try {
   checks.push(...await proof('large-updates',await page.eval(`(${largeUpdatesScenario.toString()})()`)));
   const largeCounts=()=>options.eval(`(async()=>{const [t]=await chrome.tabs.query({url:${JSON.stringify(server.origin+'/lab/fixtures/large-updates.html')}});return (await chrome.tabs.sendMessage(t.id,{type:'oled-night-report'})).counts})()`);
   add('detached queued mail rows are released', (await largeCounts()).deferredPaint===0);
+  for(const width of [1200,390]) {
+  const firstLargeCheck=checks.length;await page.size(width,1000);
   const largePairs=[],largeFramePairs=[],largeResources=[];
   for(const order of [[true,false],[false,true],[true,false]]) {
     const pair={pageOnly:true},framePair={pageOnly:true};for(const enabled of order) {
@@ -159,6 +161,10 @@ try {
   await browser.send('HeapProfiler.collectGarbage',{},page.sessionId);const largeHeapAfter=await metrics();
   add('removed large inbox does not retain more than 1MiB extra heap or 512 extra DOM nodes',largeHeapAfter.JSHeapUsedSize-largeHeapBefore.JSHeapUsedSize<1048576&&largeHeapAfter.Nodes-largeHeapBefore.Nodes<512,JSON.stringify({before:largeHeapBefore.JSHeapUsedSize,after:largeHeapAfter.JSHeapUsedSize,nodesBefore:largeHeapBefore.Nodes,nodesAfter:largeHeapAfter.Nodes}));
   add('garbage collection releases at least 10,000 removed inbox DOM nodes',largeHeapBefore.Nodes-largeHeapAfter.Nodes>=10000,JSON.stringify({nodesBefore:largeHeapBefore.Nodes,nodesAfter:largeHeapAfter.Nodes}));
+  const publicResources=await page.eval(`(async()=>{document.getElementById('resources').click();for(let n=0;n<200;n++){await new Promise(r=>setTimeout(r,50));try{const result=JSON.parse(document.getElementById('result').textContent);if(result.cycles===6)return result}catch{}}return null})()`);
+  add('public component cleanup measurement completes and restores fixture DOM',publicResources?.fixtureDomRestored===true&&publicResources.componentsPerCycle===160,JSON.stringify(publicResources));
+  for(let n=firstLargeCheck;n<checks.length;n++)checks[n].name='large inbox '+width+' / '+checks[n].name;
+  }
   await page.go(`${server.origin}/lab/fixtures/report-preview.html`);await wait(400);
   checks.push(...await page.eval(`(${reportPreviewScenario.toString()})()`));
   const lab=await browser.open(`${server.origin}/lab/`);await wait(500);add('gallery lists all '+cases.length+' cases',await lab.eval(`document.querySelectorAll('#cases button').length===${cases.length}`));

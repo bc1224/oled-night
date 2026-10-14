@@ -74,6 +74,7 @@
     }
     await browser.tabs.remove(tab.id);
     tab=await browser.tabs.create({url:TEST_ORIGIN+'/large-updates.html'});await sleep(2000);
+    out.push({name:'large inbox performance exercises a desktop viewport',ok:await inspect(()=>innerWidth>=1000)});
     await browser.scripting.executeScript({target:{tabId:tab.id},files:['lab-audit.js']});
     out.push(...await proof('large-updates',await inspect(largeUpdatesScenario)));
     out.push({name:'detached queued mail rows are released',ok:(await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts.deferredPaint===0});

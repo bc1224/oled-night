@@ -1424,14 +1424,14 @@
          retain style data throughout unrelated descendants. Theme controls
          such as --oln-strength still inherit. Generated-paint variables must
          also reach their originating element's before/after/placeholder. */
-      ${PROPS.filter(key => !/^(before-|after-|placeholder$)/.test(key)).map(key => `@property --oln-${key} { syntax: "*"; inherits: false; }`).join("\n")}
+      ${PROPS.map(key => `@property --oln-${key} { syntax: "*"; inherits: false; }`).join("\n")}
       [${MARK}~="bg"]${on} { background-color: var(--oln-bg) !important; }
       [${MARK}~="img"]${on} { background-image: var(--oln-img) !important; }
       [${MARK}~="shadow"]${on} { box-shadow: var(--oln-shadow) !important; }
       [${MARK}~="fg"]${on} { color: var(--oln-fg) !important; }
       [${MARK}~="ink"]${on} { -webkit-text-fill-color: var(--oln-ink) !important; }
       [${MARK}~="caret"]${on} { caret-color: var(--oln-caret) !important; }
-      [${MARK}~="placeholder"]${onPseudo}::placeholder { color: var(--oln-placeholder) !important; -webkit-text-fill-color: var(--oln-placeholder) !important; }
+      [${MARK}~="placeholder"]${onPseudo}::placeholder { --oln-placeholder: inherit !important; color: var(--oln-placeholder) !important; -webkit-text-fill-color: var(--oln-placeholder) !important; }
       [${MARK}~="field"]${on} { color-scheme: dark !important; }
       /* Native popup paint may use white for transparent <option> rows even
          when the closed select inherits a dark color scheme (Chrome/Windows).
@@ -1458,14 +1458,14 @@
       [${NOANIM}], [${NOANIM}] *, [${NOANIM}]::before, [${NOANIM}]::after, [${NOANIM}] *::before, [${NOANIM}] *::after { transition: none !important; }
       [${NOANIM_SELF}], [${NOANIM_SELF}]::before, [${NOANIM_SELF}]::after { transition: none !important; }
       [${NOANIM}][${MOTION}], [${NOANIM}] [${MOTION}], [${NOANIM_SELF}][${MOTION}] { transition: var(--oln-motion) !important; }
-      [${MARK}~="before-bg"]${onPseudo}::before { background-color: var(--oln-before-bg) !important; }
-      [${MARK}~="before-img"]${onPseudo}::before { background-image: var(--oln-before-img) !important; }
-      [${MARK}~="before-shadow"]${onPseudo}::before { box-shadow: var(--oln-before-shadow) !important; }
-      [${MARK}~="before-fg"]${onPseudo}::before { color: var(--oln-before-fg) !important; }
-      [${MARK}~="after-bg"]${onPseudo}::after { background-color: var(--oln-after-bg) !important; }
-      [${MARK}~="after-img"]${onPseudo}::after { background-image: var(--oln-after-img) !important; }
-      [${MARK}~="after-shadow"]${onPseudo}::after { box-shadow: var(--oln-after-shadow) !important; }
-      [${MARK}~="after-fg"]${onPseudo}::after { color: var(--oln-after-fg) !important; }
+      [${MARK}~="before-bg"]${onPseudo}::before { --oln-before-bg: inherit !important; background-color: var(--oln-before-bg) !important; }
+      [${MARK}~="before-img"]${onPseudo}::before { --oln-before-img: inherit !important; background-image: var(--oln-before-img) !important; }
+      [${MARK}~="before-shadow"]${onPseudo}::before { --oln-before-shadow: inherit !important; box-shadow: var(--oln-before-shadow) !important; }
+      [${MARK}~="before-fg"]${onPseudo}::before { --oln-before-fg: inherit !important; color: var(--oln-before-fg) !important; }
+      [${MARK}~="after-bg"]${onPseudo}::after { --oln-after-bg: inherit !important; background-color: var(--oln-after-bg) !important; }
+      [${MARK}~="after-img"]${onPseudo}::after { --oln-after-img: inherit !important; background-image: var(--oln-after-img) !important; }
+      [${MARK}~="after-shadow"]${onPseudo}::after { --oln-after-shadow: inherit !important; box-shadow: var(--oln-after-shadow) !important; }
+      [${MARK}~="after-fg"]${onPseudo}::after { --oln-after-fg: inherit !important; color: var(--oln-after-fg) !important; }
       input[${MARK}~="bg"], textarea[${MARK}~="bg"], select[${MARK}~="bg"], button[${MARK}~="bg"] { color-scheme: dark !important; accent-color: #66a3ff; }
     `;
   }
