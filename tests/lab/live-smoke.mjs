@@ -17,7 +17,7 @@ try{browser=await launchChrome();await browser.send('Extensions.loadUnpacked',{p
       checks.push({name:host+' extension active with testable navigation',kind:'site',ok:true});
       for(let round=0;round<(host==='www.cvs.com'?5:1);round++){
         await tab.hover(1,1);
-        for(let i=0;i<targets.length;i++){const r=await watchHover(tab,targets[i]);checks.push({name:host+' navigation hover '+(i+1)+' round '+(round+1),kind:'regression',ok:!r.pale&&r.samples===24,detail:r.pale?'Pale control background detected during entry/hover':'No pale control background in '+r.samples+' completed-frame CSS samples'})}
+        for(let i=0;i<targets.length;i++){const r=await watchHover(tab,targets[i]);checks.push({name:host+' navigation hover '+(i+1)+' round '+(round+1),kind:'regression',ok:!r.pale&&r.samples===24,detail:r.pale?'Pale control background detected during entry/hover: '+JSON.stringify(r):'No pale control background in '+r.samples+' completed-frame CSS samples'})}
       }
     }catch{checks.push({name:host+' live smoke',kind:'unverified',ok:false,detail:'Page or inspection unavailable; manual verification required.'})}finally{if(tab)await browser.send('Target.closeTarget',{targetId:tab.targetId})}
   }

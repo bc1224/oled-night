@@ -1,0 +1,25 @@
+name: Live navigation diagnosis
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/package.mjs
+      - name: Anonymous CVS navigation samples
+        run: node tests/lab/live-smoke.mjs --cvs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-navigation-diagnosis
+          path: dist/lab-results/live-smoke.json
+          retention-days: 7
