@@ -10,6 +10,11 @@ export async function cvsScenario(page,origin){
   const checks=[],add=(name,ok,detail='')=>checks.push({name,ok,detail});
   await page.size(1200,1000);await page.go(origin+'/lab/fixtures/cvs-hover.html');
   add('CVS stress / extension active',await page.eval("document.documentElement.hasAttribute('data-oled-night-root')"));
+  // A framework may attach roots to an existing, already-scanned host. Make
+  // that order explicit; loading speed must not decide whether this is tested.
+  await page.eval('window.CVSHoverLab.resetHost()');
+  await page.eval('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(resolve,0))))');
+  await page.eval('window.CVSHoverLab.mount()');
   for(let round=0;round<5;round++){
     // Replace nested links and adopted sheets, then drive real sibling moves.
     await page.eval('window.CVSHoverLab.hydrate()');

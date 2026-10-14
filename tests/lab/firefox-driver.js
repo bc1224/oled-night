@@ -14,6 +14,7 @@
       await browser.storage.sync.set({extensionEnabled:true});await sleep(500);
       out.push({name:theme+' / re-enable reapplies extension',ok:await inspect(()=>document.documentElement.hasAttribute('data-oled-night-root'))});
       const active=await inspect(responsiveness);out.push(...performanceChecks(native,active).map(c=>({...c,name:theme+' / '+c.name})));
+      out.push(...(await inspect(lateShadowScenario)).map(c=>({...c,name:theme+' / '+c.name})));
       await browser.tabs.remove(tab.id);
     }
   }catch(e){out.push({name:'Firefox lab execution',ok:false,detail:String(e)})}

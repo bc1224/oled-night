@@ -14,6 +14,13 @@ Follow Google's [Chrome Web Store API setup](https://developer.chrome.com/docs/w
 
 For private Chrome validation details, a manual workflow run can supply `diagnostic_public_key` as a base64-encoded RSA PEM public key. On a Chrome API failure, the workflow saves an AES-256-GCM report with its key encrypted using RSA-OAEP-SHA256, retained for one day. Keep the matching private key outside the repository and delete it after inspection. Public logs contain only sanitized status and reason codes. This option does not change the submission request.
 
+Version **0.6.37** fixes discovery of nested shadow roots attached after scanning and restores replaced component stylesheets on interaction. No new permissions; theme remains 1.0.3. See [the late-root audit](AUDIT-2026-10-13-LATE-SHADOW.md).
+
+- Local validation: 22 unit files, Chrome 257/257, Firefox 99/99, Chrome lab 1221/1221, Firefox lab 826/826, CVS stress 33/33, Firefox lint zero findings. Live CVS 20 hovers, Apple 5 and Amazon 4 passed; Reddit remains unverified because of its challenge. Reviewed Linux screenshots and exact-source CI remain required before publishing.
+- Mozilla API credentials are now configured as encrypted GitHub Actions secrets, activated with explicit approval. Both changed extension packages will be submitted through store APIs after exact-source CI succeeds. Provider outcomes are not yet confirmed.
+- Owner Chrome reload remains unverified; canonical unpacked files are 0.6.37, but browser policy has blocked extension management. Do not equate local files with a running owner-browser version.
+
+## Previous release: 0.6.36
 Version **0.6.36** fixes missed hover/focus events inside nested web components, including CVS navigation. Shared shadow-root listeners deduplicate composed events and clean up on disable or root removal. No new permissions; theme remains 1.0.3. See [the interaction audit](AUDIT-2026-10-13-SHADOW-HOVER.md).
 
 - Source/tag: `500168f20ea4f368f71917e29cb3e4d599299911`, [v0.6.36 release](https://github.com/bc1224/oled-night/releases/tag/v0.6.36). All seven asset digests match `D:\Temp\oled-release-0636\dist`. Chrome ZIP uses clean Git archive bytes. Firefox ZIP uses tested canonical runtime bytes; nine unchanged files differ from Git archive only by newline encoding. Clean reviewer source verifies this equivalence and reproduces Firefox SHA-256 `3e8ead3972da7710746d80b8abc22fa48af4f19410316311efaa6ecb2114e72f`. No unrelated working-tree files were included.

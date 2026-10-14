@@ -9,9 +9,13 @@ on:
         description: Capture screenshot candidates for explicit review (cannot deploy)
         type: boolean
         default: false
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     outputs:
       cvs_stress: ${{ steps.cvs_stress.outcome }}
     steps:
@@ -19,6 +23,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
       - run: npm ci
       - name: Unit tests
         run: for t in tests/*.test.js tests/lab/*.test.js; do node "$t" || exit 1; done

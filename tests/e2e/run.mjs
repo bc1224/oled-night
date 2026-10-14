@@ -7,6 +7,7 @@ import http from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { churnWorkload, judgeChurn } from './churn-benchmark.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // EXT_PATH lets the suite run against an unzipped release instead of the source tree.
@@ -664,19 +665,22 @@ try {
   check("typing: ancestor :has() rule rechecked after pause", scopeLight.outerDark, JSON.stringify(scopeLight));
 
   // Performance under constant page churn and slider drags.
-  await page.go(site("127.0.0.1", "rows.html"), 2500);
-  const churnScript = `(async () => { const rows = [...document.querySelectorAll('.row')]; let worst = 0, last = performance.now(), frames = 0; const stop = last + 2000;
-    await new Promise((done) => { (function tick() { const now = performance.now(); worst = Math.max(worst, now - last); last = now; frames++;
-      for (let k = 0; k < 20; k++) rows[(Math.random() * rows.length) | 0].classList.toggle('hl');
-      const p = document.createElement('p'); p.textContent = 'token ' + frames; document.getElementById('list').prepend(p);
-      if (now < stop) setTimeout(tick, 16); else done(); })(); }); return { frames, worst: Math.round(worst) }; })()`;
-  const churn = await page.eval(churnScript);
-  await setSettings({globalEnabled:false}); await sleep(400);
-  await page.go(site("127.0.0.1", "rows.html"), 2500);
-  const pageOnly = !await page.eval("document.documentElement.hasAttribute('data-oled-night-root')");
-  const pageOnlyChurn = await page.eval(churnScript);
-  check("churn avoids long stalls and retains page-only tick rate", pageOnly && churn.worst < 150 && churn.frames >= pageOnlyChurn.frames * 0.7,
-    JSON.stringify({ withExtension: churn, pageOnly: pageOnlyChurn }));
+  const pairs = [];
+  // Three fresh paired trials, with order counterbalanced. Keep every result;
+  // use median throughput but fail on any active stall at the original budget.
+  for (const order of [[true, false], [false, true], [true, false]]) {
+    const pair = {};
+    for (const active of order) {
+      await setSettings({globalEnabled: active}); await sleep(400);
+      await page.go(site("127.0.0.1", "rows.html"), 2500);
+      const enabled = await page.eval("document.documentElement.hasAttribute('data-oled-night-root')");
+      pair.pageOnly = (pair.pageOnly ?? true) && (active ? enabled : !enabled);
+      pair[active ? 'active' : 'native'] = await page.eval(`(${churnWorkload.toString()})()`);
+    }
+    pairs.push(pair);
+  }
+  const churn = judgeChurn(pairs);
+  check("churn avoids long stalls and retains page-only tick rate", churn.ok, JSON.stringify(churn));
   await resetSettings(); await sleep(400);
   await sleep(500);
   await page.eval("window.tuningPasses=0;window.tuningWatch=new MutationObserver(r=>{window.tuningPasses+=r.length});window.tuningWatch.observe(document.documentElement,{attributes:true,subtree:true,attributeFilter:['data-oled-night-measure','data-oled-night-measure-self']})");

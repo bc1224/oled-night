@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
   const {cases}=await import('./catalog.mjs');
   const entry=cases.find(c=>c.id==='cvs-hover');
   assert(entry,'the reported CVS flash must have its own browsable lab case');
-  assert(entry.limit.includes('unresolved'),'a synthetic pass must not close the intermittent live report');
+  assert(entry.limit.includes('does not guarantee every live page state'),'synthetic coverage must retain its live coverage limit');
   const {summarizeLive}=await import('../../tools/live-report.mjs');
   const report=summarizeLive({sha:'a'.repeat(40),version:'0.6.36',checkedAt:'2026-10-13T00:00:00Z',checks:[
     {name:'www.cvs.com site',kind:'site',ok:true},
@@ -18,5 +18,5 @@ const assert=require('node:assert/strict');
   assert(!JSON.stringify(report).includes('PRIVATE PAGE TEXT'),'public receipts only contain allowlisted summaries');
   assert.equal(summarizeLive({checks:[{name:'www.cvs.com availability',kind:'unverified',ok:false}]}).status,'unverified');
   assert.equal(summarizeLive({checks:[{name:'www.cvs.com site',kind:'site',ok:true},{name:'www.cvs.com navigation hover 1',kind:'regression',ok:true},{name:'www.cvs.com live smoke',kind:'unverified',ok:false}]}).status,'unverified','an interrupted run cannot report a live pass');
-  console.log('PASS CVS case keeps unresolved live failures visible and receipts private');
+  console.log('PASS CVS case keeps live failures visible, coverage limited and receipts private');
 })().catch(e=>{console.error(e);process.exitCode=1});

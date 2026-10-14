@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.36";
+  const VERSION = "0.6.37";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -1001,6 +1001,17 @@
     // The browser owns the open popup. Its static option rules are already
     // installed; synchronous select event restyles delay native opening.
     if (nativeSelect) return;
+    // attachShadow() on an already-scanned host is not a DOM mutation. Discover
+    // those roots from the native event path before painting the first hover.
+    // A new root needs its whole component scanned once; subsequent interactions
+    // keep the existing bounded path. Sites can also replace adopted sheets
+    // without a mutation, so restore our sheet on each affected root's path.
+    for (const node of event.composedPath()) {
+      if (!(node instanceof ShadowRoot) || preservesColor(node.host) || isMedia(node.host)) continue;
+      const discovered = !shadowRoots.has(node);
+      adoptShadowRoot(node);
+      if (discovered) pendingTrees.add(node.host);
+    }
     const found = path.find(node => node.matches(CONTROL));
     const control = found && found !== document.body && found !== document.documentElement ? found : null;
     const stop = firstUnchanged(event, path, control);
