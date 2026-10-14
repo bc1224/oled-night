@@ -8,7 +8,7 @@ OLED Night is a browser extension that makes web pages dark. It is built to work
 
 **What it stores:** your settings (on/off, appearance, brightness, contrast, schedule and per-site choices). They are kept in your browser's sync storage, so your browser can sync them between your signed-in browsers. The developer cannot see them.
 
-**Page content:** to recolor a page, OLED Night reads the colors of the elements on it, inside your browser. It does not save or transmit page content.
+**Page content:** to recolor a page, OLED Night reads element colors locally. Recoloring does not upload page text or entered values. Optional computed-color diagnostics and explicit local report downloads are described below.
 
 **Diagnostic reports:** "Report a broken site" first shows a preview. If you choose "Open GitHub draft", the domain, extension version, mode, brightness/contrast settings, element counts and computed contrast colors/ratios are sent to GitHub in an issue draft. Page text, field values, URL paths/query strings, selectors/identifiers, frame origins, browser identifiers and screenshots are excluded. The issue becomes public only when you submit it on GitHub. The developer and automated development tools can read submitted public issues to reproduce, test and fix bugs. Do not add private information to your description. Firefox requests optional browsingActivity and technicalAndInteraction consent for this domain/diagnostic sharing before opening the draft. Declining or unavailable consent blocks sharing only; dark mode keeps working. You can revoke consent in Firefox add-on settings.
 
