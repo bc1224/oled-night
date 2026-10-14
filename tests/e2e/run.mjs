@@ -209,12 +209,14 @@ try {
 
   check('opening menu has no white frame',frames.every(f=>lum(f.bg)<.05));
   check('expanded menu is OLED black',await css('flyout','backgroundColor')==='rgb(0, 0, 0)');
-  check('menu retains height animation',frames.some(f=>f.h>0&&f.h<239)&&frames.at(-1).h>239);
-  check('all transitions preserve opacity and width without white paint',frames.every(f=>lum(f.motionBg)<.05)&&frames.some(f=>f.opacity>.4&&f.opacity<1)&&frames.at(-1).opacity===.4&&frames.at(-1).width===180);
+  const motionEvidence=JSON.stringify({frames:frames.length,first:frames[0],last:frames.at(-1),intermediateHeight:frames.filter(f=>f.h>0&&f.h<239).length,intermediateOpacity:frames.filter(f=>f.opacity>.4&&f.opacity<1).length});
+  check('menu retains height animation',frames.some(f=>f.h>0&&f.h<239)&&frames.at(-1).h>239,motionEvidence);
+  check('all transitions preserve opacity and width without white paint',frames.every(f=>lum(f.motionBg)<.05)&&frames.some(f=>f.opacity>.4&&f.opacity<1)&&frames.at(-1).opacity===.4&&frames.at(-1).width===180,motionEvidence);
   check('menu text stays readable',lum(await css('menuText','color'))>.4);
   check('temporary motion guards are cleaned up',await page.eval("!document.querySelector('[data-oled-night-motion], [data-oled-night-noanim], [data-oled-night-noanim-self]')"));
   await setSettings({extensionEnabled:false});await sleep(400);
   check('disable restores native surfaces and ink',await css('flyout','backgroundColor')==='rgb(250, 250, 250)'&&await css('heroInk','color')==='rgb(17, 17, 17)');
+  if (process.env.OLED_TEST_SCOPE === 'navigation') break suite;
 
   await setSettings({extensionEnabled:true});
   await page.go(site('127.0.0.1','shadow-stability.html'));
