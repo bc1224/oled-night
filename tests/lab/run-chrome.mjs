@@ -130,6 +130,11 @@ try {
   await settings(true);await page.go(`${server.origin}/lab/fixtures/large-updates.html`);await wait(2000);
   await page.eval(readFileSync(join(root,'docs/lab/audit.js'),'utf8'));
   checks.push(...await proof('large-updates',await page.eval(`(${largeUpdatesScenario.toString()})()`)));
+  await page.eval(`document.querySelector('.row').classList.add('hl')`);await wait(120);
+  add('shared background declarations remain bounded',await page.eval(`(()=>{const rules=[...document.getElementById('oled-night-sheet').sheet.cssRules].filter(r=>r.selectorText?.includes('data-oled-night-bg'));return rules.length>0&&rules.length<=128})()`));
+  await settings(false);
+  add('disable removes shared paint and restores native selected row',await page.eval(`!document.querySelector('[data-oled-night-bg]')&&getComputedStyle(document.querySelector('.row')).backgroundColor==='rgb(242, 246, 252)'`));
+  await settings(true);
   const largeCounts=()=>options.eval(`(async()=>{const [t]=await chrome.tabs.query({url:${JSON.stringify(server.origin+'/lab/fixtures/large-updates.html')}});return (await chrome.tabs.sendMessage(t.id,{type:'oled-night-report'})).counts})()`);
   const settledOwnership=await largeCounts();
   await page.eval(`(${emptyRowLifecycle.toString()})()`);const emptyOwnership=await largeCounts();

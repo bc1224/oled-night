@@ -77,6 +77,11 @@
     out.push({name:'large inbox performance exercises a desktop viewport',ok:await inspect(()=>innerWidth>=1000)});
     await browser.scripting.executeScript({target:{tabId:tab.id},files:['lab-audit.js']});
     out.push(...await proof('large-updates',await inspect(largeUpdatesScenario)));
+    await inspect(()=>document.querySelector('.row').classList.add('hl'));await sleep(120);
+    out.push({name:'shared background declarations remain bounded',ok:await inspect(()=>{const rules=[...document.getElementById('oled-night-sheet').sheet.cssRules].filter(r=>r.selectorText?.includes('data-oled-night-bg'));return rules.length>0&&rules.length<=128})});
+    await browser.storage.sync.set({extensionEnabled:false});await sleep(500);
+    out.push({name:'disable removes shared paint and restores native selected row',ok:await inspect(()=>!document.querySelector('[data-oled-night-bg]')&&getComputedStyle(document.querySelector('.row')).backgroundColor==='rgb(242, 246, 252)')});
+    await browser.storage.sync.set({extensionEnabled:true});await sleep(500);
     const settledOwnership=(await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts;
     await inspect(emptyRowLifecycle);const emptyOwnership=(await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts;
     out.push({name:'emptying then removing a virtual row releases its retained shell',ok:emptyOwnership.paintContainers===settledOwnership.paintContainers,detail:JSON.stringify({before:settledOwnership,after:emptyOwnership})});

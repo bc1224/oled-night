@@ -87,3 +87,5 @@ Nested CSS and content beneath custom/slot/part boundaries retain native measure
 Document-only selection and inherited-ink proofs also reject ordinary closed hosts. This checks root presence without inspecting or styling an unknown root, and caches that boolean only within a delivery. If that check is unavailable, the proof fails closed. Later explicit dark ink on a streamed leaf is checked separately. The closed-slot cases include ordinary hosts, custom hosts and selection ink.
 
 The companion theme remains 1.0.3. Extension changes require the full release gates and separate store submission receipts.
+
+Proven neutral selection changes can use shared background declarations instead of mutating inline CSS on every update. The palette is primed before updates and capped at 128 declarations; unknown paint falls back to normal measurement and inline writes. It retains the same stylesheet, closed-root and ink proofs. Tests check distinct resting/selected paint, later page writes, framework removal, native restoration on disable and the palette bound. Memory and frame budgets remain unchanged.

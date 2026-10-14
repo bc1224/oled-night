@@ -12,6 +12,7 @@
   const ICON_PARTS = "path, circle, rect, ellipse, polygon, polyline, line, text, use, g";
   const CHART_PARTS = `${ICON_PARTS}, stop`;
   const MARK = "data-oled-night";
+  const SHARED_BG = "data-oled-night-bg";
   const MEASURE = "data-oled-night-measure";
   // Set while we swap overrides in and out, so site CSS transitions on colors
   // never animate between our dark value and the original light one.
@@ -66,7 +67,7 @@
   const isExternalOverlay = (element) => element.getAttribute("popover") === "manual" &&
     element.style.position === "fixed" && element.style.zIndex === "2147483647";
   const STATE_ATTRIBUTES = ["aria-selected", "aria-checked", "aria-expanded", "aria-disabled", "data-state", "data-highlighted", "selected", "disabled", "open"];
-  const OBSERVE = { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "href", "media", MARK, ...STATE_ATTRIBUTES] };
+  const OBSERVE = { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "href", "media", MARK, SHARED_BG, ...STATE_ATTRIBUTES] };
   const isTopFrame = (() => { try { return typeof window === "undefined" || window.top === window; } catch { return false; } })();
 
   let observer = null;
@@ -91,6 +92,9 @@
   let compiledPaintScope = null;
   let simpleScopeEpoch = 0;
   let recentBackgroundWrites = new Map();
+  let recentSharedBackgrounds = new Map();
+  const sharedBackgrounds = new Map();
+  let sharedBackgroundScope = null;
   // Browsers serialize shorthand defaults differently (initial vs repeat,
   // scroll, etc.). Compare to that engine's own color-only declaration.
   const backgroundDefaults = (() => {
@@ -821,6 +825,7 @@
 
   function write(element, found, same = unchanged(element, found)) {
     inlineStyles.set(element, inlineSignature(element));
+    element.removeAttribute(SHARED_BG);
     if (same) return;
     const keys = Object.keys(found);
     const signature = signatureOf(found);
@@ -1124,6 +1129,29 @@
     return true;
   }
 
+  function primeSharedBackgrounds(scope) {
+    if (!scope || scope.mayAnimate) return;
+    const mode = modeFor(), key = `${scope.epoch}:${mode}`;
+    if (sharedBackgroundScope === key || !['oled', 'soft'].includes(mode)) return;
+    const sheet = document.getElementById('oled-night-sheet')?.sheet;
+    if (!sheet) return;
+    const colors = colorsApi();
+    for (const {background} of scope.rules) {
+      if (background?.a !== 1 || colors.chroma(background) >= .1 || colors.luminance(background) < .8) continue;
+      const paint = colors.mapBackground(background, mode);
+      if (sharedBackgrounds.has(paint) || sharedBackgrounds.size >= 128) continue;
+      const token = String(sharedBackgrounds.size);
+      const on = `:is([${MARK}], #oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}])`;
+      try {
+        // Shared immutable declarations let the browser reuse matched paint.
+        // Prime outside animation updates; never create rules in the fast path.
+        sheet.insertRule(`[${SHARED_BG}="${token}"][${MARK}~="bg"]${on} { background-color: ${paint} !important; }`, sheet.cssRules.length);
+        sharedBackgrounds.set(paint, token);
+      } catch {} // CSSOM unavailable: retain ordinary inline paint.
+    }
+    sharedBackgroundScope = key;
+  }
+
   function processBatch(list, trees, selves) {
     // Ordinary already-styled buttons/menus need no scope analysis. Pay for
     // this proof only for repeated containers or unstyled text leaves.
@@ -1132,6 +1160,7 @@
       (!node.hasAttribute(MARK) && /^(p|span|b|strong|em|i|small)$/.test(node.localName) &&
         node.parentElement?.getAttribute(MARK)?.split(' ').includes('fg')));
     const paintScope = mayReusePaint ? simplePaintScope() : null;
+    primeSharedBackgrounds(paintScope);
     const documentContexts = new Map();
     const paintList = eagerPaintList(list, trees).filter(node => !inheritsPlainInk(node, paintScope, documentContexts));
     if (!paintList.length && !list.images.size && !list.icons.size) return;
@@ -1368,6 +1397,7 @@
     process(trees, selves);
     observer.takeRecords();
     recentBackgroundWrites.clear();
+    recentSharedBackgrounds.clear();
   }
 
   // Batch mutations before the next paint. Idle callbacks run after painting,
@@ -1529,6 +1559,7 @@
     const mode = scopes.get('mode'), snapshot = containerPaint.get(node);
     if (!["oled", "soft"].includes(mode) || !paintContainers.has(node) || !snapshot ||
         !plainDocumentContext(node, scopes.get('contexts')) || !overridesIntact(node) || inlineSignature(node) !== "") return false;
+    if (node.getAttribute(SHARED_BG) !== (snapshot.sharedToken ?? null)) return false;
     if (!scopes.has(document)) scopes.set(document, simplePaintScope());
     const scope = scopes.get(document);
     if (!scope || scope.mayAnimate || snapshot.scopeEpoch !== scope.epoch) return false;
@@ -1554,7 +1585,7 @@
     }
     const colors = colorsApi(), source = originalSurface.get(node)?.color, found = snapshot.found;
     const light = color => color?.a === 1 && colors.chroma(color) < 0.1 && colors.luminance(color) >= 0.8;
-    if (!affected || !light(background) || !light(source) || found.bg !== colors.mapBackground(source, mode)) return false;
+    if (!affected || !light(background) || !light(source) || (snapshot.effectivePaint || found.bg) !== colors.mapBackground(source, mode)) return false;
     const proofKey = `${background.r},${background.g},${background.b}`;
     if (!snapshot.inkProof?.has(proofKey)) {
     const branch = [node], walker = document.createTreeWalker(node, NodeFilter.SHOW_ELEMENT);
@@ -1583,6 +1614,17 @@
     // exactly its existing ink tier. No temporary subtree style switch.
     originalSurface.set(node, { color: background });
     const next = { ...found, bg: colors.mapBackground(background, mode) };
+    const sharedToken = sharedBackgrounds.get(next.bg);
+    if (sharedToken !== undefined) {
+      if (node.getAttribute(SHARED_BG) !== sharedToken) {
+        node.setAttribute(SHARED_BG, sharedToken);
+        if (recentSharedBackgrounds.size < 2048) recentSharedBackgrounds.set(node, sharedToken);
+      }
+      containerPaint.set(node, {found, effectivePaint: next.bg, sharedToken, classes: current,
+        scopeEpoch: scope.epoch, inkProof: snapshot.inkProof});
+      return true;
+    }
+    node.removeAttribute(SHARED_BG);
     // The proof above already verified every override and native declaration.
     // Only this background can differ. Avoid rereading/rebuilding every other
     // inline property, and recognize this exact write on observer delivery.
@@ -1598,11 +1640,15 @@
   function onMutations(records, scheduleBatch = true) {
     const ownBackgrounds = recentBackgroundWrites;
     recentBackgroundWrites = new Map();
+    const ownShared = recentSharedBackgrounds;
+    recentSharedBackgrounds = new Map();
     // A later page write changes the complete attribute and must be processed.
     // Only our still-identical color write is redundant. This map lives for
     // one delivery, is bounded, and is cleared on disable/flush as well.
     records = records.filter(record => record.type !== 'attributes' || record.attributeName !== 'style' ||
       !ownBackgrounds.has(record.target) || ownBackgrounds.get(record.target) !== record.target.getAttribute('style'));
+    records = records.filter(record => record.type !== 'attributes' || record.attributeName !== SHARED_BG ||
+      !ownShared.has(record.target) || ownShared.get(record.target) !== record.target.getAttribute(SHARED_BG));
     if (!records.length) return;
     const seenAttributes = new Map();
     const backgroundScopes = new Map();
@@ -1643,6 +1689,8 @@
         const changedSheets = [...record.addedNodes, ...record.removedNodes].some(node => isPageSheet(node) || (node instanceof Element && [...node.querySelectorAll('style, link[rel~="stylesheet"]')].some(isPageSheet)));
         if (changedSheets) { polarityDirty = true; pendingTrees.add(document.documentElement); }
         for (const node of record.addedNodes) if (node.nodeType === Node.ELEMENT_NODE) pendingTrees.add(node);
+      } else if (record.attributeName === SHARED_BG) {
+        pendingTrees.add(target);
       } else if (record.attributeName === "class" || STATE_ATTRIBUTES.includes(record.attributeName)) {
         // Sites often switch their own theme with a class on <html>/<body>.
         if (target === document.documentElement || target === document.body) polarityDirty = true;
@@ -1882,6 +1930,9 @@
     containerPaint = new WeakMap();
     nativeInk = new WeakMap();
     recentBackgroundWrites.clear();
+    recentSharedBackgrounds.clear();
+    sharedBackgrounds.clear();
+    sharedBackgroundScope = null;
     simpleScopeFingerprint = null;
     compiledPaintScope = null;
     simpleScopeEpoch = 0;
@@ -1897,8 +1948,8 @@
     logoBudget = 80;
     for (const scope of [document, ...shadowRoots]) {
       if (scope !== document) for (const type of INTERACTION_EVENTS) scope.removeEventListener(type, onInteraction, true);
-      for (const node of scope.querySelectorAll(`[${MEASURE}], [${NOANIM}], [${MEASURE_SELF}], [${NOANIM_SELF}], [${MEASURE_PSEUDO}], [${MEASURE_ROOT}], [${LOGO}], [${LOGO_EDGE}]`)) {
-        for (const name of [MEASURE, NOANIM, MEASURE_SELF, NOANIM_SELF, MEASURE_PSEUDO, MEASURE_ROOT, LOGO, LOGO_EDGE]) node.removeAttribute(name);
+      for (const node of scope.querySelectorAll(`[${MEASURE}], [${NOANIM}], [${MEASURE_SELF}], [${NOANIM_SELF}], [${MEASURE_PSEUDO}], [${MEASURE_ROOT}], [${LOGO}], [${LOGO_EDGE}], [${SHARED_BG}]`)) {
+        for (const name of [MEASURE, NOANIM, MEASURE_SELF, NOANIM_SELF, MEASURE_PSEUDO, MEASURE_ROOT, LOGO, LOGO_EDGE, SHARED_BG]) node.removeAttribute(name);
       }
       for (const element of scope.querySelectorAll(`[${MARK}]`)) {
         element.removeAttribute(MARK);
