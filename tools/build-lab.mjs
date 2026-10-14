@@ -6,9 +6,9 @@ import {cases} from '../tests/lab/catalog.mjs';
 const root = resolve(import.meta.dirname, '..');
 export function buildLab({output = join(root, 'dist/site')} = {}) {
   const tracked=execFileSync('git',['ls-files','-z','--','docs','tests/e2e/site'],{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean);
-  const docs=tracked.filter(p=>p.startsWith('docs/')&&!/^docs\/lab\/(fixtures|catalog\.json|results\.json)/.test(p));
+  const docs=tracked.filter(p=>p.startsWith('docs/')&&!/^docs\/lab\/(fixtures|catalog\.json|results\.json|live-results\.json)/.test(p));
   const fixtures=tracked.filter(p=>/^tests\/e2e\/site\/[-a-z]+\.(html|svg)$/.test(p));
-  const expected=new Set([...docs.map(p=>p.slice(5)),...fixtures.map(p=>'lab/fixtures/'+p.split('/').at(-1)),'lab/fixtures/matrix.html','lab/fixtures/audit.js','lab/catalog.json','lab/results.json']);
+  const expected=new Set([...docs.map(p=>p.slice(5)),...fixtures.map(p=>'lab/fixtures/'+p.split('/').at(-1)),'lab/fixtures/matrix.html','lab/fixtures/audit.js','lab/catalog.json','lab/results.json','lab/live-results.json']);
   function inspect(directory,prefix=''){
     for(const entry of readdirSync(directory,{withFileTypes:true})){
       const name=prefix+entry.name;

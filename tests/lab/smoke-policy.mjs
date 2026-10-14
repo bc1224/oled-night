@@ -16,9 +16,9 @@ export function navigationPaint(point){
 
 // Schedule ordinary page tasks after frame callbacks. A direct CDP inspection
 // can observe the engine's temporary native-style measurement state.
-export async function sampleNavigationPaint(point,read){
+export async function sampleNavigationPaint(point,read,{frames=4}={}){
   const samples=[];
-  for(let i=0;i<4;i++){
+  for(let i=0;i<frames;i++){
     await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
     samples.push(read(point));
   }

@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CVS-style hover stress</title><style>
+body{margin:24px;background:#fff;color:#222;font:16px/1.5 system-ui}button{padding:10px;border:1px solid #777;background:#eee;color:#222}header{background:#fff;border:1px solid #aaa;border-radius:8px;padding:16px}stress-header{display:block}p{max-width:70ch}.status{font-size:13px}a{color:#013f7c}
+</style></head><body><h1>Repeated navigation hover</h1><p>Move between the three links, including immediately after reset. Native hover is pale blue. With OLED Night active, every sampled hover state should stay dark and readable.</p><p><strong>Coverage limit:</strong> this models delayed hover styles and hydration; it is not an exact saved CVS page. The reported intermittent live CVS failure remains unresolved. See the separate live result in the gallery.</p><button id="reset">Reset header</button> <button id="hydrate">Hydrate repeatedly</button><p class="status" id="status" role="status">Ready</p><header><stress-header id="header"></stress-header></header>
+<script src="audit.js"></script><script>
+// Synthetic labels/styles only. Two nested roots model retargeted sibling events;
+// delayed scoped classes and stylesheet replacement stress later site hydration.
+const outer=document.getElementById('header').attachShadow({mode:'open'});outer.innerHTML='<stress-links></stress-links>';
+const inner=outer.querySelector('stress-links').attachShadow({mode:'open'});let generation=0,timer;
+function hydrate(){
+  const sheet=new CSSStyleSheet();sheet.replaceSync('nav{display:flex;flex-wrap:wrap;gap:8px}a{display:block;padding:18px;color:#013f7c;background:transparent;border:1px solid #aaa;border-radius:6px}a:hover,a:focus-visible,a.site-hover{background:rgb(227,241,255);color:#013f7c}a.site-hover{box-shadow:0 0 0 1px #bbb}a:focus-visible{outline:2px solid #013f7c;outline-offset:2px}');inner.adoptedStyleSheets=[sheet];
+  inner.innerHTML='<nav aria-label="Synthetic quick links">'+['Vaccine appointment','Prescription services','Browse products'].map((s,i)=>'<a id="cvs-'+i+'" href="#example" data-lab-check="text">'+s+'</a>').join('')+'</nav>';
+  for(const link of inner.querySelectorAll('a')){let delayed;link.addEventListener('pointerenter',()=>{delayed=setTimeout(()=>{if(link.matches(':hover'))link.classList.add('site-hover')},60)});link.addEventListener('pointerleave',()=>{clearTimeout(delayed);link.classList.remove('site-hover')})}
+  document.getElementById('status').textContent='Header generation '+(++generation);
+}
+window.CVSHoverLab={hydrate,links:()=>[...inner.querySelectorAll('a')]};
+document.getElementById('reset').onclick=()=>{clearInterval(timer);hydrate()};
+document.getElementById('hydrate').onclick=()=>{clearInterval(timer);let n=0;hydrate();timer=setInterval(()=>{hydrate();if(++n===6)clearInterval(timer)},170)};
+hydrate();
+</script></body></html>

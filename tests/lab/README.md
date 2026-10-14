@@ -2,7 +2,7 @@
 
 Public gallery: https://bc1224.github.io/oled-night/lab/
 
-35 synthetic cases cover the component matrix and previous site failures. The current gallery is built from the same committed fixtures used by the browser regressions. It contains no copied accounts or private report uploads.
+36 synthetic cases cover the component matrix and previous site failures. The current gallery is built from the same committed fixtures used by the browser regressions. It contains no copied accounts or private report uploads.
 
 ## Run
 
@@ -44,6 +44,12 @@ Add cases to `catalog.mjs`. Public build requires a Git checkout and copies only
 Main-branch **Tests** must pass unit tests, the existing browser suites, Firefox lint, the new matrix, timing budgets and reviewed visuals. Only then can the website deploy. Store submission requires a successful main-branch test run for the exact tagged SHA and a retained lab evidence artifact. A previous policy without lab evidence is insufficient.
 
 `npm run test:lab:live` (or **Live site smoke**) checks anonymous Apple, CVS, Amazon and Reddit navigation in a fresh Chrome profile. It saves hostnames and result summaries, never page text, account data or cookies. This is a small smoke test, not a full-site audit. The live gate requires at least two distinct reachable sites and rejects any observed pale hover or an inactive extension on a ready page. Provider challenges and unavailable controls remain explicitly unverified and never count toward that minimum. Extension submissions run it before upload; the companion theme does not run extension-only smoke checks.
+
+### CVS intermittent hover coverage
+
+Open the **CVS · repeated navigation hover** case (`/lab/#cvs-hover`). It models nested links, delayed hover classes and repeated replacement of links/adopted stylesheets. Chrome runs 5 hydration cycles × 3 real sibling moves, checks actual `:hover` and text contrast, and watches 24 completed-frame CSS samples per move. Sampling is armed **before** native pointer input rather than starting 200 ms afterward. A real-browser injected pale hover and a unit test with one early pale sample prove the monitor can fail. This models the failure pattern; it has **not** reproduced or established the cause of the intermittent real CVS failure.
+
+Every Tests run also performs a separate anonymous `node tests/lab/live-smoke.mjs --cvs`: 5 rounds over up to 5 visible navigation targets with the same entry sampler. The gallery publishes a separate exact-source/time live receipt with PASS-this-run, FAIL or UNVERIFIED. The unresolved warning remains even after a passing run; neither the synthetic check count nor a later live pass erases previously observed failures. CSS sampling is not a pixel/video proof of every rendered frame. The live CVS result does not block publishing improvements to the tester; a failing live check still exits nonzero and blocks extension store upload through the existing live submission gate. No extension binaries change in this update.
 
 Saved Bitwarden credential filling, real CAPTCHA completion, image-backed hero text and authenticated pages still need targeted live QA. The lab reduces manual work; it cannot guarantee compatibility with every changing website.
 

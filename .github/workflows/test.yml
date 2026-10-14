@@ -35,11 +35,18 @@ jobs:
           CHROME_PATH: /usr/bin/google-chrome
       - name: Component states and performance in Firefox
         run: npm run test:lab:firefox
+      - name: Separate live CVS repeated hover result (published even when failing)
+        id: cvs
+        continue-on-error: true
+        run: node tests/lab/live-smoke.mjs --cvs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
       - name: Build browsable lab with passing evidence
         if: ${{ !inputs.candidates }}
         run: |
           npm run build:lab
           node tools/lab-report.mjs
+          node tools/live-report.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
