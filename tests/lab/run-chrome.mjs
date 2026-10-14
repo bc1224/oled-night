@@ -18,7 +18,7 @@ import {largeUpdatesScenario} from './large-updates-scenario.mjs';
 import {churnWorkload,judgeChurn} from '../e2e/churn-benchmark.mjs';
 import {reportPreviewScenario} from './report-preview-scenario.mjs';
 import {visibleIconPixels} from './checkout-paint.mjs';
-import {frameWorkload,frameChecks,mountComponents,removeComponents} from '../../docs/lab/performance.js';
+import {frameWorkload,frameChecks,mountComponents,removeComponents,emptyRowLifecycle} from '../../docs/lab/performance.js';
 import {runtimeDigest,regressionChecks} from './runtime-proof.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/lab-results');mkdirSync(output,{recursive:true});
 const packageRoot=resolve(process.env.OLED_LAB_PACKAGE_ROOT||root);
@@ -132,6 +132,8 @@ try {
   checks.push(...await proof('large-updates',await page.eval(`(${largeUpdatesScenario.toString()})()`)));
   const largeCounts=()=>options.eval(`(async()=>{const [t]=await chrome.tabs.query({url:${JSON.stringify(server.origin+'/lab/fixtures/large-updates.html')}});return (await chrome.tabs.sendMessage(t.id,{type:'oled-night-report'})).counts})()`);
   const settledOwnership=await largeCounts();
+  await page.eval(`(${emptyRowLifecycle.toString()})()`);const emptyOwnership=await largeCounts();
+  add('emptying then removing a virtual row releases its retained shell',emptyOwnership.paintContainers===settledOwnership.paintContainers,JSON.stringify({before:settledOwnership,after:emptyOwnership}));
   add('idle inbox releases per-row geometry observation after initial sampling',settledOwnership.observedPaint<=64,JSON.stringify(settledOwnership));
   add('detached queued mail rows are released', (await largeCounts()).deferredPaint===0);
   for(const width of [1200,390]) {
@@ -145,6 +147,8 @@ try {
       if(enabled){const count=await largeCounts();largeResources.push({workload:'churn',frames:pair.active.frames,script:after.ScriptDuration-before.ScriptDuration,styles:after.RecalcStyleCount-before.RecalcStyleCount,queued:count.deferredPaint,observed:count.observedPaint})}
       await page.go(`${server.origin}/lab/fixtures/large-updates.html`);await wait(2000);
       framePair.pageOnly&&=await page.eval(`document.documentElement.hasAttribute('data-oled-night-root')===${enabled}`);
+      // Exercise real pointer crossings when streamed content moves beneath it.
+      await page.hover(200,650);await wait(160);
       const frameBefore=await metrics();framePair[enabled?'active':'native']=await page.eval(`(${frameWorkload.toString()})()`);const frameAfter=await metrics();
       if(enabled){const count=await largeCounts();largeResources.push({workload:'frames',frames:framePair.active.frames+1,script:frameAfter.ScriptDuration-frameBefore.ScriptDuration,styles:frameAfter.RecalcStyleCount-frameBefore.RecalcStyleCount,queued:count.deferredPaint,observed:count.observedPaint})}
     }largePairs.push(pair);largeFramePairs.push(framePair);

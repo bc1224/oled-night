@@ -3,11 +3,11 @@ body{background:#fff;color:#202124}.row{display:flex;background:#fff;border-bott
 </style></head><body><h1>2,500 fake inbox rows</h1><p>CI compares identical seeded updates with OLED Night enabled and disabled. Frame, script, style and detached-component budgets block release. It also checks selection colors, inherited text, late stylesheet edits and animated fallback. No real mail or account data.</p><button id="measure">Measure frame pacing</button><button id="churn">Measure sustained updates</button><button id="resources">Exercise component cleanup</button><p>For an on/off comparison, run a measurement, disable OLED Night, reload, and run it again. The cleanup check shows DOM counts and an approximate JS heap reading where supported; CI separately forces garbage collection and checks extension-owned roots. These are not total browser RAM measurements.</p><pre id="result"></pre><div id="list"></div><script>
 const list=document.getElementById('list');for(let i=0;i<2500;i++){const row=document.createElement('div');row.className='row';row.innerHTML='<span class="c"><b>Sender '+i+'</b></span><span class="c">Subject '+i+'</span><span class="c">snippet</span>';list.append(row)}
 </script><script type="module">
-import {frameWorkload,churnWorkload,mountComponents,removeComponents} from '../performance.js';
+import {frameWorkload,churnWorkload,mountComponents,removeComponents,emptyRowLifecycle} from '../performance.js';
 async function resources(){
  const count=()=>document.querySelectorAll('*').length,heap=()=>performance.memory?.usedJSHeapSize??null;
  const before={domNodes:count(),approximateJsHeapBytes:heap()},start=performance.now();
- for(let cycle=0;cycle<6;cycle++){mountComponents();await new Promise(r=>setTimeout(r,100));removeComponents();await new Promise(r=>setTimeout(r,100))}
+ for(let cycle=0;cycle<6;cycle++){mountComponents();await new Promise(r=>setTimeout(r,100));removeComponents();await new Promise(r=>setTimeout(r,100));await emptyRowLifecycle()}
  const after={domNodes:count(),approximateJsHeapBytes:heap()};
  return {cycles:6,componentsPerCycle:160,elapsedMs:Math.round(performance.now()-start),before,after,fixtureDomRestored:before.domNodes===after.domNodes,forcedGarbageCollection:false};
 }

@@ -307,6 +307,7 @@
         // Streaming a single plain text leaf must not enumerate thousands of
         // unrelated retained rows. Components and removed subtrees still get
         // the full immediate ownership sweep, including in hidden tabs.
+        paintContainers.delete(node);
         deferredPaint.delete(node);
         if (observedPaint.delete(node)) viewportObserver?.unobserve(node);
         for (const set of [pendingTrees, pendingSelf, settleTrees, settleSelf]) set.delete(node);
@@ -1359,6 +1360,18 @@
     handledInteractions.add(event);
     const path = event.composedPath().filter(node => node instanceof Element);
     if (path.some(isExternalOverlay)) return;
+    if (/^pointer(?:over|out)$/.test(event.type)) {
+      const index = path.findIndex(node => paintContainers.has(node));
+      if (index >= 0 && !path.some(node => node.matches(CONTROL)) && path.slice(0, index + 1).every(node =>
+          /^(div|span|b|strong|em|i|small)$/.test(node.localName) && !node.assignedSlot && !node.hasAttribute('part'))) {
+        const snapshot = containerPaint.get(path[index]), scope = snapshot && simplePaintScope();
+        // Plain repeated rows with a completely inspected scope have no
+        // authored hover rules or native control states. Pointer crossings
+        // cannot change their paint. Actual DOM/style changes still invalidate
+        // and repaint through the observer, including later event handlers.
+        if (scope && !scope.mayAnimate && snapshot.scopeEpoch === scope.epoch) return;
+      }
+    }
     const nativeSelect = path.find(node => node.localName === "select");
     // The browser owns the open popup. Its static option rules are already
     // installed; synchronous select event restyles delay native opening.

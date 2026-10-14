@@ -6,6 +6,10 @@ export async function largeUpdatesScenario(){
  const plain=document.createElement('p');plain.textContent='Fake streamed inherited text';document.getElementById('list').prepend(plain);await sleep(80);
  check('unstyled streamed text inherits readable ink without duplicate paint',!plain.hasAttribute('data-oled-night')&&plain.style.length===0&&window.OLEDLabAudit.contrast(getComputedStyle(plain).color,getComputedStyle(document.body).backgroundColor)>=4.5);
  plain.remove();await sleep(80);
+ let pointerReads=0;const pointerWatch=new MutationObserver(records=>pointerReads+=records.filter(r=>r.attributeName?.startsWith('data-oled-night-measure')).length);
+ pointerWatch.observe(document.documentElement,{subtree:true,attributes:true});
+ rows[0].querySelector('.c').dispatchEvent(new PointerEvent('pointerover',{bubbles:true,composed:true,relatedTarget:rows[1]}));await sleep(160);pointerWatch.disconnect();
+ check('plain inbox pointer movement does not remeasure unchanged row paint',pointerReads===0,String(pointerReads));
  let measurements=0;const paintWatch=new MutationObserver(records=>measurements+=records.filter(r=>r.attributeName?.startsWith('data-oled-night-measure')).length);
  paintWatch.observe(rows[0],{subtree:true,attributes:true});rows[0].classList.add('hl');await sleep(80);paintWatch.disconnect();
  check('proven background-only selection avoids native subtree measurement',measurements===0&&window.OLEDLabAudit.lum(getComputedStyle(rows[0]).backgroundColor)<.16,String(measurements));
@@ -24,6 +28,10 @@ export async function largeUpdatesScenario(){
  const inherited=document.createElement('style');inherited.textContent='.row.ink .c{color:#555}';document.head.append(inherited);await sleep(80);
  rows[0].classList.add('ink');await sleep(80);
  check('descendant selection rules retain measured readable text',window.OLEDLabAudit.contrast(getComputedStyle(rows[0].querySelector('.c')).color,getComputedStyle(rows[0]).backgroundColor)>=4.5);
+ let uncertainReads=0;const uncertainWatch=new MutationObserver(records=>uncertainReads+=records.filter(r=>r.attributeName?.startsWith('data-oled-night-measure')).length);
+ uncertainWatch.observe(document.documentElement,{subtree:true,attributes:true});
+ rows[0].querySelector('.c').dispatchEvent(new PointerEvent('pointerover',{bubbles:true,composed:true,relatedTarget:rows[1]}));await sleep(160);uncertainWatch.disconnect();
+ check('uncertain pointer styles retain native paint measurement',uncertainReads>0,String(uncertainReads));
  rows[0].classList.remove('ink');inherited.remove();await sleep(80);
  const motion=document.createElement('style');motion.textContent='.row{transition:background-color 80ms}';document.head.append(motion);await sleep(100);
  let animatedReads=0;const motionWatch=new MutationObserver(records=>animatedReads+=records.filter(r=>r.attributeName?.startsWith('data-oled-night-measure')).length);

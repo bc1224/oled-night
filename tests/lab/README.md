@@ -80,4 +80,6 @@ In a complete simple stylesheet scope, new unstyled text can inherit readable pa
 
 Saved Bitwarden credential filling, real CAPTCHA completion, image-backed hero text and authenticated pages still need targeted live QA. The lab reduces manual work; it cannot guarantee compatibility with every changing website.
 
+The large-inbox case also checks pointer crossings over plain rows and conservative repaint in uncertain scopes. Chrome frame measurements keep a real pointer over the moving inbox. Component cleanup includes rows emptied in one mutation delivery and removed in a later delivery, so a subtree sweep cannot hide retained row shells. Both browsers assert that extension-owned row counts return to their starting value; the public cleanup button runs the same lifecycle.
+
 The companion theme remains 1.0.3. Extension changes require the full release gates and separate store submission receipts.

@@ -78,6 +78,8 @@
     await browser.scripting.executeScript({target:{tabId:tab.id},files:['lab-audit.js']});
     out.push(...await proof('large-updates',await inspect(largeUpdatesScenario)));
     const settledOwnership=(await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts;
+    await inspect(emptyRowLifecycle);const emptyOwnership=(await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts;
+    out.push({name:'emptying then removing a virtual row releases its retained shell',ok:emptyOwnership.paintContainers===settledOwnership.paintContainers,detail:JSON.stringify({before:settledOwnership,after:emptyOwnership})});
     out.push({name:'idle inbox releases per-row geometry observation after initial sampling',ok:settledOwnership.observedPaint<=64,detail:JSON.stringify(settledOwnership)});
     out.push({name:'detached queued mail rows are released',ok:(await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts.deferredPaint===0});
     const largePairs=[],largeFramePairs=[];

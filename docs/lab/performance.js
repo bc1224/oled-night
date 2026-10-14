@@ -65,3 +65,14 @@ export function mountComponents() {
   document.body.append(window.__memoryHost);
 }
 export function removeComponents() { window.__memoryHost.remove(); window.__memoryHost=null; }
+
+// Virtualized UIs can empty a row in one delivery and remove its shell later.
+// Keep the deliveries separate so a subtree sweep cannot conceal shell leaks.
+export async function emptyRowLifecycle() {
+  const row=document.createElement('div');row.className='row';
+  row.innerHTML='<span class="c">Fake recyclable row</span>';
+  document.getElementById('list').append(row);
+  await new Promise(r=>setTimeout(r,100));
+  row.replaceChildren();await new Promise(r=>setTimeout(r,100));
+  row.remove();await new Promise(r=>setTimeout(r,100));
+}
