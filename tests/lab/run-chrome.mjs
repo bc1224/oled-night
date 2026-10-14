@@ -131,6 +131,8 @@ try {
   await page.eval(readFileSync(join(root,'docs/lab/audit.js'),'utf8'));
   checks.push(...await proof('large-updates',await page.eval(`(${largeUpdatesScenario.toString()})()`)));
   const largeCounts=()=>options.eval(`(async()=>{const [t]=await chrome.tabs.query({url:${JSON.stringify(server.origin+'/lab/fixtures/large-updates.html')}});return (await chrome.tabs.sendMessage(t.id,{type:'oled-night-report'})).counts})()`);
+  const settledOwnership=await largeCounts();
+  add('idle inbox releases per-row geometry observation after initial sampling',settledOwnership.observedPaint<=64,JSON.stringify(settledOwnership));
   add('detached queued mail rows are released', (await largeCounts()).deferredPaint===0);
   for(const width of [1200,390]) {
   const firstLargeCheck=checks.length;await page.size(width,1000);
@@ -152,12 +154,13 @@ try {
   add('large mail updates spend at most 8ms script work per tick',largeResources.every(r=>r.script/r.frames<.008),JSON.stringify(largeResources));
   add('offscreen observer ownership stays bounded at 2,048 branches',largeResources.every(r=>Number.isInteger(r.queued)&&r.queued<=2048),JSON.stringify(largeResources));
   add('viewport observation stays bounded at 4,096 containers',largeResources.every(r=>Number.isInteger(r.observed)&&r.observed<=4096),JSON.stringify(largeResources));
+  add('steady animated updates observe at most 64 postponed branches',largeResources.every(r=>Number.isInteger(r.observed)&&r.observed<=64),JSON.stringify(largeResources));
   checks.push(...frameChecks(largeFramePairs).map(c=>({...c,name:'2,500 rows / '+c.name,fixture:'large-updates',kind:'assertion'})));
   await settings(true);await page.go(`${server.origin}/lab/fixtures/large-updates.html`);await wait(2000);
   await browser.send('HeapProfiler.collectGarbage',{},page.sessionId);const largeHeapBefore=await metrics();
   await page.eval("document.getElementById('list').replaceChildren()");await wait(80);
   const clearedCounts=await largeCounts();
-  add('removing the whole inbox releases viewport and pending ownership',clearedCounts.observedPaint===0&&clearedCounts.deferredPaint===0,JSON.stringify(clearedCounts));
+  add('removing the whole inbox releases viewport and pending ownership',clearedCounts.observedPaint===0&&clearedCounts.deferredPaint===0&&clearedCounts.paintContainers===0,JSON.stringify(clearedCounts));
   await browser.send('HeapProfiler.collectGarbage',{},page.sessionId);const largeHeapAfter=await metrics();
   add('removed large inbox does not retain more than 1MiB extra heap or 512 extra DOM nodes',largeHeapAfter.JSHeapUsedSize-largeHeapBefore.JSHeapUsedSize<1048576&&largeHeapAfter.Nodes-largeHeapBefore.Nodes<512,JSON.stringify({before:largeHeapBefore.JSHeapUsedSize,after:largeHeapAfter.JSHeapUsedSize,nodesBefore:largeHeapBefore.Nodes,nodesAfter:largeHeapAfter.Nodes}));
   add('garbage collection releases at least 10,000 removed inbox DOM nodes',largeHeapBefore.Nodes-largeHeapAfter.Nodes>=10000,JSON.stringify({nodesBefore:largeHeapBefore.Nodes,nodesAfter:largeHeapAfter.Nodes}));

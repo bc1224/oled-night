@@ -77,6 +77,8 @@
     out.push({name:'large inbox performance exercises a desktop viewport',ok:await inspect(()=>innerWidth>=1000)});
     await browser.scripting.executeScript({target:{tabId:tab.id},files:['lab-audit.js']});
     out.push(...await proof('large-updates',await inspect(largeUpdatesScenario)));
+    const settledOwnership=(await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts;
+    out.push({name:'idle inbox releases per-row geometry observation after initial sampling',ok:settledOwnership.observedPaint<=64,detail:JSON.stringify(settledOwnership)});
     out.push({name:'detached queued mail rows are released',ok:(await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts.deferredPaint===0});
     const largePairs=[],largeFramePairs=[];
     for(const order of [[true,false],[false,true],[true,false]]) {
@@ -88,10 +90,12 @@
           const {deferredPaint:queued,observedPaint:observed}=(await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts;
           out.push({name:'offscreen observer ownership stays bounded at 2,048 branches',ok:Number.isInteger(queued)&&queued<=2048,detail:String(queued)});
           out.push({name:'viewport observation stays bounded at 4,096 containers',ok:Number.isInteger(observed)&&observed<=4096,detail:String(observed)});
+          out.push({name:'steady animated updates observe at most 64 postponed branches',ok:Number.isInteger(observed)&&observed<=64,detail:String(observed)});
         }
         await browser.tabs.reload(tab.id);await sleep(2000);
         framePair.pageOnly&&=(await inspect(()=>document.documentElement.hasAttribute('data-oled-night-root')))===enabled;
         framePair[enabled?'active':'native']=await inspect(frameWorkload);
+        if(enabled){const counts=(await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts;out.push({name:'animated frame workload observes at most 64 postponed branches',ok:Number.isInteger(counts.observedPaint)&&counts.observedPaint<=64,detail:JSON.stringify(counts)})}
       }largePairs.push(pair);largeFramePairs.push(framePair);
     }
     out.push({name:'2,500-row churn retains 70% native throughput without 150ms stalls',ok:judgeChurn(largePairs).ok,detail:JSON.stringify(judgeChurn(largePairs))});
@@ -99,7 +103,7 @@
     await browser.storage.sync.set({extensionEnabled:true});await browser.tabs.reload(tab.id);await sleep(2000);
     await inspect(()=>document.getElementById('list').replaceChildren());await sleep(80);
     const cleared=(await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts;
-    out.push({name:'removing the whole inbox releases viewport and pending ownership',ok:cleared.observedPaint===0&&cleared.deferredPaint===0,detail:JSON.stringify(cleared)});
+    out.push({name:'removing the whole inbox releases viewport and pending ownership',ok:cleared.observedPaint===0&&cleared.deferredPaint===0&&cleared.paintContainers===0,detail:JSON.stringify(cleared)});
     await browser.tabs.remove(tab.id);
     await browser.storage.sync.set({extensionEnabled:true});
     tab=await browser.tabs.create({url:TEST_ORIGIN+'/report-preview.html'});await sleep(900);

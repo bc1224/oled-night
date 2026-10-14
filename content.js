@@ -83,6 +83,12 @@
   let settings = DEFAULTS;
   let revision = 0;
   let applied = new WeakMap();
+  // Only observed repeated containers retain paint snapshots. Ink objects are
+  // shared immutable color conversions, and both maps release detached nodes.
+  let containerPaint = new WeakMap();
+  let nativeInk = new WeakMap();
+  let simpleScopeFingerprint = null;
+  let simpleScopeEpoch = 0;
   let originalSurface = new WeakMap();
   let mediaCopies = new WeakMap();
   let textTiers = new WeakMap();
@@ -116,17 +122,21 @@
   // dark paint. New/uncertain content stays eager. Bound observer ownership.
   const deferredPaint = new Set();
   const observedPaint = new Set();
+  const paintContainers = new Set();
   const nearViewport = new WeakMap();
   const MAX_DEFERRED_PAINT = 2048;
   const MAX_OBSERVED_PAINT = 4096;
+  const MAX_PENDING_OBSERVED_PAINT = 64;
   let viewportObserver = null;
 
   function forgetDeferredPaint(node) {
     deferredPaint.delete(node);
+    if (observedPaint.delete(node)) viewportObserver?.unobserve(node);
   }
 
-  function observePaint(node) {
-    if (observedPaint.has(node)) return;
+  function observePaint(node, pending = false) {
+    if (observedPaint.has(node)) return true;
+    if (pending && observedPaint.size >= MAX_PENDING_OBSERVED_PAINT) return false;
     if (observedPaint.size >= MAX_OBSERVED_PAINT || typeof IntersectionObserver === "undefined") return;
     if (!viewportObserver) {
       const margin = Math.max(innerWidth, innerHeight);
@@ -137,12 +147,19 @@
             forgetDeferredPaint(entry.target);
             pendingTrees.add(entry.target);
           }
+          // Initial geometry sampling is one-shot. Only branches with actual
+          // postponed paint stay observed across subsequent layout frames.
+          if (!deferredPaint.has(entry.target)) {
+            viewportObserver?.unobserve(entry.target);
+            observedPaint.delete(entry.target);
+          }
         }
         if (pendingTrees.size) schedule(true);
       }, { rootMargin: `${margin}px` });
     }
     observedPaint.add(node);
     viewportObserver.observe(node);
+    return true;
   }
 
   function eagerPaintList(list, trees) {
@@ -163,6 +180,7 @@
           !applied.has(node) || !overridesIntact(node) || inlineStyles.get(node) !== inlineSignature(node) ||
           node.matches('input,textarea,select,button') || /position|transform|translate|rotate|scale|margin|float|animation|text-indent/i.test(node.style.cssText.replace(/--oln-[^;]+;?/g, '')))) continue;
       if (!deferredPaint.has(root) && deferredPaint.size >= MAX_DEFERRED_PAINT) continue;
+      if (!observePaint(root, true)) continue;
       deferredPaint.add(root);
       for (const node of branch) deferred.add(node);
     }
@@ -277,7 +295,28 @@
     } catch {}
   }
 
-  function releaseDetachedComponents() {
+  function releaseDetachedComponents(removedNodes) {
+    if (removedNodes) {
+      let removedContainer = false;
+      for (const node of removedNodes) {
+        if (!(node instanceof Element) || node.isConnected) continue;
+        if (node.childElementCount || node.shadowRoot || node.localName.includes("-")) {
+          removedContainer = true;
+          continue;
+        }
+        // Streaming a single plain text leaf must not enumerate thousands of
+        // unrelated retained rows. Components and removed subtrees still get
+        // the full immediate ownership sweep, including in hidden tabs.
+        deferredPaint.delete(node);
+        if (observedPaint.delete(node)) viewportObserver?.unobserve(node);
+        for (const set of [pendingTrees, pendingSelf, settleTrees, settleSelf]) set.delete(node);
+      }
+      if (!removedContainer) {
+        if (!observedPaint.size) { viewportObserver?.disconnect(); viewportObserver = null; }
+        return;
+      }
+    }
+    for (const node of paintContainers) if (!node.isConnected) paintContainers.delete(node);
     for (const node of deferredPaint) if (!node.isConnected) forgetDeferredPaint(node);
     for (const node of observedPaint) if (!node.isConnected) { viewportObserver?.unobserve(node); observedPaint.delete(node); }
     if (!observedPaint.size) { viewportObserver?.disconnect(); viewportObserver = null; }
@@ -497,6 +536,8 @@
   function decide(element, ctx) {
     const colors = colorsApi();
     const computed = ctx.style(element);
+    if (ctx.rememberInk) nativeInk.set(element, colors.parseColor(computed.color));
+    else nativeInk.delete(element);
     const found = {};
     originalSurface.set(element, surfaceInfo(computed));
     if (ctx.mode === "none") return found;
@@ -982,8 +1023,62 @@
     } catch { return true; }
   }
 
+  // This deliberately accepts only a complete, small, simple authored scope.
+  // Conditional/imported/unreadable sheets, generated content, selector state
+  // and descendant rules keep native measurement. A fingerprint invalidates
+  // older snapshots even for CSSOM edits that have no DOM mutation.
+  function simplePaintScope() {
+    const rules = [], fingerprint = [];
+    let count = 0, length = 0, mayAnimate = false, movingPaint = false;
+    try {
+      for (const sheet of [...document.styleSheets, ...document.adoptedStyleSheets]) {
+        if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith("oled-night-")) continue;
+        if (!sheet || sheet.disabled || sheet.media?.length) return null;
+        for (const rule of sheet.cssRules) {
+          const selectors = rule.selectorText?.split(",").map(selector => selector.trim());
+          if (++count > 256 || rule.type !== 1 || !selectors?.every(selector =>
+            /^(?:[a-z][\w-]*|\*)?(?:\.[\w-]+)*$/i.test(selector))) return null;
+          length += rule.cssText.length;
+          if (length > 32768) return null;
+          fingerprint.push(rule.cssText);
+          for (const property of Array.from(rule.style)) {
+            if (/^(?:transition|animation)(?:-|$)/.test(property)) mayAnimate = true;
+            if (/^(?:position|transform|translate|rotate|scale|margin(?:-.+)?|float|animation(?:-.+)?|text-indent)$/.test(property) ||
+                (property === "display" && rule.style.display === "contents")) movingPaint = true;
+          }
+          for (const selector of selectors) rules.push({ selector, style: rule.style });
+        }
+      }
+    } catch { return null; }
+    const key = fingerprint.join("\n");
+    if (key !== simpleScopeFingerprint) { simpleScopeFingerprint = key; simpleScopeEpoch++; }
+    return { epoch: simpleScopeEpoch, rules, mayAnimate, movingPaint };
+  }
+
+  function inheritsPlainInk(node, scope) {
+    if (!scope || node.hasAttribute(MARK) || node.childElementCount || node.style.length ||
+        node.getRootNode() !== document || !/^(p|span|b|strong|em|i|small)$/.test(node.localName) ||
+        node.assignedSlot || node.hasAttribute("part") || !node.parentElement?.getAttribute(MARK)?.split(" ").includes("fg")) return false;
+    if (scope.rules.some(rule => node.matches(rule.selector))) return false;
+    // An unstyled ordinary text leaf already inherits its parent's readable
+    // ink. Avoid forcing a synchronous style/layout pass for every new token.
+    originalSurface.set(node, null);
+    applied.set(node, "");
+    inlineStyles.set(node, "");
+    textTiers.set(node, textTiers.get(node.parentElement) ?? 1);
+    return true;
+  }
+
   function processBatch(list, trees, selves) {
-    const paintList = eagerPaintList(list, trees);
+    // Ordinary already-styled buttons/menus need no scope analysis. Pay for
+    // this proof only for repeated containers or newly inherited text.
+    const mayReusePaint = list.some(node => paintContainers.has(node) ||
+      (node.childElementCount && node.parentElement?.childElementCount >= 32 && node.getRootNode() === document) ||
+      (!node.hasAttribute(MARK) && /^(p|span|b|strong|em|i|small)$/.test(node.localName) &&
+        node.parentElement?.getAttribute(MARK)?.split(" ").includes("fg")));
+    const paintScope = mayReusePaint ? simplePaintScope() : null;
+    const paintList = eagerPaintList(list, trees).filter(node => !inheritsPlainInk(node, paintScope));
+    if (!paintList.length && !list.images.size && !list.icons.size) return;
     for (const element of paintList) if (deferredPaint.has(element)) forgetDeferredPaint(element);
     const paintTrees = trees.filter(node => !deferredPaint.has(node));
     // Already-styled elements hide their original colors behind our overrides.
@@ -1098,6 +1193,7 @@
     const styles = new Map(), generatedScopes = new Map();
     const ctx = {
       mode: modeFor(),
+      rememberInk: !!paintScope && !paintScope.mayAnimate,
       // Explicit "Deepen blacks only" keeps the user's native light content.
       recolorLightRegions: currentSiteMode() !== "deepen",
       pageColor,
@@ -1158,8 +1254,17 @@
     }
     for (const [element, found] of writes) write(element, found, !changed.has(element));
     // Register only repeated, fully styled container rows, never every leaf.
-    for (const node of paintList) if (node.childElementCount && node.parentElement?.childElementCount >= 32 &&
-      node.hasAttribute(MARK) && node.getRootNode() === document && !node.localName.includes("-")) observePaint(node);
+    for (const [node, found] of writes) if (node.childElementCount && node.parentElement?.childElementCount >= 32 &&
+      node.hasAttribute(MARK) && node.getRootNode() === document && !node.localName.includes("-")) {
+      if (!paintContainers.has(node) && paintContainers.size < MAX_OBSERVED_PAINT) {
+        paintContainers.add(node);
+        observePaint(node);
+      }
+      if (paintContainers.has(node) && paintScope && !paintScope.mayAnimate) containerPaint.set(node, {
+        found: { ...found }, classes: node.getAttribute("class") || "", scopeEpoch: paintScope.epoch
+      });
+      else containerPaint.delete(node);
+    }
     for (const img of logoCandidates) checkLogo(img, ctx);
     // Commit the new colors with transitions still off, then restore them.
     const first = calm[0] || calmSelf.values().next().value;
@@ -1349,10 +1454,91 @@
     schedule();
   }
 
+  function fastBackgroundState(node, scopes) {
+    const mode = modeFor(), snapshot = containerPaint.get(node);
+    if (!["oled", "soft"].includes(mode) || !paintContainers.has(node) || !snapshot ||
+        node.getRootNode() !== document || !overridesIntact(node) || inlineSignature(node) !== "") return false;
+    if (!scopes.has(document)) scopes.set(document, simplePaintScope());
+    const scope = scopes.get(document);
+    if (!scope || scope.mayAnimate || snapshot.scopeEpoch !== scope.epoch) return false;
+    const current = node.getAttribute("class") || "";
+    if (snapshot.classes === current) { forgetDeferredPaint(node); return true; }
+    const oldClasses = new Set(snapshot.classes.split(/\s+/)), newClasses = new Set(current.split(/\s+/));
+    const changed = new Set([...oldClasses, ...newClasses].filter(name => oldClasses.has(name) !== newClasses.has(name)));
+    let affected = false, background = null, winner = null;
+    for (const { selector, style } of scope.rules) {
+      const classes = selector.match(/\.[\w-]+/g) || [];
+      if (classes.some(name => changed.has(name.slice(1)))) {
+        // Shorthand backgrounds serialize their unused longhands as initial.
+        // Any other paint/layout/custom-property change needs a native reread.
+        if (!Array.from(style).every(property => property === "background-color" ||
+            (property.startsWith("background-") && style.getPropertyValue(property) === "initial") ||
+            (property === "background-image" && style.backgroundImage === "none"))) return false;
+        affected = true;
+      }
+      if (style.backgroundColor && node.matches(selector)) {
+        const priority = [style.getPropertyPriority("background-color") === "important" ? 1 : 0,
+          classes.length, /^[a-z]/i.test(selector) ? 1 : 0];
+        if (!winner || priority[0] > winner[0] || (priority[0] === winner[0] &&
+            (priority[1] > winner[1] || (priority[1] === winner[1] && priority[2] >= winner[2])))) {
+          winner = priority;
+          background = colorsApi().parseColor(style.backgroundColor);
+        }
+      }
+    }
+    const colors = colorsApi(), source = originalSurface.get(node)?.color, found = snapshot.found;
+    const light = color => color?.a === 1 && colors.chroma(color) < 0.1 && colors.luminance(color) >= 0.8;
+    if (!affected || !light(background) || !light(source) || found.bg !== colors.mapBackground(source, mode)) return false;
+    const proofKey = `${background.r},${background.g},${background.b}`;
+    if (!snapshot.inkProof?.has(proofKey)) {
+    const branch = [node], walker = document.createTreeWalker(node, NodeFilter.SHOW_ELEMENT);
+    while (walker.nextNode() && branch.length <= 16) branch.push(walker.currentNode);
+    if (branch.length > 16) return false;
+    for (const item of branch) {
+      const ink = nativeInk.get(item), signature = applied.get(item), keys = (item.getAttribute(MARK) || "").split(" ");
+      const foreground = signature?.match(/(?:^|;)fg=([^;]+)(?:;|$)/)?.[1];
+      if (!ink || item.shadowRoot || item.matches(MEDIA_SELECTOR) || !/^(div|span|b|strong|em|i|small)$/.test(item.localName) ||
+          (item !== node && originalSurface.get(item)) || !overridesIntact(item) || inlineSignature(item) !== "" ||
+          keys.some(key => !["bg", "fg", "bt", "br", "bb", "bl"].includes(key)) ||
+          foreground !== colors.mapForeground(ink, colors.textTier(ink, background))) return false;
+    }
+    // The observer invalidates the whole snapshot before descendant mutations.
+    // Retain only two proven neutral backgrounds, never a DOM subtree or an
+    // unbounded color history. Unknown colors still check every leaf.
+    if (!snapshot.inkProof) snapshot.inkProof = new Set();
+    if (snapshot.inkProof.size < 2) snapshot.inkProof.add(proofKey);
+    }
+    if (nearViewport.get(node) === false && !scope.movingPaint &&
+        (deferredPaint.size < MAX_DEFERRED_PAINT || deferredPaint.has(node)) && observePaint(node, true)) {
+      deferredPaint.add(node);
+      return true;
+    }
+    // Only the neutral container background changed; every descendant keeps
+    // exactly its existing ink tier. No temporary subtree style switch.
+    originalSurface.set(node, { color: background });
+    const next = { ...found, bg: colors.mapBackground(background, mode) };
+    write(node, next);
+    containerPaint.set(node, { found: next, classes: current, scopeEpoch: scope.epoch, inkProof: snapshot.inkProof });
+    return true;
+  }
+
   function onMutations(records, scheduleBatch = true) {
     const seenAttributes = new Map();
+    const backgroundScopes = new Map();
     const changedRoots = new Set();
-    let removed = false;
+    const removed = [];
+    // Inspect the complete delivery first: a descendant edit and a row's class
+    // toggle can arrive together in either order. Never reuse an earlier ink
+    // proof after external styles, content, attributes or children changed.
+    for (const record of records) {
+      let node = record.target;
+      if (record.type === "attributes") {
+        if (["style", MARK].includes(record.attributeName) && overridesIntact(node) &&
+            inlineSignature(node) === (inlineStyles.get(node) || "")) continue;
+        if (record.attributeName === "class" && paintContainers.has(node)) node = parentAcrossShadow(node);
+      } else if (!(node instanceof Element)) node = node.parentElement;
+      for (; node; node = parentAcrossShadow(node)) containerPaint.delete(node);
+    }
     for (const record of records) {
       const target = record.target;
       const copies = mediaCopies.get(target);
@@ -1372,7 +1558,7 @@
         polarityDirty = true;
         pendingTrees.add(document.documentElement);
       } else if (record.type === "childList") {
-        if (record.removedNodes.length) removed = true;
+        removed.push(...record.removedNodes);
         const changedSheets = [...record.addedNodes, ...record.removedNodes].some(node => isPageSheet(node) || (node instanceof Element && [...node.querySelectorAll('style, link[rel~="stylesheet"]')].some(isPageSheet)));
         if (changedSheets) { polarityDirty = true; pendingTrees.add(document.documentElement); }
         for (const node of record.addedNodes) if (node.nodeType === Node.ELEMENT_NODE) pendingTrees.add(node);
@@ -1380,6 +1566,7 @@
         // Sites often switch their own theme with a class on <html>/<body>.
         if (target === document.documentElement || target === document.body) polarityDirty = true;
         // Class changes can restyle the whole subtree through descendant selectors.
+        if (record.attributeName === "class" && fastBackgroundState(target, backgroundScopes)) continue;
         pendingTrees.add(target);
         // Expanded controls commonly reveal a sibling menu. Its existing
         // descendants can acquire a new surface without their own mutation.
@@ -1407,7 +1594,7 @@
     // Navigation and virtualized lists discard entire component trees. Release
     // our strong references on that mutation, including in background tabs,
     // rather than waiting for the sheet health timer or frame polling.
-    if (removed) releaseDetachedComponents();
+    if (removed.length) releaseDetachedComponents(removed);
     for (const root of changedRoots) if (shadowRoots.has(root)) ensureShadowSheet(root);
     if (scheduleBatch && (pendingTrees.size || pendingSelf.size || polarityDirty)) schedule(true);
   }
@@ -1607,9 +1794,14 @@
     viewportObserver = null;
     deferredPaint.clear();
     observedPaint.clear();
+    paintContainers.clear();
     pendingTrees.clear();
     pendingSelf.clear();
     applied = new WeakMap();
+    containerPaint = new WeakMap();
+    nativeInk = new WeakMap();
+    simpleScopeFingerprint = null;
+    simpleScopeEpoch = 0;
     originalSurface = new WeakMap();
     mediaCopies = new WeakMap();
     textTiers = new WeakMap();
@@ -1798,7 +1990,7 @@
       extension: "OLED Night", version: VERSION, host: hostname(), when: new Date().toISOString(), userAgent: navigator.userAgent,
       active, siteMode: currentSiteMode(), mode: active ? modeFor() : "off", darkPage, pageColor,
       settings: { appearance: settings.appearance, ...Settings.tuningFor(settings, hostname()), schedule: settings.schedule },
-      counts: { styled: document.querySelectorAll(`[${MARK}]`).length, shadowRoots: shadowRoots.size, deferredPaint: deferredPaint.size, observedPaint: observedPaint.size, frames: document.querySelectorAll("iframe").length },
+      counts: { styled: document.querySelectorAll(`[${MARK}]`).length, shadowRoots: shadowRoots.size, deferredPaint: deferredPaint.size, observedPaint: observedPaint.size, paintContainers: paintContainers.size, frames: document.querySelectorAll("iframe").length },
       // Only each frame's origin and state are recorded, never its address path or content.
       frames: [...document.querySelectorAll("iframe")].slice(0, 20).map((frame) => {
         const rect = frame.getBoundingClientRect();
