@@ -84,6 +84,33 @@ async function amoRequest(path, options = {}) {
   return json(response, `AMO ${path}`);
 }
 
+// AMO renders plain links as HTML in readback. Compare visible text only.
+export function storeText(text) {
+  return String(text).replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#(?:39|x27);/g, "'")
+    .replace(/\s+/g, ' ').trim();
+}
+
+export async function updateAmoListing(request, description, privacy) {
+  if (!description.trim() || !privacy.trim()) throw new Error('Empty AMO listing or privacy policy.');
+  const path = `/addons/addon/${AMO_ADDON}/`;
+  for (const [endpoint, field, value] of [[path, 'description', description], [`${path}eula_policy/`, 'privacy_policy', privacy]]) {
+    await request(endpoint, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({[field]:{'en-US':value}})});
+    const saved = await request(endpoint);
+    if (typeof saved[field]?.['en-US'] !== 'string' || storeText(saved[field]['en-US']) !== storeText(value))
+      throw new Error(`AMO ${field} readback did not match the requested copy.`);
+  }
+}
+
+async function submitAmoListing() {
+  requireEnv('AMO_API_KEY', 'AMO_API_SECRET');
+  const description = readFileSync(join(root, 'store', 'FIREFOX-LISTING.txt'), 'utf8').trim();
+  const privacy = readFileSync(join(root, 'store', 'PRIVACY.md'), 'utf8')
+    .replace(/^#.*\r?\n/, '').replace(/\*\*/g, '').replace(/^_(.*)_$/m, '$1').trim();
+  await updateAmoListing(amoRequest, description, privacy);
+  console.log('AMO English listing and privacy policy: saved and read back successfully. No browsing-history log; optional current-domain reports only.');
+}
+
 async function submitAmo() {
   requireEnv("AMO_API_KEY", "AMO_API_SECRET");
   requireFiles("firefox", "source");
@@ -105,6 +132,7 @@ async function submitAmo() {
   const created = await amoRequest(`/addons/addon/${AMO_ADDON}/versions/`, { method: "POST", body: submission });
   if (created.version !== version) throw new Error("AMO did not confirm the submitted version.");
   console.log(`AMO ${version}: submitted for review.`);
+  await submitAmoListing();
 }
 
 async function cwsRequest(path, token, options = {}) {
@@ -149,6 +177,7 @@ async function submitChrome(theme = false) {
   console.log(`Chrome Web Store ${theme ? "theme " : ""}${uploadVersion}: ${published.state}.`);
 }
 
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
 const command = process.argv[2];
 try {
   if (command === "--status") {
@@ -157,11 +186,13 @@ try {
     for (const name of ["AMO_API_KEY", "AMO_API_SECRET", "CWS_CLIENT_ID", "CWS_CLIENT_SECRET", "CWS_REFRESH_TOKEN", "CWS_PUBLISHER_ID"])
       console.log(`${name}: ${process.env[name] ? "configured" : "missing"}`);
   } else if (command === "--amo") await submitAmo();
+  else if (command === "--amo-listing") await submitAmoListing();
   else if (command === "--chrome") await submitChrome();
   else if (command === "--chrome-theme") await submitChrome(true);
   else if (command === "--both") { await submitAmo(); await submitChrome(); }
-  else throw new Error("Use --status, --amo, --chrome, --chrome-theme, or --both.");
+  else throw new Error("Use --status, --amo, --amo-listing, --chrome, --chrome-theme, or --both.");
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;
+}
 }

@@ -13,7 +13,7 @@ on:
         required: true
         default: both
         type: choice
-        options: [both, amo, chrome, chrome-theme]
+        options: [both, amo, amo-listing, chrome, chrome-theme]
       diagnostic_public_key:
         description: Optional base64 PEM public key for an encrypted Chrome error report
         required: false
@@ -47,7 +47,7 @@ jobs:
           git archive --format=zip --output="dist/oled-night-source-${version}.zip" HEAD
           cp .store-uploader/tools/submit-stores.mjs tools/submit-stores.mjs
       - name: Verify public site navigation before extension submission
-        if: ${{ inputs.store != 'chrome-theme' }}
+        if: ${{ inputs.store != 'chrome-theme' && inputs.store != 'amo-listing' }}
         run: node .store-uploader/tests/lab/live-smoke.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
@@ -59,15 +59,16 @@ jobs:
           path: .store-uploader/dist/lab-results/live-smoke.json
           if-no-files-found: ignore
       - name: Submit to Mozilla Add-ons
-        if: ${{ github.event_name == 'release' || inputs.store == 'both' || inputs.store == 'amo' }}
+        if: ${{ github.event_name == 'release' || inputs.store == 'both' || inputs.store == 'amo' || inputs.store == 'amo-listing' }}
         id: amo
         continue-on-error: true
         env:
           AMO_API_KEY: ${{ secrets.AMO_API_KEY }}
           AMO_API_SECRET: ${{ secrets.AMO_API_SECRET }}
+          AMO_TARGET: ${{ inputs.store == 'amo-listing' && '--amo-listing' || '--amo' }}
         run: |
           if [[ -n "$AMO_API_KEY" && -n "$AMO_API_SECRET" ]]; then
-            node tools/submit-stores.mjs --amo
+            node tools/submit-stores.mjs "$AMO_TARGET"
           else
             echo 'AMO submission skipped: API credentials are not configured.' >> "$GITHUB_STEP_SUMMARY"
           fi

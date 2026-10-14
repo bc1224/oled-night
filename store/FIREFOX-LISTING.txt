@@ -1,0 +1,17 @@
+OLED Night turns website backgrounds true black while keeping text readable and images in their original colors. Made for OLED displays, and works on other screens too.
+
+• Automatic dark mode, full recolor, deepen blacks only, invert, or off for each site.
+• Per-site brightness, contrast, and optional image dimming.
+• Schedule and Alt+Shift+D shortcut.
+• Settings backup and optional broken-site reports.
+
+OLED Night does not record or save your browsing history. No ads, analytics, tracking or developer servers. Website access is used to recolor pages locally. Your settings, including per-site preferences, use your browser's sync storage; these are preferences, not a record of visits.
+
+In 0.6.39 and later, Firefox's optional browsing-activity permission only covers sharing the current site's domain in a bug report. It does not enable history tracking. You preview scrubbed technical diagnostics before choosing to open a GitHub draft. No page text, entered values, URL paths, cookies or screenshots are included in that draft. Declining this permission leaves dark mode working normally.
+
+GitHub retains drafts and reports according to its policies; issues you submit are public. OLED Night has no separate report database. Full local report downloads can contain short text snippets and site addresses; review them before sharing them yourself. Earlier versions save a local report instead of opening a scrubbed GitHub draft.
+
+Free and open source. Firefox desktop 142 or later. Some sites may need a different mode or to be turned off.
+
+Source and support: https://github.com/bc1224/oled-night
+Privacy policy: https://github.com/bc1224/oled-night/blob/main/store/PRIVACY.md

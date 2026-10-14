@@ -1,5 +1,7 @@
 # Store submission without a file picker
 
+Firefox listing and privacy wording are kept in `store/FIREFOX-LISTING.txt` and `store/PRIVACY.md`. A successful Mozilla version submission also updates both English fields through AMO's metadata API and verifies their readback. If only that metadata step fails, use the existing store workflow with `store: amo-listing` and the exact passing release tag; this retries wording without uploading the version again. Credentials stay in encrypted GitHub Actions secrets. Metadata editing does not grant extension permissions or collect browsing history.
+
 `node tools/submit-stores.mjs --status` checks package files and reports which credential names are configured. It never prints credential values. With credentials set, `--amo`, `--chrome`, or `--both` submits the current manifest version directly through the store APIs. Releases after this workflow is installed trigger `.github/workflows/submit-stores.yml`; the workflow skips a store until that store's GitHub secrets are configured. To submit an earlier release, dispatch the workflow with its tag.
 
 ## One-time Mozilla setup

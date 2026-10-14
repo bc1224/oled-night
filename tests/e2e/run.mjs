@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { churnWorkload, judgeChurn } from './churn-benchmark.mjs';
+import { navigationFrames } from './navigation-scenario.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // EXT_PATH lets the suite run against an unzipped release instead of the source tree.
@@ -205,7 +206,7 @@ try {
   await page.eval("document.getElementById('lateMedia').classList.add('ready')");await sleep(250);
   check('late media repairs inherited native copy without page rescan',await css('lateInk','color')==='rgb(29, 29, 31)');
   check('neutral navigation is OLED black',await css('nav','backgroundColor')==='rgb(0, 0, 0)');
-  const frames=await page.eval("(async()=>{const nav=document.getElementById('nav'),fly=document.getElementById('flyout'),motion=document.getElementById('motion'),out=[],until=performance.now()+400;document.getElementById('trigger').click();for(let i=0;performance.now()<until;i++){await new Promise(requestAnimationFrame);out.push({bg:getComputedStyle(fly).backgroundColor,h:fly.getBoundingClientRect().height,opacity:+getComputedStyle(motion).opacity,width:motion.getBoundingClientRect().width,motionBg:getComputedStyle(motion).backgroundColor,t:performance.now(),transition:getComputedStyle(fly).transition,ink:getComputedStyle(document.getElementById('menuText')).color})}return out})()");
+  const frames=await page.eval('(' + navigationFrames.toString() + ')()');
 
   check('opening menu has no white frame',frames.every(f=>lum(f.bg)<.05));
   check('expanded menu is OLED black',await css('flyout','backgroundColor')==='rgb(0, 0, 0)');
@@ -213,6 +214,10 @@ try {
   check('menu retains height animation',frames.some(f=>f.h>0&&f.h<239)&&frames.at(-1).h>239,motionEvidence);
   check('all transitions preserve opacity and width without white paint',frames.every(f=>lum(f.motionBg)<.05)&&frames.some(f=>f.opacity>.4&&f.opacity<1)&&frames.at(-1).opacity===.4&&frames.at(-1).width===180,motionEvidence);
   check('menu text stays readable',lum(await css('menuText','color'))>.4);
+  await page.eval("document.getElementById('trigger').click()");await sleep(300);
+  const busyFrames=await page.eval('(' + navigationFrames.toString() + ')({eventWorkMs:250})');
+  check('busy event menu never flashes white',busyFrames.every(f=>lum(f.bg)<.05&&lum(f.motionBg)<.05));
+  check('busy event retains intermediate and completed layout motion',busyFrames.some(f=>f.h>0&&f.h<239)&&busyFrames.at(-1).h>239&&busyFrames.some(f=>f.opacity>.4&&f.opacity<1)&&busyFrames.at(-1).opacity===.4&&busyFrames.at(-1).width===180,JSON.stringify({first:busyFrames[0],last:busyFrames.at(-1)}));
   check('temporary motion guards are cleaned up',await page.eval("!document.querySelector('[data-oled-night-motion], [data-oled-night-noanim], [data-oled-night-noanim-self]')"));
   await setSettings({extensionEnabled:false});await sleep(400);
   check('disable restores native surfaces and ink',await css('flyout','backgroundColor')==='rgb(250, 250, 250)'&&await css('heroInk','color')==='rgb(17, 17, 17)');

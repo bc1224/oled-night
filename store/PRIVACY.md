@@ -6,6 +6,8 @@ OLED Night is a browser extension that recolors web pages locally. Sharing a bug
 
 **Automatic collection:** none. OLED Night has no servers, analytics, advertising or tracking. Optional public bug reports and browser-account syncing are described below.
 
+**Browsing history:** OLED Night does not record or save a log of the pages you visit. Firefox's optional browsing-activity permission covers sharing the current site's domain in a bug report, only after you preview it and choose to open a GitHub draft. It does not enable history tracking. Per-site settings store your chosen preferences for a domain, not visits or page URLs. GitHub retains drafts and reports according to its own policies; submitted issues are public. OLED Night has no separate report database.
+
 **What it stores:** your settings (on/off, appearance, brightness, contrast, schedule and per-site choices). They are kept in your browser's sync storage, so your browser can sync them between your signed-in browsers. The developer cannot see them.
 
 **Page content:** to recolor a page, OLED Night reads element colors locally. Recoloring does not upload page text or entered values. Optional computed-color diagnostics and explicit local report downloads are described below.

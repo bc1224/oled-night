@@ -21,10 +21,11 @@ Upload `dist/oled-night-<version>.zip` (build it with `node tools/package.mjs`).
 >
 > LOCAL RECOLORING. NO BACKGROUND TRACKING.
 > • No analytics, background telemetry, ads or OLED Night account. Recoloring runs locally.
-> • Your settings live in Chrome's own sync storage. The developer never sees them.
+> • OLED Night does not record or save your browsing history. Your settings, including per-site preferences, live in your browser's sync storage. The developer never sees them.
 > • Page text and field values are not uploaded. Optional reports share only the previewed domain and technical diagnostics with GitHub.
 > • "Report a broken site" previews scrubbed diagnostics and opens a GitHub issue draft only when you choose. Full reports can still be saved locally.
-> • Firefox asks native permission for optional domain/technical report sharing. Declining keeps dark mode working normally.
+> • Firefox's optional browsing-activity permission is only for sharing the current site's domain in a bug report, not history tracking. Declining keeps dark mode working normally.
+> • GitHub retains drafts and reports according to its policies; issues you submit are public. OLED Night has no separate report database.
 >
 > 100% OPEN SOURCE (GPL-3.0)
 > Every line of code is public on GitHub: https://github.com/bc1224/oled-night
@@ -42,7 +43,7 @@ Upload `dist/oled-night-<version>.zip` (build it with `node tools/package.mjs`).
 > • Per-site modes: automatic, full recolor, deepen blacks only, invert (for canvas apps such as spreadsheets and design tools), or off.
 > • Per-site brightness and contrast, plus optional image dimming.
 > • A schedule (for example, only at night) and a keyboard shortcut (Alt+Shift+D) to switch any site on or off.
-> • Settings sync through your Chrome profile; export and import them as a file.
+> • Settings sync through your browser profile; export and import them as a file.
 >
 > WHY IT ASKS TO RUN ON EVERY SITE
 > Recoloring pages is the whole job, so it has to run on the pages you visit. It only changes colors. Its other permissions just save your settings (storage) and let the popup and shortcut see which site you're on (activeTab, scripting).
