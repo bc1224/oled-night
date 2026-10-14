@@ -666,6 +666,8 @@ try {
 
   // Performance under constant page churn and slider drags.
   const pairs = [];
+  const stylePasses = [];
+  await send('Performance.enable', {}, page.sessionId);
   // Three fresh paired trials, with order counterbalanced. Keep every result;
   // use median throughput but fail on any active stall at the original budget.
   for (const order of [[true, false], [false, true], [true, false]]) {
@@ -675,12 +677,16 @@ try {
       await page.go(site("127.0.0.1", "rows.html"), 2500);
       const enabled = await page.eval("document.documentElement.hasAttribute('data-oled-night-root')");
       pair.pageOnly = (pair.pageOnly ?? true) && (active ? enabled : !enabled);
+      const before = (await send('Performance.getMetrics', {}, page.sessionId)).result.metrics.find(m => m.name === 'RecalcStyleCount').value;
       pair[active ? 'active' : 'native'] = await page.eval(`(${churnWorkload.toString()})()`);
+      const after = (await send('Performance.getMetrics', {}, page.sessionId)).result.metrics.find(m => m.name === 'RecalcStyleCount').value;
+      if (active) stylePasses.push({frames: pair.active.frames, recalculations: after - before});
     }
     pairs.push(pair);
   }
   const churn = judgeChurn(pairs);
   check("churn avoids long stalls and retains page-only tick rate", churn.ok, JSON.stringify(churn));
+  check('transition-free churn avoids an extra style measurement per update', stylePasses.every(p => p.recalculations <= 2.25 * p.frames + 3), JSON.stringify(stylePasses));
   await resetSettings(); await sleep(400);
   await sleep(500);
   await page.eval("window.tuningPasses=0;window.tuningWatch=new MutationObserver(r=>{window.tuningPasses+=r.length});window.tuningWatch.observe(document.documentElement,{attributes:true,subtree:true,attributeFilter:['data-oled-night-measure','data-oled-night-measure-self']})");

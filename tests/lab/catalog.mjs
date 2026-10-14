@@ -6,7 +6,7 @@ const groups = {
   'Isolation & loading': ['components','protected','challenge','challenge-inline','frame','transparent-frame','slow','efficiency','report-fields','report-preview','generated-style']
 };
 const descriptions = {
-  'generated-style':'Late CSSOM generated labels in document, adopted shadow sheets and exported parts; authored scopes are reconsidered after updates',
+  'generated-style':'Late CSSOM color and width transitions plus generated labels in document, adopted shadow sheets and exported parts; authored scopes are reconsidered after updates',
   'report-preview':'Public issue preview omits private text, field values, selectors, frame origins and URL paths; nothing sends before a click',
   'cold-shadow':'Roots attached after their hosts were scanned: resting nested controls become readable without hover or focus',
   'email-newsletter':'Gmail-style dark reader: authored HTML headings, paragraphs, nested light panels and preserved artwork',

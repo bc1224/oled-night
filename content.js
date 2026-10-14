@@ -830,11 +830,13 @@
   // scope proves there are no before/after selectors. Re-scan each batch:
   // insertRule and adoptedStyleSheets can change without a DOM mutation.
   // Unreadable, imported, large and slotted scopes retain the conservative path.
-  function hasGeneratedRules(root) {
+  function hasAuthoredRules(root, feature) {
     let count = 0;
     const inspect = rules => {
       for (const rule of rules) {
-        if (++count > 256 || /:before\b|:after\b/i.test(rule.selectorText || "") || rule.type === 3) return true;
+        if (++count > 256 || rule.type === 3) return true;
+        if (feature === "generated" ? /:before\b|:after\b/i.test(rule.selectorText || "") :
+            rule.style?.getPropertyValue("transition-duration") || rule.style?.getPropertyValue("transition")) return true;
         if (rule.cssRules && inspect(rule.cssRules)) return true;
       }
       return false;
@@ -904,9 +906,23 @@
     // transition guards still invalidates styles across those rows twice per
     // batch. Keep the guards only when this batch can actually animate; old
     // pseudo overrides retain the conservative path for generated transitions.
+    const transitionScopes = new Map();
+    const mayTransition = node => {
+      // A complete authored scope with no transition declarations needs no
+      // pre-measurement computed-style pass. Reinspect each batch for CSSOM
+      // changes; inline transitions and native/cross-scope controls stay read.
+      const root = node.getRootNode();
+      const uncertain = node.assignedSlot || node.hasAttribute("part") || node.localName.includes("-") ||
+        /^(q|input|button|select|textarea|progress|meter)$/.test(node.localName) ||
+        node.style.transition || node.style.transitionDuration;
+      if (!uncertain) {
+        if (!transitionScopes.has(root)) transitionScopes.set(root, hasAuthoredRules(root, "transition"));
+        if (!transitionScopes.get(root)) return false;
+      }
+      return getComputedStyle(node).transitionDuration.split(",").some(duration => parseFloat(duration) > 0);
+    };
     const needsCalm = list.icons.size > 0 || [...list, ...list.images].some(node =>
-      PSEUDO_KEYS.test(node.getAttribute(MARK) || "") ||
-      getComputedStyle(node).transitionDuration.split(",").some(duration => parseFloat(duration) > 0));
+      PSEUDO_KEYS.test(node.getAttribute(MARK) || "") || mayTransition(node));
     if (!needsCalm) { calm.length = 0; calmSelf.clear(); }
     // Suppress paint transitions without canceling the page's layout motion.
     // Retain list timing/delays; commas inside cubic-bezier() are not separators.
@@ -958,7 +974,7 @@
         // scope's generated paint; never infer those from this scope's sheets.
         if (element.assignedSlot || element.hasAttribute('part') || element.localName.includes('-') || /^(q|input|button|select|textarea|progress|meter)$/.test(element.localName)) return true;
         const root = element.getRootNode();
-        if (!generatedScopes.has(root)) generatedScopes.set(root, hasGeneratedRules(root));
+        if (!generatedScopes.has(root)) generatedScopes.set(root, hasAuthoredRules(root, "generated"));
         return generatedScopes.get(root);
       },
       style(node) {
