@@ -13,8 +13,17 @@ function hydrate(){
   for(const link of inner.querySelectorAll('a')){let delayed;link.addEventListener('pointerenter',()=>{delayed=setTimeout(()=>{if(link.matches(':hover'))link.classList.add('site-hover')},60)});link.addEventListener('pointerleave',()=>{clearTimeout(delayed);link.classList.remove('site-hover')})}
   document.getElementById('status').textContent='Header generation '+(++generation);
 }
-window.CVSHoverLab={hydrate,resetHost,mount,links:()=>[...inner.querySelectorAll('a')]};
+function deferredHover(){
+  document.getElementById('deferred-hover')?.remove();document.getElementById('deferred-sheet')?.remove();
+  const sheet=document.createElement('style');sheet.id='deferred-sheet';sheet.textContent='#deferred-hover{display:inline-block;padding:16px;color:#013f7c;background:transparent}';document.head.append(sheet);
+  const link=document.createElement('a');link.id='deferred-hover';link.href='#example';link.textContent='Deferred stylesheet hover';document.querySelector('header').append(link);
+  const update=()=>queueMicrotask(()=>sheet.sheet.insertRule('#deferred-hover:is(:hover,:focus-visible){background:rgb(227,241,255);color:#013f7c}',sheet.sheet.cssRules.length));
+  link.addEventListener('pointerover',update,{once:true});link.addEventListener('focusin',update,{once:true});
+  return link;
+}
+window.CVSHoverLab={hydrate,resetHost,mount,deferredHover,links:()=>[...inner.querySelectorAll('a')]};
 document.getElementById('reset').onclick=()=>{clearInterval(timer);hydrate()};
 document.getElementById('hydrate').onclick=()=>{clearInterval(timer);let n=0;hydrate();timer=setInterval(()=>{hydrate();if(++n===6)clearInterval(timer)},170)};
 mount();
+deferredHover();
 </script></body></html>

@@ -26,6 +26,12 @@ export async function cvsScenario(page,origin){
       add(`CVS stress / hydration ${round+1} sibling ${i+1} actually hovered and readable`,await page.eval(`(()=>{const e=window.CVSHoverLab.links()[${i}],a=window.OLEDLabAudit;return e.matches(':hover')&&a.contrast(getComputedStyle(e).color,a.background(e))>=4.5})()`));
     }
   }
+  // Authored CSSOM edits in a later event microtask have no DOM mutation.
+  await page.hover(1,1);await page.eval('window.CVSHoverLab.deferredHover()');
+  await page.eval('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(resolve,0))))');
+  const deferredPoint=await page.eval(`(()=>{const r=document.getElementById('deferred-hover').getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`);
+  const deferred=await watchHover(page,deferredPoint);
+  add('CVS stress / deferred CSSOM hover has no pale sample',!deferred.pale&&deferred.samples===24,JSON.stringify(deferred));
   // Demonstrate sensitivity with the same real browser sampler, not a passing
   // count alone: an explicitly injected pale hover must be caught.
   await page.eval(`(()=>{const e=window.CVSHoverLab.links()[2];e.style.setProperty('background-color','#fff','important')})()`);

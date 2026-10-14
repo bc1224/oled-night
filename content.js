@@ -39,7 +39,7 @@
   // "Multiply"-style blends hide a photo's white background on a light page;
   // over black they turn the whole photo black (Amazon product images).
   const DARKENING_BLENDS = /^(multiply|darken|color-burn|plus-darker)$/;
-  const PROPS = ["bg", "img", "shadow", "fg", "ink", "caret", "placeholder", "field", "bt", "br", "bb", "bl", "fill", "stroke", "stop", "blend", "faded-icon", "asset-icon", "data",
+  const PROPS = ["bg", "img", "shadow", "fg", "ink", "caret", "placeholder", "field", "bt", "br", "bb", "bl", "fill", "stroke", "stop", "blend", "faded-icon", "asset-icon", "icon-invert", "data",
     "before-bg", "before-img", "before-shadow", "before-fg", "after-bg", "after-img", "after-shadow", "after-fg"];
   const SIDES = [["Top", "bt"], ["Right", "br"], ["Bottom", "bb"], ["Left", "bl"]];
   // Frames that are players, maps, ads or challenges are left exactly as they are.
@@ -568,21 +568,22 @@
     const colors = colorsApi();
     const icon = rect.width <= 64 && rect.height <= 64;
     if (nativeIcon) {
-      // Native dark applications can ship fixed black payment/navigation
-      // glyphs. An edge preserves the badge interior and colored brand paint;
-      // inverting or whitening every path would erase white-on-black details.
-      if (icon) {
+      // Invert only wholly neutral badges: black-on-white details become
+      // white-on-black together. SVG drop-shadow edges are not reliably painted
+      // by every Chrome backend. Colored brands retain their authored paint.
+      if (icon && !svg.querySelector('use,image,foreignObject')) {
         const bg = colors.luminance(backdropOf(svg, ctx).color);
-        const unreadable = [...svg.querySelectorAll(ICON_PARTS)].some(part => {
+        let neutral = true;
+        const paints = [...svg.querySelectorAll(ICON_PARTS)].flatMap(part => {
           const s = ctx.style(part);
-          return [s.fill, s.stroke].some(paint => {
-            const c = colors.parseColor(paint);
-            if (!c || c.a < .5 || colors.chroma(c) > .1) return false;
-            const ink = colors.luminance(c);
-            return bg < .2 && (Math.max(bg, ink) + .05) / (Math.min(bg, ink) + .05) < 3;
-          });
+          return [s.fill, s.stroke].map(paint => colors.parseColor(paint)).filter(c => c && c.a >= .5);
         });
-        out.push([svg, unreadable ? {"asset-icon":"1"} : {}]);
+        for (const paint of paints) if (colors.chroma(paint) > .1) neutral = false;
+        const unreadable = paints.some(c => {
+          const ink = colors.luminance(c);
+          return bg < .2 && (Math.max(bg, ink) + .05) / (Math.min(bg, ink) + .05) < 3;
+        });
+        out.push([svg, neutral && unreadable ? {"icon-invert":"1"} : {}]);
       }
       return;
     }
@@ -1214,7 +1215,10 @@
     }
     const group = path.find(node => node.matches(STATE_GROUP));
     if (group && (!stop || path.indexOf(group) < path.indexOf(stop))) pendingTrees.add(group);
-    schedule(true);
+    // A site's later event microtask may edit CSSOM without a DOM mutation.
+    // Read interactive states at the frame boundary, after those handlers.
+    // Mutation batches still use their own pre-paint microtask path.
+    schedule();
     if (settleSelf.size || settleTrees.size) {
       clearTimeout(settleTimer);
       settleTimer = setTimeout(settle, SETTLE_MS);
@@ -1369,6 +1373,7 @@
          after their surrounding light surface becomes black. */
       img[${MARK}~="faded-icon"]${on} { opacity: 0.65 !important; filter: drop-shadow(0 0 1px #888) !important; }
       [${MARK}~="asset-icon"]${on} { filter: drop-shadow(0 0 0.75px #ddd) drop-shadow(0 0 0.75px #ddd) !important; }
+      [${MARK}~="icon-invert"]${on} { filter: invert(1) !important; }
       [${NOANIM}], [${NOANIM}] *, [${NOANIM}]::before, [${NOANIM}]::after, [${NOANIM}] *::before, [${NOANIM}] *::after { transition: none !important; }
       [${NOANIM_SELF}], [${NOANIM_SELF}]::before, [${NOANIM_SELF}]::after { transition: none !important; }
       [${NOANIM}][${MOTION}], [${NOANIM}] [${MOTION}], [${NOANIM_SELF}][${MOTION}] { transition: var(--oln-motion) !important; }

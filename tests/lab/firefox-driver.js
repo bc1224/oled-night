@@ -34,6 +34,8 @@
       await browser.tabs.remove(tab.id);
     }
     await browser.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'recolor'}});
+    tab=await browser.tabs.create({url:TEST_ORIGIN+'/cvs-hover.html'});await sleep(900);
+    out.push(...await proof('cvs-hover',await inspect(deferredCssomScenario)));await browser.tabs.remove(tab.id);
     tab=await browser.tabs.create({url:TEST_ORIGIN+'/booking-form.html'});await sleep(1500);
     await browser.scripting.executeScript({target:{tabId:tab.id},files:['lab-audit.js']});
     out.push(...(await proof('booking-form',await inspect(bookingScenario))).map(c=>({...c,name:'booking / '+c.name})));
