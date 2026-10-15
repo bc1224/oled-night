@@ -582,12 +582,13 @@
         element.closest(ctx.recolorLightRegions ? LIGHT_UI : DROPDOWN));
     const mode = lightIsland ? "oled" : localMode;
     mapSurface(computed, "", mode, found);
-    // Keep an interacted transparent/dark control's surface protected too. A site
-    // can insert a hover rule through CSSOM after our interaction recheck,
-    // without a mutation notification. Pin its native surface until the next
-    // measurement, which reads through our overrides as usual.
+    // Protect native links/buttons before their first interaction too. CSSOM
+    // hydration can change their surface without a mutation or input event.
+    // Other semantic controls gain the same protection on interaction. Native
+    // tag checks avoid another selector query during the full-page scan.
     if ((mode === "oled" || mode === "soft") && !found.bg &&
-        interactionSurfaces.has(element) && computed.backgroundImage === "none" && !paintsInk(computed))
+        (element.localName === "a" || element.localName === "button" || interactionSurfaces.has(element)) &&
+        computed.backgroundImage === "none" && !paintsInk(computed))
       found.bg = computed.backgroundColor;
     if (mode === "oled" && isPageLayout(element, computed, colors.parseColor(computed.backgroundColor))) found.bg = "#000000";
     // Full-width neutral navigation is page chrome, rather than a raised card.

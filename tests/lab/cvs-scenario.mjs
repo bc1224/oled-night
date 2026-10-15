@@ -34,6 +34,8 @@ export async function cvsScenario(page,origin){
   add('CVS stress / deferred CSSOM hover has no pale sample',!deferred.pale&&deferred.samples===24,JSON.stringify(deferred));
   await page.hover(1,1);await page.eval('window.CVSHoverLab.frameHover()');
   await page.eval('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(resolve,0))))');
+  const firstEntry=await page.eval(`(()=>{const sheet=document.getElementById('frame-sheet').sheet,index=sheet.insertRule('#frame-hover{background:rgb(227,241,255)}',sheet.cssRules.length);return new Promise(resolve=>requestAnimationFrame(()=>setTimeout(()=>{const color=getComputedStyle(document.getElementById('frame-hover')).backgroundColor;sheet.deleteRule(index);resolve(color)},0)))})()`);
+  add('CVS stress / CSSOM surface stays dark before first interaction',!/^rgb\(227,\s*241,\s*255\)$/.test(firstEntry),firstEntry);
   const framePoint=await page.eval(`(()=>{const r=document.getElementById('frame-hover').getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`);
   const frame=await watchHover(page,framePoint);
   add('CVS stress / frame CSSOM hover has no pale sample',!frame.pale&&frame.samples===24,JSON.stringify(frame));
