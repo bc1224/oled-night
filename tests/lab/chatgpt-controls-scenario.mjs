@@ -15,5 +15,12 @@ export function chatgptControlsScenario(){
   const logoPaths=logo?[...logo.querySelectorAll('path')]:[];
   const logoPaints=logoPaths.map(path=>getComputedStyle(path).fill);
   const logoPreserved=!!logo&&getComputedStyle(logo).filter==='none'&&logoPaints.join('|')==='rgb(20, 99, 199)|rgb(196, 44, 84)'&&logoPaths.every(path=>!path.hasAttribute('data-oled-night'));
-  return {enabled,textRatio,icons,logoPreserved,ok:(!enabled||textRatio>=4.5)&&icons.every(i=>i.styleRatio>=3)&&logoPreserved};
+  // These fake sprite symbols explicitly draw their strokes with currentColor.
+  // A fill override on <use> alone cannot repair their actual stroke paint.
+  const voices=['voice-local','voice-external','voice-dark','voice-readable','voice-yellow'].map(id=>{
+    const button=document.getElementById(id),svg=button.querySelector('svg');
+    const ink=getComputedStyle(svg).color,background=getComputedStyle(button).backgroundColor;
+    return {id,ink,background,ratio:contrast(ink,background),filter:getComputedStyle(svg).filter};
+  });
+  return {enabled,textRatio,icons,voices,logoPreserved,ok:(!enabled||textRatio>=4.5)&&icons.every(i=>i.styleRatio>=3)&&voices.every(i=>i.ratio>=3&&i.filter==='none')&&logoPreserved};
 }

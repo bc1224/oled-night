@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.43";
+  const VERSION = "0.6.44";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -694,7 +694,21 @@
     if (backdropOf(svg, ctx).image) return;
     const colors = colorsApi();
     const icon = rect.width <= 64 && rect.height <= 64;
+    // A sprite's shadow tree is not traversable here. Repair inherited
+    // currentColor instead of inverting unknown artwork: explicit brand
+    // fills/strokes in either local or external symbols keep their paint.
+    const referencedInk = icon && svg.querySelector("use") ? colors.parseColor(ctx.style(svg).color) : null;
+    const referenceFg = referencedInk?.a >= .95 && colors.chroma(referencedInk) < .1 &&
+      colors.luminance(referencedInk) < .2 ? colors.mapForeground(referencedInk, 1) : null;
     if (nativeIcon) {
+      if (icon && svg.querySelector("use") && !svg.querySelector("image,foreignObject")) {
+        const backdrop = backdropOf(svg, ctx).color;
+        const bg = colors.luminance(backdrop);
+        const ink = referencedInk && colors.luminance(referencedInk);
+        const unreadable = referenceFg && ((bg < .2 && (Math.max(bg, ink) + .05) / (Math.min(bg, ink) + .05) < 3) || (bg > .6 && colors.chroma(backdrop) < .1));
+        out.push([svg, unreadable ? {fg: referenceFg} : {}]);
+        return;
+      }
       // Invert only wholly neutral badges: black-on-white details become
       // white-on-black together. SVG drop-shadow edges are not reliably painted
       // by every Chrome backend. Colored brands retain their authored paint.
@@ -743,6 +757,7 @@
         // leaves a glaring white square on a darkened header.
         if (part === svg) {
           mapSurface(computed, "", mode, found);
+          if (referenceFg) found.fg = referenceFg;
           if (outline) {
             const currentColor = colors.parseColor(computed.color);
             if (currentColor) found.fg = colors.mapForeground(currentColor, 1);

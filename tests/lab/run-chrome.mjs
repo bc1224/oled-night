@@ -19,7 +19,7 @@ import {largeUpdatesScenario} from './large-updates-scenario.mjs';
 import {churnWorkload,judgeChurn} from '../e2e/churn-benchmark.mjs';
 import {reportPreviewScenario} from './report-preview-scenario.mjs';
 import {visibleIconPixels} from './checkout-paint.mjs';
-import {PNG} from 'pngjs';
+import {sampleChatgptPixels} from './chatgpt-controls-paint.mjs';
 import {chatgptControlsScenario} from './chatgpt-controls-scenario.mjs';
 import {reportBaselineEntry} from './report-baseline.mjs';
 import {frameWorkload,frameChecks,mountComponents,removeComponents,emptyRowLifecycle} from '../../docs/lab/performance.js';
@@ -38,20 +38,13 @@ try {
   await options.eval("chrome.storage.sync.set({extensionEnabled:true,globalEnabled:true,siteRules:{}})");await wait(500);
   await page.size(1024,1000);await page.go(`${server.origin}/lab/fixtures/chatgpt-controls.html`);await wait(900);
   const chatgptAuto=await page.eval(`(${chatgptControlsScenario.toString()})()`);
-  const pixelLum=rgb=>{const [r,g,b]=rgb.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return .2126*r+.7152*g+.0722*b};
-  const pixelRatio=(a,b)=>{const x=pixelLum(a),y=pixelLum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
-  const sampleIcons=async()=>{
-    const boxes=await page.eval(`(()=>Object.fromEntries(['stop-light','stop-dark'].map(id=>{const s=document.querySelector('#'+id+' svg'),r=s.getBoundingClientRect();return [id,{x:r.x,y:r.y,width:r.width,height:r.height}]})))()`);
-    const shot=PNG.sync.read(await page.screenshot()),sampled=(x,y)=>{const i=(Math.floor(y)*shot.width+Math.floor(x))*4;return [...shot.data.subarray(i,i+3)]};
-    return Object.entries(boxes).map(([id,b])=>{const icon=sampled(b.x+b.width/2,b.y+b.height/2),surface=sampled(b.x+1,b.y+b.height/2);return {id,icon,surface,ratio:pixelRatio(icon,surface)}});
-  };
-  const paintedAuto=await sampleIcons();
+  const paintedAuto=await sampleChatgptPixels(page);
   await options.eval("chrome.storage.sync.set({extensionEnabled:true,globalEnabled:true,siteRules:{'127.0.0.1':'recolor'}})");await wait(700);await page.go(`${server.origin}/lab/fixtures/chatgpt-controls.html`);await wait(900);
-  const chatgptRecolor=await page.eval(`(${chatgptControlsScenario.toString()})()`),paintedRecolor=await sampleIcons();
+  const chatgptRecolor=await page.eval(`(${chatgptControlsScenario.toString()})()`),paintedRecolor=await sampleChatgptPixels(page);
   const name='ChatGPT controls keep text and Stop icon readable';
   const textOk=(!chatgptAuto.enabled||chatgptAuto.textRatio>=4.5)&&(!chatgptRecolor.enabled||chatgptRecolor.textRatio>=4.5);
-  const actualOk=textOk&&chatgptAuto.ok&&chatgptRecolor.ok&&paintedAuto.every(p=>p.ratio>=3)&&paintedRecolor.every(p=>p.ratio>=3);
-  checks.push(...await proof('chatgpt-controls',[{name,ok:actualOk,detail:JSON.stringify({auto:{textRatio:chatgptAuto.textRatio,icons:chatgptAuto.icons,logoPreserved:chatgptAuto.logoPreserved,painted:paintedAuto},recolor:{textRatio:chatgptRecolor.textRatio,icons:chatgptRecolor.icons,logoPreserved:chatgptRecolor.logoPreserved,painted:paintedRecolor}})}]));
+  const actualOk=textOk&&chatgptAuto.ok&&chatgptRecolor.ok&&paintedAuto.icons.every(p=>p.ratio>=3)&&paintedRecolor.icons.every(p=>p.ratio>=3)&&paintedAuto.brandPreserved&&paintedRecolor.brandPreserved;
+  checks.push(...await proof('chatgpt-controls',[{name,ok:actualOk,detail:JSON.stringify({auto:{textRatio:chatgptAuto.textRatio,icons:chatgptAuto.icons,voices:chatgptAuto.voices,logoPreserved:chatgptAuto.logoPreserved,painted:paintedAuto},recolor:{textRatio:chatgptRecolor.textRatio,icons:chatgptRecolor.icons,voices:chatgptRecolor.voices,logoPreserved:chatgptRecolor.logoPreserved,painted:paintedRecolor}})}]));
   await settings(true);
   for(const [theme,width] of [['light',1200],['dark',1200],['light',390]]){
     const label=`${theme}-${width}`;await page.size(width,1000);await page.go(`${server.origin}/lab/fixtures/matrix.html?theme=${theme}`);await wait(800);

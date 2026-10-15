@@ -30,7 +30,7 @@ const temp=mkdtempSync(join(tmpdir(),'oled-night-firefox-lab-'));
 let receive;const result=new Promise(r=>receive=r);
 const server=createServer((req,res)=>{
   if(req.url==='/result'&&req.method==='POST'){let body='';req.on('data',c=>body+=c);req.on('end',()=>{try{receive(JSON.parse(body));res.end('ok')}catch{res.writeHead(400);res.end()}});return}
-  const file=new URL(req.url,'http://localhost').pathname.slice(1);if(!['matrix.html','audit.js','ordinary-image.svg','email-newsletter.html','native-banner.html','booking-form.html','apple-recovery.html','report-preview.html','generated-style.html','report-utils.js','checkout.html','chatgpt-controls.html','paint-updates.html','large-updates.html','performance.js','cvs-hover.html'].includes(file)){res.writeHead(404);res.end();return}
+  const file=new URL(req.url,'http://localhost').pathname.slice(1);if(!['matrix.html','audit.js','ordinary-image.svg','chatgpt-sprite.svg','email-newsletter.html','native-banner.html','booking-form.html','apple-recovery.html','report-preview.html','generated-style.html','report-utils.js','checkout.html','chatgpt-controls.html','paint-updates.html','large-updates.html','performance.js','cvs-hover.html'].includes(file)){res.writeHead(404);res.end();return}
   const path=file==='report-utils.js'?join(root,file):file==='matrix.html'?join(root,'tests/lab',file):file==='chatgpt-controls.html'?join(root,'tests/e2e/site',file):['audit.js','performance.js'].includes(file)?join(root,'docs/lab',file):join(root,'tests/e2e/site',file);
   res.setHeader('content-type',file.endsWith('.js')?'text/javascript':file.endsWith('.svg')?'image/svg+xml':'text/html');res.end(readFileSync(path));
 });

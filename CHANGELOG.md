@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.44
+
+- Keep compact SVG sprite controls readable by repairing their inherited currentColor, including voice waveforms whose referenced strokes cannot be fixed through fill overrides. Preserve explicit sprite brand colors and readable native icons.
+- Extend the synthetic ChatGPT lab fixture with local/external voice sprites, light/dark button surfaces, already-readable icons and colored sprite artwork. Verify composited Chrome pixels as well as both browsers' inherited ink contrast.
+
 ## 0.6.43
 
 - Keep neutral Stop icons readable when Automatic mode darkens a light authored control on a dark page. Preserve dark-button inversion, colored artwork and non-control SVGs; add synthetic painted-pixel and text-contrast coverage with immutable-base Linux proof.
