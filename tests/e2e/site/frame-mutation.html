@@ -2,4 +2,7 @@
 <style>body{background:#fff;color:#111;font:18px system-ui;padding:24px}button{padding:12px}#header{background:#fff;color:#111;padding:24px;margin-top:16px;border:1px solid #aaa}</style>
 <h1>Frame-created navigation</h1><p>Hover or focus the button. The site replaces its header inside an animation callback.</p>
 <button id="trigger">Replace navigation</button><div id="header">Original navigation surface</div>
+<style>#frame-focus{display:inline-block;padding:16px;color:#013f7c;background:transparent}#frame-focus:focus{background:rgb(227,241,255);color:#013f7c}</style>
+<p><button id="focus-trigger">Focus navigation during a frame</button> <a id="frame-focus" href="#example" data-lab-check="text surface">Frame-boundary navigation</a></p>
+<script>document.getElementById('focus-trigger').onclick=()=>requestAnimationFrame(()=>document.getElementById('frame-focus').focus())</script>
 <script>let count=0;function update(){requestAnimationFrame(()=>{const panel=document.createElement('div');panel.id='header';panel.style.cssText='background:#fff;color:#111';panel.textContent='Frame-created navigation '+(++count);document.getElementById('header').replaceWith(panel)})}trigger.addEventListener('pointerenter',update);trigger.addEventListener('focus',update);trigger.addEventListener('click',update)</script></html>

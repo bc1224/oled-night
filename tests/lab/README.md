@@ -89,3 +89,5 @@ Document-only selection and inherited-ink proofs also reject ordinary closed hos
 The companion theme remains 1.0.3. Extension changes require the full release gates and separate store submission receipts.
 
 Proven neutral selection changes can use shared background declarations instead of mutating inline CSS on every update. The palette is primed before updates and capped at 128 declarations; unknown paint falls back to normal measurement and inline writes. It retains the same stylesheet, closed-root and ink proofs. Tests check distinct resting/selected paint, later page writes, framework removal, native restoration on disable and the palette bound. Memory and frame budgets remain unchanged.
+
+The frame-created navigation case also focuses a transparent link inside an animation callback. Both browsers inspect its completed current frame, before another callback can repair it. Interaction state is repaired at the current microtask checkpoint and its changed path is checked once more at the next frame boundary for later CSSOM edits. This retains the deferred-CSSOM hover/focus checks and avoids waiting a frame to darken native focus paint.

@@ -119,6 +119,9 @@
   const settleSelf = new Set();
   const settleTrees = new Set();
   let settleTimer = null;
+  const interactionSelf = new Set();
+  const interactionTrees = new Set();
+  let interactionFrame = null;
   const SETTLE_MS = 400;
   const INTERACTION_EVENTS = ["pointerover", "pointerout", "pointerdown", "pointerup", "pointercancel", "focusin", "focusout", "input", "change", "keydown", "keyup"];
   const CONTROL = 'a, button, input, textarea, select, option, label, li, [role="option"], [role^="menuitem"], [role="button"], [role="combobox"], [aria-haspopup], [aria-expanded], [data-action], [contenteditable="true"], [tabindex]';
@@ -324,7 +327,7 @@
         paintContainers.delete(node);
         deferredPaint.delete(node);
         if (observedPaint.delete(node)) viewportObserver?.unobserve(node);
-        for (const set of [pendingTrees, pendingSelf, settleTrees, settleSelf]) set.delete(node);
+        for (const set of [pendingTrees, pendingSelf, settleTrees, settleSelf, interactionTrees, interactionSelf]) set.delete(node);
       }
       if (!removedContainer) {
         if (!observedPaint.size) { viewportObserver?.disconnect(); viewportObserver = null; }
@@ -342,7 +345,7 @@
       }
     }
     for (const host of unresolvedShadowHosts) if (!host.isConnected) unresolvedShadowHosts.delete(host);
-    for (const set of [pendingTrees, pendingSelf, settleTrees, settleSelf])
+    for (const set of [pendingTrees, pendingSelf, settleTrees, settleSelf, interactionTrees, interactionSelf])
       for (const node of set) if (!node.isConnected) set.delete(node);
     if (!unresolvedShadowHosts.size && shadowDiscoveryFrame !== null) {
       cancelAnimationFrame(shadowDiscoveryFrame);
@@ -1471,7 +1474,7 @@
       if (!(node instanceof ShadowRoot) || preservesColor(node.host) || isMedia(node.host)) continue;
       const discovered = !shadowRoots.has(node);
       adoptShadowRoot(node);
-      if (discovered) pendingTrees.add(node.host);
+      if (discovered) queueInteraction(node.host, true);
     }
     const found = path.find(node => node.matches(CONTROL));
     const control = found && found !== document.body && found !== document.documentElement ? found : null;
@@ -1480,28 +1483,43 @@
     for (const node of path) {
       if (node === document.body || node === document.documentElement) break;
       if (node === stop) rest = true;
-      (rest ? settleSelf : pendingSelf).add(node);
+      if (rest) settleSelf.add(node); else queueInteraction(node);
     }
     // Descendant rules of changed elements (".row:hover .label") need their subtree.
     const controlChanged = control && (!stop || path.indexOf(control) < path.indexOf(stop));
-    if (controlChanged) pendingTrees.add(control);
+    if (controlChanged) queueInteraction(control, true);
     else {
       // Non-semantic triggers and plain text hover must not promote the
       // entire page layout to a subtree reread. Ancestor state is checked
       // shallowly above; actual DOM/class changes still queue their subtree.
-      if (path[0] && path[0] !== stop) pendingTrees.add(path[0]);
+      if (path[0] && path[0] !== stop) queueInteraction(path[0], true);
       if (control) settleTrees.add(control);
     }
     const group = path.find(node => node.matches(STATE_GROUP));
-    if (group && (!stop || path.indexOf(group) < path.indexOf(stop))) pendingTrees.add(group);
-    // A site's later event microtask may edit CSSOM without a DOM mutation.
-    // Read interactive states at the frame boundary, after those handlers.
-    // Mutation batches still use their own pre-paint microtask path.
-    schedule();
+    if (group && (!stop || path.indexOf(group) < path.indexOf(stop))) queueInteraction(group, true);
+    // Native focus/hover can change inside a frame callback. Waiting for the
+    // next rAF exposes its pale state in the current paint. Repair at this
+    // microtask checkpoint, then recheck only this path at the next boundary:
+    // a later site microtask can edit CSSOM without any observed DOM write.
+    schedule(true);
+    if (interactionFrame === null) interactionFrame = requestAnimationFrame(() => {
+      interactionFrame = null;
+      if (!observer) return;
+      for (const node of interactionSelf) if (node.isConnected) pendingSelf.add(node);
+      for (const node of interactionTrees) if (node.isConnected) pendingTrees.add(node);
+      interactionSelf.clear();
+      interactionTrees.clear();
+      schedule(true);
+    });
     if (settleSelf.size || settleTrees.size) {
       clearTimeout(settleTimer);
       settleTimer = setTimeout(settle, SETTLE_MS);
     }
+  }
+
+  function queueInteraction(node, tree = false) {
+    (tree ? pendingTrees : pendingSelf).add(node);
+    (tree ? interactionTrees : interactionSelf).add(node);
   }
 
   // Moving between elements changes :hover/:focus-within only below the common
@@ -1906,6 +1924,10 @@
     settleTimer = null;
     settleSelf.clear();
     settleTrees.clear();
+    if (interactionFrame !== null) cancelAnimationFrame(interactionFrame);
+    interactionFrame = null;
+    interactionSelf.clear();
+    interactionTrees.clear();
     inlineStyles = new WeakMap();
     active = false;
     clearInterval(challengeTimer);
