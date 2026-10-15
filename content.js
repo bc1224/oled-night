@@ -122,6 +122,7 @@
   const interactionSelf = new Set();
   const interactionTrees = new Set();
   let interactionFrame = null;
+  const interactionSurfaces = new WeakSet();
   const SETTLE_MS = 400;
   const INTERACTION_EVENTS = ["pointerover", "pointerout", "pointerdown", "pointerup", "pointercancel", "focusin", "focusout", "input", "change", "keydown", "keyup"];
   const CONTROL = 'a, button, input, textarea, select, option, label, li, [role="option"], [role^="menuitem"], [role="button"], [role="combobox"], [aria-haspopup], [aria-expanded], [data-action], [contenteditable="true"], [tabindex]';
@@ -581,12 +582,12 @@
         element.closest(ctx.recolorLightRegions ? LIGHT_UI : DROPDOWN));
     const mode = lightIsland ? "oled" : localMode;
     mapSurface(computed, "", mode, found);
-    // Keep an already transparent/dark control's surface protected too. A site
+    // Keep an interacted transparent/dark control's surface protected too. A site
     // can insert a hover rule through CSSOM after our interaction recheck,
     // without a mutation notification. Pin its native surface until the next
     // measurement, which reads through our overrides as usual.
     if ((mode === "oled" || mode === "soft") && !found.bg &&
-        element.matches(CONTROL) && computed.backgroundImage === "none" && !paintsInk(computed))
+        interactionSurfaces.has(element) && computed.backgroundImage === "none" && !paintsInk(computed))
       found.bg = computed.backgroundColor;
     if (mode === "oled" && isPageLayout(element, computed, colors.parseColor(computed.backgroundColor))) found.bg = "#000000";
     // Full-width neutral navigation is page chrome, rather than a raised card.
@@ -1474,6 +1475,7 @@
     if (nativeSelect) return;
     const found = path.find(node => node.matches(CONTROL));
     const control = found && found !== document.body && found !== document.documentElement ? found : null;
+    if (control) interactionSurfaces.add(control);
     // Existing background AND ink overrides protect the current paint. Native
     // dark mode may own only a background; new native focus ink then needs the
     // immediate pass too. Fully protected leaf controls stay coalesced.
