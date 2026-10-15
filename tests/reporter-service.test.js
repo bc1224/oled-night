@@ -1,0 +1,25 @@
+const assert=require('node:assert/strict');
+(async()=>{
+ const {receiveReport}=await import('../services/reporter/core.mjs');
+ const map=new Map(),storage={get:async k=>structuredClone(map.get(k)),put:async(k,v)=>map.set(k,structuredClone(v)),delete:async k=>map.delete(k),getAlarm:async()=>null,setAlarm:async()=>{}};
+ const sent=[],env={GITHUB_TOKEN:'TEST_ONLY',fetch:async(url,options)=>{sent.push({url,...options});return Response.json({html_url:'https://github.com/bc1224/oled-night/issues/123'},{status:201})}};
+ const raw={requestId:crypto.randomUUID(),description:'The verification label is unreadable',report:{host:'example.com',version:'0.6.41',text:'PRIVATE',settings:{siteRules:{PRIVATE:'off'}}}};
+ const request=(data=raw,ip='synthetic-client')=>new Request('https://reporter.test/v1/issues',{method:'POST',headers:{'content-type':'application/json','x-client-id':ip},body:JSON.stringify(data)});
+ let res=await receiveReport(request(),env,storage);assert.equal(res.status,201);assert.equal((await res.json()).url,'https://github.com/bc1224/oled-night/issues/123');assert.equal(sent.length,1);assert(!sent[0].body.includes('PRIVATE'));assert.equal(sent[0].url,'https://api.github.com/repos/bc1224/oled-night/issues');assert(JSON.parse(sent[0].body).body.includes(raw.description));
+ assert.equal((await receiveReport(request(),env,storage)).status,200);assert.equal(sent.length,1,'retry cannot create a duplicate');
+ assert.equal((await receiveReport(request({...raw,description:'different'}),env,storage)).status,409);
+ assert.equal((await receiveReport(request({...raw,requestId:'bad'}),env,storage)).status,400);
+ assert.equal((await receiveReport(request({...raw,requestId:crypto.randomUUID(),report:{host:'localhost'}}),env,storage)).status,400);
+ assert.equal((await receiveReport(request({...raw,description:'x'.repeat(20000)}),env,storage)).status,413);
+ for(let i=0;i<2;i++)assert.equal((await receiveReport(request({...raw,requestId:crypto.randomUUID()}),env,storage)).status,201);
+ assert.equal((await receiveReport(request({...raw,requestId:crypto.randomUUID()}),env,storage)).status,429);
+ const failed={...raw,requestId:crypto.randomUUID()};let attempts=0;const offline={...env,fetch:async()=>{attempts++;throw Error('network')}};
+ assert.equal((await receiveReport(request(failed,'other'),offline,storage)).status,502);assert.equal((await receiveReport(request(failed,'other'),env,storage)).status,409);assert.equal(attempts,1,'ambiguous upstream failure is never resubmitted');
+ assert(!JSON.stringify([...map]).includes('PRIVATE'));assert(!JSON.stringify([...map]).includes(raw.description),'no report body retained');
+ assert.equal((await receiveReport(request({...raw,requestId:crypto.randomUUID()},'third'),{},storage)).status,503);
+ const rejected={...raw,requestId:crypto.randomUUID()},rejectEnv={...env,fetch:async()=>Response.json({message:'rejected'},{status:422})};
+ assert.equal((await receiveReport(request(rejected,'fourth'),rejectEnv,storage)).status,502);assert.equal((await receiveReport(request(rejected,'fourth'),env,storage)).status,201,'definitive rejection can retry safely');
+ const day=new Date().toISOString().slice(0,10);map.set('total:'+day,{count:30,expiresAt:Date.now()+1000});assert.equal((await receiveReport(request({...raw,requestId:crypto.randomUUID()},'fresh'),env,storage)).status,429,'global daily cap applies across clients');
+ assert.equal((await receiveReport(new Request('https://reporter.test',{method:'POST',body:'not-json'}),env,storage)).status,400);
+ console.log('PASS hosted reporter creates real issues through fixed API, scrubs data, limits requests, deduplicates retries and fails closed');
+})().catch(e=>{console.error(e);process.exitCode=1});

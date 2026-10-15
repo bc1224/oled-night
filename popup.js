@@ -227,13 +227,20 @@
     if (!reportSession || $("reportSubmit").disabled) return;
     const session = reportSession;
     $("reportSubmit").disabled = true;
+    $("reportDescription").disabled = true;
     try {
-      const shared = await session.send();
+      const shared = await session.send($("reportDescription").value);
       if (session !== reportSession) return;
-      if (shared) $("reportPreview").close();
-      else $("reportConsentStatus").textContent = "Sharing declined. OLED Night still works; you can save a report locally.";
-    } catch {
-      if (session === reportSession) $("reportConsentStatus").textContent = "Could not open the GitHub draft. You can retry or save a report locally.";
+      if (shared) {
+        $("reportConsentStatus").textContent = "Issue submitted. Thank you.";
+        $("reportIssueLink").href = shared.url;
+        $("reportIssueLink").hidden = false;
+        $("reportSubmit").hidden = true;
+        $("reportDescription").disabled = true;
+      }
+      else { $("reportDescription").disabled = false; $("reportConsentStatus").textContent = "Sharing declined. OLED Night still works; you can save a report locally."; }
+    } catch (error) {
+      if (session === reportSession) $("reportConsentStatus").textContent = error.message || "Could not submit the issue. You can retry or save a report locally.";
     } finally { $("reportSubmit").disabled = false; }
   });
   $("report").addEventListener("click", async () => {
@@ -246,12 +253,16 @@
     }
     pendingReport = report;
     reportSession?.cancel();
-    reportSession = OledNightReport.createDraftSession(report, {
+    reportSession = OledNightReport.createSubmissionSession(report, {
       requestConsent: isFirefox ? () => chrome.permissions.request({data_collection:["browsingActivity","technicalAndInteraction"]}) : null,
-      openTab: tab => chrome.tabs.create(tab)
+      submit: payload => OledNightReport.submitIssue(payload)
     });
     $("reportSubmit").disabled = false;
     $("reportConsentStatus").textContent = "";
+    $("reportSubmit").hidden = false;
+    $("reportIssueLink").hidden = true;
+    $("reportDescription").value = "";
+    $("reportDescription").disabled = false;
     $("reportDiagnostics").textContent = JSON.stringify(OledNightReport.scrub(report), null, 2);
     $("reportPreview").showModal();
   });

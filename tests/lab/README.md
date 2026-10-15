@@ -2,7 +2,7 @@
 
 Public gallery: https://bc1224.github.io/oled-night/lab/
 
-46 synthetic cases cover the component matrix and previous site failures. The current gallery is built from the same committed fixtures used by the browser regressions. It contains no copied accounts or private report uploads.
+47 synthetic cases cover the component matrix and previous site failures. The current gallery is built from the same committed fixtures used by the browser regressions. It contains no copied accounts or private report uploads.
 
 ## Every reported bug becomes a regression
 
@@ -93,3 +93,5 @@ Proven neutral selection changes can use shared background declarations instead 
 The frame-created navigation case also focuses a transparent link inside an animation callback. Both browsers inspect its completed current frame, before another callback can repair it. They also check native-dark focus that replaces light ink while its background stays overridden. Exposed interaction paint is repaired at the current microtask checkpoint and its changed path is checked once more at the next frame boundary for later CSSOM edits. Leaf controls with both background and ink protected retain one coalesced pass. This retains the deferred-CSSOM hover/focus and mutation-coalescing checks and avoids waiting a frame to darken native focus paint.
 
 Idle observer ownership is sampled after two rendering opportunities following re-enable, allowing initial one-shot geometry delivery. A fixed timer alone can expire during the synchronous scan. The 64 idle/pending observation limit and all frame, heap and cleanup budgets remain unchanged.
+
+The Apple recovery case (`/lab/#apple-recovery`) reproduces issue #4: a site-owned editable `captcha-input` must have a dark surface and readable floating label, while actual provider widgets and verification artwork remain untouched. Chrome checks desktop/mobile, Automatic/Recolor, editing/focus and disable restoration; Firefox checks both modes. No account or CAPTCHA is submitted. The reporting fixture simulates one direct service submission without sending an issue.

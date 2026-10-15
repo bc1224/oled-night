@@ -28,7 +28,7 @@ body:
     id: report
     attributes:
       label: Report file
-      description: Use "Report a broken site" in the popup to preview scrubbed diagnostics and open a GitHub draft. Do not attach full local reports, which may contain page text and identifiers.
+      description: Use "Report a broken site" in the popup to preview scrubbed diagnostics and submit a public issue directly. Do not attach full local reports, which may contain page text and identifiers.
   - type: input
     id: version
     attributes:

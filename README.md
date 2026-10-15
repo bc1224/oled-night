@@ -59,7 +59,7 @@ The switch beside **OLED Night** and **Alt+Shift+E** pause or resume the extensi
 | Invert | For canvas apps (Sheets, Figma): flips the page, then flips images back |
 | Off | Never touches the site |
 
-If a site still looks wrong, click **Report a broken site** in the popup, preview the scrubbed diagnostics and open a GitHub draft. Issues are public; keep private details and sensitive screenshots out. Full local report downloads can contain visible text and identifiers, so review them before sharing.
+If a site still looks wrong, click **Report a broken site** in the popup, preview the scrubbed diagnostics and submit a public GitHub issue directly. Issues are public; keep private details and sensitive screenshots out. Full local report downloads can contain visible text and identifiers, so review them before sharing.
 
 ## How it works
 OLED Night doesn't run one filter over the whole page. It works out a color for each element on its own: backgrounds, text, borders, SVG icons, chart fills, gradients, shadows and `::before`/`::after`. It keeps each text's original emphasis and remembers what was originally behind it. Every update reads all the styles it needs first and writes the changes after, so a batch costs a single style recalculation. Brightness and contrast are CSS variables, so moving a slider never re-scans the page.

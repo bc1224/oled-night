@@ -55,5 +55,35 @@
       }
     };
   }
-  scope.OledNightReport = {scrub,issueUrl,openDraft,createDraftSession};
+  function createSubmissionSession(report, {requestConsent,submit}) {
+    const clean = scrub(report), requestId = crypto.randomUUID();
+    let cancelled = false, busy = false, sent = false, payload;
+    return {
+      cancel() { cancelled = true; },
+      async send(description = '') {
+        if (cancelled || busy || sent) return false;
+        busy = true;
+        try {
+          if (requestConsent && !await requestConsent()) return false;
+          if (cancelled) return false;
+          payload ||= {requestId,report:clean,description:String(description).trim().slice(0,2000)};
+          const receipt = await submit(payload);
+          if (!/^https:\/\/github\.com\/bc1224\/oled-night\/issues\/[1-9]\d*$/.test(receipt?.url || '')) throw Error('Invalid issue receipt');
+          sent = true;
+          return receipt;
+        } finally { busy = false; }
+      }
+    };
+  }
+  async function submitIssue(payload) {
+    const response = await fetch('https://oled-night-reporter.bcf1224.workers.dev/v1/issues', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload),
+      credentials:'omit', referrerPolicy:'no-referrer', signal:AbortSignal.timeout(20000)
+    });
+    if (response.status === 429) throw Error('Report limit reached. Please try tomorrow or save the report locally.');
+    if (response.status === 409) throw Error('This report may already have reached GitHub. Check the issue list before sending a new report.');
+    if (!response.ok) throw Error('Could not submit the issue. Retry or save the report locally.');
+    return response.json();
+  }
+  scope.OledNightReport = {scrub,issueUrl,openDraft,createDraftSession,createSubmissionSession,submitIssue};
 })(globalThis);

@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.40";
+  const VERSION = "0.6.41";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -57,7 +57,7 @@
   // Provider widgets by their own markup. A site's own element that merely has
   // "captcha" in its name counts only while it holds no form of its own, so a
   // login form wrapped in "login-captcha-wrapper" is still darkened.
-  const BOT_CHECK = ':is([data-sitekey], .cf-turnstile, [id^="cf-chl-"], [id^="cf-turnstile"], .g-recaptcha, .grecaptcha-badge, .h-captcha, .frc-captcha, .frc-container, #px-captcha, [class^="geetest_"], [class*=" geetest_"], [id^="arkose"], [id^="funcaptcha"], awswaf-captcha, :is([class*="captcha" i], [id*="captcha" i]):not(:has(form, input:not([type="hidden"]), select, button, textarea:not([name*="response" i]))), iframe[src*="captcha" i], iframe[src*="challenges.cloudflare.com"], iframe[src*="/challenge-platform/"], iframe[src*="arkoselabs"], iframe[src*="geetest"], iframe[src*="perimeterx"], iframe[src*="px-cloud.net"], iframe[src*="px-cdn.net"], iframe[src*="datadome"], iframe[src*="awswaf"], iframe[src*="kasada"], iframe[src*="frcapi"]):not(html, body)';
+  const BOT_CHECK = ':is([data-sitekey], .cf-turnstile, [id^="cf-chl-"], [id^="cf-turnstile"], .g-recaptcha, .grecaptcha-badge, .h-captcha, .frc-captcha, .frc-container, #px-captcha, [class^="geetest_"], [class*=" geetest_"], [id^="arkose"], [id^="funcaptcha"], awswaf-captcha, :is([class*="captcha" i], [id*="captcha" i]):not(input, select, button, textarea):not(:has(form, input:not([type="hidden"]), select, button, textarea:not([name*="response" i]))), iframe[src*="captcha" i], iframe[src*="challenges.cloudflare.com"], iframe[src*="/challenge-platform/"], iframe[src*="arkoselabs"], iframe[src*="geetest"], iframe[src*="perimeterx"], iframe[src*="px-cloud.net"], iframe[src*="px-cdn.net"], iframe[src*="datadome"], iframe[src*="awswaf"], iframe[src*="kasada"], iframe[src*="frcapi"]):not(html, body)';
   // Subtrees we never recolor: color data and verification widgets.
   const PRESERVE = `${COLOR_CONTROL}, ${BOT_CHECK}`;
   // Password managers inject top-layer menus into the page. Bitwarden's menu

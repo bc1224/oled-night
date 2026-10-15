@@ -23,9 +23,9 @@ Upload `dist/oled-night-<version>.zip` (build it with `node tools/package.mjs`).
 > • No analytics, background telemetry, ads or OLED Night account. Recoloring runs locally.
 > • OLED Night does not record or save your browsing history. Your settings, including per-site preferences, live in your browser's sync storage. The developer never sees them.
 > • Page text and field values are not uploaded. Optional reports share only the previewed domain and technical diagnostics with GitHub.
-> • "Report a broken site" previews scrubbed diagnostics and opens a GitHub issue draft only when you choose. Full reports can still be saved locally.
+> • "Report a broken site" previews scrubbed diagnostics and submits a public GitHub issue through our hosted service only when you choose. Full reports can still be saved locally.
 > • Firefox's optional browsing-activity permission is only for sharing the current site's domain in a bug report, not history tracking. Declining keeps dark mode working normally.
-> • GitHub retains drafts and reports according to its policies; issues you submit are public. OLED Night has no separate report database.
+> • GitHub retains submitted public issues. Our Cloudflare-hosted reporting service temporarily retains request hashes and issue links for deduplication, but does not retain report bodies.
 >
 > 100% OPEN SOURCE (GPL-3.0)
 > Every line of code is public on GitHub: https://github.com/bc1224/oled-night
@@ -63,14 +63,14 @@ Regenerate the images with `node tools/store-assets.mjs`.
 > Makes web pages dark (true black) for comfortable reading, with per-site controls.
 
 **Permission justifications:**
-- `host_permissions: <all_urls>`: The extension reads styles locally to recolor pages. Full local diagnostic downloads may include short visible text snippets. Optional GitHub drafts share only the previewed domain and technical diagnostics after the user chooses; page text and entered values are excluded from those drafts.
+- `host_permissions: <all_urls>`: The extension reads styles locally to recolor pages. Full local diagnostic downloads may include short visible text snippets. Optional public bug reports share only the previewed domain and technical diagnostics after the user chooses; page text and entered values are excluded from those reports.
 - `storage`: Saves the user's settings and per-site choices in Chrome sync storage.
 - `activeTab`: Lets the popup and the keyboard shortcut identify the current site so its settings can be shown and changed.
 - `scripting`: Lets the popup check whether the current tab can be reached (to offer a Reload button), and removes a page script that versions before 0.6.15 registered for the experimental "reach inside locked web components" setting. No code is injected into pages.
 
 **Remote code:** No, the extension does not use remote code. All code ships in the package.
 
-**Data usage:** Disclose Web history for the domain used in settings and optional bug reports, and Website content for local diagnostic snippets. Explain that recoloring and full reports are local, while optional GitHub drafts share only the previewed domain and technical diagnostics. Confirm all three certifications (no selling, no unrelated use, no creditworthiness use). Keep dashboard disclosures consistent with the privacy policy; the upload API does not update these fields.
+**Data usage:** Disclose Web history for the domain used in settings and optional bug reports, and Website content for local diagnostic snippets. Explain that recoloring and full reports are local, while optional public bug reports share only the previewed domain and technical diagnostics. Confirm all three certifications (no selling, no unrelated use, no creditworthiness use). Keep dashboard disclosures consistent with the privacy policy; the upload API does not update these fields.
 
 **Privacy policy URL:** Host `store/PRIVACY.md` somewhere public (for example a GitHub repo or gist, or your own site) and paste the link.
 

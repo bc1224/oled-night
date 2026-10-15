@@ -49,6 +49,16 @@
     out.push({name:'booking / disable restores field ink and logo',ok:await inspect(()=>getComputedStyle(document.getElementById('booking-value')).webkitTextFillColor==='rgb(119, 119, 119)'&&getComputedStyle(document.getElementById('booking-logo')).filter==='none')});
     await browser.tabs.remove(tab.id);
     await browser.storage.sync.set({extensionEnabled:true});await sleep(400);
+    for(const mode of ['auto','recolor']){
+      await browser.storage.sync.set({extensionEnabled:true,siteRules:mode==='auto'?{}:{'127.0.0.1':'recolor'}});
+      tab=await browser.tabs.create({url:TEST_ORIGIN+'/apple-recovery.html'});await sleep(1000);
+      await browser.scripting.executeScript({target:{tabId:tab.id},files:['lab-audit.js']});
+      out.push(...(await proof('apple-recovery',await inspect(appleRecoveryScenario))).map(c=>({...c,name:'apple-recovery / '+mode+' / '+c.name})));
+      await browser.storage.sync.set({extensionEnabled:false});await sleep(400);
+      out.push({name:'apple-recovery / disable restores original',ok:await inspect(()=>getComputedStyle(document.getElementById('recovery-code')).backgroundColor==='rgba(255, 255, 255, 0.8)')});
+      await browser.tabs.remove(tab.id);
+    }
+    await browser.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'recolor'}});
     tab=await browser.tabs.create({url:TEST_ORIGIN+'/generated-style.html'});await sleep(900);
     await browser.scripting.executeScript({target:{tabId:tab.id},files:['lab-audit.js']});
     out.push(...await proof('generated-style',await inspect(generatedStyleScenario)));await browser.tabs.remove(tab.id);

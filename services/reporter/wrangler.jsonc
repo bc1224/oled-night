@@ -1,0 +1,11 @@
+{
+  "name": "oled-night-reporter",
+  "account_id": "fcf93d661830a8d27a165895b907bb3c",
+  "main": "index.mjs",
+  "compatibility_date": "2026-10-15",
+  "workers_dev": true,
+  "send_metrics": false,
+  "durable_objects": {"bindings": [{"name": "REPORTS", "class_name": "ReportGate"}]},
+  "migrations": [{"tag": "v1", "new_sqlite_classes": ["ReportGate"]}],
+  "observability": {"enabled": false}
+}

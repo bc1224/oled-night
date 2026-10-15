@@ -199,7 +199,7 @@
           <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></div><h3>Fast, and no white flash</h3><p>Pages go black before they draw. Updates are batched, so busy apps like Gmail and ChatGPT stay smooth.</p></div>
           <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.4 3 14.6 0 18M12 3c-3 3.4-3 14.6 0 18"/></svg></div><h3>Per-site control</h3><p>A mode for each site, plus that site's own brightness, contrast and image dimming.</p></div>
           <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg></div><h3>Schedule &amp; shortcuts</h3><p>Press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> to turn OLED Night on or off everywhere, or <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> for the current site. Keep your saved settings and optional night schedule.</p></div>
-          <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg></div><h3>Private by design</h3><p>No servers, no analytics, no tracking. Settings sync only through your own Chrome profile.</p></div>
+          <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg></div><h3>Private by design</h3><p>No analytics or tracking. Settings sync through your browser profile; reports use our hosted service only when you submit one.</p></div>
         </div>
       </div>
     </section>
@@ -246,7 +246,7 @@
               <li><b>Appearance</b>OLED Black (pure black), Soft Dark (near-black), or Auto (follows your system's dark mode).</li>
               <li><b>Brightness &amp; Contrast</b>Brightness sets how light text is. Contrast sets how far panels stand out from the black page. The top sliders change only the current site. All sites contains the defaults; site choices take priority.</li>
               <li><b>Dim images on this site</b>Takes glare off bright photos and illustrations.</li>
-              <li><b>Report a broken site</b>Previews scrubbed diagnostics before opening a public GitHub issue draft.</li>
+              <li><b>Report a broken site</b>Previews scrubbed diagnostics before submitting a public GitHub issue directly.</li>
             </ul>
           </div>
           <img class="shot" src="assets/popup.png" width="1280" height="800" alt="The OLED Night popup: main switch, site mode menu, appearance options, brightness and contrast sliders, and per-site options.">
@@ -272,7 +272,7 @@
       <div class="wrap">
         <div class="kicker">FAQ</div>
         <h2>Questions</h2>
-        <details><summary>A site still looks wrong. What should I try?</summary><p>Open the popup on that site and try <b>Deepen blacks only</b> if the site already has its own dark design, <b>Invert</b> if it draws its content on a canvas (spreadsheets, design tools), or <b>Off</b>. If it's still broken, click <b>Report a broken site</b> to review scrubbed diagnostics and open a public GitHub issue draft. Keep private information out of your description.</p></details>
+        <details><summary>A site still looks wrong. What should I try?</summary><p>Open the popup on that site and try <b>Deepen blacks only</b> if the site already has its own dark design, <b>Invert</b> if it draws its content on a canvas (spreadsheets, design tools), or <b>Off</b>. If it's still broken, click <b>Report a broken site</b> to review scrubbed diagnostics and submit a public GitHub issue directly. Keep private information out of your description.</p></details>
         <details><summary>How is this different from Dark Reader?</summary><p>Dark Reader is great and does a lot. OLED Night is narrower on purpose: it aims for pure black backgrounds while keeping text readable and images, charts and product photos intact, and it's tested against the specific ways dark modes break sites. That includes unreadable text, white fades and glows, blank chart fills, black product photos, web components and chat widgets. If Dark Reader already looks perfect on your sites, keep it. If you want deeper blacks, or it breaks something you use, try this.</p></details>
         <details><summary>How is this different from Chrome's built-in "Auto Dark Mode"?</summary><p>Chrome's flag runs one filter over the whole page. It produces grey instead of black, can't be tuned per site, and often mangles images and charts. OLED Night decides each element's color separately: backgrounds, text, borders, icons, gradients and shadows each get their own treatment, and images are left alone.</p></details>
         <details><summary>Why don't images get darker?</summary><p>That's on purpose: photos and artwork should look the way they were made. If a bright image is too much on a black page, turn on <b>Dim images on this site</b>, or set it as the default in Settings.</p></details>
@@ -289,7 +289,7 @@
           <div class="big">🔒</div>
           <div>
             <h3>Your browsing stays yours.</h3>
-            <p>OLED Night does not record or save your browsing history. It recolors sites locally, with no analytics or tracking. Your settings, including per-site preferences, stay in browser storage and can sync through your browser profile. Firefox's optional browsing-activity permission only lets you share the current site's domain in a bug report after previewing it. Reports also include scrubbed technical diagnostics. GitHub retains drafts and reports according to its policies; issues you submit are public. OLED Night has no separate report database. <a href="https://github.com/bc1224/oled-night/blob/main/store/PRIVACY.md">Read the privacy policy</a>.</p>
+            <p>OLED Night does not record or save your browsing history. It recolors sites locally, with no analytics or tracking. Your settings, including per-site preferences, stay in browser storage and can sync through your browser profile. Firefox's optional browsing-activity permission only lets you share the current site's domain in a bug report after previewing it. Reports also include scrubbed technical diagnostics. GitHub retains submitted public issues. Our Cloudflare-hosted reporting service temporarily retains request hashes and issue links for deduplication, but does not retain report bodies. <a href="https://github.com/bc1224/oled-night/blob/main/store/PRIVACY.md">Read the privacy policy</a>.</p>
           </div>
         </div>
       </div>
@@ -307,7 +307,7 @@
           </div>
         </div>
         <ul class="pains">
-          <li class="fix">Found a broken site? Preview scrubbed diagnostics in the popup and open a GitHub draft. Issues are public; keep private details and sensitive screenshots out.</li>
+          <li class="fix">Found a broken site? Preview scrubbed diagnostics in the popup and submit a public GitHub issue directly. Issues are public; keep private details and sensitive screenshots out.</li>
           <li class="fix">Fixing a site? Add a small page that reproduces it to the test suite.</li>
           <li class="fix">Star the repo if OLED Night saves your eyes, and watch releases to hear about updates.</li>
         </ul>

@@ -83,3 +83,8 @@ input[type="range"]:focus-visible, summary:focus-visible, button:focus-visible {
 .mode-row select { width: 170px; }
 #useRecolor { display: block; margin: -4px 0 6px; }
 #resetSite { display: block; }
+
+dialog textarea { box-sizing:border-box; width:100%; padding:8px; margin:6px 0; background:#111; color:#eee; border:1px solid #777; border-radius:6px; font:12px system-ui; resize:vertical; }
+dialog label, dialog a { font-size:12px; }
+dialog a { color:#b8aaff; }
+dialog textarea:focus-visible { outline:2px solid #b8aaff; outline-offset:2px; }

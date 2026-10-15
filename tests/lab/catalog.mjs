@@ -2,10 +2,11 @@ const groups = {
   'Interactions': ['dropdowns','dark-dropdowns','state-surfaces','shadow-hover','cold-shadow','interaction-layout','media-navigation','frame-mutation','paint-updates','large-updates'],
   'Text & surfaces': ['light','dark','explicit-light','ink','surfaces','scope-light','scope-dark','scope-scheme','svg-outline'],
   'Media & data': ['indicators','chart','canvas','shop','ad-overlays'],
-  'App reproductions': ['youtube','gmail','email-newsletter','native-banner','booking-form','checkout','reddit-res','shadow-stability','apple-auth'],
+  'App reproductions': ['youtube','gmail','email-newsletter','native-banner','booking-form','checkout','reddit-res','shadow-stability','apple-auth','apple-recovery'],
   'Isolation & loading': ['components','protected','challenge','challenge-inline','frame','transparent-frame','slow','efficiency','report-fields','report-preview','generated-style']
 };
 const descriptions = {
+  'apple-recovery':'Issue #4: Apple-style account recovery with an editable captcha-input, readable floating label, protected provider widget and unchanged verification artwork',
   'large-updates':'2,500 fake inbox rows: native/active frame throughput, script/style/collected-memory budgets, bounded ownership, inherited text, background-only selection, CSSOM invalidation and animated fallback',
   'paint-updates':'Synthetic mail updates: paired native/active animation frame pacing, CPU and style work, bounded heap growth and prompt release of detached shadow components',
   'checkout':'Stripe-style fake checkout: monochrome payment icons, preserved payment brand colors, filled fields and animated accordion opening without pale frames; no payments or real customer data',

@@ -9,6 +9,7 @@ import {checkScreenshot} from './visual.mjs';
 import {cases} from './catalog.mjs';
 import {frameMutationScenario,nativeFrameFocusScenario} from './frame-mutation-scenario.mjs';
 import {mixedSurfaceScenario,mixedSurfaceOriginal,mixedSurfaceDeepen} from './mixed-surface-scenario.mjs';
+import {appleRecoveryScenario} from './apple-recovery-scenario.mjs';
 import {bookingScenario} from './booking-scenario.mjs';
 import {coldShadowScenario} from './cold-shadow-scenario.mjs';
 import {generatedStyleScenario} from './generated-style-scenario.mjs';
@@ -80,6 +81,13 @@ try {
     add('booking-'+width+' / disable restores field ink and logo',await page.eval("getComputedStyle(document.getElementById('booking-value')).webkitTextFillColor==='rgb(119, 119, 119)'&&getComputedStyle(document.getElementById('booking-logo')).filter==='none'"));
     await settings(true);
   }
+  for(const width of [1200,390])for(const mode of ['auto','recolor']){
+    await page.size(width,1000);await options.eval(`chrome.storage.sync.set({extensionEnabled:true,siteRules:${mode==='auto'?'{}':"{'127.0.0.1':'recolor'}"}})`);await wait(400);
+    await page.go(`${server.origin}/lab/fixtures/apple-recovery.html`);await page.eval(readFileSync(join(root,'docs/lab/audit.js'),'utf8'));
+    checks.push(...(await proof('apple-recovery',await page.eval(`(${appleRecoveryScenario.toString()})()`))).map(c=>({...c,name:'apple-recovery-'+width+' / '+mode+' / '+c.name})));
+    await settings(false);add('apple-recovery / disable restores original',await page.eval("getComputedStyle(document.getElementById('recovery-code')).backgroundColor==='rgba(255, 255, 255, 0.8)'"));
+  }
+  await settings(true);
   await page.go(`${server.origin}/lab/fixtures/generated-style.html`);await wait(400);
   await page.eval(readFileSync(join(root,'docs/lab/audit.js'),'utf8'));
   checks.push(...await proof('generated-style',await page.eval(`(${generatedStyleScenario.toString()})()`)));
