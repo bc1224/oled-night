@@ -20,6 +20,11 @@
       out.push(...(await inspect(frameMutationScenario)).map(c=>({...c,name:theme+' / '+c.name})));
       await browser.tabs.remove(tab.id);
     }
+    await browser.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'deepen'}});
+    tab=await browser.tabs.create({url:TEST_ORIGIN+'/matrix.html?theme=dark'});await sleep(1000);
+    await browser.scripting.executeScript({target:{tabId:tab.id},files:['lab-audit.js']});
+    out.push(...await proof('frame-mutation',await inspect(nativeFrameFocusScenario)));
+    await browser.tabs.remove(tab.id);
     for(const file of ['email-newsletter','native-banner']){
       await browser.storage.sync.set({extensionEnabled:true,siteRules:{}});
       tab=await browser.tabs.create({url:TEST_ORIGIN+'/'+file+'.html'});await sleep(1500);
@@ -82,7 +87,8 @@
     await browser.storage.sync.set({extensionEnabled:false});await sleep(500);
     out.push({name:'disable removes shared paint and restores native selected row',ok:await inspect(()=>!document.querySelector('[data-oled-night-bg]')&&getComputedStyle(document.querySelector('.row')).backgroundColor==='rgb(242, 246, 252)')});
     await browser.storage.sync.set({extensionEnabled:true});await sleep(500);
-    const settledOwnership=(await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts;
+ await inspect(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(done,0)))));
+ const settledOwnership=(await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts;
     await inspect(emptyRowLifecycle);const emptyOwnership=(await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts;
     out.push({name:'emptying then removing a virtual row releases its retained shell',ok:emptyOwnership.paintContainers===settledOwnership.paintContainers,detail:JSON.stringify({before:settledOwnership,after:emptyOwnership})});
     out.push({name:'idle inbox releases per-row geometry observation after initial sampling',ok:settledOwnership.observedPaint<=64,detail:JSON.stringify(settledOwnership)});

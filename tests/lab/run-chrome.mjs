@@ -7,7 +7,7 @@ import {serveLab} from './server.mjs';
 import {matrixStates,responsiveness,performanceChecks} from './scenarios.mjs';
 import {checkScreenshot} from './visual.mjs';
 import {cases} from './catalog.mjs';
-import {frameMutationScenario} from './frame-mutation-scenario.mjs';
+import {frameMutationScenario,nativeFrameFocusScenario} from './frame-mutation-scenario.mjs';
 import {mixedSurfaceScenario,mixedSurfaceOriginal,mixedSurfaceDeepen} from './mixed-surface-scenario.mjs';
 import {bookingScenario} from './booking-scenario.mjs';
 import {coldShadowScenario} from './cold-shadow-scenario.mjs';
@@ -51,6 +51,10 @@ try {
     const faults=await page.eval(`(()=>{const e=document.getElementById('heading');e.style.color=getComputedStyle(document.body).backgroundColor;const r=window.OLEDLabAudit.audit(document,{requireExtension:false}).find(r=>r.name==='heading text');e.style.removeProperty('color');return r})()`);add(label+' / audit detects unreadable injected text',faults.ok===false,faults.detail);
     await settings(true);add(label+' / re-enable reapplies extension',await page.eval(`document.documentElement.hasAttribute('data-oled-night-root')`));
   }
+  await options.eval("chrome.storage.sync.set({siteRules:{}})");
+  await page.go(`${server.origin}/lab/fixtures/matrix.html?theme=dark`);await wait(500);
+  checks.push(...await proof('frame-mutation',await page.eval(`(${nativeFrameFocusScenario.toString()})()`)));
+  await settings(true);
   await page.size(1200,1000);await page.go(`${server.origin}/lab/fixtures/matrix.html`);await settings(false);const native=await page.eval(`(${responsiveness.toString()})()`);await settings(true);const active=await page.eval(`(${responsiveness.toString()})()`);checks.push(...performanceChecks(native,active));
   for(const width of [1200,390])for(const file of ['email-newsletter','native-banner']){
     const label=file+'-'+width;await page.size(width,1000);
@@ -135,6 +139,10 @@ try {
   await settings(false);
   add('disable removes shared paint and restores native selected row',await page.eval(`!document.querySelector('[data-oled-night-bg]')&&getComputedStyle(document.querySelector('.row')).backgroundColor==='rgb(242, 246, 252)'`));
   await settings(true);
+  // The synchronous re-enable scan can consume the timer's whole delay.
+  // Give initial IntersectionObserver geometry delivery two rendering turns;
+  // the unchanged idle ownership budget still catches retained observations.
+  await page.eval('new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(done,0))))');
   const largeCounts=()=>options.eval(`(async()=>{const [t]=await chrome.tabs.query({url:${JSON.stringify(server.origin+'/lab/fixtures/large-updates.html')}});return (await chrome.tabs.sendMessage(t.id,{type:'oled-night-report'})).counts})()`);
   const settledOwnership=await largeCounts();
   await page.eval(`(${emptyRowLifecycle.toString()})()`);const emptyOwnership=await largeCounts();

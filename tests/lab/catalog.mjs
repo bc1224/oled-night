@@ -15,7 +15,7 @@ const descriptions = {
   'email-newsletter':'Gmail-style dark reader: authored HTML headings, paragraphs, nested light panels and preserved artwork',
   'native-banner':'Robinhood-style native dark application with a light onboarding banner and tour controls',
   'booking-form':'SynXis-style filled fields, placeholders, focus outlines, colored hotel logo and back icon',
-  'frame-mutation':'Navigation replaced or focused inside an animation callback: dark, readable surfaces before another frame',
+  'frame-mutation':'Navigation replaced or focused inside an animation callback: dark surfaces and readable native-dark focus ink before another frame',
   'shadow-hover':'CVS-style nested navigation: sibling pointer moves and focus in adopted stylesheets',
   'state-surfaces':'Apple Ads-style sibling cells and row hover',
   'media-navigation':'Apple-style media headings and animated navigation',

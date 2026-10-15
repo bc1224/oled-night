@@ -31,3 +31,22 @@ export async function frameMutationScenario() {
   return [{name:'frame-created surfaces dark and readable before another frame',ok,detail:JSON.stringify(colors)},
     {name:'frame-boundary focus stays dark before another frame',ok:focused.every(c=>c.focused&&window.OLEDLabAudit.lum(c.background)<.16&&window.OLEDLabAudit.contrast(c.color,c.background)>=4.5),detail:JSON.stringify(focused)}];
 }
+
+// Native-dark pages can need a background override while keeping their own
+// light ink. A focus state can replace that ink before the next rAF.
+export async function nativeFrameFocusScenario() {
+  const sheet=document.createElement('style'),link=document.createElement('a');
+  sheet.textContent='#native-frame-probe{background:#202124;color:#eee;display:inline-block;padding:16px}#native-frame-probe:focus{background:#fff;color:#111}';
+  link.id='native-frame-probe';link.href='#example';link.textContent='Fake native navigation';
+  document.head.append(sheet);document.body.append(link);
+  await new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)));
+  const samples=[];
+  for(let round=0;round<5;round++){
+    link.blur();await new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)));
+    await new Promise(done=>requestAnimationFrame(()=>{
+      link.focus();setTimeout(()=>{const style=getComputedStyle(link);samples.push({focused:document.activeElement===link,background:style.backgroundColor,color:style.color});done()},0);
+    }));
+  }
+  link.remove();sheet.remove();
+  return [{name:'native dark focus ink remains readable in the current frame',ok:samples.every(c=>c.focused&&window.OLEDLabAudit.lum(c.background)<.16&&window.OLEDLabAudit.contrast(c.color,c.background)>=4.5),detail:JSON.stringify(samples)}];
+}

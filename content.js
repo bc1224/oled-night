@@ -1467,11 +1467,12 @@
     if (nativeSelect) return;
     const found = path.find(node => node.matches(CONTROL));
     const control = found && found !== document.body && found !== document.documentElement ? found : null;
-    // Existing background overrides already protect the current paint. Only
-    // an exposed path (or a control with descendant paint) needs the immediate
-    // pass plus a later CSSOM recheck; keep protected leaf controls coalesced.
+    // Existing background AND ink overrides protect the current paint. Native
+    // dark mode may own only a background; new native focus ink then needs the
+    // immediate pass too. Fully protected leaf controls stay coalesced.
     const currentPaint = !!control?.childElementCount || path.some(node =>
-      node !== document.body && node !== document.documentElement && !node.getAttribute(MARK)?.split(' ').includes('bg'));
+      node !== document.body && node !== document.documentElement &&
+      !['bg','fg'].every(key => node.getAttribute(MARK)?.split(' ').includes(key)));
     // attachShadow() on an already-scanned host is not a DOM mutation. Discover
     // those roots from the native event path before painting the first hover.
     // A new root needs its whole component scanned once; subsequent interactions
