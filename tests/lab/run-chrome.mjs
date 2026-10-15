@@ -52,6 +52,7 @@ try {
     await settings(true);add(label+' / re-enable reapplies extension',await page.eval(`document.documentElement.hasAttribute('data-oled-night-root')`));
   }
   await options.eval("chrome.storage.sync.set({siteRules:{}})");
+  add('native focus regression uses Automatic mode',await options.eval("chrome.storage.sync.get('siteRules').then(s=>!s.siteRules?.['127.0.0.1'])"));
   await page.go(`${server.origin}/lab/fixtures/matrix.html?theme=dark`);await wait(500);
   checks.push(...await proof('frame-mutation',await page.eval(`(${nativeFrameFocusScenario.toString()})()`)));
   await settings(true);

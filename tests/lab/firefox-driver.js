@@ -20,7 +20,8 @@
       out.push(...(await inspect(frameMutationScenario)).map(c=>({...c,name:theme+' / '+c.name})));
       await browser.tabs.remove(tab.id);
     }
-    await browser.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'deepen'}});
+    await browser.storage.sync.set({extensionEnabled:true,siteRules:{}});
+    out.push({name:'native focus regression uses Automatic mode',ok:!(await browser.storage.sync.get('siteRules')).siteRules?.['127.0.0.1']});
     tab=await browser.tabs.create({url:TEST_ORIGIN+'/matrix.html?theme=dark'});await sleep(1000);
     await browser.scripting.executeScript({target:{tabId:tab.id},files:['lab-audit.js']});
     out.push(...await proof('frame-mutation',await inspect(nativeFrameFocusScenario)));
