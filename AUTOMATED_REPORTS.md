@@ -4,9 +4,11 @@ The owner explicitly authorized gated automatic releases on October 14, 2026. Th
 
 ## Reporting
 
-The popup previews an allowlisted payload and opens a GitHub issue draft only after a click. GitHub requires the reporter to submit the draft. This uses their own GitHub account and keeps publishing tokens out of the extension. No backend or automatic screenshot upload is added. Firefox declares optional browsingActivity and technicalAndInteraction for the domain and error diagnostics and requests native consent before opening a draft. Denial or an unavailable permission fails closed; normal dark mode remains available. Full raw reports remain an explicitly chosen local download.
+The popup opens a confirmation with allowlisted diagnostics, optional notes and an optional screenshot supplied by paste, drop or file selection. The image is previewed/removable locally. Only explicit Submit issue sends the confirmed payload through the existing hosted reporter directly to a public GitHub issue. No reporter GitHub login or draft is required, and publishing tokens remain outside the extension. Nothing is captured automatically. Firefox declares optional browsingActivity and technicalAndInteraction for domain/error diagnostics and websiteContent for an explicitly attached screenshot; native consent is requested only for the submitted categories. Denial or unavailable consent blocks sharing, while dark mode remains available. Full raw reports remain an explicitly chosen local download.
 
-The public payload includes domain, version, mode, brightness/contrast, element counts and computed contrast colors/ratios. It excludes page text, input values, selectors, IDs/classes, URL paths/queries, frame origins and user-agent strings. A domain can reveal a service someone uses; it is visible before opening the draft. User-written issue descriptions are public and are not automatically scrubbed.
+The public diagnostics include domain, version, mode, brightness/contrast, element counts and computed contrast colors/ratios. They exclude automatically collected page text, input values, selectors, IDs/classes, URL paths/queries, frame origins and user-agent strings. A domain can reveal a service someone uses and is previewed before submission. User-written notes and explicitly attached images are public and are not automatically redacted. Images are resized/re-encoded locally without filenames or original metadata, hosted publicly for up to 30 days, and may be cached by GitHub; see store/PRIVACY.md.
+
+Daily polling and gated automatic releases are owned by the existing Windows OLED Night Issue Poll program, not a duplicate Codex schedule.
 
 ## Automation contract
 

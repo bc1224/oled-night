@@ -34,7 +34,7 @@ try {
     else {
       assert.deepEqual(built.background.scripts, ['settings.js', 'background.js']);
       assert.deepEqual(built.browser_specific_settings.gecko.data_collection_permissions,
-        {required:['none'],optional:['browsingActivity','technicalAndInteraction']});
+        {required:['none'],optional:['browsingActivity','technicalAndInteraction','websiteContent']});
     }
   }
   assert.equal(readFileSync(join(fixture, 'dist', 'keep.txt'), 'utf8'), 'unrelated output');

@@ -9,6 +9,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { churnWorkload, judgeChurn } from './churn-benchmark.mjs';
 import { navigationFrames } from './navigation-scenario.mjs';
+import { reportAttachmentsScenario } from './report-attachments-scenario.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // EXT_PATH lets the suite run against an unzipped release instead of the source tree.
@@ -50,7 +51,7 @@ const site = (host, file) => `http://${host}:${port}/${file}`;
 const profile = mkdtempSync(join(tmpdir(), "oled-night-e2e-"));
 const chrome = spawn(CHROME, ["--headless=new", "--remote-debugging-pipe", "--enable-unsafe-extension-debugging", `--user-data-dir=${profile}`,
   "--no-first-run", "--no-default-browser-check", "--window-size=1000,800",
-  "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows", "about:blank"], { stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"] });
+  "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows", "about:blank"], { windowsHide:true, stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"] });
 const toChrome = chrome.stdio[3], fromChrome = chrome.stdio[4];
 let nextId = 0, buffer = "";
 const pending = new Map();
@@ -749,9 +750,11 @@ try {
   check("report cancel sends nothing",await popup.eval("!document.getElementById('reportPreview').open") && await ext.eval("chrome.tabs.query({}).then(t=>t.length)")===beforeReportTabs);
   await popup.eval("window.__originalFetch=window.fetch;window.__submissions=[];window.fetch=async (url,options)=>{window.__submissions.push({url,body:options.body});return Response.json({url:'https://github.com/bc1224/oled-night/issues/123'},{status:201})};");
   await click('report');
+  for(const result of await popup.eval(`(${reportAttachmentsScenario.toString()})()`)) check(result.name,result.ok);
   await popup.eval("document.getElementById('reportDescription').value='The verification field is unreadable';document.getElementById('reportSubmit').click();document.getElementById('reportSubmit').click()");await sleep(100);
   check('popup explicit Submit creates one scrubbed issue without a GitHub draft',await popup.eval("window.__submissions.length===1&&!/PRIVATE|SENTINEL/.test(window.__submissions[0].body)&&document.getElementById('reportIssueLink').href==='https://github.com/bc1224/oled-night/issues/123'&&!document.getElementById('reportIssueLink').hidden&&document.getElementById('reportSubmit').hidden")&&await ext.eval("chrome.tabs.query({}).then(t=>t.length)")===beforeReportTabs);
   check('report submits only to the hosted reporter with user description',await popup.eval("window.__submissions[0].url==='https://oled-night-reporter.bcf1224.workers.dev/v1/issues'&&JSON.parse(window.__submissions[0].body).description==='The verification field is unreadable'"));
+  check('explicit confirmation submits the previewed screenshot without its filename',await popup.eval("JSON.parse(window.__submissions[0].body).screenshot.type==='image/png'&&!window.__submissions[0].body.includes('private-filename')"));
   await popup.eval("window.fetch=window.__originalFetch;delete window.__originalFetch;delete window.__submissions");
   await click('reportCancel');
   await click("extensionEnabled");

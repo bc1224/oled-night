@@ -10,7 +10,7 @@ const assert=require('node:assert/strict');
  assert.equal((await receiveReport(request({...raw,description:'different'}),env,storage)).status,409);
  assert.equal((await receiveReport(request({...raw,requestId:'bad'}),env,storage)).status,400);
  assert.equal((await receiveReport(request({...raw,requestId:crypto.randomUUID(),report:{host:'localhost'}}),env,storage)).status,400);
- assert.equal((await receiveReport(request({...raw,description:'x'.repeat(20000)}),env,storage)).status,413);
+ assert.equal((await receiveReport(request({...raw,description:'x'.repeat(600000)}),env,storage)).status,413);
  for(let i=0;i<2;i++)assert.equal((await receiveReport(request({...raw,requestId:crypto.randomUUID()}),env,storage)).status,201);
  assert.equal((await receiveReport(request({...raw,requestId:crypto.randomUUID()}),env,storage)).status,429);
  const failed={...raw,requestId:crypto.randomUUID()};let attempts=0;const offline={...env,fetch:async()=>{attempts++;throw Error('network')}};

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.42
+
+- Keep the report confirmation and optional notes; add an optional screenshot by drag and drop, Ctrl+V / ⌘V, Paste screenshot or file selection. Preview and remove images locally before explicit submission; never capture screenshots automatically.
+- Resize/re-encode attached images without filenames or original metadata. Send the chosen image with the confirmed report, preserve duplicate protection and host the public attachment for up to 30 days. Request Firefox website-content consent only for an attached image.
+- Cover local preview, removal, cancellation, explicit paste, submission, retry, expiry and invalid-image rejection with behavioral checks. Keep test browser launches hidden.
+
 ## 0.6.40
 
 - Read hover/focus styles after later event microtasks edit CSSOM; add deferred stylesheet hover/focus tests to the public CVS case.

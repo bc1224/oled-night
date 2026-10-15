@@ -7,7 +7,7 @@ export async function launchChrome(){
   const exe=process.env.CHROME_PATH||['C:/Program Files/Google/Chrome/Application/chrome.exe','/usr/bin/google-chrome','/usr/bin/chromium'].find(existsSync);
   if(!exe)throw Error('Set CHROME_PATH to a test Chrome binary');
   const profile=mkdtempSync(join(tmpdir(),'oled-night-lab-'));
-  const processHandle=spawn(exe,['--headless=new','--remote-debugging-pipe','--enable-unsafe-extension-debugging',`--user-data-dir=${profile}`,'--no-first-run','--no-default-browser-check','--disable-background-timer-throttling','--disable-renderer-backgrounding','--window-size=1024,1000','about:blank'],{stdio:['ignore','ignore','ignore','pipe','pipe']});
+  const processHandle=spawn(exe,['--headless=new','--remote-debugging-pipe','--enable-unsafe-extension-debugging',`--user-data-dir=${profile}`,'--no-first-run','--no-default-browser-check','--disable-background-timer-throttling','--disable-renderer-backgrounding','--window-size=1024,1000','about:blank'],{windowsHide:true,stdio:['ignore','ignore','ignore','pipe','pipe']});
   let next=0,buffer='';const pending=new Map();const errors=[];
   processHandle.on('error',e=>{for(const p of pending.values())p.reject(e)});
   processHandle.stdio[4].on('data',chunk=>{buffer+=chunk;let end;while((end=buffer.indexOf('\0'))>=0){const msg=JSON.parse(buffer.slice(0,end));buffer=buffer.slice(end+1);const p=pending.get(msg.id);if(p){pending.delete(msg.id);clearTimeout(p.timer);msg.error?p.reject(Error(msg.error.message)):p.resolve(msg.result)}else if(msg.method==='Runtime.exceptionThrown')errors.push(msg.params.exceptionDetails.text)}});

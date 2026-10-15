@@ -1,9 +1,16 @@
 import '../../report-utils.js';
 export const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
+export const MAX_REPORT_BYTES=570000;
+export async function readScreenshot(request,storage){
+  const id=new URL(request.url).pathname.match(/^\/v1\/screenshots\/([a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12})$/i)?.[1];
+  const image=id&&await storage.get('screenshot:'+id);
+  if(!image||image.expiresAt<=Date.now())return json({error:'Screenshot not found or expired'},404);
+  return new Response(image.bytes,{headers:{'Content-Type':image.type,'X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; sandbox",'Cache-Control':'no-store','Access-Control-Allow-Origin':'*'}});
+}
 async function boundedJson(request){
   const reader=request.body?.getReader();if(!reader)throw Error('invalid');
   const chunks=[];let size=0;
-  while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>8192){await reader.cancel();throw Error('large')}chunks.push(value)}
+  while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>MAX_REPORT_BYTES){await reader.cancel();throw Error('large')}chunks.push(value)}
   const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length}
   return JSON.parse(new TextDecoder().decode(bytes));
 }
@@ -16,7 +23,8 @@ export async function receiveReport(request,env,storage){
      typeof raw.description!=='string'||raw.description.length>2000)return json({error:'Invalid report'},400);
   const report=globalThis.OledNightReport.scrub(raw.report);
   if(!report.host)return json({error:'A public site domain is required'},400);
-  const description=raw.description.trim().replace(/@/g,'@\u200b'),hash=await digest(JSON.stringify({report,description}));
+  let screenshot;try{screenshot=globalThis.OledNightReport.scrubScreenshot(raw.screenshot)}catch{return json({error:'Invalid screenshot'},400)}
+  const description=raw.description.trim().replace(/@/g,'@\u200b'),hash=await digest(JSON.stringify({report,description,screenshot}));
   const key='report:'+raw.requestId,prior=await storage.get(key);
   if(prior){if(prior.hash!==hash||!prior.url)return json({error:'This report may already have been submitted. Check GitHub before starting another.'},409);return json({url:prior.url})}
   const day=new Date().toISOString().slice(0,10),expiresAt=Date.now()+2*86400000;
@@ -24,10 +32,13 @@ export async function receiveReport(request,env,storage){
   const count=(await storage.get(client))?.count||0,total=(await storage.get(totalKey))?.count||0;
   if(count>=3||total>=30)return json({error:'Daily report limit reached'},429);
   // Reserve before the external side effect. A timeout must never create a
-  // second issue on retry. Only hashes, counters and receipts are retained.
+  // second issue on retry. Retain hashes/counters/receipts and explicitly attached images.
   await storage.put(client,{count:count+1,expiresAt});await storage.put(totalKey,{count:total+1,expiresAt});await storage.put(key,{hash,expiresAt});
   if(!await storage.getAlarm())await storage.setAlarm(Date.now()+3600000);
-  const body=(description||'A site rendering problem was reported from OLED Night.')+'\n\nPublic diagnostics (no page text, field values, URL paths or screenshots):\n```json\n'+JSON.stringify(report,null,2)+'\n```\n\nReport ID: '+raw.requestId;
+  const imageId=screenshot&&crypto.randomUUID();
+  if(screenshot)await storage.put('screenshot:'+imageId,{type:screenshot.type,bytes:Uint8Array.from(atob(screenshot.data),c=>c.charCodeAt(0)),expiresAt:Date.now()+30*86400000});
+  const imageBody=imageId?'\n\n![User-attached screenshot](https://oled-night-reporter.bcf1224.workers.dev/v1/screenshots/'+imageId+')\n\nScreenshot explicitly attached by the reporter; hosted for up to 30 days.':'';
+  const body=(description||'A site rendering problem was reported from OLED Night.')+'\n\nPublic diagnostics (no page text, field values, URL paths or automatic screenshots):\n```json\n'+JSON.stringify(report,null,2)+'\n```'+imageBody+'\n\nReport ID: '+raw.requestId;
   let response;
   try{response=await (env.fetch||fetch)('https://api.github.com/repos/bc1224/oled-night/issues',{
     method:'POST',headers:{Authorization:'Bearer '+env.GITHUB_TOKEN,'Content-Type':'application/json',Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'OLED-Night-Reporter'},
@@ -35,7 +46,7 @@ export async function receiveReport(request,env,storage){
   })}catch{return json({error:'GitHub response was unavailable. This report will not be sent twice.'},502)}
   if(!response.ok){
     // A definitive rejection is safe to retry; ambiguous server errors are not.
-    if(response.status>=400&&response.status<500)await storage.delete(key);
+    if(response.status>=400&&response.status<500){await storage.delete(key);if(imageId)await storage.delete('screenshot:'+imageId)}
     return json({error:'GitHub could not accept the report'},502);
   }
   let result;try{result=await response.json()}catch{return json({error:'GitHub receipt unavailable'},502)}

@@ -3,6 +3,7 @@ import { cpSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:f
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import webExt from 'web-ext';
+import {reportAttachmentsScenario} from '../e2e/report-attachments-scenario.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const temp = mkdtempSync(join(tmpdir(), 'oled-night-firefox-test-'));
@@ -33,7 +34,7 @@ try {
     const path = join(temp, page);
     writeFileSync(path, readFileSync(path, 'utf8').replace('</body>', '<script src="test-ui.js"></script></body>'));
   }
-  cpSync(join(root, 'tests/firefox/ui.js'), join(temp, 'test-ui.js'));
+  writeFileSync(join(temp, 'test-ui.js'), 'const reportAttachmentsScenario='+reportAttachmentsScenario.toString()+';\n'+readFileSync(join(root, 'tests/firefox/ui.js'),'utf8'));
   runner = await webExt.cmd.run({ sourceDir: temp, artifactsDir: temp, firefox: process.env.FIREFOX_PATH || (process.platform === 'win32' ? 'C:/Program Files/Mozilla Firefox/firefox.exe' : 'firefox'), args: ['-headless'], noReload: true, noInput: true }, { shouldExitProgram: false });
   const checks = await Promise.race([result, new Promise((_, reject) => { timer = setTimeout(() => reject(Error('Firefox tests timed out')), 90000); })]);
   for (const c of checks) console.log(`${c.ok ? 'PASS' : 'FAIL'} ${c.name}${c.detail ? ': ' + c.detail : ''}`);

@@ -1,0 +1,27 @@
+const assert=require('node:assert/strict');require('../report-utils.js');
+(async()=>{
+ const {receiveReport,readScreenshot}=await import('../services/reporter/core.mjs');
+ const image={type:'image/png',data:'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1ioAAAAASUVORK5CYII='};
+ const calls=[],map=new Map(),storage={get:async k=>structuredClone(map.get(k)),put:async(k,v)=>map.set(k,structuredClone(v)),delete:async k=>map.delete(k),getAlarm:async()=>1,setAlarm:async()=>{}};
+ const env={GITHUB_TOKEN:'TEST_ONLY',fetch:async(url,options)=>{calls.push(JSON.parse(options.body));return Response.json({html_url:'https://github.com/bc1224/oled-night/issues/123'},{status:201})}};
+ const raw={requestId:crypto.randomUUID(),description:'Stop icon is unreadable',report:{host:'chatgpt.com'},screenshot:image};
+ const request=data=>new Request('https://reporter.test/v1/issues',{method:'POST',headers:{'x-client-id':'synthetic'},body:JSON.stringify(data)});
+ const res=await receiveReport(request(raw),env,storage);assert.equal(res.status,201);
+ const url=calls[0].body.match(/!\[User-attached screenshot\]\((https:[^)]+)\)/)?.[1];
+ assert.ok(url,'confirmed screenshot is attached to the public issue');
+ const saved=await readScreenshot(new Request(url),storage);assert.equal(saved.status,200);assert.equal(saved.headers.get('Content-Type'),'image/png');assert.equal(saved.headers.get('X-Content-Type-Options'),'nosniff');
+ assert.equal(Buffer.from(await saved.arrayBuffer()).toString('base64'),image.data);
+ assert.equal((await receiveReport(request(raw),env,storage)).status,200);assert.equal(calls.length,1,'retry does not duplicate issue or attachment');
+ assert.equal((await receiveReport(request({...raw,screenshot:null}),env,storage)).status,409,'attachment is part of immutable retry payload');
+ assert.equal((await receiveReport(request({...raw,requestId:crypto.randomUUID(),screenshot:{type:'image/svg+xml',data:image.data}}),env,storage)).status,400);
+ assert.equal((await receiveReport(request({...raw,requestId:crypto.randomUUID(),screenshot:{type:'image/png',data:btoa('not an image')}}),env,storage)).status,400);
+ const path=new URL(url).pathname,key='screenshot:'+path.split('/').pop(),entry=map.get(key);entry.expiresAt=Date.now()-1;map.set(key,entry);
+ assert.equal((await readScreenshot(new Request(url),storage)).status,404,'expired screenshots are not served');
+ assert.equal((await readScreenshot(new Request('https://reporter.test/v1/screenshots/not-an-id'),storage)).status,404);
+ const submitted=[];const session=OledNightReport.createSubmissionSession({host:'chatgpt.com'},{submit:async p=>{submitted.push(p);return {url:'https://github.com/bc1224/oled-night/issues/123'}}});
+ assert.equal(submitted.length,0,'creating confirmation preview never sends');await session.send('Optional notes',image);
+ assert.deepEqual(submitted[0].screenshot,image,'only explicitly attached image is submitted');
+ const plain=OledNightReport.createSubmissionSession({host:'chatgpt.com'},{submit:async p=>{submitted.push(p);return {url:'https://github.com/bc1224/oled-night/issues/124'}}});
+ await plain.send();assert.ok(!submitted[1].screenshot,'screenshot stays optional');
+ console.log('PASS optional screenshots: explicit submit, immutable retry, safe public image, expiry and invalid-image rejection');
+})().catch(e=>{console.error(e);process.exitCode=1});

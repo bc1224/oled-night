@@ -22,6 +22,17 @@ setTimeout(async () => {
     $('extensionEnabled').click();
     await new Promise(r => setTimeout(r,300));
     check('popup master switch persists', (await browser.storage.sync.get('extensionEnabled')).extensionEnabled === false);
+    chrome.tabs.sendMessage=async()=>({host:'chatgpt.com',version:browser.runtime.getManifest().version});
+    let consent;
+    chrome.permissions.request=async options=>{consent=options;return true};
+    window.__submissions=[];
+    window.fetch=async(url,options)=>{window.__submissions.push(JSON.parse(options.body));return Response.json({url:'https://github.com/bc1224/oled-night/issues/123'},{status:201})};
+    $('report').click();await new Promise(r=>setTimeout(r,100));
+    checks.push(...await reportAttachmentsScenario());
+    $('reportDescription').value='The ChatGPT button is unreadable';$('reportSubmit').click();
+    await new Promise(r=>setTimeout(r,100));
+    check('Firefox explicit submit sends the chosen screenshot once',window.__submissions.length===1&&window.__submissions[0].screenshot?.type==='image/png');
+    check('Firefox screenshot sharing requests optional websiteContent consent',consent?.data_collection.includes('websiteContent'));
   }
   await browser.runtime.sendMessage({type:'firefox-ui-test',checks});
 }, 1500);

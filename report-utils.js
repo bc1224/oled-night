@@ -55,18 +55,40 @@
       }
     };
   }
+  function scrubScreenshot(raw) {
+    if (raw == null) return null;
+    if (!['image/png','image/jpeg'].includes(raw.type) || typeof raw.data !== 'string' || raw.data.length > 546136 || !/^[A-Za-z0-9+/]+={0,2}$/.test(raw.data)) throw Error('Use a PNG or JPEG screenshot under 400 KB.');
+    let bytes;try { bytes=atob(raw.data); } catch { throw Error('Invalid screenshot.'); }
+    if (bytes.length > 409600 || (raw.type === 'image/png' ? !bytes.startsWith('\x89PNG\r\n\x1a\n') : !bytes.startsWith('\xff\xd8\xff'))) throw Error('Invalid screenshot.');
+    return {type:raw.type,data:raw.data};
+  }
+  async function prepareScreenshot(file) {
+    if (!file || !['image/png','image/jpeg','image/webp'].includes(file.type) || file.size > 10*1024*1024) throw Error('Choose a PNG, JPEG or WebP image under 10 MB.');
+    const bitmap=await createImageBitmap(file);
+    try {
+      const scale=Math.min(1,1600/bitmap.width,1600/bitmap.height),canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+      const ctx=canvas.getContext('2d');ctx.fillStyle='#000';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+      // Re-encoding drops file metadata; no filename or source file is shared.
+      let url=canvas.toDataURL('image/png');
+      if (url.length > 546160) url=canvas.toDataURL('image/jpeg',.8);
+      const match=url.match(/^data:(image\/(?:png|jpeg));base64,(.+)$/);
+      if (!match) throw Error('Could not prepare screenshot.');
+      return scrubScreenshot({type:match[1],data:match[2]});
+    } finally { bitmap.close(); }
+  }
   function createSubmissionSession(report, {requestConsent,submit}) {
     const clean = scrub(report), requestId = crypto.randomUUID();
     let cancelled = false, busy = false, sent = false, payload;
     return {
       cancel() { cancelled = true; },
-      async send(description = '') {
+      async send(description = '', screenshot = null) {
         if (cancelled || busy || sent) return false;
         busy = true;
         try {
           if (requestConsent && !await requestConsent()) return false;
           if (cancelled) return false;
-          payload ||= {requestId,report:clean,description:String(description).trim().slice(0,2000)};
+          payload ||= {requestId,report:clean,description:String(description).trim().slice(0,2000),...(screenshot ? {screenshot:scrubScreenshot(screenshot)} : {})};
           const receipt = await submit(payload);
           if (!/^https:\/\/github\.com\/bc1224\/oled-night\/issues\/[1-9]\d*$/.test(receipt?.url || '')) throw Error('Invalid issue receipt');
           sent = true;
@@ -85,5 +107,5 @@
     if (!response.ok) throw Error('Could not submit the issue. Retry or save the report locally.');
     return response.json();
   }
-  scope.OledNightReport = {scrub,issueUrl,openDraft,createDraftSession,createSubmissionSession,submitIssue};
+  scope.OledNightReport = {scrub,issueUrl,openDraft,createDraftSession,createSubmissionSession,submitIssue,scrubScreenshot,prepareScreenshot};
 })(globalThis);

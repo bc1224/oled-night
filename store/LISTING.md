@@ -25,7 +25,7 @@ Upload `dist/oled-night-<version>.zip` (build it with `node tools/package.mjs`).
 > • Page text and field values are not uploaded. Optional reports share only the previewed domain and technical diagnostics with GitHub.
 > • "Report a broken site" previews scrubbed diagnostics and submits a public GitHub issue through our hosted service only when you choose. Full reports can still be saved locally.
 > • Firefox's optional browsing-activity permission is only for sharing the current site's domain in a bug report, not history tracking. Declining keeps dark mode working normally.
-> • GitHub retains submitted public issues. Our Cloudflare-hosted reporting service temporarily retains request hashes and issue links for deduplication, but does not retain report bodies.
+> • GitHub retains submitted public issues. Our Cloudflare-hosted reporting service temporarily retains request hashes and issue links for deduplication. Notes and diagnostic bodies are not stored by the service; a screenshot you explicitly paste, drop or select is hosted publicly for up to 30 days. Nothing is captured automatically or submitted before confirmation.
 >
 > 100% OPEN SOURCE (GPL-3.0)
 > Every line of code is public on GitHub: https://github.com/bc1224/oled-night

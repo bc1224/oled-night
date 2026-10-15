@@ -215,21 +215,93 @@
   });
   let pendingReport = null;
   let reportSession = null;
+  let screenshot = null, screenshotGeneration = 0, screenshotBusy = false, attachmentLocked = false;
+  function clearScreenshot() {
+    screenshotGeneration++;
+    screenshot = null; screenshotBusy = false;
+    $("reportScreenshotImage").hidden = true;
+    $("reportScreenshotImage").removeAttribute("src");
+    $("reportScreenshotRemove").hidden = true;
+    $("reportScreenshotFile").value = "";
+    $("reportScreenshotStatus").textContent = "";
+  }
+  function lockAttachment(locked) {
+    attachmentLocked = locked;
+    for (const id of ["reportScreenshotPaste","reportScreenshotFile","reportScreenshotRemove"]) $(id).disabled = locked;
+  }
+  async function attachScreenshot(file) {
+    if (!reportSession || attachmentLocked) return;
+    const session = reportSession, generation = ++screenshotGeneration;
+    screenshotBusy = true; $("reportSubmit").disabled = true;
+    $("reportScreenshotStatus").textContent = "Preparing preview…";
+    try {
+      const prepared = await OledNightReport.prepareScreenshot(file);
+      if (session !== reportSession || generation !== screenshotGeneration) return;
+      screenshot = prepared;
+      $("reportScreenshotImage").src = `data:${prepared.type};base64,${prepared.data}`;
+      $("reportScreenshotImage").hidden = false;
+      $("reportScreenshotRemove").hidden = false;
+      $("reportScreenshotStatus").textContent = "Screenshot attached locally. It will be shared only when you submit.";
+    } catch (error) {
+      if (session === reportSession && generation === screenshotGeneration) $("reportScreenshotStatus").textContent = error.message || "Could not read this image. Try another screenshot.";
+    } finally {
+      if (session === reportSession && generation === screenshotGeneration) { screenshotBusy = false; $("reportSubmit").disabled = false; }
+    }
+  }
+  const transferredImage = transfer => [...(transfer?.items || [])].find(item => item.kind === "file" && item.type.startsWith("image/"))?.getAsFile() || [...(transfer?.files || [])].find(file => file.type.startsWith("image/"));
+  $("reportPreview").addEventListener("paste", event => {
+    const file = transferredImage(event.clipboardData);
+    if (file && reportSession && !attachmentLocked) { event.preventDefault(); attachScreenshot(file); }
+  });
+  $("reportScreenshotDrop").addEventListener("dragover", event => { event.preventDefault(); if (!attachmentLocked) $("reportScreenshotDrop").classList.add("dragging"); });
+  $("reportScreenshotDrop").addEventListener("dragleave", () => $("reportScreenshotDrop").classList.remove("dragging"));
+  $("reportScreenshotDrop").addEventListener("drop", event => {
+    event.preventDefault(); $("reportScreenshotDrop").classList.remove("dragging");
+    const file = transferredImage(event.dataTransfer);
+    if (file) attachScreenshot(file);
+    else if (!attachmentLocked) $("reportScreenshotStatus").textContent = "Drop a PNG, JPEG or WebP screenshot.";
+  });
+  $("reportScreenshotFile").addEventListener("change", event => { if (event.target.files[0]) attachScreenshot(event.target.files[0]); });
+  $("reportScreenshotRemove").addEventListener("click", () => { if (!attachmentLocked) { clearScreenshot(); $("reportSubmit").disabled = false; } });
+  $("reportScreenshotPaste").addEventListener("click", async () => {
+    if (!reportSession || attachmentLocked) return;
+    const session = reportSession;
+    try {
+      const items = await navigator.clipboard.read();
+      if (session !== reportSession || attachmentLocked) return;
+      for (const item of items) {
+        const type = item.types.find(type => ["image/png","image/jpeg","image/webp"].includes(type));
+        if (type) {
+          const file = await item.getType(type);
+          if (session === reportSession && !attachmentLocked) await attachScreenshot(file);
+          return;
+        }
+      }
+      $("reportScreenshotStatus").textContent = "No screenshot found. Copy an image, then paste again.";
+    } catch {
+      if (session !== reportSession) return;
+      $("reportScreenshotStatus").textContent = "Clipboard access was unavailable. Press Ctrl+V (⌘V on Mac) here, or drop an image.";
+      $("reportScreenshotDrop").focus();
+    }
+  });
   $("reportPreview").addEventListener("close", () => {
+    if ($("reportPreview").open) return;
     reportSession?.cancel();
     reportSession = null;
     pendingReport = null;
+    clearScreenshot(); lockAttachment(false);
   });
   $("reportPreview").addEventListener("cancel", () => reportSession?.cancel());
-  $("reportCancel").addEventListener("click", () => $("reportPreview").close());
+  $("reportCancel").addEventListener("click", () => { reportSession?.cancel(); $("reportPreview").close(); });
   $("reportDownload").addEventListener("click", () => { if (pendingReport) saveReport(pendingReport); });
   $("reportSubmit").addEventListener("click", async () => {
-    if (!reportSession || $("reportSubmit").disabled) return;
+    if (!reportSession || $("reportSubmit").disabled || screenshotBusy) return;
     const session = reportSession;
     $("reportSubmit").disabled = true;
     $("reportDescription").disabled = true;
+    lockAttachment(true);
     try {
-      const shared = await session.send($("reportDescription").value);
+      const shared = await session.send($("reportDescription").value, screenshot);
       if (session !== reportSession) return;
       if (shared) {
         $("reportConsentStatus").textContent = "Issue submitted. Thank you.";
@@ -238,10 +310,10 @@
         $("reportSubmit").hidden = true;
         $("reportDescription").disabled = true;
       }
-      else { $("reportDescription").disabled = false; $("reportConsentStatus").textContent = "Sharing declined. OLED Night still works; you can save a report locally."; }
+      else { $("reportDescription").disabled = false; lockAttachment(false); $("reportConsentStatus").textContent = "Sharing declined. OLED Night still works; you can save a report locally."; }
     } catch (error) {
       if (session === reportSession) $("reportConsentStatus").textContent = error.message || "Could not submit the issue. You can retry or save a report locally.";
-    } finally { $("reportSubmit").disabled = false; }
+    } finally { if (session === reportSession && !screenshotBusy) $("reportSubmit").disabled = false; }
   });
   $("report").addEventListener("click", async () => {
     if (!tabId || !chrome?.tabs) return;
@@ -254,7 +326,7 @@
     pendingReport = report;
     reportSession?.cancel();
     reportSession = OledNightReport.createSubmissionSession(report, {
-      requestConsent: isFirefox ? () => chrome.permissions.request({data_collection:["browsingActivity","technicalAndInteraction"]}) : null,
+      requestConsent: isFirefox ? () => chrome.permissions.request({data_collection:["browsingActivity","technicalAndInteraction",...(screenshot ? ["websiteContent"] : [])]}) : null,
       submit: payload => OledNightReport.submitIssue(payload)
     });
     $("reportSubmit").disabled = false;
@@ -263,6 +335,8 @@
     $("reportIssueLink").hidden = true;
     $("reportDescription").value = "";
     $("reportDescription").disabled = false;
+    clearScreenshot(); lockAttachment(false);
+    $("reportFirefoxConsent").hidden = !isFirefox;
     $("reportDiagnostics").textContent = JSON.stringify(OledNightReport.scrub(report), null, 2);
     $("reportPreview").showModal();
   });
