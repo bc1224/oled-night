@@ -713,13 +713,15 @@
             if (color && color.a >= .5) paints.push(color);
           }
         }
+        const logoLike = svg.closest('[itemprop~="logo"], [aria-label*="logo" i], [data-oled-night-logo]') ||
+          /(?:^|[\s_-])logo(?:$|[\s_-])/i.test(`${svg.id} ${svg.getAttribute("class") || ""}`);
         const unreadable = paints.some(c => {
           const ink = colors.luminance(c);
           // In Automatic mode a light native control inside a dark page is
           // transformed to a dark surface. Its authored backdrop is still
           // light here, so a neutral dark icon also needs inversion.
           return (bg < .2 && (Math.max(bg, ink) + .05) / (Math.min(bg, ink) + .05) < 3) ||
-            (bg > .6 && ink < .2);
+            (bg > .6 && ink < .2 && !logoLike);
         });
         out.push([svg, neutral && unreadable ? {"icon-invert":"1"} : {}]);
       }

@@ -50,8 +50,8 @@ try {
   const chatgptRecolor=await page.eval(`(${chatgptControlsScenario.toString()})()`),paintedRecolor=await sampleIcons();
   const name='ChatGPT controls keep text and Stop icon readable';
   const textOk=(!chatgptAuto.enabled||chatgptAuto.textRatio>=4.5)&&(!chatgptRecolor.enabled||chatgptRecolor.textRatio>=4.5);
-  const actualOk=textOk&&paintedAuto.every(p=>p.ratio>=3)&&paintedRecolor.every(p=>p.ratio>=3)&&chatgptAuto.icons.every(i=>i.styleRatio>=3)&&chatgptRecolor.icons.every(i=>i.styleRatio>=3);
-  checks.push(...await proof('chatgpt-controls',[{name,ok:actualOk,detail:JSON.stringify({auto:{textRatio:chatgptAuto.textRatio,icons:chatgptAuto.icons,painted:paintedAuto},recolor:{textRatio:chatgptRecolor.textRatio,icons:chatgptRecolor.icons,painted:paintedRecolor}})}]));
+  const actualOk=textOk&&chatgptAuto.ok&&chatgptRecolor.ok&&paintedAuto.every(p=>p.ratio>=3)&&paintedRecolor.every(p=>p.ratio>=3);
+  checks.push(...await proof('chatgpt-controls',[{name,ok:actualOk,detail:JSON.stringify({auto:{textRatio:chatgptAuto.textRatio,icons:chatgptAuto.icons,logoPreserved:chatgptAuto.logoPreserved,painted:paintedAuto},recolor:{textRatio:chatgptRecolor.textRatio,icons:chatgptRecolor.icons,logoPreserved:chatgptRecolor.logoPreserved,painted:paintedRecolor}})}]));
   await settings(true);
   for(const [theme,width] of [['light',1200],['dark',1200],['light',390]]){
     const label=`${theme}-${width}`;await page.size(width,1000);await page.go(`${server.origin}/lab/fixtures/matrix.html?theme=${theme}`);await wait(800);

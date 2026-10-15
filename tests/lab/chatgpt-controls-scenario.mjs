@@ -11,5 +11,9 @@ export function chatgptControlsScenario(){
     const rgb=channel(fill);const painted=filter.includes('invert(1)')?rgb.map(v=>255-v):rgb;
     return {id,buttonColor,fill,filter,painted:painted.map(v=>`rgb(${v}, ${v}, ${v})`)[0],styleRatio:contrast(`rgb(${painted.join(', ')})`,buttonColor)};
   });
-  return {enabled,textRatio,icons,ok:(!enabled||textRatio>=4.5)&&icons.every(i=>i.styleRatio>=3)};
+  const logo=document.querySelector('#brand-logo svg');
+  const logoPaths=logo?[...logo.querySelectorAll('path')]:[];
+  const logoPaints=logoPaths.map(path=>getComputedStyle(path).fill);
+  const logoPreserved=!!logo&&getComputedStyle(logo).filter==='none'&&logoPaints.join('|')==='rgb(20, 99, 199)|rgb(196, 44, 84)'&&logoPaths.every(path=>!path.hasAttribute('data-oled-night'));
+  return {enabled,textRatio,icons,logoPreserved,ok:(!enabled||textRatio>=4.5)&&icons.every(i=>i.styleRatio>=3)&&logoPreserved};
 }
