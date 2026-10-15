@@ -1465,6 +1465,13 @@
     // The browser owns the open popup. Its static option rules are already
     // installed; synchronous select event restyles delay native opening.
     if (nativeSelect) return;
+    const found = path.find(node => node.matches(CONTROL));
+    const control = found && found !== document.body && found !== document.documentElement ? found : null;
+    // Existing background overrides already protect the current paint. Only
+    // an exposed path (or a control with descendant paint) needs the immediate
+    // pass plus a later CSSOM recheck; keep protected leaf controls coalesced.
+    const currentPaint = !!control?.childElementCount || path.some(node =>
+      node !== document.body && node !== document.documentElement && !node.getAttribute(MARK)?.split(' ').includes('bg'));
     // attachShadow() on an already-scanned host is not a DOM mutation. Discover
     // those roots from the native event path before painting the first hover.
     // A new root needs its whole component scanned once; subsequent interactions
@@ -1474,35 +1481,33 @@
       if (!(node instanceof ShadowRoot) || preservesColor(node.host) || isMedia(node.host)) continue;
       const discovered = !shadowRoots.has(node);
       adoptShadowRoot(node);
-      if (discovered) queueInteraction(node.host, true);
+      if (discovered) queueInteraction(node.host, true, currentPaint);
     }
-    const found = path.find(node => node.matches(CONTROL));
-    const control = found && found !== document.body && found !== document.documentElement ? found : null;
     const stop = firstUnchanged(event, path, control);
     let rest = false;
     for (const node of path) {
       if (node === document.body || node === document.documentElement) break;
       if (node === stop) rest = true;
-      if (rest) settleSelf.add(node); else queueInteraction(node);
+      if (rest) settleSelf.add(node); else queueInteraction(node, false, currentPaint);
     }
     // Descendant rules of changed elements (".row:hover .label") need their subtree.
     const controlChanged = control && (!stop || path.indexOf(control) < path.indexOf(stop));
-    if (controlChanged) queueInteraction(control, true);
+    if (controlChanged) queueInteraction(control, true, currentPaint);
     else {
       // Non-semantic triggers and plain text hover must not promote the
       // entire page layout to a subtree reread. Ancestor state is checked
       // shallowly above; actual DOM/class changes still queue their subtree.
-      if (path[0] && path[0] !== stop) queueInteraction(path[0], true);
+      if (path[0] && path[0] !== stop) queueInteraction(path[0], true, currentPaint);
       if (control) settleTrees.add(control);
     }
     const group = path.find(node => node.matches(STATE_GROUP));
-    if (group && (!stop || path.indexOf(group) < path.indexOf(stop))) queueInteraction(group, true);
+    if (group && (!stop || path.indexOf(group) < path.indexOf(stop))) queueInteraction(group, true, currentPaint);
     // Native focus/hover can change inside a frame callback. Waiting for the
     // next rAF exposes its pale state in the current paint. Repair at this
     // microtask checkpoint, then recheck only this path at the next boundary:
     // a later site microtask can edit CSSOM without any observed DOM write.
-    schedule(true);
-    if (interactionFrame === null) interactionFrame = requestAnimationFrame(() => {
+    schedule(currentPaint);
+    if (currentPaint && interactionFrame === null) interactionFrame = requestAnimationFrame(() => {
       interactionFrame = null;
       if (!observer) return;
       for (const node of interactionSelf) if (node.isConnected) pendingSelf.add(node);
@@ -1517,9 +1522,9 @@
     }
   }
 
-  function queueInteraction(node, tree = false) {
+  function queueInteraction(node, tree = false, recheck = false) {
     (tree ? pendingTrees : pendingSelf).add(node);
-    (tree ? interactionTrees : interactionSelf).add(node);
+    if (recheck) (tree ? interactionTrees : interactionSelf).add(node);
   }
 
   // Moving between elements changes :hover/:focus-within only below the common
