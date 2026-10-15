@@ -21,9 +21,17 @@ function deferredHover(){
   link.addEventListener('pointerover',update,{once:true});link.addEventListener('focusin',update,{once:true});
   return link;
 }
-window.CVSHoverLab={hydrate,resetHost,mount,deferredHover,links:()=>[...inner.querySelectorAll('a')]};
+function frameHover(){
+  document.getElementById('frame-hover')?.remove();document.getElementById('frame-sheet')?.remove();
+  const sheet=document.createElement('style');sheet.id='frame-sheet';sheet.textContent='#frame-hover{display:inline-block;padding:16px;color:#013f7c;background:transparent}';document.head.append(sheet);
+  const link=document.createElement('a');link.id='frame-hover';link.href='#example';link.textContent='Frame stylesheet hover';document.querySelector('header').append(link);
+  link.addEventListener('pointerover',()=>requestAnimationFrame(()=>sheet.sheet.insertRule('#frame-hover:hover{background:rgb(227,241,255);color:#013f7c}',sheet.sheet.cssRules.length)),{once:true});
+  return link;
+}
+window.CVSHoverLab={hydrate,resetHost,mount,deferredHover,frameHover,links:()=>[...inner.querySelectorAll('a')]};
 document.getElementById('reset').onclick=()=>{clearInterval(timer);hydrate()};
 document.getElementById('hydrate').onclick=()=>{clearInterval(timer);let n=0;hydrate();timer=setInterval(()=>{hydrate();if(++n===6)clearInterval(timer)},170)};
 mount();
 deferredHover();
+frameHover();
 </script></body></html>
