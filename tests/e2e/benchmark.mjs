@@ -7,6 +7,7 @@ import http from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { chromeTestArgs } from '../lab/chrome-launch.mjs';
 
 const workload = process.env.BENCH_WORKLOAD || 'classes';
 if (!['classes','transforms'].includes(workload)) throw Error('Unknown workload');
@@ -48,9 +49,9 @@ const port = server.address().port;
 const site = (host, file) => `http://${host}:${port}/${file}`;
 
 const profile = mkdtempSync(join(tmpdir(), "oled-night-e2e-"));
-const chrome = spawn(CHROME, ["--headless=new", "--remote-debugging-pipe", "--enable-unsafe-extension-debugging", `--user-data-dir=${profile}`,
+const chrome = spawn(CHROME, chromeTestArgs(["--headless=new", "--remote-debugging-pipe", "--enable-unsafe-extension-debugging", `--user-data-dir=${profile}`,
   "--no-first-run", "--no-default-browser-check", "--window-size=1000,800",
-  "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows", "about:blank"], { stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"] });
+  "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows", "about:blank"]), { windowsHide:true, stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"] });
 const toChrome = chrome.stdio[3], fromChrome = chrome.stdio[4];
 let nextId = 0, buffer = "";
 const pending = new Map();

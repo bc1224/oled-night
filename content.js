@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.42";
+  const VERSION = "0.6.43";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -715,7 +715,11 @@
         }
         const unreadable = paints.some(c => {
           const ink = colors.luminance(c);
-          return bg < .2 && (Math.max(bg, ink) + .05) / (Math.min(bg, ink) + .05) < 3;
+          // In Automatic mode a light native control inside a dark page is
+          // transformed to a dark surface. Its authored backdrop is still
+          // light here, so a neutral dark icon also needs inversion.
+          return (bg < .2 && (Math.max(bg, ink) + .05) / (Math.min(bg, ink) + .05) < 3) ||
+            (bg > .6 && ink < .2);
         });
         out.push([svg, neutral && unreadable ? {"icon-invert":"1"} : {}]);
       }

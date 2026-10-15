@@ -1,0 +1,5 @@
+{
+  "base": "1602da939ec3f44e2ee2992fa6a64f04b4f1e9fa",
+  "fixture": "chatgpt-controls",
+  "check": "ChatGPT controls keep text and Stop icon readable"
+}

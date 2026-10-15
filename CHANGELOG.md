@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.43
+
+- Keep neutral Stop icons readable when Automatic mode darkens a light authored control on a dark page. Preserve dark-button inversion, colored artwork and non-control SVGs; add synthetic painted-pixel and text-contrast coverage with immutable-base Linux proof.
+- Add a CI-only immutable-base report reproduction for the exact named public-lab assertion. Keep Chrome and Firefox reports separate and retain original base JSON before fixed results.
+- Add the Windows MXC-only headless Chrome sandbox flag to existing test launchers; other launch defaults remain unchanged.
+
 ## 0.6.42
 
 - Keep the report confirmation and optional notes; add an optional screenshot by drag and drop, Ctrl+V / ⌘V, Paste screenshot or file selection. Preview and remove images locally before explicit submission; never capture screenshots automatically.

@@ -26,6 +26,13 @@
     await browser.scripting.executeScript({target:{tabId:tab.id},files:['lab-audit.js']});
     out.push(...await proof('frame-mutation',await inspect(nativeFrameFocusScenario)));
     await browser.tabs.remove(tab.id);
+    await browser.storage.sync.set({extensionEnabled:true,siteRules:{}});
+    tab=await browser.tabs.create({url:TEST_ORIGIN+'/chatgpt-controls.html'});await sleep(1200);
+    const chatgptAuto=await inspect(chatgptControlsScenario);
+    await browser.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'recolor'}});await browser.tabs.reload(tab.id);await sleep(1200);
+    const chatgptRecolor=await inspect(chatgptControlsScenario);
+    out.push(...await proof('chatgpt-controls',[{name:'ChatGPT controls keep text and Stop icon readable',ok:chatgptAuto.ok&&chatgptRecolor.ok,detail:JSON.stringify({auto:chatgptAuto,recolor:chatgptRecolor})}]));
+    await browser.tabs.remove(tab.id);
     for(const file of ['email-newsletter','native-banner']){
       await browser.storage.sync.set({extensionEnabled:true,siteRules:{}});
       tab=await browser.tabs.create({url:TEST_ORIGIN+'/'+file+'.html'});await sleep(1500);

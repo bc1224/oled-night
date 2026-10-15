@@ -2,7 +2,7 @@ const groups = {
   'Interactions': ['dropdowns','dark-dropdowns','state-surfaces','shadow-hover','cold-shadow','interaction-layout','media-navigation','frame-mutation','paint-updates','large-updates'],
   'Text & surfaces': ['light','dark','explicit-light','ink','surfaces','scope-light','scope-dark','scope-scheme','svg-outline'],
   'Media & data': ['indicators','chart','canvas','shop','ad-overlays'],
-  'App reproductions': ['youtube','gmail','email-newsletter','native-banner','booking-form','checkout','reddit-res','shadow-stability','apple-auth','apple-recovery'],
+  'App reproductions': ['youtube','gmail','email-newsletter','native-banner','booking-form','checkout','chatgpt-controls','reddit-res','shadow-stability','apple-auth','apple-recovery'],
   'Isolation & loading': ['components','protected','challenge','challenge-inline','frame','transparent-frame','slow','efficiency','report-fields','report-preview','generated-style']
 };
 const descriptions = {
@@ -10,6 +10,7 @@ const descriptions = {
   'large-updates':'2,500 fake inbox rows: native/active frame throughput, script/style/collected-memory budgets, bounded ownership, inherited text, background-only selection, CSSOM invalidation and animated fallback',
   'paint-updates':'Synthetic mail updates: paired native/active animation frame pacing, CPU and style work, bounded heap growth and prompt release of detached shadow components',
   'checkout':'Stripe-style fake checkout: monochrome payment icons, preserved payment brand colors, filled fields and animated accordion opening without pale frames; no payments or real customer data',
+  'chatgpt-controls':'Synthetic dark chat controls: readable plan text and painted Stop icons on light and dark authored buttons',
   'generated-style':'Late CSSOM color and width transitions plus generated labels in document, adopted shadow sheets and exported parts; authored scopes are reconsidered after updates',
   'report-preview':'Public issue preview omits private text, field values, selectors, frame origins and URL paths; nothing sends before a click',
   'cold-shadow':'Roots attached after their hosts were scanned: resting nested controls become readable without hover or focus',

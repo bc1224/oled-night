@@ -19,10 +19,14 @@ import {largeUpdatesScenario} from './large-updates-scenario.mjs';
 import {churnWorkload,judgeChurn} from '../e2e/churn-benchmark.mjs';
 import {reportPreviewScenario} from './report-preview-scenario.mjs';
 import {visibleIconPixels} from './checkout-paint.mjs';
+import {PNG} from 'pngjs';
+import {chatgptControlsScenario} from './chatgpt-controls-scenario.mjs';
+import {reportBaselineEntry} from './report-baseline.mjs';
 import {frameWorkload,frameChecks,mountComponents,removeComponents,emptyRowLifecycle} from '../../docs/lab/performance.js';
 import {runtimeDigest,regressionChecks} from './runtime-proof.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/lab-results');mkdirSync(output,{recursive:true});
 const packageRoot=resolve(process.env.OLED_LAB_PACKAGE_ROOT||root);
+await reportBaselineEntry('Chrome',root,output,resolve(root,'tests/lab/run-chrome.mjs'),new Set(cases.map(c=>c.id)),'dist/chrome');
 const checks=[],add=(name,ok,detail='')=>checks.push({name,ok:!!ok,detail});
 const site=buildLab().output,server=await serveLab(site);let browser,completed=false;
 try {
@@ -31,6 +35,24 @@ try {
   const settings=async enabled=>{await options.eval(`chrome.storage.sync.set({extensionEnabled:${enabled},globalEnabled:true,siteRules:{'127.0.0.1':'recolor'}})`);await wait(500)};
   await settings(true);const page=await browser.open();
   const proof=async (fixture,items)=>regressionChecks(fixture,await page.eval("document.documentElement.hasAttribute('data-oled-night-root')"),items);
+  await options.eval("chrome.storage.sync.set({extensionEnabled:true,globalEnabled:true,siteRules:{}})");await wait(500);
+  await page.size(1024,1000);await page.go(`${server.origin}/lab/fixtures/chatgpt-controls.html`);await wait(900);
+  const chatgptAuto=await page.eval(`(${chatgptControlsScenario.toString()})()`);
+  const pixelLum=rgb=>{const [r,g,b]=rgb.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return .2126*r+.7152*g+.0722*b};
+  const pixelRatio=(a,b)=>{const x=pixelLum(a),y=pixelLum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+  const sampleIcons=async()=>{
+    const boxes=await page.eval(`(()=>Object.fromEntries(['stop-light','stop-dark'].map(id=>{const s=document.querySelector('#'+id+' svg'),r=s.getBoundingClientRect();return [id,{x:r.x,y:r.y,width:r.width,height:r.height}]})))()`);
+    const shot=PNG.sync.read(await page.screenshot()),sampled=(x,y)=>{const i=(Math.floor(y)*shot.width+Math.floor(x))*4;return [...shot.data.subarray(i,i+3)]};
+    return Object.entries(boxes).map(([id,b])=>{const icon=sampled(b.x+b.width/2,b.y+b.height/2),surface=sampled(b.x+1,b.y+b.height/2);return {id,icon,surface,ratio:pixelRatio(icon,surface)}});
+  };
+  const paintedAuto=await sampleIcons();
+  await options.eval("chrome.storage.sync.set({extensionEnabled:true,globalEnabled:true,siteRules:{'127.0.0.1':'recolor'}})");await wait(700);await page.go(`${server.origin}/lab/fixtures/chatgpt-controls.html`);await wait(900);
+  const chatgptRecolor=await page.eval(`(${chatgptControlsScenario.toString()})()`),paintedRecolor=await sampleIcons();
+  const name='ChatGPT controls keep text and Stop icon readable';
+  const textOk=(!chatgptAuto.enabled||chatgptAuto.textRatio>=4.5)&&(!chatgptRecolor.enabled||chatgptRecolor.textRatio>=4.5);
+  const actualOk=textOk&&paintedAuto.every(p=>p.ratio>=3)&&paintedRecolor.every(p=>p.ratio>=3)&&chatgptAuto.icons.every(i=>i.styleRatio>=3)&&chatgptRecolor.icons.every(i=>i.styleRatio>=3);
+  checks.push(...await proof('chatgpt-controls',[{name,ok:actualOk,detail:JSON.stringify({auto:{textRatio:chatgptAuto.textRatio,icons:chatgptAuto.icons,painted:paintedAuto},recolor:{textRatio:chatgptRecolor.textRatio,icons:chatgptRecolor.icons,painted:paintedRecolor}})}]));
+  await settings(true);
   for(const [theme,width] of [['light',1200],['dark',1200],['light',390]]){
     const label=`${theme}-${width}`;await page.size(width,1000);await page.go(`${server.origin}/lab/fixtures/matrix.html?theme=${theme}`);await wait(800);
     checks.push(...(await page.eval(`(${coldShadowScenario.toString()})()`)).map(c=>({...c,name:label+' / '+c.name})));

@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { churnWorkload, judgeChurn } from './churn-benchmark.mjs';
 import { navigationFrames } from './navigation-scenario.mjs';
 import { reportAttachmentsScenario } from './report-attachments-scenario.mjs';
+import { chromeTestArgs } from '../lab/chrome-launch.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // EXT_PATH lets the suite run against an unzipped release instead of the source tree.
@@ -49,9 +50,9 @@ const port = server.address().port;
 const site = (host, file) => `http://${host}:${port}/${file}`;
 
 const profile = mkdtempSync(join(tmpdir(), "oled-night-e2e-"));
-const chrome = spawn(CHROME, ["--headless=new", "--remote-debugging-pipe", "--enable-unsafe-extension-debugging", `--user-data-dir=${profile}`,
+const chrome = spawn(CHROME, chromeTestArgs(["--headless=new", "--remote-debugging-pipe", "--enable-unsafe-extension-debugging", `--user-data-dir=${profile}`,
   "--no-first-run", "--no-default-browser-check", "--window-size=1000,800",
-  "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows", "about:blank"], { windowsHide:true, stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"] });
+  "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows", "about:blank"]), { windowsHide:true, stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"] });
 const toChrome = chrome.stdio[3], fromChrome = chrome.stdio[4];
 let nextId = 0, buffer = "";
 const pending = new Map();

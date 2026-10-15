@@ -6,6 +6,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import http from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { chromeTestArgs } from '../lab/chrome-launch.mjs';
 
 const EXTS = { base: null, baseline: process.env.BASELINE_EXT, candidate: process.env.CANDIDATE_EXT };
 const ORDER = (process.env.ORDER || 'base,baseline,candidate').split(',');
@@ -46,9 +47,9 @@ const port = server.address().port;
 
 async function runVariant(name, ext) {
   const profile = mkdtempSync(join(tmpdir(), "oln-global-"));
-  const chrome = spawn(CHROME, ["--headless=new", "--remote-debugging-pipe", "--enable-unsafe-extension-debugging", `--user-data-dir=${profile}`,
+  const chrome = spawn(CHROME, chromeTestArgs(["--headless=new", "--remote-debugging-pipe", "--enable-unsafe-extension-debugging", `--user-data-dir=${profile}`,
     "--no-first-run", "--no-default-browser-check", "--window-size=1200,900", "--disable-background-timer-throttling", "--disable-renderer-backgrounding",
-    "--disable-backgrounding-occluded-windows", "about:blank"], { stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"] });
+    "--disable-backgrounding-occluded-windows", "about:blank"]), { windowsHide:true, stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"] });
   const to = chrome.stdio[3], from = chrome.stdio[4];
   let id = 0, buf = ""; const pending = new Map();
   from.on("data", (c) => { buf += c; let e; while ((e = buf.indexOf("\0")) >= 0) { const m = JSON.parse(buf.slice(0, e)); buf = buf.slice(e + 1); if (m.id) pending.get(m.id)?.(m); } });
