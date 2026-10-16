@@ -11,6 +11,7 @@ import { churnWorkload, judgeChurn } from './churn-benchmark.mjs';
 import { navigationFrames } from './navigation-scenario.mjs';
 import { reportAttachmentsScenario } from './report-attachments-scenario.mjs';
 import { spriteAssetsScenario } from './sprite-assets-scenario.mjs';
+import { colorPaletteScenario, colorPaletteRestored } from './color-palette-scenario.mjs';
 import { chromeTestArgs } from '../lab/chrome-launch.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -112,6 +113,15 @@ try {
   await resetSettings();
 
   const page = await openTab();
+  for(const mode of ['auto','recolor']){
+    await setSettings({extensionEnabled:true,globalEnabled:true,siteRules:{'127.0.0.1':mode}});
+    await page.go(site('127.0.0.1','google-sheets-colors.html'));
+    const palette=await page.eval(`(${colorPaletteScenario.toString()})()`);
+    check(`Google palette: ${mode} preserves exact static and updated colors with working dark menu`,palette.ok,JSON.stringify(palette));
+  }
+  await setSettings({extensionEnabled:false});await sleep(350);
+  check('Google palette: disabling restores authored menu and sample colors',await page.eval(`(${colorPaletteRestored.toString()})()`));
+  await resetSettings();
   const css = (id, prop, pseudo) => page.eval(`getComputedStyle(document.getElementById(${JSON.stringify(id)})${pseudo ? `, ${JSON.stringify(pseudo)}` : ""})[${JSON.stringify(prop)}]`);
 
   await page.go(site("127.0.0.1", "indicators.html"));

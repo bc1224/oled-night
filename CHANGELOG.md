@@ -2,6 +2,8 @@
 
 ## 0.6.45
 
+- Preserve exact Google Sheets-style palette swatch colors, including white, grays, saturated colors, pastels and custom colors, while darkening the surrounding menu. Add a synthetic test-site case and Chrome/Firefox regressions for opening, selecting and updating colors.
+
 - Repair compact control symbols with explicit neutral fills or strokes, including filled Send-style arrows that cannot inherit an outer SVG color override. Inspect local definitions or bounded, same-origin SVG assets; preserve colored and uncertain artwork, avoid redirects and stop pending work when disabled.
 - Expand the synthetic chat interface regression across Send/Stop transitions, voice, disabled controls, keyboard focus, sidebar and response actions, opened menus/dialogs, late controls and narrow layouts. Check actual Chrome pixels and Firefox rendering states, preserving colored artwork and authored output on disable.
 - These fixtures cover rendering patterns; the full authenticated live ChatGPT audit remains unverified because its security verification blocks browser access.

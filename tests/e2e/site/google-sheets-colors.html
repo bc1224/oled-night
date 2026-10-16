@@ -1,0 +1,18 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Google Sheets palette color preservation · synthetic reproduction</title>
+<style>
+body{font:16px Arial;background:#fff;color:#202124;margin:24px}button{padding:8px;background:#fff;color:#202124}#palette{background:#fff;color:#202124;padding:16px;width:380px;border:1px solid #ccc;margin-top:12px}.row{display:grid;grid-template-columns:repeat(10,28px);gap:6px;margin:8px 0}.swatch{display:block;width:26px;height:26px;border-radius:50%;border:1px solid #999;cursor:pointer}.swatch svg{width:12px;height:12px}.note{max-width:650px}
+</style>
+<h1>Formatting colors</h1>
+<p class="note">Synthetic palette using Closure and Docs Material swatch classes. No document data. Every sample must retain its authored color while the menu becomes dark.</p>
+<button id="toggle" aria-expanded="true">Fill color</button>
+<section id="palette" aria-label="Fill color palette"><strong>Standard and custom colors</strong><div id="rows"></div><button id="add-colors">Add custom colors</button><div id="chosen" aria-live="polite">No color selected</div></section>
+<script>
+const colors=['#000000','#434343','#999999','#cccccc','#ffffff','#ff0000','#ff9900','#ffff00','#00ff00','#00ffff','#0000ff','#9900ff','#f4cccc','#fce5cd','#fff2cc','#d9ead3','#d0e0e3','#cfe2f3','#d9d2e9','#ead1dc'];
+const classes=['goog-palette-colorswatch','goog-palette-customcolor','docs-material-colorpalette-colorswatch','docs-material-colorpalette-colorswatch-color'];
+function addPaletteRow(kind,values=colors){const row=document.createElement('div');row.className='row';for(const hex of values){const cell=document.createElement('span');cell.className='goog-palette-cell';const swatch=document.createElement('span');swatch.className=classes[kind]+' swatch';swatch.style.backgroundColor=hex;swatch.dataset.expected=hex;swatch.tabIndex=0;swatch.setAttribute('role','button');swatch.setAttribute('aria-label',hex);swatch.addEventListener('click',()=>{document.getElementById('chosen').textContent=hex;swatch.setAttribute('aria-pressed','true')});cell.append(swatch);row.append(cell)}document.getElementById('rows').append(row)}
+for(let i=0;i<classes.length;i++)addPaletteRow(i);
+document.getElementById('add-colors').onclick=()=>{for(let i=0;i<4;i++)addPaletteRow(i,['#ffffff','#ffff00','#ea9999'])};
+document.getElementById('toggle').onclick=()=>{const p=document.getElementById('palette');p.hidden=!p.hidden;document.getElementById('toggle').setAttribute('aria-expanded',String(!p.hidden))};
+</script>

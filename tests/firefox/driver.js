@@ -11,6 +11,15 @@
   const inspect = async func => (await browser.scripting.executeScript({target:{tabId:tab.id},func}))[0].result;
   try {
     await browser.storage.sync.clear();
+    for(const mode of ['auto','recolor']){
+      await browser.storage.sync.set({extensionEnabled:true,globalEnabled:true,siteRules:{'127.0.0.1':mode}});
+      await open('google-sheets-colors.html');
+      const palette=await inspect(colorPaletteScenario);
+      check(`Google palette: ${mode} preserves exact static and updated colors with working dark menu`,palette.ok,JSON.stringify(palette));
+    }
+    await browser.storage.sync.set({extensionEnabled:false});await wait(350);
+    check('Google palette: disabling restores authored menu and sample colors',await inspect(colorPaletteRestored));
+    await browser.storage.sync.clear();
     await open('interaction-layout.html');
     check('large layout becomes black while bordered cards stay distinct', await inspect(() => {
       const css=id=>getComputedStyle(document.getElementById(id));

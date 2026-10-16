@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import webExt from 'web-ext';
 import {reportAttachmentsScenario} from '../e2e/report-attachments-scenario.mjs';
+import {colorPaletteScenario,colorPaletteRestored} from '../e2e/color-palette-scenario.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const temp = mkdtempSync(join(tmpdir(), 'oled-night-firefox-test-'));
@@ -29,7 +30,7 @@ try {
   const manifest = JSON.parse(readFileSync(join(temp, 'manifest.json')));
   manifest.background.scripts.push('test-driver.js');
   writeFileSync(join(temp, 'manifest.json'), JSON.stringify(manifest));
-  writeFileSync(join(temp, 'test-driver.js'), `const TEST_ORIGIN = ${JSON.stringify(origin)};\n` + readFileSync(join(root, 'tests/firefox/driver.js'), 'utf8'));
+  writeFileSync(join(temp, 'test-driver.js'), `const TEST_ORIGIN = ${JSON.stringify(origin)};\nconst colorPaletteScenario = ${colorPaletteScenario.toString()};\nconst colorPaletteRestored = ${colorPaletteRestored.toString()};\n` + readFileSync(join(root, 'tests/firefox/driver.js'), 'utf8'));
   for (const page of ['options.html', 'popup.html']) {
     const path = join(temp, page);
     writeFileSync(path, readFileSync(path, 'utf8').replace('</body>', '<script src="test-ui.js"></script></body>'));

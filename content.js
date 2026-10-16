@@ -7,7 +7,7 @@
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
   // Explicit color controls carry data, not decorative page colors.
-  const COLOR_CONTROL = 'input[type="color"], [data-oled-night-preserve-colors], .react-colorful, .color-picker, .color-swatch, [role="slider"][aria-label*="hue" i], [role="slider"][aria-label*="saturation" i], [role="slider"][aria-label*="color" i]';
+  const COLOR_CONTROL = 'input[type="color"], [data-oled-night-preserve-colors], .react-colorful, .color-picker, .color-swatch, .goog-palette-colorswatch, .goog-palette-customcolor, .docs-material-colorpalette-colorswatch, .docs-material-colorpalette-colorswatch-color, [role="slider"][aria-label*="hue" i], [role="slider"][aria-label*="saturation" i], [role="slider"][aria-label*="color" i]';
 
   const ICON_PARTS = "path, circle, rect, ellipse, polygon, polyline, line, text, use, g";
   const CHART_PARTS = `${ICON_PARTS}, stop`;
