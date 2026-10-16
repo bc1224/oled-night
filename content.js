@@ -698,7 +698,6 @@
       if (spriteDocuments.size >= 8) return null;
       entry = { doc: null, waiting: new Set(), controller: new AbortController(), pending: true };
       spriteDocuments.set(key, entry);
-      const epoch = flushEpoch;
       const timer = setTimeout(() => entry.controller.abort(), 3000);
       (async () => {
         try {
@@ -721,9 +720,13 @@
           if (doc.documentElement.localName === "svg" && doc.documentElement.namespaceURI === "http://www.w3.org/2000/svg" && !doc.querySelector("parsererror,style,script") && doc.querySelectorAll("*").length <= 2048) entry.doc = doc;
         } catch {} finally {
           clearTimeout(timer); entry.pending = false;
-          if (active && epoch === flushEpoch) for (const icon of entry.waiting) if (icon.isConnected) pendingTrees.add(icon);
+          // Repaints advance flushEpoch while an asset is loading. Entry
+          // ownership changes only on disable/re-enable, so ordinary page
+          // updates must not discard a completed inspection.
+          const current = active && spriteDocuments.get(key) === entry && !entry.controller.signal.aborted;
+          if (current) for (const icon of entry.waiting) if (icon.isConnected) pendingTrees.add(icon);
           entry.waiting.clear();
-          if (active && epoch === flushEpoch) schedule();
+          if (current) schedule();
         }
       })();
     }

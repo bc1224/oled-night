@@ -19,10 +19,15 @@ export async function spriteAssetsScenario({openTab,closeTab,setSettings,check})
         Array.from({length:32},(_,i)=>button('shared-'+i,'/shared.svg')).join('')+
         ['bad-mime','redirect','huge','style','broken','slow'].map(id=>button(id,'/'+id+'.svg')).join('')+
         button('cross-origin',`http://localhost:${server.address().port}/cross.svg`);
-      res.end(`<!doctype html><style>body{background:#202124;color:#eee}button{background:white;color:black;border:0;margin:2px;width:36px;height:36px}svg{width:24px;height:24px;fill:currentColor}</style>${controls}`);return;
+      res.end(`<!doctype html><style>body{background:#202124;color:#eee}button{background:white;color:black;border:0;margin:2px;width:36px;height:36px}svg{width:24px;height:24px;fill:currentColor}</style>${controls}<script>for(const delay of [100,200,300])setTimeout(()=>{document.body.className='paint-'+delay},delay)</script>`);return;
     }
     if(path==='/redirect.svg'){res.writeHead(302,{location:'/redirect-final.svg'});res.end();return}
     res.setHeader('content-type',path==='/bad-mime.svg'?'text/plain':'image/svg+xml');
+    // Finish inspection after the page's three class mutations. Ordinary
+    // repaint generations must not invalidate a still-enabled asset read.
+    if(path==='/shared.svg'&&req.headers['sec-fetch-dest']==='empty'){
+      const timer=setTimeout(()=>{timers.delete(timer);res.end(svg)},900);timers.add(timer);return;
+    }
     if(path==='/slow.svg'||path==='/pending.svg'){
       res.write(' ');
       const timer=setTimeout(()=>{timers.delete(timer);res.end(svg)},4500);timers.add(timer);return;
@@ -36,7 +41,8 @@ export async function spriteAssetsScenario({openTab,closeTab,setSettings,check})
     await setSettings({extensionEnabled:true,globalEnabled:true,siteRules:{}});
     page=await openTab(origin+'/index.html');await sleep(3600);
     check('sprites: repeated controls coalesce one same-origin inspection',requests.get('/shared.svg')===1,JSON.stringify(Object.fromEntries(requests)));
-    check('sprites: compact explicit-black symbols become visible',await page.eval("getComputedStyle(document.querySelector('#shared-0 svg')).filter==='invert(1)'"));
+    const sharedPaint=await page.eval("(()=>{const svg=document.querySelector('#shared-0 svg'),s=getComputedStyle(svg);return {filter:s.filter,background:s.backgroundColor,mark:svg.getAttribute('data-oled-night'),churn:document.body.className}})()");
+    check('sprites: delayed symbols become visible after intervening page repaints',sharedPaint.filter==='invert(1)',JSON.stringify(sharedPaint));
     check('sprites: cross-origin symbols are never fetched for inspection',!requests.has('/cross.svg'));
     check('sprites: redirects are never followed for inspection',requests.get('/redirect.svg')===1&&!requests.has('/redirect-final.svg'));
     check('sprites: slow inspection is aborted within its deadline',aborted.get('/slow.svg')===1);
