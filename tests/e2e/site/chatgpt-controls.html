@@ -14,9 +14,51 @@
   #voice-readable{background:#292a2d}
   #voice-readable svg{color:#eee}
   #voice-yellow{background:#ffff00}
+  .interface{display:flex;flex-wrap:wrap;gap:12px;max-width:900px;margin-top:24px}
+  .interface section{padding:12px;background:#292a2d;border-radius:12px}
+  .interface h2{font-size:16px}
+  .interface .stop{display:inline-grid;margin:4px;background:#fff;color:#000}
+  .interface svg{width:24px;height:24px;fill:currentColor}
+  .interface button:focus-visible{outline:2px solid #77aaff;outline-offset:2px}
+  .interface button:hover{background:#ddd}
+  #css-symbol path{fill:#1463c7}
+  #sprite-tile svg{background:#1463c7}
+  #sprite-dark-tile svg{background:#111}
 </style></head><body><main>
   <svg style="display:none" xmlns="http://www.w3.org/2000/svg"><symbol id="voice" viewBox="0 0 32 24"><path d="M8 10v4m4-7v10m4-14v18m4-14v10m4-7v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol></svg>
   <button class="plan" id="plan">Check my plan costs</button>
+  <p>Synthetic interface patterns, not a capture or verification of the live ChatGPT app.</p>
+  <div class="interface">
+    <section><h2>Composer states</h2>
+      <button class="stop" id="send-local" aria-label="Send" data-paint-icon><svg viewBox="0 0 24 24"><use href="#send"/></svg></button>
+      <button class="stop" id="send-external" aria-label="Send" data-paint-icon><svg viewBox="0 0 24 24"><use href="chatgpt-sprite.svg#send"/></svg></button>
+      <button class="stop" id="send-disabled" aria-label="Send" disabled data-paint-icon><svg viewBox="0 0 24 24"><use href="chatgpt-sprite.svg#send"/></svg></button>
+      <button class="stop" id="composer-state" aria-label="Send" data-paint-icon><svg viewBox="0 0 24 24"><use href="chatgpt-sprite.svg#send"/></svg></button>
+    </section>
+    <section><h2>Sidebar and menus</h2>
+      <button class="stop" id="sidebar-toggle" aria-label="Toggle sidebar" data-paint-icon><svg viewBox="0 0 24 24"><use href="chatgpt-sprite.svg#fixed-stroke"/></svg></button>
+      <button class="stop" id="new-chat" aria-label="New chat" data-paint-icon><svg viewBox="0 0 24 24"><use href="chatgpt-sprite.svg#send"/></svg></button>
+      <button class="stop" id="tools" aria-label="Tools" aria-expanded="false" data-paint-icon><svg viewBox="0 0 24 24"><use href="chatgpt-sprite.svg#variable"/></svg></button>
+      <div id="tools-menu" hidden><button class="stop" id="menu-item" aria-label="Menu action" data-paint-icon><svg viewBox="0 0 24 24"><use href="chatgpt-sprite.svg#send"/></svg></button></div>
+    </section>
+    <section id="response-actions"><h2>Response actions</h2>
+      <button class="stop" id="copy" aria-label="Copy" data-paint-icon><svg viewBox="0 0 24 24"><use href="chatgpt-sprite.svg#send"/></svg></button>
+      <button class="stop" id="regenerate" aria-label="Regenerate" data-paint-icon><svg viewBox="0 0 24 24"><use href="chatgpt-sprite.svg#fixed-stroke"/></svg></button>
+      <button class="stop" id="settings" aria-label="Settings" data-paint-icon><svg viewBox="0 0 24 24"><use href="chatgpt-sprite.svg#send"/></svg></button>
+      <button class="stop" id="sprite-tile" aria-label="Colored artwork"><svg viewBox="0 0 24 24"><use href="chatgpt-sprite.svg#send"/></svg></button>
+      <button class="stop" id="sprite-dark-tile" aria-label="Authored tile"><svg viewBox="0 0 24 24"><use href="chatgpt-sprite.svg#send"/></svg></button>
+      <button class="stop" id="css-logo" aria-label="Colored artwork"><svg viewBox="0 0 24 24"><use href="#css-symbol"/></svg></button>
+    </section>
+  </div>
+  <svg style="display:none"><symbol id="send" viewBox="0 0 24 24"><path fill="#000" d="M11 21V8l-5 5-2-2 8-8 8 8-2 2-5-5v13z"/></symbol></svg>
+  <svg style="display:none"><symbol id="css-symbol" viewBox="0 0 24 24"><path fill="#000" d="M11 21V8l-5 5-2-2 8-8 8 8-2 2-5-5v13z"/></symbol></svg>
+  <dialog id="preferences"><p>Synthetic preferences dialog</p><button class="stop" id="dialog-close" aria-label="Close dialog"><svg viewBox="0 0 24 24"><use href="chatgpt-sprite.svg#fixed-stroke"/></svg></button></dialog>
+  <script>
+    document.getElementById('tools').onclick=function(){const menu=document.getElementById('tools-menu');menu.hidden=!menu.hidden;this.setAttribute('aria-expanded',String(!menu.hidden))};
+    document.getElementById('composer-state').onclick=function(){const use=this.querySelector('use'),next=use.getAttribute('href').endsWith('#send')?'#fixed-stop':'#send';use.setAttribute('href','chatgpt-sprite.svg'+next);this.setAttribute('aria-label',next==='#send'?'Send':'Stop')};
+    document.getElementById('settings').onclick=()=>document.getElementById('preferences').showModal();
+    document.getElementById('dialog-close').onclick=()=>document.getElementById('preferences').close();
+  </script>
   <div class="composer"><button class="stop" id="stop-light" aria-label="Stop"><svg viewBox="0 0 16 16"><rect x="3" y="3" width="10" height="10" rx="1"/></svg></button>
   <button class="stop" id="stop-dark" aria-label="Stop"><svg viewBox="0 0 16 16"><rect x="3" y="3" width="10" height="10" rx="1"/></svg></button>
   <button class="stop" id="brand-logo" aria-label="Brand logo"><svg viewBox="0 0 16 16"><path fill="#1463c7" d="M2 2h5v5H2z"/><path fill="#c42c54" d="M9 9h5v5H9z"/></svg></button>

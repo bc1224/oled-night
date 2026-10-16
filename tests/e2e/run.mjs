@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { churnWorkload, judgeChurn } from './churn-benchmark.mjs';
 import { navigationFrames } from './navigation-scenario.mjs';
 import { reportAttachmentsScenario } from './report-attachments-scenario.mjs';
+import { spriteAssetsScenario } from './sprite-assets-scenario.mjs';
 import { chromeTestArgs } from '../lab/chrome-launch.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -106,6 +107,9 @@ try {
   check("options page renders", (await ext.eval("document.querySelectorAll('#newMode option').length")) === 5);
 
   check("Chrome options retain theme controls", await ext.eval("!document.getElementById('getTheme').closest('section').hidden && document.getElementById('shortcutHelp').hidden"));
+
+  await spriteAssetsScenario({openTab,closeTab:tab=>tab?send('Target.closeTarget',{targetId:tab.targetId}):Promise.resolve(),setSettings,check});
+  await resetSettings();
 
   const page = await openTab();
   const css = (id, prop, pseudo) => page.eval(`getComputedStyle(document.getElementById(${JSON.stringify(id)})${pseudo ? `, ${JSON.stringify(pseudo)}` : ""})[${JSON.stringify(prop)}]`);

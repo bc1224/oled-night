@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.45
+
+- Repair compact control symbols with explicit neutral fills or strokes, including filled Send-style arrows that cannot inherit an outer SVG color override. Inspect local definitions or bounded, same-origin SVG assets; preserve colored and uncertain artwork, avoid redirects and stop pending work when disabled.
+- Expand the synthetic chat interface regression across Send/Stop transitions, voice, disabled controls, keyboard focus, sidebar and response actions, opened menus/dialogs, late controls and narrow layouts. Check actual Chrome pixels and Firefox rendering states, preserving colored artwork and authored output on disable.
+- These fixtures cover rendering patterns; the full authenticated live ChatGPT audit remains unverified because its security verification blocks browser access.
+
 ## 0.6.44
 
 - Keep compact SVG sprite controls readable by repairing their inherited currentColor, including voice waveforms whose referenced strokes cannot be fixed through fill overrides. Preserve explicit sprite brand colors and readable native icons.

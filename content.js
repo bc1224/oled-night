@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.44";
+  const VERSION = "0.6.45";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -108,6 +108,7 @@
   let textTiers = new WeakMap();
   let logoChecked = new WeakSet();
   let logoBudget = 80;
+  const spriteDocuments = new Map();
   let inlineStyles = new WeakMap();
   const pendingTrees = new Set();
   const pendingSelf = new Set();
@@ -679,6 +680,114 @@
     return found;
   }
 
+  // Inspect only the artwork already referenced by a compact control. Never
+  // insert fetched SVG into the page or change a shared symbol definition.
+  // Unknown/colored artwork retains its paint. Requests are same-origin,
+  // coalesced, finite and bounded; a failed asset is not retried in this run.
+  function spriteTarget(svg, use) {
+    const href = use.getAttribute("href") || use.getAttribute("xlink:href") || "";
+    let url, id;
+    try { url = new URL(href, document.baseURI); id = decodeURIComponent(url.hash.slice(1)); } catch { return null; }
+    if (!id || id.length > 256) return null;
+    if (href.startsWith("#")) return svg.getRootNode().getElementById(id);
+    if (!/^https?:$/.test(url.protocol) || url.origin !== location.origin || url.username || url.password) return null;
+    url.hash = "";
+    const key = url.href;
+    let entry = spriteDocuments.get(key);
+    if (!entry) {
+      if (spriteDocuments.size >= 8) return null;
+      entry = { doc: null, waiting: new Set(), controller: new AbortController(), pending: true };
+      spriteDocuments.set(key, entry);
+      const epoch = flushEpoch;
+      const timer = setTimeout(() => entry.controller.abort(), 3000);
+      (async () => {
+        try {
+          const response = await fetch(key, { credentials: "same-origin", signal: entry.controller.signal, redirect: "error" });
+          if (!response.ok || !/^(?:image\/svg\+xml|(?:application|text)\/xml)(?:;|$)/i.test(response.headers.get("content-type") || "")) return;
+          const reader = response.body.getReader(), chunks = []; let length = 0;
+          try {
+            while (true) {
+              const { done, value } = await reader.read(); if (done) break;
+              length += value.length;
+              if (length > 524288) { await reader.cancel(); return; }
+              chunks.push(value);
+            }
+          } finally { reader.releaseLock(); }
+          const bytes = new Uint8Array(length); let offset = 0;
+          for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+          const text = new TextDecoder().decode(bytes);
+          if (/<!DOCTYPE/i.test(text)) return;
+          const doc = new DOMParser().parseFromString(text, "image/svg+xml");
+          if (doc.documentElement.localName === "svg" && doc.documentElement.namespaceURI === "http://www.w3.org/2000/svg" && !doc.querySelector("parsererror,style,script") && doc.querySelectorAll("*").length <= 2048) entry.doc = doc;
+        } catch {} finally {
+          clearTimeout(timer); entry.pending = false;
+          if (active && epoch === flushEpoch) for (const icon of entry.waiting) if (icon.isConnected) pendingTrees.add(icon);
+          entry.waiting.clear();
+          if (active && epoch === flushEpoch) schedule();
+        }
+      })();
+    }
+    if (entry.pending && entry.waiting.size < 256) entry.waiting.add(svg);
+    return entry.doc?.getElementById(id) || null;
+  }
+
+  function fixedSpriteInk(svg, ctx) {
+    const uses = svg.querySelectorAll("use");
+    if (uses.length !== 1 || svg.querySelector("path,rect,circle,ellipse,line,polyline,polygon,image,foreignObject")) return null;
+    const colors = colorsApi(), surface = colors.parseColor(ctx.style(svg).backgroundColor);
+    // Inverting the SVG also inverts its own CSS tile, unlike the button
+    // around it. Preserve authored tiles and blending/filter effects.
+    if ((surface && surface.a >= .08) || ctx.style(svg).mixBlendMode !== "normal" || ctx.style(svg).filter !== "none") return null;
+    const use = uses[0], target = spriteTarget(svg, use);
+    if (!target || target.querySelectorAll("*").length > 128) return null;
+    const paints = [];
+    let unknown = false;
+    const resolve = (value, color, depth = 0) => {
+      if (depth > 3) return null;
+      if (/^currentcolor$/i.test(value)) return resolve(color, "", depth + 1);
+      const variable = /^var\(\s*(--[\w-]+)\s*(?:,\s*(.*))?\)$/i.exec(value);
+      if (variable) return resolve(ctx.style(svg).getPropertyValue(variable[1]).trim() || variable[2] || "", color, depth + 1);
+      const hex = /^#([\da-f]{3}|[\da-f]{4}|[\da-f]{6}|[\da-f]{8})$/i.exec(value);
+      if (hex) {
+        const digits = hex[1].length <= 4 ? [...hex[1]].map(c => c + c).join("") : hex[1];
+        return { r: parseInt(digits.slice(0, 2), 16), g: parseInt(digits.slice(2, 4), 16), b: parseInt(digits.slice(4, 6), 16), a: digits.length === 8 ? parseInt(digits.slice(6), 16) / 255 : 1 };
+      }
+      value = ({ black: "rgb(0,0,0)", white: "rgb(255,255,255)", transparent: "rgba(0,0,0,0)" })[value.toLowerCase()] || value;
+      return colors.parseColor(value);
+    };
+    const visit = (node, inherited, draw = true) => {
+      if (!/^(svg|symbol|g|defs|path|rect|circle|ellipse|line|polyline|polygon|title|desc)$/.test(node.localName) || node.hasAttribute("class") ||
+          ["filter", "mask", "clip-path"].some(key => node.hasAttribute(key)) ||
+          Array.from(node.style || []).some(key => !/^(display|visibility|color|fill|stroke|opacity|fill-opacity|stroke-opacity|fill-rule|clip-rule|stroke-width|stroke-linecap|stroke-linejoin|stroke-miterlimit|stroke-dasharray|stroke-dashoffset)$/.test(key))) { unknown = true; return; }
+      const state = { ...inherited };
+      for (const key of ["color", "fill", "stroke"]) {
+        const value = (node.style?.getPropertyValue(key) || node.getAttribute(key) || "").trim();
+        if (value && value !== "inherit") { state[key] = value; if (key !== "color") state[key + "Fixed"] = !/^currentcolor$/i.test(value); }
+      }
+      if (draw && /^(path|rect|circle|ellipse|line|polyline|polygon)$/.test(node.localName)) for (const key of ["fill", "stroke"]) {
+        if (state[key] === "none") continue;
+        const color = resolve(state[key], state.color);
+        if (!color) unknown = true;
+        else if (color.a >= .08) {
+          // A local stylesheet can override a presentation attribute. Do not
+          // infer neutral artwork when its actual authored paint differs.
+          const live = target.ownerDocument === document && state[key + "Fixed"] ? colors.parseColor(ctx.style(node)[key]) : null;
+          if (live && ["r", "g", "b", "a"].some(channel => Math.abs(live[channel] - color[channel]) > .01)) unknown = true;
+          paints.push({ color, fixed: state[key + "Fixed"] });
+        }
+      }
+      if (draw) for (const child of node.children) visit(child, state);
+      return state;
+    };
+    const computed = ctx.style(use);
+    let state = { color: ctx.style(svg).color, fill: computed.fill, stroke: computed.stroke, fillFixed: true, strokeFixed: true };
+    const ancestry = []; for (let node = target.parentElement; node && ancestry.length < 16; node = node.parentElement) { ancestry.unshift(node); if (node.localName === "svg") break; }
+    for (const node of ancestry) state = visit(node, state, false) || state;
+    visit(target, state);
+    if (unknown || !paints.length || paints.some(p => colors.chroma(p.color) > .1)) return null;
+    return paints.find(p => p.fixed && colors.luminance(p.color) < .2)?.color || null;
+  }
+
   // Small inline SVG icons with a hard-coded dark fill/stroke would vanish on
   // black. Larger SVGs are charts/illustrations: their near-white area fills
   // and gradient stops (App Store Connect sparklines) are darkened instead,
@@ -694,6 +803,14 @@
     if (backdropOf(svg, ctx).image) return;
     const colors = colorsApi();
     const icon = rect.width <= 64 && rect.height <= 64;
+    if (icon && svg.closest('a,button,[role="button"],[role="radio"]')) {
+      const fixed = fixedSpriteInk(svg, ctx);
+      if (fixed) {
+        const backdrop = backdropOf(svg, ctx).color, bg = colors.luminance(backdrop), ink = colors.luminance(fixed);
+        const unreadable = mode !== "crush" || (bg < .2 && (Math.max(bg, ink) + .05) / (Math.min(bg, ink) + .05) < 3) || (bg > .6 && colors.chroma(backdrop) < .1);
+        if (unreadable) { out.push([svg, { "icon-invert": "1" }]); return; }
+      }
+    }
     // A sprite's shadow tree is not traversable here. Repair inherited
     // currentColor instead of inverting unknown artwork: explicit brand
     // fills/strokes in either local or external symbols keep their paint.
@@ -1945,6 +2062,8 @@
   }
 
   function disable() {
+    for (const entry of spriteDocuments.values()) { entry.controller.abort(); entry.waiting.clear(); }
+    spriteDocuments.clear();
     stopYouTubeTheme?.();
     stopYouTubeTheme = null;
     document.removeEventListener("load", onSheetLoad, true);

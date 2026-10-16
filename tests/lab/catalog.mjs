@@ -10,7 +10,7 @@ const descriptions = {
   'large-updates':'2,500 fake inbox rows: native/active frame throughput, script/style/collected-memory budgets, bounded ownership, inherited text, background-only selection, CSSOM invalidation and animated fallback',
   'paint-updates':'Synthetic mail updates: paired native/active animation frame pacing, CPU and style work, bounded heap growth and prompt release of detached shadow components',
   'checkout':'Stripe-style fake checkout: monochrome payment icons, preserved payment brand colors, filled fields and animated accordion opening without pale frames; no payments or real customer data',
-  'chatgpt-controls':'Synthetic dark chat controls: readable plan text, Stop icons and local/external SVG voice sprites on light and dark buttons; colored logos preserved',
+  'chatgpt-controls':'Synthetic chat interface: filled/stroked Send and Stop sprites, voice, disabled and focus states, sidebar/response actions, menus/dialogs, late controls and narrow layouts; colored artwork preserved. Not a live ChatGPT audit',
   'generated-style':'Late CSSOM color and width transitions plus generated labels in document, adopted shadow sheets and exported parts; authored scopes are reconsidered after updates',
   'report-preview':'Public issue preview omits private text, field values, selectors, frame origins and URL paths; nothing sends before a click',
   'cold-shadow':'Roots attached after their hosts were scanned: resting nested controls become readable without hover or focus',

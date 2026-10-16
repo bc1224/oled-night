@@ -28,10 +28,10 @@
     await browser.tabs.remove(tab.id);
     await browser.storage.sync.set({extensionEnabled:true,siteRules:{}});
     tab=await browser.tabs.create({url:TEST_ORIGIN+'/chatgpt-controls.html'});await sleep(1200);
-    const chatgptAuto=await inspect(chatgptControlsScenario);
+    const chatgptAuto=await inspect(chatgptControlsScenario),interfaceAuto=await inspect(chatgptInterfaceScenario);
     await browser.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'recolor'}});await browser.tabs.reload(tab.id);await sleep(1200);
-    const chatgptRecolor=await inspect(chatgptControlsScenario);
-    out.push(...await proof('chatgpt-controls',[{name:'ChatGPT controls keep text and Stop icon readable',ok:chatgptAuto.ok&&chatgptRecolor.ok,detail:JSON.stringify({auto:chatgptAuto,recolor:chatgptRecolor})}]));
+    const chatgptRecolor=await inspect(chatgptControlsScenario),interfaceRecolor=await inspect(chatgptInterfaceScenario);
+    out.push(...await proof('chatgpt-controls',[{name:'ChatGPT controls keep text and Stop icon readable',ok:chatgptAuto.ok&&chatgptRecolor.ok&&interfaceAuto.ok&&interfaceRecolor.ok,detail:JSON.stringify({auto:chatgptAuto,recolor:chatgptRecolor,interfaceAuto,interfaceRecolor})}]));
     await browser.tabs.remove(tab.id);
     for(const file of ['email-newsletter','native-banner']){
       await browser.storage.sync.set({extensionEnabled:true,siteRules:{}});
