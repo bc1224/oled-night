@@ -2,7 +2,7 @@ const groups = {
   'Interactions': ['dropdowns','dark-dropdowns','state-surfaces','shadow-hover','cold-shadow','interaction-layout','media-navigation','frame-mutation','paint-updates','large-updates'],
   'Text & surfaces': ['light','dark','explicit-light','ink','surfaces','scope-light','scope-dark','scope-scheme','svg-outline'],
   'Media & data': ['indicators','chart','canvas','shop','ad-overlays'],
-  'App reproductions': ['youtube','gmail','email-newsletter','native-banner','booking-form','checkout','chatgpt-controls','google-sheets-colors','reddit-res','shadow-stability','apple-auth','apple-recovery'],
+  'App reproductions': ['youtube','gmail','email-newsletter','native-banner','booking-form','checkout','chatgpt-controls','google-sheets-colors','reddit-res','shadow-stability','apple-auth','apple-recovery','dmv-hero-text'],
   'Isolation & loading': ['components','protected','challenge','challenge-inline','frame','transparent-frame','slow','efficiency','report-fields','report-preview','generated-style']
 };
 const descriptions = {
@@ -32,7 +32,8 @@ const descriptions = {
   'challenge-inline':'Inline challenge exclusions',
   'report-fields':'Diagnostic privacy: fake private-field sentinels',
   'apple-auth':'Synthetic login fields and native text fill',
-  'components':'Open/closed shadow roots, replaced stylesheets and protected widgets'
+  'components':'Open/closed shadow roots, replaced stylesheets and protected widgets',
+  'dmv-hero-text':'Synthetic DMV-style carousel: absolutely positioned caption over a nested picture/image wrapper and colorful fake artwork; verifies painted text contrast without live DMV assets'
 };
 export const cases = [
   {id:'cvs-hover',title:'CVS · repeated navigation hover',category:'Interactions',file:'cvs-hover.html',covers:['Late nested-root creation, pointer entry, sibling moves, delayed hover classes and replaced stylesheets','Whole hover interval sampled in Chrome; anonymous live CVS result shown separately'],limit:'Synthetic CVS-style stress case for the late-root fix in 0.6.38. A passing run does not guarantee every live page state; check the separate live receipt.'},

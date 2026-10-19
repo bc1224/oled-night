@@ -1,6 +1,6 @@
 // Test-only background script added to a disposable copy of the packaged extension.
 (async()=>{
-  const out=[],sleep=ms=>new Promise(r=>setTimeout(r,ms));let tab,completed=false;
+  const out=[],sleep=ms=>new Promise(r=>setTimeout(r,ms));let tab,completed=false,paintedHero=null;
   const inspect=async (func,args=[])=>(await browser.scripting.executeScript({target:{tabId:tab.id},func,args}))[0].result;
   const proof=async (fixture,items)=>regressionChecks(fixture,await inspect(()=>document.documentElement.hasAttribute('data-oled-night-root')),items);
   try{
@@ -140,7 +140,12 @@
     tab=await browser.tabs.create({url:TEST_ORIGIN+'/report-preview.html'});await sleep(900);
     out.push(...await inspect(reportPreviewScenario));
     await browser.tabs.remove(tab.id);
+    await browser.storage.sync.set({extensionEnabled:true,siteRules:{}});
+    tab=await browser.tabs.create({url:TEST_ORIGIN+'/dmv-hero-text.html'});await sleep(1000);
+    const heroProbe=await inspect(dmvHeroPaintProbe),heroImage=await browser.tabs.captureVisibleTab(tab.windowId,{format:'png'});
+    paintedHero={probe:heroProbe,dataUrl:heroImage};
+    await browser.tabs.remove(tab.id);
     completed=true;
   }catch(e){out.push({name:'Firefox lab execution',ok:false,detail:String(e)})}
-  await fetch(TEST_ORIGIN+'/result',{method:'POST',body:JSON.stringify({completed,checks:out})});
+  await fetch(TEST_ORIGIN+'/result',{method:'POST',body:JSON.stringify({completed,checks:out,paintedHero})});
 })();

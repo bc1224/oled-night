@@ -23,6 +23,8 @@ import {sampleChatgptPixels} from './chatgpt-controls-paint.mjs';
 import {chatgptControlsScenario} from './chatgpt-controls-scenario.mjs';
 import {chatgptInterfaceScenario} from './chatgpt-interface-scenario.mjs';
 import {reportBaselineEntry} from './report-baseline.mjs';
+import {dmvHeroPaintProbe} from './dmv-hero-scenario.mjs';
+import {paintedInkContrast,paintedSample} from './painted-contrast.mjs';
 import {frameWorkload,frameChecks,mountComponents,removeComponents,emptyRowLifecycle} from '../../docs/lab/performance.js';
 import {runtimeDigest,regressionChecks} from './runtime-proof.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/lab-results');mkdirSync(output,{recursive:true});
@@ -129,6 +131,12 @@ try {
       checks.push({fixture:'checkout',kind:'assertion',name:'checkout-'+width+' / '+sample.icon+' gains visible painted icon pixels',ok:sample.active-sample.native>=8,detail:JSON.stringify(sample)});
     }
   }
+  await options.eval("chrome.storage.sync.set({extensionEnabled:true,globalEnabled:true,appearance:'oled',brightness:88,contrast:72,dimImages:false,siteRules:{},siteTuning:{}})");await wait(500);
+  await page.size(1024,768);await page.go(`${server.origin}/lab/fixtures/dmv-hero-text.html`);await wait(500);
+  const hero=await page.eval(`(${dmvHeroPaintProbe.toString()})()`),heroPng=await page.screenshot();
+  const heroPaint=paintedInkContrast(heroPng,hero.rect,[246,230,107]),artPaint=paintedSample(heroPng,20,20),blueArt=paintedSample(heroPng,20,230),redArt=paintedSample(heroPng,560,54);
+  const pixelIs=(actual,expected)=>actual?.every((c,i)=>Math.abs(c-expected[i])<=3);
+  checks.push(...await proof('dmv-hero-text',[{name:'DMV hero text retains readable ink over nested picture artwork',ok:hero.active&&hero.image.loaded&&hero.image.filter==='none'&&hero.picture.width===0&&hero.picture.height===0&&pixelIs(artPaint,[246,230,107])&&pixelIs(blueArt,[11,102,158])&&pixelIs(redArt,[219,62,66])&&heroPaint.ok,detail:JSON.stringify({probe:hero,paint:heroPaint,artPaint,blueArt,redArt})}]));
   await settings(true);await page.size(1200,1000);await page.go(`${server.origin}/lab/fixtures/paint-updates.html`);await wait(500);
   await page.eval(readFileSync(join(root,'docs/lab/audit.js'),'utf8'));
   checks.push(...await proof('paint-updates',await page.eval(`(${paintUpdatesScenario.toString()})()`)));

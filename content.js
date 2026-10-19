@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.45";
+  const VERSION = "0.6.46";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -442,11 +442,12 @@
         if (!sibling || node.parentElement?.childElementCount > 4 ||
             !(directMedia || ctx.style(node).position === "absolute" || ctx.style(sibling).position === "absolute")) continue;
         const frame = node.parentElement?.getBoundingClientRect();
-        const underlay = sibling.getBoundingClientRect();
         const content = node.getBoundingClientRect();
         const media = frame && mediaUnderlay(sibling, frame, content, ctx, node);
-        if (frame && underlay.width >= frame.width * 0.7 && underlay.height >= frame.height * 0.7 &&
-            media) {
+        // A <picture> can have a zero-sized inline box when its absolutely
+        // positioned image fills the slide. mediaUnderlay validates the actual
+        // rendered image bounds and overlap, so the wrapper's box is irrelevant.
+        if (frame && media) {
           result = { image: true };
           break;
         }

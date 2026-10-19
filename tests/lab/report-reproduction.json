@@ -1,5 +1,5 @@
 {
-  "base": "1602da939ec3f44e2ee2992fa6a64f04b4f1e9fa",
-  "fixture": "chatgpt-controls",
-  "check": "ChatGPT controls keep text and Stop icon readable"
+  "base": "1780c923e100abe78fc75931504a044ce47db892",
+  "fixture": "dmv-hero-text",
+  "check": "DMV hero text retains readable ink over nested picture artwork"
 }

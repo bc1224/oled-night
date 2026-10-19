@@ -5,7 +5,7 @@ import {spawnSync} from 'node:child_process';
 import {runtimeDigest} from './runtime-proof.mjs';
 
 const BASE=/^[a-f0-9]{40}$/;
-const IMMUTABLE_BASE='1602da939ec3f44e2ee2992fa6a64f04b4f1e9fa';
+const IMMUTABLE_BASE='1780c923e100abe78fc75931504a044ce47db892';
 export function shouldRunReportBaseline({githubActions=process.env.GITHUB_ACTIONS,hasSpec,packageRoot=process.env.OLED_LAB_PACKAGE_ROOT}={}){
   return githubActions==='true'&&hasSpec===true&&!packageRoot;
 }
@@ -25,6 +25,11 @@ export function validateBaselineReport(report,spec,engine,expectedRuntimeHash){
   if(!activation.length||activation.some(c=>c.ok!==true)||named.length!==1||named[0].ok!==false||failures.length!==1||failures[0]!==named[0]||
     report.checks.some(c=>typeof c.name!=='string'||typeof c.ok!=='boolean')||
     report.checks.some(c=>c.ok===false&&(c.kind!=='assertion'||!c.fixture)))throw Error('Baseline must contain only the named active-runtime rendering failure');
+  return true;
+}
+export function validateBaselineChildResult(child){
+  if(child?.error)throw Error(`Baseline child process failed: ${child.error}`);
+  if(child?.status!==1)throw Error(`Expected the named baseline failure to exit 1; got ${child?.status}`);
   return true;
 }
 function run(command,args,{cwd,env,timeout}){
@@ -56,8 +61,7 @@ export async function runReportBaseline({engine,root,output,runnerFile,catalogId
     if(!existsSync(reportPath))throw Error(`Baseline child did not write ${reportPath}`);
     const report=JSON.parse(readFileSync(reportPath,'utf8'));
     validateBaselineReport(report,spec,engine,baseRuntimeHash);
-    if(child.error)throw child.error;
-    if(child.status!==1)throw Error(`Expected the named baseline failure to exit 1; got ${child.status}`);
+    validateBaselineChildResult(child);
     return true;
   }finally{
     try{git(root,['worktree','remove','--force',worktree],30000)}catch{}

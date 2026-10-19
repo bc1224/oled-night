@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.46
+
+- Preserve authored caption colors over hero artwork when an inline `<picture>` wrapper has no box but its positioned image fills the slide. Keep the image and its colored artwork unchanged; add a synthetic DMV-style carousel fixture with painted-pixel contrast checks.
+
 ## 0.6.45
 
 - Preserve exact Google Sheets-style palette swatch colors, including white, grays, saturated colors, pastels and custom colors, while darkening the surrounding menu. Add a synthetic test-site case and Chrome/Firefox regressions for opening, selecting and updating colors.
