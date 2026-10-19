@@ -2,6 +2,7 @@
 
 ## 0.6.47
 
+- Keep thin currentColor hamburger/close strokes readable inside compact controls, including rotated and hidden expanded states.
 - Keep compact, explicitly identified inline SVG wordmarks readable on darkened surfaces, including wide animated navigation logos and paths added after loading. Preserve colored paint, unlabelled illustrations, larger artwork and adjacent opacity animations. Add synthetic Chrome/Firefox coverage for resting, focused, expanded and disabled states.
 - The Anthropic hero text report remains open: animation interruption probes have not reproduced a stuck grey state. This wordmark correction does not establish a fix for that separate symptom.
 

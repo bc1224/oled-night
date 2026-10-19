@@ -1,5 +1,5 @@
 {
   "base": "4f1deb9a7640dc69e07fc16caf7117614e7b7469",
   "fixture": "wide-wordmarks",
-  "check": "Wide inline wordmarks stay readable through state and animation updates"
+  "check": "Compact navigation graphics stay readable through state and animation updates"
 }

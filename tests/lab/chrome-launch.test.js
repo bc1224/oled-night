@@ -9,7 +9,7 @@ const assert=require('node:assert/strict');
   assert.equal(shouldRunReportBaseline({githubActions:'true',hasSpec:false,packageRoot:''}),false);
   assert.equal(shouldRunReportBaseline({githubActions:'false',hasSpec:true,packageRoot:''}),false);
   assert.equal(shouldRunReportBaseline({githubActions:'true',hasSpec:true,packageRoot:'/base'}),false);
-  const spec={base:'4f1deb9a7640dc69e07fc16caf7117614e7b7469',fixture:'wide-wordmarks',check:'Wide inline wordmarks stay readable through state and animation updates'};
+  const spec={base:'4f1deb9a7640dc69e07fc16caf7117614e7b7469',fixture:'wide-wordmarks',check:'Compact navigation graphics stay readable through state and animation updates'};
   assert.deepEqual(validateBaselineSpec(spec,new Set(['wide-wordmarks'])),spec);
   const report={engine:'Chrome',completed:true,sha:spec.base,runtimeHash:'a'.repeat(64),checks:[
     {fixture:spec.fixture,kind:'activation',name:'extension active',ok:true},

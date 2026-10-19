@@ -552,6 +552,23 @@
     return horizontal || vertical;
   }
 
+  // Some compact controls draw their icon with thin neutral background bars.
+  // Measure authored width/height, so rotating a hamburger into a close glyph
+  // does not turn its thin stroke into a square surface. Exclude separators,
+  // text, artwork and bars outside a small semantic control.
+  function isControlStroke(element, computed, ctx) {
+    if (element.childElementCount || element.textContent.trim() || computed.backgroundImage !== "none") return false;
+    const w = parseFloat(computed.width), h = parseFloat(computed.height);
+    if (!((w >= 6 && w <= 64 && h > 0 && h <= 3) || (h >= 6 && h <= 64 && w > 0 && w <= 3))) return false;
+    const control = element.parentElement?.closest('button, [role="button"]');
+    if (!control) return false;
+    const style = ctx.style(control), cw = parseFloat(style.width), ch = parseFloat(style.height);
+    if (!(cw > 0 && cw <= 96 && ch > 0 && ch <= 96) || backdropOf(element, ctx).image) return false;
+    const colors = colorsApi(), paint = colors.parseColor(computed.backgroundColor);
+    return paint?.a >= .5 && colors.chroma(paint) < .15 &&
+      !element.closest('[role="progressbar"], [role="meter"], [role="img"]');
+  }
+
   // Read-only: decides overrides from original computed styles. No DOM writes
   // happen here, so the whole batch costs a single style recalculation.
   function decide(element, ctx) {
@@ -607,6 +624,11 @@
     if ((mode === "oled" || mode === "soft") && isDataFill(element, computed, ctx)) {
       found.bg = colors.mapDataPaint(colors.parseColor(computed.backgroundColor));
       found.data = "1";
+    }
+    if ((mode === "oled" || mode === "soft") && isControlStroke(element, computed, ctx)) {
+      // currentColor can already inherit our light foreground during a
+      // shallow state update; it remains ink at either native lightness.
+      found.bg = colors.mapForeground(colors.parseColor(computed.backgroundColor), 1);
     }
     if (element.matches("input, textarea, select")) found.field = "1";
     if (mode === "crush") {
