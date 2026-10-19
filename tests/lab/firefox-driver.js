@@ -145,6 +145,12 @@
     const heroProbe=await inspect(dmvHeroPaintProbe),heroImage=await browser.tabs.captureVisibleTab(tab.windowId,{format:'png'});
     paintedHero={probe:heroProbe,dataUrl:heroImage};
     await browser.tabs.remove(tab.id);
+    await browser.storage.sync.set({extensionEnabled:true,siteRules:{}});
+    tab=await browser.tabs.create({url:TEST_ORIGIN+'/wide-wordmarks.html'});await sleep(1000);
+    out.push(...await proof('wide-wordmarks',await inspect(wideWordmarksScenario)));
+    await browser.storage.sync.set({extensionEnabled:false});await sleep(300);
+    out.push({name:'wide-wordmarks / disabling restores native paint',ok:await inspect(()=>getComputedStyle(document.getElementById('wordmark-ink')).fill==='rgb(24, 24, 24)')});
+    await browser.tabs.remove(tab.id);
     completed=true;
   }catch(e){out.push({name:'Firefox lab execution',ok:false,detail:String(e)})}
   await fetch(TEST_ORIGIN+'/result',{method:'POST',body:JSON.stringify({completed,checks:out,paintedHero})});

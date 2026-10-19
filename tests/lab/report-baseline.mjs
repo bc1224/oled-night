@@ -5,7 +5,7 @@ import {spawnSync} from 'node:child_process';
 import {runtimeDigest} from './runtime-proof.mjs';
 
 const BASE=/^[a-f0-9]{40}$/;
-const IMMUTABLE_BASE='1780c923e100abe78fc75931504a044ce47db892';
+const IMMUTABLE_BASE='4f1deb9a7640dc69e07fc16caf7117614e7b7469';
 export function shouldRunReportBaseline({githubActions=process.env.GITHUB_ACTIONS,hasSpec,packageRoot=process.env.OLED_LAB_PACKAGE_ROOT}={}){
   return githubActions==='true'&&hasSpec===true&&!packageRoot;
 }

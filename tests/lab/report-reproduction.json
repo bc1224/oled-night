@@ -1,5 +1,5 @@
 {
-  "base": "1780c923e100abe78fc75931504a044ce47db892",
-  "fixture": "dmv-hero-text",
-  "check": "DMV hero text retains readable ink over nested picture artwork"
+  "base": "4f1deb9a7640dc69e07fc16caf7117614e7b7469",
+  "fixture": "wide-wordmarks",
+  "check": "Wide inline wordmarks stay readable through state and animation updates"
 }

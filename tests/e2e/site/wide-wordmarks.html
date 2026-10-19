@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{background:#f0eee6;color:#141413;font:16px sans-serif;margin:24px}button{display:block;background:#fff;color:#141413;border:1px solid #aaa;padding:16px;margin:12px 0}button:hover{background:#ddd}button:active,button[aria-expanded=true]{background:#ccc}button:focus{outline:3px solid #126ac4;outline-offset:3px}button:disabled{opacity:.6}.nav_logo_lottie svg{width:143px;height:16px}.tall-logo svg{width:143px;height:96px}.entrance{opacity:0;transform:translateY(10px);transition:opacity .25s linear,transform .25s linear}
+</style></head><body><h1>Fake research navigation</h1>
+<button id="wordmark-button" aria-label="Home page" aria-expanded="false" onclick="this.setAttribute('aria-expanded',this.getAttribute('aria-expanded')!=='true');if(!document.getElementById('late-ink')){const p=document.createElementNS('http://www.w3.org/2000/svg','path');p.id='late-ink';p.setAttribute('fill','#181818');p.setAttribute('d','M95 4h35v8H95z');document.getElementById('wordmark-svg').append(p)}"><div class="nav_logo_lottie"><svg id="wordmark-svg" viewBox="0 0 143 16"><defs><clipPath id="wordmark-clip"><rect width="143" height="16"/></clipPath></defs><g clip-path="url(#wordmark-clip)"><path id="wordmark-ink" fill="#181818" d="M2 2h18v12H2zM26 2h18v12H26zM50 2h18v12H50z"/></g></svg></div></button>
+<div class="nav_logo_lottie"><svg viewBox="0 0 143 16"><path id="colored-wordmark" fill="#d64267" d="M2 2h70v12H2z"/></svg></div>
+<svg width="143" height="16" viewBox="0 0 143 16"><path id="ordinary-art" fill="#181818" d="M2 2h70v12H2z"/></svg>
+<div class="tall-logo"><svg viewBox="0 0 143 96"><path id="tall-art" fill="#181818" d="M2 2h70v90H2z"/></svg></div>
+<p><span id="entrance-word" class="entrance">Fake animated hero copy</span></p>
+<script>requestAnimationFrame(()=>requestAnimationFrame(()=>{const e=document.getElementById('entrance-word');e.style.opacity='1';e.style.transform='translateY(0)'}));</script>
+</body></html>

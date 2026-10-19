@@ -1,11 +1,12 @@
 const groups = {
   'Interactions': ['dropdowns','dark-dropdowns','state-surfaces','shadow-hover','cold-shadow','interaction-layout','media-navigation','frame-mutation','paint-updates','large-updates'],
   'Text & surfaces': ['light','dark','explicit-light','ink','surfaces','scope-light','scope-dark','scope-scheme','svg-outline'],
-  'Media & data': ['indicators','chart','canvas','shop','ad-overlays'],
+  'Media & data': ['indicators','chart','canvas','shop','ad-overlays','wide-wordmarks'],
   'App reproductions': ['youtube','gmail','email-newsletter','native-banner','booking-form','checkout','chatgpt-controls','google-sheets-colors','reddit-res','shadow-stability','apple-auth','apple-recovery','dmv-hero-text'],
   'Isolation & loading': ['components','protected','challenge','challenge-inline','frame','transparent-frame','slow','efficiency','report-fields','report-preview','generated-style']
 };
 const descriptions = {
+  'wide-wordmarks':'Synthetic wide inline animated wordmark: readable neutral ink at rest, focus, expanded and disabled states; late paths, colored logos, larger artwork and adjacent opacity motion preserved',
   'google-sheets-colors':'Synthetic Google-style fill-color palette: exact grayscale, saturated and pastel swatches, custom colors, dynamic updates and selection while the surrounding menu stays dark. Chrome and Firefox extension regressions; not a live document capture',
   'apple-recovery':'Issue #4: Apple-style account recovery with an editable captcha-input, readable floating label, protected provider widget and unchanged verification artwork',
   'large-updates':'2,500 fake inbox rows: native/active frame throughput, script/style/collected-memory budgets, bounded ownership, inherited text, background-only selection, CSSOM invalidation and animated fallback',

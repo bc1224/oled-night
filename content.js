@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.46";
+  const VERSION = "0.6.47";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -806,7 +806,20 @@
     // Icons in an image creative share its authored light/dark ink.
     if (backdropOf(svg, ctx).image) return;
     const colors = colorsApi();
-    const icon = rect.width <= 64 && rect.height <= 64;
+    // Compact wordmarks can be much wider than a square icon (including
+    // animated SVG logos). Keep the same neutral-ink mapping for explicitly
+    // named logos; unlabelled illustrations and larger artwork stay charts.
+    let compactLogo = false;
+    if (rect.width > 64 && rect.width <= 420 && rect.height <= 64) {
+      for (let owner = svg, depth = 0; owner && depth < 3; owner = owner.parentElement, depth++) {
+        if (owner.matches('[itemprop~="logo"], [aria-label*="logo" i], [data-oled-night-logo]') ||
+            /(?:^|[\s_-])logo(?:$|[\s_-])/i.test(`${owner.id} ${owner.getAttribute("class") || ""}`)) {
+          compactLogo = true;
+          break;
+        }
+      }
+    }
+    const icon = (rect.width <= 64 && rect.height <= 64) || compactLogo;
     if (icon && svg.closest('a,button,[role="button"],[role="radio"]')) {
       const fixed = fixedSpriteInk(svg, ctx);
       if (fixed) {

@@ -9,8 +9,8 @@ const assert=require('node:assert/strict');
   assert.equal(shouldRunReportBaseline({githubActions:'true',hasSpec:false,packageRoot:''}),false);
   assert.equal(shouldRunReportBaseline({githubActions:'false',hasSpec:true,packageRoot:''}),false);
   assert.equal(shouldRunReportBaseline({githubActions:'true',hasSpec:true,packageRoot:'/base'}),false);
-  const spec={base:'1780c923e100abe78fc75931504a044ce47db892',fixture:'dmv-hero-text',check:'DMV hero text retains readable ink over nested picture artwork'};
-  assert.deepEqual(validateBaselineSpec(spec,new Set(['dmv-hero-text'])),spec);
+  const spec={base:'4f1deb9a7640dc69e07fc16caf7117614e7b7469',fixture:'wide-wordmarks',check:'Wide inline wordmarks stay readable through state and animation updates'};
+  assert.deepEqual(validateBaselineSpec(spec,new Set(['wide-wordmarks'])),spec);
   const report={engine:'Chrome',completed:true,sha:spec.base,runtimeHash:'a'.repeat(64),checks:[
     {fixture:spec.fixture,kind:'activation',name:'extension active',ok:true},
     {fixture:spec.fixture,kind:'assertion',name:spec.check,ok:false}
@@ -24,7 +24,7 @@ const assert=require('node:assert/strict');
     r=>{r.checks[1].ok=true},r=>{r.sha='f'.repeat(40)},r=>{r.runtimeHash='b'.repeat(64)},r=>{r.checks[0].ok=false},
     r=>{r.candidate=true},r=>{r.checks[1].kind='infrastructure'},r=>{r.checks[1].name='wrong assertion'}
   ]){const bad=structuredClone(report);mutation(bad);assert.throws(()=>validateBaselineReport(bad,spec,'Chrome','a'.repeat(64)))}
-  assert.throws(()=>validateBaselineSpec({...spec,check:' '},new Set(['dmv-hero-text'])));
-  assert.throws(()=>validateBaselineSpec({...spec,base:'f'.repeat(40)},new Set(['dmv-hero-text'])));
+  assert.throws(()=>validateBaselineSpec({...spec,check:' '},new Set(['wide-wordmarks'])));
+  assert.throws(()=>validateBaselineSpec({...spec,base:'f'.repeat(40)},new Set(['wide-wordmarks'])));
   console.log('PASS Chrome sandbox opt-in and immutable report-baseline acceptance contract');
 })().catch(e=>{console.error(e);process.exitCode=1});

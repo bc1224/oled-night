@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.47
+
+- Keep compact, explicitly identified inline SVG wordmarks readable on darkened surfaces, including wide animated navigation logos and paths added after loading. Preserve colored paint, unlabelled illustrations, larger artwork and adjacent opacity animations. Add synthetic Chrome/Firefox coverage for resting, focused, expanded and disabled states.
+- The Anthropic hero text report remains open: animation interruption probes have not reproduced a stuck grey state. This wordmark correction does not establish a fix for that separate symptom.
+
 ## 0.6.46
 
 - Preserve authored caption colors over hero artwork when an inline `<picture>` wrapper has no box but its positioned image fills the slide. Keep the image and its colored artwork unchanged; add a synthetic DMV-style carousel fixture with painted-pixel contrast checks.
