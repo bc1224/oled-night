@@ -573,9 +573,11 @@
   // black. Bound this to compact, empty, rounded children of semantic switches.
   function switchThumb(element, computed, ctx) {
     if (ctx.mode === "crush" && !ctx.recolorLightRegions) return null;
-    if (element.childElementCount || element.textContent.trim() || computed.backgroundImage !== "none") return null;
-    const control = element.parentElement?.closest('[role="switch"], button[aria-checked]');
-    if (!control || element.parentElement !== control) return null;
+    if (element.childElementCount) return null;
+    const control = element.parentElement;
+    if (control?.getAttribute("role") !== "switch" &&
+        !(control?.localName === "button" && control.hasAttribute("aria-checked"))) return null;
+    if (element.textContent.trim() || computed.backgroundImage !== "none") return null;
     const w = parseFloat(computed.width), h = parseFloat(computed.height);
     if (!(w >= 8 && w <= 32 && h >= 8 && h <= 32 && w / h >= .5 && w / h <= 2 &&
         parseFloat(computed.borderTopLeftRadius) >= Math.min(w, h) / 4)) return null;
