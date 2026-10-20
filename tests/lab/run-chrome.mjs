@@ -18,7 +18,6 @@ import {paintUpdatesScenario} from './paint-updates-scenario.mjs';
 import {largeUpdatesScenario} from './large-updates-scenario.mjs';
 import {churnWorkload,judgeChurn} from '../e2e/churn-benchmark.mjs';
 import {reportPreviewScenario} from './report-preview-scenario.mjs';
-import {reportedControlsScenario,reportedControlsRestored} from './reported-controls-scenario.mjs';
 import {visibleIconPixels} from './checkout-paint.mjs';
 import {sampleChatgptPixels} from './chatgpt-controls-paint.mjs';
 import {chatgptControlsScenario} from './chatgpt-controls-scenario.mjs';
@@ -230,19 +229,6 @@ try {
   }
   await page.go(`${server.origin}/lab/fixtures/report-preview.html`);await wait(400);
   checks.push(...await page.eval(`(${reportPreviewScenario.toString()})()`));
-  for(const mode of ['auto','recolor']){
-    await options.eval(`chrome.storage.sync.set({extensionEnabled:true,brightness:88,contrast:72,dimImages:false,siteRules:${mode==='auto'?'{}':"{'127.0.0.1':'recolor'}"}})`);await wait(500);
-    await page.go(`${server.origin}/lab/fixtures/reported-controls.html${mode==='recolor'?'?light':''}`);await wait(900);
-    checks.push(...(await page.eval(`(${reportedControlsScenario.toString()})()`)).map(c=>({...c,name:'reported controls / '+mode+' / '+c.name})));
-    const reportedShot=await page.screenshot();
-    writeFileSync(join(output,'reported-controls-'+mode+'.png'),reportedShot);
-    const promoBounds=await page.eval("(()=>{const text=document.getElementById('promo-ink').getBoundingClientRect(),art=document.getElementById('yellow-art').getBoundingClientRect();return {text:{x:text.x,y:text.y,width:text.width,height:text.height},art:{x:art.x+20,y:art.y+art.height-20}}})()");
-    const promoPaint=paintedInkContrast(reportedShot,promoBounds.text,[255,211,116]),artPaint=paintedSample(reportedShot,promoBounds.art.x,promoBounds.art.y);
-    checks.push({name:'reported controls / '+mode+' / actual promotion pixels keep readable ink and original artwork',ok:promoPaint.ok&&artPaint?.every((v,i)=>Math.abs(v-[255,211,116][i])<=3),detail:JSON.stringify({promoPaint,artPaint})});
-    await options.eval('chrome.storage.sync.set({extensionEnabled:false})');await wait(500);
-    checks.push(...(await page.eval(`(${reportedControlsRestored.toString()})()`)).map(c=>({...c,name:'reported controls / '+mode+' / '+c.name})));
-  }
-  await options.eval('chrome.storage.sync.set({extensionEnabled:true,brightness:88,contrast:72})');await wait(500);
   const lab=await browser.open(`${server.origin}/lab/`);await wait(500);add('gallery lists all '+cases.length+' cases',await lab.eval(`document.querySelectorAll('#cases button').length===${cases.length}`));
   add('gallery search filters cases',await lab.eval(`(()=>{const s=document.getElementById('search');s.value='Reddit';s.dispatchEvent(new Event('input'));return document.querySelectorAll('#cases button').length>0&&document.querySelectorAll('#cases button').length<${cases.length}})()`));await lab.eval(`document.getElementById('search').value='';document.getElementById('search').dispatchEvent(new Event('input'))`);
   await lab.size(390,850);add('mobile gallery has no horizontal overflow',await lab.eval(`document.documentElement.scrollWidth<=innerWidth`));writeFileSync(join(output,'gallery-mobile.png'),await lab.screenshot());

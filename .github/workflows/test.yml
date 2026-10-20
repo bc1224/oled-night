@@ -83,9 +83,35 @@ jobs:
         with:
           name: oled-night-zip
           path: dist/*.zip
+  reported-controls:
+    name: Reported control contrast in Chrome and Firefox
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node tools/package.mjs
+      - uses: browser-actions/setup-firefox@v1
+      - name: Switches, generated buttons, artwork and checkboxes in Chrome
+        run: node tests/lab/run-reported-controls.mjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+      - name: Switches, generated buttons, artwork and checkboxes in Firefox
+        run: node tests/lab/run-reported-controls-firefox.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oled-reported-controls-evidence
+          path: |
+            dist/lab-results/reported-controls-*.json
+            dist/reported-controls/*.png
   extension-regression-gate:
     name: CVS extension release gate
-    needs: test
+    needs: [test, reported-controls]
     runs-on: ubuntu-latest
     steps:
       - name: Require the known synthetic regression to pass for store submission
@@ -103,7 +129,7 @@ jobs:
           fi
   deploy:
     if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
-    needs: test
+    needs: [test, reported-controls]
     runs-on: ubuntu-latest
     permissions:
       pages: write

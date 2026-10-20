@@ -137,15 +137,6 @@
     out.push({name:'removing the whole inbox releases viewport and pending ownership',ok:cleared.observedPaint===0&&cleared.deferredPaint===0&&cleared.paintContainers===0,detail:JSON.stringify(cleared)});
     await browser.tabs.remove(tab.id);
     await browser.storage.sync.set({extensionEnabled:true});
-    for(const mode of ['auto','recolor']){
-      await browser.storage.sync.set({extensionEnabled:true,brightness:88,contrast:72,dimImages:false,siteRules:mode==='auto'?{}:{'127.0.0.1':'recolor'}});
-      tab=await browser.tabs.create({url:TEST_ORIGIN+'/reported-controls.html'+(mode==='recolor'?'?light':'')});await sleep(1200);
-      out.push(...(await inspect(reportedControlsScenario)).map(c=>({...c,name:'reported controls / '+mode+' / '+c.name})));
-      await browser.storage.sync.set({extensionEnabled:false});await sleep(500);
-      out.push(...(await inspect(reportedControlsRestored)).map(c=>({...c,name:'reported controls / '+mode+' / '+c.name})));
-      await browser.tabs.remove(tab.id);
-    }
-    await browser.storage.sync.set({extensionEnabled:true,brightness:88,contrast:72});
     tab=await browser.tabs.create({url:TEST_ORIGIN+'/report-preview.html'});await sleep(900);
     out.push(...await inspect(reportPreviewScenario));
     await browser.tabs.remove(tab.id);
