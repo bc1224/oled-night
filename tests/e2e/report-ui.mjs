@@ -62,4 +62,9 @@ try {
   await wait(5100);
   assert.equal(await tab.eval("!document.getElementById('report').disabled&&!document.getElementById('reportOpenStatus').hidden"),true,'an unresponsive page cannot leave the report action stuck');
   console.log('PASS disconnected and unresponsive page feedback');
+  await browser.send('Page.addScriptToEvaluateOnNewDocument',{source:'chrome.tabs.query=async()=>[{id:7,windowId:1}]'},tab.sessionId);
+  await tab.go(`chrome-extension://${id}/popup.html`);
+  await tab.eval("document.getElementById('report').click()");await wait(80);
+  assert.equal(await tab.eval("document.getElementById('reportPreview').open&&document.getElementById('reportHost').textContent==='example.com'"),true,'a valid page report remains available when tab URL metadata is absent');
+  console.log('PASS valid page diagnostics without tab URL metadata');
 } finally {await browser.close()}

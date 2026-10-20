@@ -367,7 +367,7 @@
   $("report").addEventListener("click", async () => {
     if ($("report").disabled) return;
     $("reportOpenStatus").hidden = true;
-    if (!tabId || !host || !chrome?.tabs) {
+    if (!tabId || !chrome?.tabs) {
       $("reportOpenStatus").textContent = "Open a website, then report the page from there.";
       $("reportOpenStatus").hidden = false;
       return;
@@ -397,7 +397,7 @@
     $("reportIssueLink").hidden = true;
     $("reportDescription").value = "";
     $("reportDescription").disabled = false;
-    $("reportHost").textContent = host;
+    $("reportHost").textContent = OledNightReport.scrub(report).host || host;
     for (const detail of $("reportPreview").querySelectorAll("details")) detail.open = false;
     clearScreenshot(); lockAttachment(false);
     $("reportFirefoxConsent").hidden = !isFirefox;
