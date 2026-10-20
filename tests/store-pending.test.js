@@ -1,0 +1,25 @@
+const assert = require('node:assert/strict');
+(async () => {
+  const {replacePendingChromeRevision: replace} = await import('../tools/submit-stores.mjs');
+  const pending = (version='0.6.49', state='PENDING_REVIEW') => ({submittedItemRevisionStatus:{state,distributionChannels:[{crxVersion:version}]}});
+  let calls=[];
+  const request=async(action,options)=>{calls.push({action,options});return action==='fetchStatus'?pending('0.6.49','CANCELLED'):{};};
+  await replace(request,pending(),'','0.6.50');
+  assert.equal(calls.length,0,'ordinary submission never cancels a pending review');
+  await assert.rejects(replace(request,pending('0.6.48'),'0.6.49','0.6.50'),/different/);
+  await assert.rejects(replace(request,pending(),'0.6.49','0.6.49'),/newer/);
+  await assert.rejects(replace(request,pending('0.6.49','STAGED'),'0.6.49','0.6.50'),/pending review/);
+  await assert.rejects(replace(request,pending(),'not-a-version','0.6.50'),/version/);
+  assert.equal(calls.length,0,'mismatched or ambiguous requests make no writes');
+  await replace(request,pending(),'0.6.49','0.6.50');
+  assert.deepEqual(calls.map(c=>c.action),['cancelSubmission','fetchStatus']);
+  assert.deepEqual(calls[0].options,{method:'POST'},'cancel uses an empty request body');
+  calls=[];
+  await replace(request,{},'0.6.49','0.6.50');
+  await replace(request,pending('0.6.49','CANCELLED'),'0.6.49','0.6.50');
+  assert.equal(calls.length,0,'already published/cancelled revisions need no cancellation');
+  await assert.rejects(replace(async action=>action==='fetchStatus'?pending():{},pending(),'0.6.49','0.6.50'),/confirm/);
+  await assert.rejects(replace(async()=>{throw Error('HTTP 403')},pending(),'0.6.49','0.6.50'),/HTTP 403/);
+  await assert.rejects(replace(request,{submittedItemRevisionStatus:{state:'PENDING_REVIEW'}},'0.6.49','0.6.50'),/different/);
+  console.log('Pending Chrome review: explicit exact-version replacement, preserved defaults and confirmation failures verified.');
+})().catch(error=>{console.error(error);process.exitCode=1});

@@ -147,6 +147,28 @@ async function cwsRequest(path, token, options = {}) {
   return json(response, `Chrome Web Store ${path}`);
 }
 
+// Opt-in only: replace one explicitly named older review, after the workflow's
+// exact-source release gate. Ordinary releases preserve all pending reviews.
+export async function replacePendingChromeRevision(request, before, expected, target) {
+  if (!expected) return false;
+  const parse = value => /^\d{1,5}(?:\.\d{1,5}){0,3}$/.test(value) && value.split('.').every(n => +n <= 65535)
+    ? [...value.split('.').map(Number), 0, 0, 0].slice(0, 4) : null;
+  const previous = parse(expected), next = parse(target);
+  if (!previous || !next) throw new Error('Invalid Chrome replacement version.');
+  const differing = next.findIndex((n, i) => n !== previous[i]);
+  if (differing < 0 || next[differing] <= previous[differing]) throw new Error('Replacement must be a newer version.');
+  const submitted = before.submittedItemRevisionStatus;
+  if (!submitted || submitted.state === 'CANCELLED') return false;
+  if (submitted.state !== 'PENDING_REVIEW') throw new Error('Named Chrome revision is not pending review; preserved.');
+  if (!submitted.distributionChannels?.length || submitted.distributionChannels.some(channel => channel.crxVersion !== expected))
+    throw new Error('A different or unknown Chrome revision is pending; preserved.');
+  await request('cancelSubmission', {method:'POST'});
+  const after = await request('fetchStatus');
+  if (after.submittedItemRevisionStatus && after.submittedItemRevisionStatus.state !== 'CANCELLED')
+    throw new Error('Could not confirm Chrome cancellation; replacement upload stopped.');
+  return true;
+}
+
 async function submitChrome(theme = false) {
   requireEnv("CWS_CLIENT_ID", "CWS_CLIENT_SECRET", "CWS_REFRESH_TOKEN", "CWS_PUBLISHER_ID");
   const uploadVersion = theme ? JSON.parse(readFileSync(join(root, "theme", "manifest.json"), "utf8")).version : version;
@@ -164,6 +186,9 @@ async function submitChrome(theme = false) {
   const before = await cwsRequest(`/v2/${item}:fetchStatus`, token);
   const revision = status => `${status?.state || "NONE"}${status?.distributionChannels?.[0]?.crxVersion ? ` ${status.distributionChannels[0].crxVersion}` : ""}`;
   console.log(`Chrome Web Store before upload: published ${revision(before.publishedItemRevisionStatus)}, submitted ${revision(before.submittedItemRevisionStatus)}.`);
+  if (await replacePendingChromeRevision((action, options) => cwsRequest(`/v2/${item}:${action}`, token, options), before,
+      process.env.CWS_REPLACE_PENDING_VERSION || '', uploadVersion))
+    console.log(`Chrome Web Store: cancelled pending ${process.env.CWS_REPLACE_PENDING_VERSION}; confirmed before replacement upload.`);
   const uploaded = await cwsRequest(`/upload/v2/${item}:upload`, token, {
     method: "POST", headers: { "Content-Type": "application/zip" }, body: readFileSync(uploadFile)
   });

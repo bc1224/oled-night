@@ -18,6 +18,10 @@ on:
         description: Optional base64 PEM public key for an encrypted Chrome error report
         required: false
         type: string
+      replace_pending_version:
+        description: Explicit older Chrome version to replace if still pending review; blank preserves pending reviews
+        required: false
+        type: string
 
 jobs:
   submit:
@@ -82,6 +86,7 @@ jobs:
           CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
           CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
           CWS_DIAGNOSTIC_PUBLIC_KEY: ${{ inputs.diagnostic_public_key }}
+          CWS_REPLACE_PENDING_VERSION: ${{ inputs.replace_pending_version }}
           CWS_TARGET: ${{ inputs.store == 'chrome-theme' && '--chrome-theme' || '--chrome' }}
         run: |
           if [[ -n "$CWS_CLIENT_ID" && -n "$CWS_CLIENT_SECRET" && -n "$CWS_REFRESH_TOKEN" && -n "$CWS_PUBLISHER_ID" ]]; then
