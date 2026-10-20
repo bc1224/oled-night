@@ -155,9 +155,10 @@
     render();
     try {
       const commands = await chrome.commands.getAll();
-      const shortcut = commands.find((command) => command.name === "toggle-site")?.shortcut;
+      const assigned = name => commands.filter(command => command.name === name || command.name === name + "-backup").map(command => command.shortcut).filter(Boolean).join(" / ");
+      const shortcut = assigned("toggle-site");
       $("shortcut").textContent = shortcut || "not set";
-      $("extensionShortcut").textContent = commands.find((command) => command.name === "toggle-extension")?.shortcut || "not set";
+      $("extensionShortcut").textContent = assigned("toggle-extension") || "not set";
     } catch {}
   })();
   chrome.storage.onChanged.addListener(async (changes, area) => {

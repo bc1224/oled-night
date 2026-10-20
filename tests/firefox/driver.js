@@ -306,6 +306,8 @@
 
     check('keyboard shortcut registered', (await browser.commands.getAll()).some(c => c.name === 'toggle-site' && c.shortcut));
     check('master keyboard shortcut registered', (await browser.commands.getAll()).some(c => c.name === 'toggle-extension' && c.shortcut));
+    check('alternate site keyboard shortcut registered', (await browser.commands.getAll()).some(c => c.name === 'toggle-site-backup' && c.shortcut));
+    check('alternate master keyboard shortcut registered', (await browser.commands.getAll()).some(c => c.name === 'toggle-extension-backup' && c.shortcut));
     for (const page of ['options.html', 'popup.html']) {
       let resolveUI;
       const uiResult = new Promise(r => { resolveUI = r; });

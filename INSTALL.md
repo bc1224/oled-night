@@ -29,4 +29,5 @@ The extension darkens websites. To make Chrome's own tab bar, toolbar and new-ta
 ## Using it
 - Click the toolbar icon to switch it on or off, pick a mode for the current site, and adjust brightness and contrast.
 - **Alt+Shift+D** turns the current site on or off.
+- Alternate keys are **Ctrl+Shift+9** for OLED Night everywhere and **Ctrl+Shift+8** for the current site (Command on macOS). The popup and Settings show assigned keys; use **Settings & defaults → Change shortcuts** if a key is unavailable.
 - If a site looks wrong, try **Deepen blacks only** or **Invert** for that site. If it still looks wrong, click **Report a broken site**, preview the scrubbed diagnostics and open a GitHub draft. Issues are public; keep private details and sensitive screenshots out. Full local report downloads can contain visible text and identifiers, so review them before sharing.

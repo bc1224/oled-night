@@ -46,7 +46,7 @@ Download [`oled-night.zip`](https://github.com/bc1224/oled-night/releases/latest
 ## Using it
 Click the toolbar icon on any site:
 
-The switch beside **OLED Night** and **Alt+Shift+E** pause or resume the extension everywhere, including sites with a forced mode. Your site rules, tuning, appearance and schedule are preserved; resuming restores them, so sites saved as Off stay off. The existing **All sites** switch controls the default for sites without their own rule. The site shortcut leaves rules unchanged while the extension is paused. If a shortcut is unassigned or conflicts with another extension, use **Settings & defaults → Change shortcuts** to assign it.
+The switch beside **OLED Night** and **Alt+Shift+E** pause or resume the extension everywhere, including sites with a forced mode. Your site rules, tuning, appearance and schedule are preserved; resuming restores them, so sites saved as Off stay off. The existing **All sites** switch controls the default for sites without their own rule. The site shortcut leaves rules unchanged while the extension is paused. Alternate keys are **Ctrl+Shift+9** for the whole extension and **Ctrl+Shift+8** for the current site (Command replaces Ctrl on macOS). The popup and Settings show the keys your browser actually assigned. If none are assigned, use **Settings & defaults → Change shortcuts** to assign them.
 
 <img src="store/images/screenshot-2-popup.png" alt="The OLED Night popup" width="720">
 

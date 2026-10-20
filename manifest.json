@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "OLED Night",
-  "version": "0.6.49",
+  "version": "0.6.50",
   "description": "True-black dark mode for every site. Keeps images intact, readable text, per-site controls.",
   "permissions": [
     "storage",
@@ -44,6 +44,14 @@
         "default": "Alt+Shift+D"
       },
       "description": "Turn OLED Night on or off for the current site"
+    },
+    "toggle-extension-backup": {
+      "suggested_key": { "default": "Ctrl+Shift+9" },
+      "description": "Turn OLED Night on or off everywhere (alternate shortcut)"
+    },
+    "toggle-site-backup": {
+      "suggested_key": { "default": "Ctrl+Shift+8" },
+      "description": "Turn OLED Night on or off for the current site (alternate shortcut)"
     }
   },
   "content_scripts": [

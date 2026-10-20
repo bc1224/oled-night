@@ -38,6 +38,10 @@ jobs:
           CHROME_PATH: /usr/bin/google-chrome
       - name: Package
         run: node tools/package.mjs
+      - name: Keyboard shortcut conflicts in real Chrome
+        run: node tests/e2e/shortcut-conflicts.mjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
       - uses: browser-actions/setup-firefox@v1
       - run: npm run lint:firefox
       - run: npm run test:firefox

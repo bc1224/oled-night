@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.49";
+  const VERSION = "0.6.50";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -1871,11 +1871,11 @@
     if (!snapshot.inkProof) snapshot.inkProof = new Set();
     if (snapshot.inkProof.size < 2) snapshot.inkProof.add(proofKey);
     }
-    if (nearViewport.get(node) === false && !scope.movingPaint &&
-        (deferredPaint.size < MAX_DEFERRED_PAINT || deferredPaint.has(node)) && observePaint(node, true)) {
-      deferredPaint.add(node);
-      return true;
-    }
+    // This proof needs only an attribute write, without layout or native-style
+    // reads. Re-observing offscreen rows costs more: IntersectionObserver must
+    // track their geometry on every frame until they approach the viewport.
+    // Apply cheap paint immediately; defer only the expensive measured path.
+    forgetDeferredPaint(node);
     // Only the neutral container background changed; every descendant keeps
     // exactly its existing ink tier. No temporary subtree style switch.
     originalSurface.set(node, { color: background });

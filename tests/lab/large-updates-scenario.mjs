@@ -50,12 +50,15 @@ export async function largeUpdatesScenario(){
  check('animated surfaces retain the native measurement and transition guards',animatedReads>0&&window.OLEDLabAudit.lum(getComputedStyle(rows[0]).backgroundColor)<.16,String(animatedReads));
  rows[0].classList.remove('hl');motion.remove();await sleep(100);
  const original=far.map(e=>e.style.getPropertyValue('--oln-bg'));
+ const restingBackground=getComputedStyle(far[0]).backgroundColor;
  let writes=0;const observer=new MutationObserver(records=>writes+=records.filter(r=>r.attributeName==='style').length);
  for(const row of far)observer.observe(row,{attributes:true});
  for(const row of far)row.classList.add('hl');await sleep(80);observer.disconnect();
  check('offscreen updates retain dark paint without rewriting all rows',writes===0,JSON.stringify({writes}));
+ const updatedBackground=getComputedStyle(far[0]).backgroundColor;
+ check('proven offscreen background changes paint immediately without viewport tracking',updatedBackground!==restingBackground&&window.OLEDLabAudit.lum(updatedBackground)<.16,updatedBackground);
  const row=far[0];row.scrollIntoView({block:'center'});await sleep(100);
- const css=getComputedStyle(row);check('approaching viewport refreshes pending row paint',row.style.getPropertyValue('--oln-bg')!==original[0]&&window.OLEDLabAudit.lum(css.backgroundColor)<.16,css.backgroundColor);
+ const css=getComputedStyle(row);check('approaching viewport preserves the immediately updated shared paint',css.backgroundColor===updatedBackground&&row.style.getPropertyValue('--oln-bg')===original[0]&&window.OLEDLabAudit.lum(css.backgroundColor)<.16,css.backgroundColor);
  check('refreshed row ink remains readable',window.OLEDLabAudit.contrast(getComputedStyle(row.querySelector('.c')).color,css.backgroundColor)>=4.5);
  // New text must be recolored immediately even when its containing row is offscreen.
  scrollTo(0,0);await sleep(100);const fresh=document.createElement('span');fresh.textContent='Fake new message';fresh.style.color='#111';far[1].append(fresh);await sleep(80);

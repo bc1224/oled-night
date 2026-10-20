@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.50
+
+- Keep proven background-only updates immediate instead of retaining offscreen rows in viewport tracking. This avoids repeated geometry work during animated inbox/list updates while preserving the conservative path for other page changes.
+- Add alternate browser shortcuts: Ctrl+Shift+9 pauses or resumes OLED Night everywhere; Ctrl+Shift+8 toggles the current site. Keep existing shortcuts and custom assignments; show the keys actually registered by the browser in the popup and Settings.
+- Cover conflicting extension shortcuts in real Chrome and retain the existing frame-throughput, contrast and component regression checks.
+
 ## 0.6.49
 
 - Keep compact neutral switch thumbs visible against their tracks in both states, including Suno-style billing toggles.

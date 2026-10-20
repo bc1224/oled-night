@@ -10,12 +10,12 @@ async function load() {
 
 // The master command works from any tab, including browser-owned pages.
 async function handleCommand(command) {
-  if (command === "toggle-extension") {
+  if (command === "toggle-extension" || command === "toggle-extension-backup") {
     const config = await load();
     await chrome.storage.sync.set({ extensionEnabled: !config.extensionEnabled });
     return;
   }
-  if (command !== "toggle-site") return;
+  if (command !== "toggle-site" && command !== "toggle-site-backup") return;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   let host = "";
   // Websites only: browser pages (chrome://extensions) are not sites and can't be changed.

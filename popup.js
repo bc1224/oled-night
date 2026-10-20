@@ -178,9 +178,10 @@
     refreshStatus();
     try {
       const commands = await chrome.commands.getAll();
-      const shortcut = commands.find((command) => command.name === "toggle-site")?.shortcut;
+      const assigned = name => commands.filter(command => command.name === name || command.name === name + "-backup").map(command => command.shortcut).filter(Boolean).join(" / ");
+      const shortcut = assigned("toggle-site");
       $("shortcut").textContent = shortcut || "Set a shortcut";
-      $("extensionShortcut").textContent = commands.find((command) => command.name === "toggle-extension")?.shortcut || "Set in Settings";
+      $("extensionShortcut").textContent = assigned("toggle-extension") || "Set in Settings";
     } catch {}
   }
 
