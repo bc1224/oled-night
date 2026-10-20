@@ -39,6 +39,7 @@ try {
   for(const height of [600,450]) {
     await tab.size(360,height);
     assert.equal(await tab.eval(`(()=>{const d=document.getElementById('reportPreview'),b=document.getElementById('reportSubmit').getBoundingClientRect();return d.scrollHeight===d.clientHeight&&b.bottom<=innerHeight&&b.top>=0&&document.documentElement.scrollWidth<=innerWidth})()`),true,'footer stays visible at '+height+'px');
+    assert.equal(await tab.eval('document.documentElement.clientWidth===innerWidth'),true,'only the form body scrolls, without a second outer scrollbar at '+height+'px');
   }
   await tab.size(360,600);
   writeFileSync(join(out,'report.png'),await tab.screenshot());
