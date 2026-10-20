@@ -766,12 +766,15 @@ try {
   await popup.eval("window.__originalFetch=window.fetch;window.__submissions=[];window.fetch=async (url,options)=>{window.__submissions.push({url,body:options.body});return Response.json({url:'https://github.com/bc1224/oled-night/issues/123'},{status:201})};");
   await click('report');
   for(const result of await popup.eval(`(${reportAttachmentsScenario.toString()})()`)) check(result.name,result.ok);
+  const pastedScreenshot=await popup.eval("document.getElementById('reportScreenshotImage').src");
+  await click('reportScreenshotCapture');
+  check('explicit screenshot button captures the real active fixture viewport',await popup.eval(`document.getElementById('reportScreenshotImage').src!==${JSON.stringify(pastedScreenshot)}&&!document.getElementById('reportSubmit').disabled&&document.getElementById('reportScreenshotStatus').textContent.startsWith('Click the image')`));
   await popup.eval("document.getElementById('reportDescription').value='The verification field is unreadable';document.getElementById('reportSubmit').click();document.getElementById('reportSubmit').click()");await sleep(100);
-  check('popup explicit Submit creates one scrubbed issue without a GitHub draft',await popup.eval("window.__submissions.length===1&&!/PRIVATE|SENTINEL/.test(window.__submissions[0].body)&&document.getElementById('reportIssueLink').href==='https://github.com/bc1224/oled-night/issues/123'&&!document.getElementById('reportIssueLink').hidden&&document.getElementById('reportSubmit').hidden")&&await ext.eval("chrome.tabs.query({}).then(t=>t.length)")===beforeReportTabs);
+  check('popup explicit Submit creates one scrubbed issue and closes report with success feedback',await popup.eval("window.__submissions.length===1&&!/PRIVATE|SENTINEL/.test(window.__submissions[0].body)&&document.getElementById('reportIssueLink').href==='https://github.com/bc1224/oled-night/issues/123'&&!document.getElementById('reportIssueLink').hidden&&!document.getElementById('reportPreview').open&&document.getElementById('reportSuccess').open")&&await ext.eval("chrome.tabs.query({}).then(t=>t.length)")===beforeReportTabs);
   check('report submits only to the hosted reporter with user description',await popup.eval("window.__submissions[0].url==='https://oled-night-reporter.bcf1224.workers.dev/v1/issues'&&JSON.parse(window.__submissions[0].body).description==='The verification field is unreadable'"));
   check('explicit confirmation submits the previewed screenshot without its filename',await popup.eval("JSON.parse(window.__submissions[0].body).screenshot.type==='image/png'&&!window.__submissions[0].body.includes('private-filename')"));
   await popup.eval("window.fetch=window.__originalFetch;delete window.__originalFetch;delete window.__submissions");
-  await click('reportCancel');
+  await click('reportSuccessClose');
   await click("extensionEnabled");
   state = await ui();
   check("popup master switch pauses and explains disabled site controls", !(await rootHas("data-oled-night-root")) && /Paused everywhere/.test(state.status) && !state.controls && await popup.eval("document.getElementById('siteEnabled').disabled"));

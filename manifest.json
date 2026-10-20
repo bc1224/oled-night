@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "OLED Night",
-  "version": "0.6.47",
+  "version": "0.6.48",
   "description": "True-black dark mode for every site. Keeps images intact, readable text, per-site controls.",
   "permissions": [
     "storage",
     "activeTab",
     "scripting"
   ],
+  "optional_permissions": ["clipboardRead"],
   "host_permissions": [
     "<all_urls>"
   ],

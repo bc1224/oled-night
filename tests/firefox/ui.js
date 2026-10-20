@@ -33,6 +33,7 @@ setTimeout(async () => {
     await new Promise(r=>setTimeout(r,100));
     check('Firefox explicit submit sends the chosen screenshot once',window.__submissions.length===1&&window.__submissions[0].screenshot?.type==='image/png');
     check('Firefox screenshot sharing requests optional websiteContent consent',consent?.data_collection.includes('websiteContent'));
+    check('Firefox success confirmation closes the report form',!$('reportPreview').open&&$('reportSuccess').open);
   }
   await browser.runtime.sendMessage({type:'firefox-ui-test',checks});
 }, 1500);

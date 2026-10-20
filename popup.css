@@ -47,7 +47,7 @@ input[type="range"]::-webkit-slider-thumb { appearance: none; width: 16px; heigh
 .check input { width: 15px; height: 15px; margin: 0; accent-color: #9b8cff; }
 .check input:disabled + span { color: #5c5c64; }
 .actions { display: flex; justify-content: space-between; gap: 12px; }
-dialog { color:#e0e0e0; background:#000; border:1px solid #666; border-radius:12px; max-width:300px; max-height:85vh; overflow:auto; }
+dialog { color:#f5f5f7; background:#08080b; border:1px solid #34343c; border-radius:12px; max-width:100%; max-height:100vh; padding:20px; }
 dialog::backdrop { background:rgb(0 0 0 / 80%); }
 dialog p { font-size:12px; line-height:1.5; }
 dialog pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:160px; overflow:auto; font-size:11px; }
@@ -55,9 +55,10 @@ dialog button { margin:5px 0; }
 dialog h2 { margin:0 0 10px; font-size:18px; }
 dialog h2:focus { outline:none; }
 dialog a { color:#b8aaff; }
-.report-actions { position:sticky; bottom:-16px; display:flex; align-items:center; gap:12px; padding:10px 0; background:#000; }
+.report-actions { display:flex; align-items:center; gap:12px; padding:14px 20px; border-top:1px solid #2a2a32; background:#08080b; }
 .report-actions .primary-button { width:auto; flex:1; margin:0; }
-.report-actions #reportCancel { background:#222; border:1px solid #777; border-radius:6px; color:#eee; padding:9px 12px; cursor:pointer; }
+.report-actions button { min-height:42px; margin:0; background:#202026; border:1px solid #54545e; border-radius:8px; color:#eee; padding:9px 14px; cursor:pointer; }
+.report-actions .primary-button { background:#8878f6; color:#08080b; border-color:transparent; }
 .actions .settings-link { margin-top: 10px; }
 .hint { margin: 8px 0 0; color: #858590; font-size: 11px; }
 kbd { padding: 2px 6px; border: 1px solid #34343c; border-radius: 5px; background: #0b0b0f; color: #d5d5da; font: 11px ui-monospace, "Cascadia Mono", monospace; }
@@ -90,18 +91,35 @@ input[type="range"]:focus-visible, summary:focus-visible, button:focus-visible {
 #useRecolor { display: block; margin: -4px 0 6px; }
 #resetSite { display: block; }
 
-dialog textarea { box-sizing:border-box; width:100%; padding:8px; margin:6px 0; background:#111; color:#eee; border:1px solid #777; border-radius:6px; font:12px system-ui; resize:vertical; }
+dialog textarea { box-sizing:border-box; width:100%; padding:12px; margin:8px 0 0; background:#111116; color:#eee; border:1px solid #54545e; border-radius:8px; font:13px/1.5 system-ui; resize:vertical; min-height:76px; }
 dialog label, dialog a { font-size:12px; }
 dialog a { color:#b8aaff; }
 dialog textarea:focus-visible { outline:2px solid #b8aaff; outline-offset:2px; }
-.screenshot-drop { border:1px dashed #777; border-radius:8px; padding:10px; margin:10px 0; }
+.screenshot-drop { border:1px dashed #54545e; border-radius:10px; padding:12px; margin:18px 0 10px; }
 .screenshot-drop:focus-visible, .screenshot-drop.dragging { outline:2px solid #b8aaff; outline-offset:2px; }
-.screenshot-drop h3 { margin:0; font-size:13px; }
+.screenshot-drop h3 { margin:0 0 10px; font-size:13px; }
 .screenshot-drop p { font-size:12px; line-height:1.5; }
-.screenshot-drop button, .screenshot-file { background:#222; color:#eee; border:1px solid #777; border-radius:6px; padding:8px; font:inherit; font-size:12px; cursor:pointer; }
+.screenshot-drop button, .screenshot-file { background:#202026; color:#eee; border:1px solid #54545e; border-radius:8px; padding:9px; margin:0; min-height:38px; font:inherit; font-size:12px; cursor:pointer; }
 .screenshot-file { display:inline-block; position:relative; overflow:hidden; }
 .screenshot-file input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
 .screenshot-file:focus-within { outline:2px solid #b8aaff; outline-offset:2px; }
-#reportScreenshotImage { display:block; max-width:100%; max-height:180px; margin:8px auto; object-fit:contain; }
-#reportScreenshotRemove { background:transparent; color:#b8aaff; }
-#reportScreenshotStatus { margin:4px 0; }
+#reportPreview[open], #reportImagePreview[open] { position:fixed; inset:0; margin:0; width:100%; max-width:none; height:100vh; max-height:600px; padding:0; border:0; border-radius:0; display:flex; flex-direction:column; overflow:hidden; }
+.report-header { flex:none; padding:20px 20px 16px; border-bottom:1px solid #2a2a32; }
+.report-header h2 { margin:0; font-size:19px; }
+#reportHost { overflow-wrap:anywhere; color:#b9b9c4; }
+.report-body { flex:1; min-height:0; overflow-y:auto; padding:16px 20px; scrollbar-gutter:stable; }
+#reportDisclosure { margin:0 0 16px; }
+.report-actions { flex:none; }
+.screenshot-tools { display:flex; gap:8px; margin-top:8px; }
+.screenshot-tools > * { flex:1; text-align:center; }
+#reportScreenshotCapture { width:100%; border-color:#8172cd; background:#211d35; }
+#reportScreenshotHelp { margin:10px 0 0; color:#b9b9c4; }
+#reportScreenshotReview { display:block; width:100%; padding:0; margin:12px 0 0; overflow:hidden; }
+#reportScreenshotImage { display:block; width:100%; height:100px; object-fit:contain; background:#000; }
+#reportScreenshotRemove { display:block; background:transparent; border:0; color:#c5baff; padding:6px 0; }
+#reportScreenshotStatus { margin:0; }
+#reportScreenshotStatus:empty, #reportConsentStatus:empty { display:none; }
+#reportReviewImage { display:block; width:100%; max-height:100%; object-fit:contain; }
+#reportSuccess { width:calc(100% - 32px); text-align:center; }
+#reportSuccess .primary-button { margin:20px 0 0; color:#08080b; min-height:42px; }
+#reportIssueLink { display:block; margin-top:14px; }

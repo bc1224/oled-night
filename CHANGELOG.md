@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.48
+
+- Simplify site reporting with a full-width form, optional details and always-visible Cancel/Submit buttons.
+- Restore native image paste focus, request optional clipboard access only from Paste image, and add an explicit Screenshot this site action with tab-change protection.
+- Let reporters click an attached image to review it before sharing. Successful submission closes the form and shows a Successfully submitted confirmation with an issue link.
+
 ## 0.6.47
 
 - Keep thin currentColor hamburger/close strokes readable inside compact controls, including rotated and hidden expanded states.

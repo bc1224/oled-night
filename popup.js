@@ -7,6 +7,7 @@
   const isFirefox = (() => { try { return chrome.runtime.getURL("").startsWith("moz-extension://"); } catch { return false; } })();
   let host = "";
   let tabId = null;
+  let tabWindowId;
   let settings = Settings.normalize();
   let persistTimer = null;
   // What the tab reported: null while unknown, { active, mode } when it answered,
@@ -169,6 +170,7 @@
     settings = Settings.normalize(await chrome.storage.sync.get(Settings.DEFAULTS));
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     tabId = tab?.id ?? null;
+    tabWindowId = tab?.windowId;
     try { const url = new URL(tab.url); host = /^https?:$/.test(url.protocol) ? url.hostname : ""; } catch { host = ""; }
     $("hostname").textContent = host || "This page";
     $("hostname").title = host;
@@ -221,13 +223,14 @@
     screenshot = null; screenshotBusy = false;
     $("reportScreenshotImage").hidden = true;
     $("reportScreenshotImage").removeAttribute("src");
+    $("reportScreenshotReview").hidden = true;
     $("reportScreenshotRemove").hidden = true;
     $("reportScreenshotFile").value = "";
     $("reportScreenshotStatus").textContent = "";
   }
   function lockAttachment(locked) {
     attachmentLocked = locked;
-    for (const id of ["reportScreenshotPaste","reportScreenshotFile","reportScreenshotRemove"]) $(id).disabled = locked;
+    for (const id of ["reportScreenshotCapture","reportScreenshotPaste","reportScreenshotFile","reportScreenshotRemove"]) $(id).disabled = locked;
   }
   async function attachScreenshot(file) {
     if (!reportSession || attachmentLocked) return;
@@ -235,23 +238,53 @@
     screenshotBusy = true; $("reportSubmit").disabled = true;
     $("reportScreenshotStatus").textContent = "Preparing preview…";
     try {
-      const prepared = await OledNightReport.prepareScreenshot(file);
+      const source = typeof file === "function" ? await file() : file;
+      if (session !== reportSession || generation !== screenshotGeneration) return;
+      const prepared = await OledNightReport.prepareScreenshot(source);
       if (session !== reportSession || generation !== screenshotGeneration) return;
       screenshot = prepared;
       $("reportScreenshotImage").src = `data:${prepared.type};base64,${prepared.data}`;
       $("reportScreenshotImage").hidden = false;
+      $("reportScreenshotReview").hidden = false;
       $("reportScreenshotRemove").hidden = false;
-      $("reportScreenshotStatus").textContent = "Screenshot attached locally. It will be shared only when you submit.";
+      $("reportScreenshotStatus").textContent = "Click the image to review. Shared only on Submit.";
     } catch (error) {
       if (session === reportSession && generation === screenshotGeneration) $("reportScreenshotStatus").textContent = error.message || "Could not read this image. Try another screenshot.";
     } finally {
       if (session === reportSession && generation === screenshotGeneration) { screenshotBusy = false; $("reportSubmit").disabled = false; }
     }
   }
+  let imageOnlyPaste = false;
   const transferredImage = transfer => [...(transfer?.items || [])].find(item => item.kind === "file" && item.type.startsWith("image/"))?.getAsFile() || [...(transfer?.files || [])].find(file => file.type.startsWith("image/"));
   $("reportPreview").addEventListener("paste", event => {
     const file = transferredImage(event.clipboardData);
     if (file && reportSession && !attachmentLocked) { event.preventDefault(); attachScreenshot(file); }
+    else if (imageOnlyPaste) { event.preventDefault(); $("reportScreenshotStatus").textContent = "No screenshot found. Copy an image, then paste again."; }
+  });
+  $("reportScreenshotCapture").addEventListener("click", () => {
+    if (screenshotBusy || !tabId) return;
+    attachScreenshot(async () => {
+      const [before] = await chrome.tabs.query({active: true, windowId: tabWindowId});
+      if (before?.id !== tabId || new URL(before.url).hostname !== host) throw Error("Return to the site you are reporting, then try again.");
+      const dataUrl = await chrome.tabs.captureVisibleTab(tabWindowId, {format: "png"});
+      const [after] = await chrome.tabs.query({active: true, windowId: tabWindowId});
+      if (after?.id !== tabId || after.url !== before.url) throw Error("The tab changed. Return to the site and try again.");
+      const data = dataUrl.match(/^data:image\/png;base64,(.+)$/)?.[1];
+      if (!data) throw Error("Could not capture this page. Choose an image instead.");
+      return new Blob([Uint8Array.from(atob(data), c => c.charCodeAt(0))], {type: "image/png"});
+    });
+  });
+  $("reportScreenshotReview").addEventListener("click", () => {
+    if (!screenshot) return;
+    $("reportReviewImage").src = $("reportScreenshotImage").src;
+    $("reportImagePreview").showModal();
+  });
+  $("reportImageClose").addEventListener("click", () => $("reportImagePreview").close());
+  $("reportImagePreview").addEventListener("close", () => $("reportReviewImage").removeAttribute("src"));
+  $("reportSuccessClose").addEventListener("click", () => $("reportSuccess").close());
+  // Native image paste needs an editable target, including after clicking a button.
+  $("reportPreview").addEventListener("keydown", event => {
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "v" && !attachmentLocked) $("reportDescription").focus();
   });
   $("reportScreenshotDrop").addEventListener("dragover", event => { event.preventDefault(); if (!attachmentLocked) $("reportScreenshotDrop").classList.add("dragging"); });
   $("reportScreenshotDrop").addEventListener("dragleave", () => $("reportScreenshotDrop").classList.remove("dragging"));
@@ -267,6 +300,16 @@
     if (!reportSession || attachmentLocked) return;
     const session = reportSession;
     try {
+      // Optional permission is requested only by this explicit paste action.
+      if (chrome.permissions?.request && !await chrome.permissions.request({permissions: ["clipboardRead"]})) throw Error("Clipboard access declined");
+      if (session !== reportSession || attachmentLocked) return;
+      $("reportDescription").focus();
+      if (!navigator.clipboard?.read) {
+        imageOnlyPaste = true;
+        try { if (document.execCommand("paste")) return; }
+        finally { imageOnlyPaste = false; }
+        throw Error("Clipboard image reading unavailable");
+      }
       const items = await navigator.clipboard.read();
       if (session !== reportSession || attachmentLocked) return;
       for (const item of items) {
@@ -281,7 +324,7 @@
     } catch {
       if (session !== reportSession) return;
       $("reportScreenshotStatus").textContent = "Clipboard access was unavailable. Press Ctrl+V (⌘V on Mac) here, or drop an image.";
-      $("reportScreenshotDrop").focus();
+      $("reportDescription").focus();
     }
   });
   $("reportPreview").addEventListener("close", () => {
@@ -298,22 +341,24 @@
     if (!reportSession || $("reportSubmit").disabled || screenshotBusy) return;
     const session = reportSession;
     $("reportSubmit").disabled = true;
+    $("reportSubmit").textContent = "Submitting…";
     $("reportDescription").disabled = true;
     lockAttachment(true);
     try {
       const shared = await session.send($("reportDescription").value, screenshot);
       if (session !== reportSession) return;
       if (shared) {
-        $("reportConsentStatus").textContent = "Issue submitted. Thank you.";
         $("reportIssueLink").href = shared.url;
         $("reportIssueLink").hidden = false;
         $("reportSubmit").hidden = true;
         $("reportDescription").disabled = true;
+        $("reportPreview").close();
+        $("reportSuccess").showModal();
       }
       else { $("reportDescription").disabled = false; lockAttachment(false); $("reportConsentStatus").textContent = "Sharing declined. OLED Night still works; you can save a report locally."; }
     } catch (error) {
       if (session === reportSession) $("reportConsentStatus").textContent = error.message || "Could not submit the issue. You can retry or save a report locally.";
-    } finally { if (session === reportSession && !screenshotBusy) $("reportSubmit").disabled = false; }
+    } finally { if (session === reportSession && !screenshotBusy) { $("reportSubmit").disabled = false; $("reportSubmit").textContent = "Submit report"; } }
   });
   $("report").addEventListener("click", async () => {
     if (!tabId || !chrome?.tabs) return;
@@ -332,9 +377,11 @@
     $("reportSubmit").disabled = false;
     $("reportConsentStatus").textContent = "";
     $("reportSubmit").hidden = false;
+    $("reportSubmit").textContent = "Submit report";
     $("reportIssueLink").hidden = true;
     $("reportDescription").value = "";
     $("reportDescription").disabled = false;
+    $("reportHost").textContent = host;
     clearScreenshot(); lockAttachment(false);
     $("reportFirefoxConsent").hidden = !isFirefox;
     $("reportDiagnostics").textContent = JSON.stringify(OledNightReport.scrub(report), null, 2);

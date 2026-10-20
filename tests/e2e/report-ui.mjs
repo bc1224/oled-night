@@ -1,0 +1,51 @@
+// Focused report UI regression: real extension DOM, browser API boundaries only.
+import assert from 'node:assert/strict';
+import {mkdirSync,writeFileSync} from 'node:fs';
+import {resolve,join} from 'node:path';
+import {launchChrome,wait} from '../lab/browser.mjs';
+const root=resolve(process.env.EXT_PATH||'.'),out=join(root,'dist/report-ui');
+mkdirSync(out,{recursive:true});
+const browser=await launchChrome();
+try {
+  const {id}=await browser.send('Extensions.loadUnpacked',{path:root});
+  const tab=await browser.open();
+  await browser.send('Page.addScriptToEvaluateOnNewDocument',{source:`
+    chrome.tabs.query=async()=>[{id:7,windowId:1,url:'https://example.com/'}];
+    chrome.tabs.sendMessage=async()=>({host:'example.com',version:chrome.runtime.getManifest().version,active:true});
+    window.__submissions=[];
+    window.fetch=async(url,options)=>{window.__submissions.push(JSON.parse(options.body));return Response.json({url:'https://github.com/bc1224/oled-night/issues/123'},{status:201})};
+  `},tab.sessionId);
+  await tab.size(360,600);
+  await tab.go(`chrome-extension://${id}/popup.html`);
+  await tab.eval("document.getElementById('report').click()");await wait(80);
+  assert.equal(await tab.eval('document.activeElement.id'),'reportDescription','report opens ready for native keyboard paste');
+  console.log('PASS report opens ready for native keyboard paste');
+  await tab.eval("document.getElementById('reportScreenshotCapture').focus();document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'v',ctrlKey:true,bubbles:true}))");
+  assert.equal(await tab.eval('document.activeElement.id'),'reportDescription','Ctrl+V after a button focuses a native paste target');
+  await tab.eval(`window.__captures=0;const canvas=document.createElement('canvas');canvas.width=640;canvas.height=480;const ctx=canvas.getContext('2d');ctx.fillStyle='#423580';ctx.fillRect(0,0,640,480);ctx.fillStyle='white';ctx.font='24px sans-serif';ctx.fillText('Example site screenshot',30,70);window.__image=canvas.toDataURL();chrome.tabs.captureVisibleTab=async()=>{window.__captures++;return window.__image}`);
+  assert.equal(await tab.eval('window.__captures'),0,'no automatic capture');
+  await tab.eval("document.getElementById('reportScreenshotCapture').click()");await wait(150);
+  assert.equal(await tab.eval("window.__captures===1&&!document.getElementById('reportScreenshotImage').hidden&&window.__submissions.length===0"),true,'capture attaches locally without submitting: '+await tab.eval("document.getElementById('reportScreenshotStatus').textContent"));
+  console.log('PASS explicit capture attaches locally without submitting');
+  await tab.eval("document.getElementById('reportScreenshotReview').click()");
+  assert.equal(await tab.eval("document.getElementById('reportImagePreview').open&&document.getElementById('reportReviewImage').src===document.getElementById('reportScreenshotImage').src"),true,'click image opens larger review');
+  writeFileSync(join(out,'review.png'),await tab.screenshot());
+  await tab.eval("document.getElementById('reportImageClose').click()");
+  for(const height of [600,450]) {
+    await tab.size(360,height);
+    assert.equal(await tab.eval(`(()=>{const d=document.getElementById('reportPreview'),b=document.getElementById('reportSubmit').getBoundingClientRect();return d.scrollHeight===d.clientHeight&&b.bottom<=innerHeight&&b.top>=0&&document.documentElement.scrollWidth<=innerWidth})()`),true,'footer stays visible at '+height+'px');
+  }
+  await tab.size(360,600);
+  writeFileSync(join(out,'report.png'),await tab.screenshot());
+  await tab.eval("document.getElementById('reportDescription').value='Button is unreadable';document.getElementById('reportSubmit').click();document.getElementById('reportSubmit').click()");await wait(80);
+  assert.equal(await tab.eval("window.__submissions.length===1&&!document.getElementById('reportPreview').open&&document.getElementById('reportSuccess').open"),true,'one submit shows success and closes report');
+  writeFileSync(join(out,'success.png'),await tab.screenshot());
+  console.log('PASS screenshot review, visible footer, single submit and success popup');
+  await tab.eval("document.getElementById('reportSuccessClose').click();document.getElementById('report').click()");await wait(50);
+  assert.equal(await tab.eval("document.getElementById('reportScreenshotImage').hidden&&document.getElementById('reportDescription').value===''"),true,'new report clears previous notes and attachment');
+  await tab.eval("chrome.tabs.query=async()=>[{id:8,windowId:1,url:'https://other.example/'}];document.getElementById('reportScreenshotCapture').click()");await wait(50);
+  assert.equal(await tab.eval("window.__captures===1&&document.getElementById('reportScreenshotImage').hidden&&document.getElementById('reportScreenshotStatus').textContent.includes('Return to the site')"),true,'wrong active tab is never captured');
+  await tab.eval("chrome.tabs.query=async()=>[{id:7,windowId:1,url:'https://example.com/'}];window.fetch=async()=>{throw Error('Offline')};document.getElementById('reportSubmit').click()");await wait(50);
+  assert.equal(await tab.eval("document.getElementById('reportPreview').open&&!document.getElementById('reportSuccess').open&&!document.getElementById('reportSubmit').disabled&&document.getElementById('reportConsentStatus').textContent.length>0"),true,'failed submission stays open and can retry without false success');
+  console.log('PASS fresh report, changed tab protection and failed submission retry');
+} finally {await browser.close()}
