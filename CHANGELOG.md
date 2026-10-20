@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.49
+
+- Keep compact neutral switch thumbs visible against their tracks in both states, including Suno-style billing toggles.
+- Darken bright generated button surfaces in automatic dark-page mode so PostHog-style action labels remain readable.
+- Preserve authored text colors over promotional images inside busier cards, including Uber Eats-style yellow artwork.
+- Give enabled checkbox, radio and switch boundaries enough contrast without brightening ordinary separators. Cover light DOM and shadow-root checkboxes, checked states and restoring authored styles on disable in Chrome and Firefox.
+- These regression fixtures reproduce the reported rendering patterns; they do not establish a full authenticated audit of the four sites.
+
 ## 0.6.48
 
 - Simplify site reporting with a full-width form, optional details and always-visible Cancel/Submit buttons.

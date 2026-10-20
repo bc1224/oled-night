@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.48";
+  const VERSION = "0.6.49";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -439,7 +439,7 @@
         // them on every streaming update.
         if (!sibling || (!sibling.matches("img, video") && !sibling.childElementCount)) continue;
         const directMedia = sibling?.matches("img, picture, video") || sibling?.firstElementChild?.matches("img, picture, video");
-        if (!sibling || node.parentElement?.childElementCount > 4 ||
+        if (!sibling || (node.parentElement?.childElementCount > 4 && !directMedia) ||
             !(directMedia || ctx.style(node).position === "absolute" || ctx.style(sibling).position === "absolute")) continue;
         const frame = node.parentElement?.getBoundingClientRect();
         const content = node.getBoundingClientRect();
@@ -569,6 +569,27 @@
       !element.closest('[role="progressbar"], [role="meter"], [role="img"]');
   }
 
+  // A switch's moving knob is state ink, not a second panel to crush to
+  // black. Bound this to compact, empty, rounded children of semantic switches.
+  function switchThumb(element, computed, ctx) {
+    if (ctx.mode === "crush" && !ctx.recolorLightRegions) return null;
+    if (element.childElementCount || element.textContent.trim() || computed.backgroundImage !== "none") return null;
+    const control = element.parentElement?.closest('[role="switch"], button[aria-checked]');
+    if (!control || element.parentElement !== control) return null;
+    const w = parseFloat(computed.width), h = parseFloat(computed.height);
+    if (!(w >= 8 && w <= 32 && h >= 8 && h <= 32 && w / h >= .5 && w / h <= 2 &&
+        parseFloat(computed.borderTopLeftRadius) >= Math.min(w, h) / 4)) return null;
+    const colors = colorsApi(), paint = colors.parseColor(computed.backgroundColor);
+    if (!paint || paint.a < .5 || colors.chroma(paint) > .15) return null;
+    const track = colors.parseColor(ctx.style(control).backgroundColor);
+    let trackMode = modeForElement(control, ctx);
+    if (trackMode === "crush" && ctx.recolorLightRegions && track?.a >= .5 &&
+        colors.luminance(track) > .5 && control.closest(LIGHT_UI)) trackMode = "oled";
+    // Native bright checked tracks already need a dark knob. Recolored
+    // tracks are dark, so keep their knob light in either logical state.
+    return trackMode === "crush" && track && colors.luminance(track) > .18 ? "#000000" : "rgb(190 190 190)";
+  }
+
   // Read-only: decides overrides from original computed styles. No DOM writes
   // happen here, so the whole batch costs a single style recalculation.
   function decide(element, ctx) {
@@ -601,6 +622,8 @@
         element.closest(ctx.recolorLightRegions ? LIGHT_UI : DROPDOWN));
     const mode = lightIsland ? "oled" : localMode;
     mapSurface(computed, "", mode, found);
+    const thumb = switchThumb(element, computed, ctx);
+    if (thumb) found.bg = thumb;
     // Protect native links/buttons before their first interaction too. CSSOM
     // hydration can change their surface without a mutation or input event.
     // Other semantic controls gain the same protection on interaction. Native
@@ -632,6 +655,9 @@
     }
     if (element.matches("input, textarea, select")) found.field = "1";
     if (mode === "crush") {
+      // The parent may have been recolored as a light UI island while this
+      // descendant still sits over artwork. Pin its authored ink here too.
+      if (nativeBackdrop?.image) found.fg = computed.color;
       // Native dark readers sometimes replace the message canvas while
       // leaving explicit dark HTML ink. Repair only unreadable neutral ink
       // on a solid dark backdrop; keep readable native text and imagery.
@@ -642,13 +668,40 @@
         if (bg < 0.2 && (Math.max(bg, ink) + 0.05) / (Math.min(bg, ink) + 0.05) < 4.5)
           found.fg = colors.mapForeground(text, 1);
       }
+      // Raised buttons can paint their entire face in a generated layer
+      // (PostHog's LemonButton__chrome). Their element itself is transparent,
+      // so the ordinary light-island check cannot see the bright surface.
+      if (ctx.recolorLightRegions && element.closest('button, [role="button"]') && ctx.generated(element)) {
+        for (const pseudo of ["before", "after"]) {
+          const style = getComputedStyle(element, `::${pseudo}`);
+          const paint = colors.parseColor(style.backgroundColor);
+          // Cover a button face, not a small generated switch knob or badge.
+          if ((style.content === '""' || style.content === "''") && style.position === "absolute" &&
+              parseFloat(style.width) >= parseFloat(computed.width) * .7 &&
+              parseFloat(style.height) >= parseFloat(computed.height) * .7 &&
+              paint?.a >= .5 && colors.luminance(paint) > .5)
+            mapSurface(style, `${pseudo}-`, "oled", found);
+        }
+      }
       return found;
     }
     if (DARKENING_BLENDS.test(computed.mixBlendMode)) found.blend = "normal";
+    let visibleControlBoundary;
     for (const [side, key] of SIDES) {
       if (computed[`border${side}Width`] === "0px" || computed[`border${side}Style`] === "none") continue;
+      if (visibleControlBoundary === undefined) {
+        const type = element.localName === "input" ? element.type : null, role = element.getAttribute("role");
+        visibleControlBoundary = (type === "checkbox" || type === "radio" || role === "checkbox" || role === "switch") &&
+          !element.matches(':disabled, [aria-disabled="true"]');
+      }
       const border = colors.mapBorder(colors.parseColor(computed[`border${side}Color`]));
       if (border) found[key] = border;
+      // Small form-control boundaries need stronger contrast than decorative
+      // separators. Do not make the page's ordinary borders this bright.
+      if (visibleControlBoundary) {
+        const paint = colors.parseColor(computed[`border${side}Color`]);
+        if (paint?.a >= .08 && colors.chroma(paint) <= .15) found[key] = "rgb(160 160 168)";
+      }
     }
     if (computed.outlineWidth !== "0px" && computed.outlineStyle !== "none") {
       const outline = colors.mapBorder(colors.parseColor(computed.outlineColor));
