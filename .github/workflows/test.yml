@@ -39,7 +39,9 @@ jobs:
       - name: Package
         run: node tools/package.mjs
       - name: Keyboard shortcut conflicts in real Chrome
-        run: node tests/e2e/shortcut-conflicts.mjs
+        run: |
+          node tests/e2e/shortcut-conflicts.mjs
+          node tests/lab/run-performance.mjs --correctness
         env:
           CHROME_PATH: /usr/bin/google-chrome
       - uses: browser-actions/setup-firefox@v1

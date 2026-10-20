@@ -38,6 +38,15 @@ try{
   await options.eval("chrome.storage.sync.set({extensionEnabled:true,globalEnabled:true,siteRules:{'127.0.0.1':'recolor'}})");await wait(500);
   await page.go(`${server.origin}/lab/fixtures/large-updates.html`);await wait(2000);
   await page.eval(readFileSync(join(root,'docs/lab/audit.js'),'utf8'));
+  // Keep this candidate regression separate from the historical, single-fault
+  // report baseline used by the full lab. It must fail on the old runtime.
+  checks.push(await page.eval(`(async()=>{
+   const row=document.querySelector('.row:last-child'),before=getComputedStyle(row).backgroundColor;
+   row.classList.add('hl');await new Promise(r=>setTimeout(r,80));
+   const after=getComputedStyle(row).backgroundColor;
+   row.classList.remove('hl');await new Promise(r=>setTimeout(r,80));
+   return {name:'proven offscreen background changes paint immediately without viewport tracking',ok:after!==before&&window.OLEDLabAudit.lum(after)<.16,detail:JSON.stringify({before,after})};
+  })()`));
   checks.push(...await page.eval(`(${largeUpdatesScenario.toString()})()`));
   console.log(JSON.stringify({passed:checks.filter(c=>c.ok).length,failed:checks.filter(c=>!c.ok)}));
  }
