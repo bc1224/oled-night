@@ -38,7 +38,7 @@ jobs:
           CHROME_PATH: /usr/bin/google-chrome
       - name: Package
         run: node tools/package.mjs
-      - name: Keyboard shortcut conflicts in real Chrome
+      - name: Shortcut conflicts and immediate background updates in real Chrome
         run: |
           node tests/e2e/shortcut-conflicts.mjs
           node tests/lab/run-performance.mjs --correctness

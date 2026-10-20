@@ -44,9 +44,11 @@ try{
    const row=document.querySelector('.row:last-child'),before=getComputedStyle(row).backgroundColor;
    row.classList.add('hl');await new Promise(r=>setTimeout(r,80));
    const after=getComputedStyle(row).backgroundColor;
-   row.classList.remove('hl');await new Promise(r=>setTimeout(r,80));
    return {name:'proven offscreen background changes paint immediately without viewport tracking',ok:after!==before&&window.OLEDLabAudit.lum(after)<.16,detail:JSON.stringify({before,after})};
   })()`));
+  const counts=await options.eval(`(async()=>{const [tab]=await chrome.tabs.query({url:${JSON.stringify(server.origin+'/lab/fixtures/large-updates.html')}});return (await chrome.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts})()`);
+  checks.push({name:'cheap background updates retain no viewport observations or deferred paint',ok:counts.observedPaint===0&&counts.deferredPaint===0,detail:JSON.stringify(counts)});
+  await page.eval("document.querySelector('.row:last-child').classList.remove('hl')");await wait(80);
   checks.push(...await page.eval(`(${largeUpdatesScenario.toString()})()`));
   console.log(JSON.stringify({passed:checks.filter(c=>c.ok).length,failed:checks.filter(c=>!c.ok)}));
  }
