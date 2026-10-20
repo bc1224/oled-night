@@ -104,9 +104,14 @@ dialog textarea:focus-visible { outline:2px solid #b8aaff; outline-offset:2px; }
 .screenshot-file input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
 .screenshot-file:focus-within { outline:2px solid #b8aaff; outline-offset:2px; }
 #reportPreview[open], #reportImagePreview[open] { position:fixed; inset:0; margin:0; width:100%; max-width:none; height:100vh; max-height:600px; padding:0; border:0; border-radius:0; display:flex; flex-direction:column; overflow:hidden; }
+/* Modal dialogs do not contribute to the toolbar popup's automatic sizing. */
+body:has(#reportPreview[open]), body:has(#reportImagePreview[open]) { min-height:580px; }
+.report-open-status { color:#e6c3aa; font-size:12px; line-height:1.5; margin:12px 0; }
+.report-optional { color:#a3a3b0; font-weight:400; }
 .report-header { flex:none; padding:20px 20px 16px; border-bottom:1px solid #2a2a32; }
 .report-header h2 { margin:0; font-size:19px; }
 #reportHost { overflow-wrap:anywhere; color:#b9b9c4; }
+#reportHost { margin:6px 0 0; }
 .report-body { flex:1; min-height:0; overflow-y:auto; padding:16px 20px; scrollbar-gutter:stable; }
 #reportDisclosure { margin:0 0 16px; }
 .report-actions { flex:none; }
@@ -114,6 +119,8 @@ dialog textarea:focus-visible { outline:2px solid #b8aaff; outline-offset:2px; }
 .screenshot-tools > * { flex:1; text-align:center; }
 #reportScreenshotCapture { width:100%; border-color:#8172cd; background:#211d35; }
 #reportScreenshotHelp { margin:10px 0 0; color:#b9b9c4; }
+.screenshot-alternatives { margin-top:8px; }
+.screenshot-alternatives summary { padding:6px 0; }
 #reportScreenshotReview { display:block; width:100%; padding:0; margin:12px 0 0; overflow:hidden; }
 #reportScreenshotImage { display:block; width:100%; height:100px; object-fit:contain; background:#000; }
 #reportScreenshotRemove { display:block; background:transparent; border:0; color:#c5baff; padding:6px 0; }

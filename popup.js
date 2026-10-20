@@ -249,6 +249,7 @@
       $("reportScreenshotReview").hidden = false;
       $("reportScreenshotRemove").hidden = false;
       $("reportScreenshotStatus").textContent = "Click the image to review. Shared only on Submit.";
+      return true;
     } catch (error) {
       if (session === reportSession && generation === screenshotGeneration) $("reportScreenshotStatus").textContent = error.message || "Could not read this image. Try another screenshot.";
     } finally {
@@ -262,9 +263,9 @@
     if (file && reportSession && !attachmentLocked) { event.preventDefault(); attachScreenshot(file); }
     else if (imageOnlyPaste) { event.preventDefault(); $("reportScreenshotStatus").textContent = "No screenshot found. Copy an image, then paste again."; }
   });
-  $("reportScreenshotCapture").addEventListener("click", () => {
+  $("reportScreenshotCapture").addEventListener("click", async () => {
     if (screenshotBusy || !tabId) return;
-    attachScreenshot(async () => {
+    const attached = await attachScreenshot(async () => {
       const [before] = await chrome.tabs.query({active: true, windowId: tabWindowId});
       if (before?.id !== tabId || new URL(before.url).hostname !== host) throw Error("Return to the site you are reporting, then try again.");
       const dataUrl = await chrome.tabs.captureVisibleTab(tabWindowId, {format: "png"});
@@ -274,12 +275,14 @@
       if (!data) throw Error("Could not capture this page. Choose an image instead.");
       return new Blob([Uint8Array.from(atob(data), c => c.charCodeAt(0))], {type: "image/png"});
     });
+    if (attached && screenshot && $("reportPreview").open) reviewScreenshot();
   });
-  $("reportScreenshotReview").addEventListener("click", () => {
+  function reviewScreenshot() {
     if (!screenshot) return;
     $("reportReviewImage").src = $("reportScreenshotImage").src;
-    $("reportImagePreview").showModal();
-  });
+    if (!$("reportImagePreview").open) $("reportImagePreview").showModal();
+  }
+  $("reportScreenshotReview").addEventListener("click", reviewScreenshot);
   $("reportImageClose").addEventListener("click", () => $("reportImagePreview").close());
   $("reportImagePreview").addEventListener("close", () => $("reportReviewImage").removeAttribute("src"));
   $("reportSuccessClose").addEventListener("click", () => $("reportSuccess").close());
@@ -362,11 +365,23 @@
     } finally { if (session === reportSession && !screenshotBusy) { $("reportSubmit").disabled = false; $("reportSubmit").textContent = "Submit report"; } }
   });
   $("report").addEventListener("click", async () => {
-    if (!tabId || !chrome?.tabs) return;
+    if ($("report").disabled) return;
+    $("reportOpenStatus").hidden = true;
+    if (!tabId || !host || !chrome?.tabs) {
+      $("reportOpenStatus").textContent = "Open a website, then report the page from there.";
+      $("reportOpenStatus").hidden = false;
+      return;
+    }
+    $("report").disabled = true;
+    $("report").setAttribute("aria-busy", "true");
     let report = null;
-    try { report = await chrome.tabs.sendMessage(tabId, { type: "oled-night-report" }); } catch {}
+    let reportTimeout;
+    try { report = await Promise.race([chrome.tabs.sendMessage(tabId, { type: "oled-night-report" }), new Promise(resolve => { reportTimeout = setTimeout(() => resolve(null), 5000); })]); } catch {}
+    finally { clearTimeout(reportTimeout); $("report").disabled = false; $("report").removeAttribute("aria-busy"); }
     if (!report) {
       $("status").textContent = page === "reload" ? "Reload this tab first, then report." : "Your browser doesn't let extensions read this page, so there is nothing to report.";
+      $("reportOpenStatus").textContent = "Couldn't connect to this page. Reload the webpage, then try reporting again. Your browser may block extensions on this page.";
+      $("reportOpenStatus").hidden = false;
       return;
     }
     pendingReport = report;
@@ -383,6 +398,7 @@
     $("reportDescription").value = "";
     $("reportDescription").disabled = false;
     $("reportHost").textContent = host;
+    for (const detail of $("reportPreview").querySelectorAll("details")) detail.open = false;
     clearScreenshot(); lockAttachment(false);
     $("reportFirefoxConsent").hidden = !isFirefox;
     $("reportDiagnostics").textContent = JSON.stringify(OledNightReport.scrub(report), null, 2);

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.51
+
+- Give the report form enough height even when OLED Night is paused, with fixed actions and a scrolling body.
+- Simplify the form around notes and an explicit screenshot button. Capturing opens image review immediately; paste/upload and privacy details stay expandable.
+- Show actionable feedback beside the report button when a page is disconnected or unresponsive, and prevent overlapping report requests.
+
 ## 0.6.50
 
 - Keep proven background-only updates immediate instead of retaining offscreen rows in viewport tracking. This avoids repeated geometry work during animated inbox/list updates while preserving the conservative path for other page changes.

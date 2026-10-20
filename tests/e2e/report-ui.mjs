@@ -10,6 +10,7 @@ try {
   const {id}=await browser.send('Extensions.loadUnpacked',{path:root});
   const tab=await browser.open();
   await browser.send('Page.addScriptToEvaluateOnNewDocument',{source:`
+    chrome.storage.sync.get=async defaults=>({...defaults,extensionEnabled:false});
     chrome.tabs.query=async()=>[{id:7,windowId:1,url:'https://example.com/'}];
     chrome.tabs.sendMessage=async()=>({host:'example.com',version:chrome.runtime.getManifest().version,active:true});
     window.__submissions=[];
@@ -18,6 +19,8 @@ try {
   await tab.size(360,600);
   await tab.go(`chrome-extension://${id}/popup.html`);
   await tab.eval("document.getElementById('report').click()");await wait(80);
+  writeFileSync(join(out,'paused-report.png'),await tab.screenshot());
+  assert.ok(await tab.eval('document.body.getBoundingClientRect().height>=580'),'opening a report expands a paused toolbar popup to a usable height');
   assert.equal(await tab.eval('document.activeElement.id'),'reportDescription','report opens ready for native keyboard paste');
   console.log('PASS report opens ready for native keyboard paste');
   await tab.eval("document.getElementById('reportScreenshotCapture').focus();document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'v',ctrlKey:true,bubbles:true}))");
@@ -26,6 +29,8 @@ try {
   assert.equal(await tab.eval('window.__captures'),0,'no automatic capture');
   await tab.eval("document.getElementById('reportScreenshotCapture').click()");await wait(150);
   assert.equal(await tab.eval("window.__captures===1&&!document.getElementById('reportScreenshotImage').hidden&&window.__submissions.length===0"),true,'capture attaches locally without submitting: '+await tab.eval("document.getElementById('reportScreenshotStatus').textContent"));
+  assert.equal(await tab.eval("document.getElementById('reportImagePreview').open"),true,'explicit capture immediately opens image review');
+  await tab.eval("window.__attachedImage=document.getElementById('reportScreenshotImage').src");
   console.log('PASS explicit capture attaches locally without submitting');
   await tab.eval("document.getElementById('reportScreenshotReview').click()");
   assert.equal(await tab.eval("document.getElementById('reportImagePreview').open&&document.getElementById('reportReviewImage').src===document.getElementById('reportScreenshotImage').src"),true,'click image opens larger review');
@@ -39,6 +44,7 @@ try {
   writeFileSync(join(out,'report.png'),await tab.screenshot());
   await tab.eval("document.getElementById('reportDescription').value='Button is unreadable';document.getElementById('reportSubmit').click();document.getElementById('reportSubmit').click()");await wait(80);
   assert.equal(await tab.eval("window.__submissions.length===1&&!document.getElementById('reportPreview').open&&document.getElementById('reportSuccess').open"),true,'one submit shows success and closes report');
+  assert.equal(await tab.eval("'data:'+window.__submissions[0].screenshot.type+';base64,'+window.__submissions[0].screenshot.data===window.__attachedImage"),true,'submitted attachment is exactly the reviewed image');
   writeFileSync(join(out,'success.png'),await tab.screenshot());
   console.log('PASS screenshot review, visible footer, single submit and success popup');
   await tab.eval("document.getElementById('reportSuccessClose').click();document.getElementById('report').click()");await wait(50);
@@ -48,4 +54,11 @@ try {
   await tab.eval("chrome.tabs.query=async()=>[{id:7,windowId:1,url:'https://example.com/'}];window.fetch=async()=>{throw Error('Offline')};document.getElementById('reportSubmit').click()");await wait(50);
   assert.equal(await tab.eval("document.getElementById('reportPreview').open&&!document.getElementById('reportSuccess').open&&!document.getElementById('reportSubmit').disabled&&document.getElementById('reportConsentStatus').textContent.length>0"),true,'failed submission stays open and can retry without false success');
   console.log('PASS fresh report, changed tab protection and failed submission retry');
+  await tab.eval("document.getElementById('reportCancel').click();chrome.tabs.sendMessage=async()=>{throw Error('No connection')};document.getElementById('report').click()");await wait(50);
+  assert.equal(await tab.eval("!document.getElementById('reportPreview').open&&!document.getElementById('reportOpenStatus').hidden&&document.getElementById('reportOpenStatus').textContent.includes('Reload the webpage')&&!document.getElementById('report').disabled"),true,'disconnected page shows actionable feedback beside the report button');
+  await tab.eval("chrome.tabs.sendMessage=()=>new Promise(()=>{});document.getElementById('report').click()");
+  assert.equal(await tab.eval("document.getElementById('report').disabled&&document.getElementById('report').getAttribute('aria-busy')==='true'"),true,'loading diagnostics visibly marks the report action busy');
+  await wait(5100);
+  assert.equal(await tab.eval("!document.getElementById('report').disabled&&!document.getElementById('reportOpenStatus').hidden"),true,'an unresponsive page cannot leave the report action stuck');
+  console.log('PASS disconnected and unresponsive page feedback');
 } finally {await browser.close()}
