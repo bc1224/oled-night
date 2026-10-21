@@ -33,6 +33,7 @@ try{
       await browser.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'deepen'}});
       tab=await browser.tabs.create({url:${JSON.stringify(origin)}+'/reported-controls.html'});await sleep(1200);
       out.push({name:'Explicit Deepen blacks only preserves bright generated surfaces',ok:await inspect(()=>getComputedStyle(document.getElementById('save-chrome'),'::after').backgroundColor==='rgb(255, 191, 25)')});
+      out.push({name:'Explicit Deepen preserves native raised card depth',ok:await inspect(()=>getComputedStyle(document.getElementById('native-panel')).backgroundColor==='rgb(28, 28, 28)')});
       completed=true;
     }catch(e){out.push({name:'Firefox reported control execution',ok:false,detail:String(e)})}
     finally{if(tab)await browser.tabs.remove(tab.id)}

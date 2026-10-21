@@ -8,6 +8,24 @@ export async function reportedControlsScenario(){
   const composite=(a,b)=>{const values=(a.match(/[\d.]+/g)||[]).map(Number),alpha=values[3]??1,base=rgb(b);return 'rgb('+values.slice(0,3).map((v,i)=>Math.round(v*alpha+base[i]*(1-alpha))).join(', ')+')'};
   const backdrop=element=>{for(let node=element;node;node=node.parentElement||node.getRootNode()?.host){const bg=getComputedStyle(node).backgroundColor;if((bg.match(/[\d.]+/g)||[]).length===3||Number((bg.match(/[\d.]+/g)||[])[3])>=.99)return bg}return 'rgb(0, 0, 0)'};
   const out=[],check=(name,ok,detail)=>out.push({name,ok,detail:JSON.stringify(detail)});
+  const panel=document.getElementById('native-panel'),panelPage=document.getElementById('native-panel-page');
+  const panelColor=getComputedStyle(panel).backgroundColor,pageColor=getComputedStyle(panelPage).backgroundColor;
+  check('Hetzner native raised cards remain distinct from the OLED page',luminance(panelColor)>=.005&&luminance(panelColor)<.03&&panelColor!==pageColor,{panelColor,pageColor});
+  check('Hetzner authored card levels remain distinct',panelColor!==getComputedStyle(document.getElementById('native-panel-other')).backgroundColor,{panelColor});
+  check('Flat native page layouts still become true black',getComputedStyle(document.getElementById('flat-layout')).backgroundColor==='rgb(0, 0, 0)',{});
+  panel.style.backgroundColor='#222';await wait();
+  check('Hetzner raised card survives a live color update',getComputedStyle(panel).backgroundColor==='rgb(34, 34, 34)',{color:getComputedStyle(panel).backgroundColor});
+  panel.style.removeProperty('background-color');await wait();
+  const like=document.getElementById('song-like'),likeIcon=document.getElementById('song-like-icon');
+  for(const selected of [true,false,true]){
+    if((like.getAttribute('aria-pressed')==='true')!==selected)like.click();await wait();
+    const s=getComputedStyle(likeIcon),bg=getComputedStyle(like).backgroundColor;
+    const fill=rgb(s.fill),ink=s.filter.includes('invert(1)')?'rgb('+fill.map(v=>255-v).join(',')+')':s.fill;
+    check('Suno liked icon '+selected+' remains readable after final paint',ratio(ink,bg)>=3&&like.getAttribute('aria-pressed')===String(selected),{ink,bg,filter:s.filter,ratio:ratio(ink,bg)});
+  }
+  const likePath=likeIcon.querySelector('path');likePath.style.color='rgb(0, 200, 5)';await wait();
+  check('Later colored currentColor artwork retains its authored hue',getComputedStyle(likePath).fill==='rgb(0, 200, 5)',{fill:getComputedStyle(likePath).fill});
+  likePath.style.removeProperty('color');await wait();
   const toggle=document.getElementById('reload'),thumb=document.getElementById('reload-thumb');
   for(const checked of [false,true,false]){
     if((toggle.getAttribute('aria-checked')==='true')!==checked)toggle.click();await wait();
@@ -40,6 +58,8 @@ export async function reportedControlsScenario(){
 export function reportedControlsRestored(){
   const color=id=>getComputedStyle(document.getElementById(id)).backgroundColor;
   return [
+    {name:'disable restores authored native card and page colors',ok:color('native-panel')==='rgb(28, 28, 28)'&&color('native-panel-page')==='rgb(21, 21, 21)'},
+    {name:'disable restores selected currentColor icon without a filter',ok:getComputedStyle(document.getElementById('song-like-icon')).fill==='rgb(23, 23, 23)'&&getComputedStyle(document.getElementById('song-like-icon')).filter==='none'},
     {name:'disable restores authored switch thumb',ok:color('reload-thumb')==='rgb(18, 18, 18)'},
     {name:'disable restores authored generated button surface',ok:getComputedStyle(document.getElementById('save-chrome'),'::after').backgroundColor==='rgb(255, 191, 25)'},
     {name:'disable restores authored checkbox boundary',ok:getComputedStyle(document.getElementById('plain-check')).borderTopColor==='rgb(153, 153, 153)'},

@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.51";
+  const VERSION = "0.6.52";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -624,6 +624,18 @@
         element.closest(ctx.recolorLightRegions ? LIGHT_UI : DROPDOWN));
     const mode = lightIsland ? "oled" : localMode;
     mapSurface(computed, "", mode, found);
+    // Native dark dashboards distinguish raised cards with subtle shades.
+    // Keep that authored depth; crushing both the page and its cards to black
+    // removes their boundaries. Flat layouts and compact controls still crush.
+    if (mode !== "soft" && found.bg && computed.backgroundImage === "none" && !paintsInk(computed) &&
+        element !== document.documentElement && element !== document.body &&
+        (element.childElementCount || element.textContent.trim()) &&
+        parseFloat(computed.width) >= 120 && parseFloat(computed.height) >= 64 &&
+        (parseFloat(computed.borderTopLeftRadius) >= 4 || computed.boxShadow !== "none")) {
+      const bg = colors.parseColor(computed.backgroundColor);
+      if (bg?.a >= .5 && colors.chroma(bg) < .1 && colors.luminance(bg) >= .005 && colors.luminance(bg) < .025)
+        found.bg = computed.backgroundColor;
+    }
     const thumb = switchThumb(element, computed, ctx);
     if (thumb) found.bg = thumb;
     // Protect native links/buttons before their first interaction too. CSSOM
@@ -925,18 +937,26 @@
       // by every Chrome backend. Colored brands retain their authored paint.
       if (icon && !svg.querySelector('use,image,foreignObject')) {
         const bg = colors.luminance(backdropOf(svg, ctx).color);
-        let neutral = true;
-        const paints = [];
+        let neutral = true, currentColorOnly = true;
+        const paints = [], currentParts = [];
         for (const part of svg.querySelectorAll(ICON_PARTS)) {
           const s = ctx.style(part);
-          for (const paint of [s.fill, s.stroke]) {
+          for (const name of ['fill', 'stroke']) {
+            const paint = s[name];
             if (paint === 'none') continue;
             const color = colors.parseColor(paint);
             // Gradients/referenced paint and translucent brand colors are not
             // evidence of a wholly neutral badge. Preserve uncertain artwork.
             if (!color || /^url\(/i.test(paint) || colors.chroma(color) > .1) neutral = false;
             if (color && color.a >= .5) paints.push(color);
+            let authored = '';
+            for (let node = part, depth = 0; node && depth < 16; node = node.parentElement, depth++) {
+              authored = node.style?.[name] || node.getAttribute(name) || '';
+              if (authored || node === svg) break;
+            }
+            if (authored.toLowerCase() !== 'currentcolor' || paint !== s.color) currentColorOnly = false;
           }
+          currentParts.push(part);
         }
         const logoLike = svg.closest('[itemprop~="logo"], [aria-label*="logo" i], [data-oled-night-logo]') ||
           /(?:^|[\s_-])logo(?:$|[\s_-])/i.test(`${svg.id} ${svg.getAttribute("class") || ""}`);
@@ -948,7 +968,15 @@
           return (bg < .2 && (Math.max(bg, ink) + .05) / (Math.min(bg, ink) + .05) < 3) ||
             (bg > .6 && ink < .2 && !logoLike);
         });
-        out.push([svg, neutral && unreadable ? {"icon-invert":"1"} : {}]);
+        // A lightened parent also lightens currentColor SVG paint. Inverting
+        // that inherited ink a second time makes selected icons dark again.
+        // Fixed black-on-white badges still need the whole-image inversion.
+        if (neutral && unreadable && currentColorOnly && paints.length) {
+          const fg = colors.mapForeground(colors.parseColor(ctx.style(svg).color), 1);
+          out.push([svg, {fg}], ...currentParts.map(part => [part, {fg}]));
+        } else {
+          out.push([svg, neutral && unreadable ? {"icon-invert":"1"} : {}], ...currentParts.map(part => [part, {}]));
+        }
       }
       return;
     }
