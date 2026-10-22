@@ -24,6 +24,13 @@ try{
     const bounds=await page.eval("(()=>{const text=document.getElementById('promo-ink').getBoundingClientRect(),art=document.getElementById('yellow-art').getBoundingClientRect();return {text:{x:text.x,y:text.y,width:text.width,height:text.height},art:{x:art.x+20,y:art.y+art.height-20}}})()");
     const ink=paintedInkContrast(shot,bounds.text,[255,211,116]),art=paintedSample(shot,bounds.art.x,bounds.art.y);
     checks.push({name:mode+' / painted promotion preserves readable ink and original artwork',ok:ink.ok&&art?.every((v,i)=>Math.abs(v-[255,211,116][i])<=3),detail:JSON.stringify({ink,art})});
+    await page.eval("document.getElementById('review-rating').scrollIntoView()");await wait(150);
+    const controlsShot=await page.screenshot();writeFileSync(join(output,mode+'-stars-composer.png'),controlsShot);
+    const controlPaint=await page.eval("(()=>{const point=(e,x,y)=>{const r=e.getBoundingClientRect();return {x:r.x+x,y:r.y+y}};return {stars:Array.from(document.querySelectorAll('#review-rating svg')).map(e=>point(e,10,10)),shell:point(document.getElementById('composer-shell'),30,15),footer:point(document.getElementById('composer-footer'),15,30)}})()");
+    const starPixels=controlPaint.stars.map(p=>paintedSample(controlsShot,p.x,p.y));
+    checks.push({name:mode+' / review rating screenshot shows three bright and two muted stars',ok:starPixels.length===5&&starPixels.slice(0,3).every(p=>p?.every(v=>v>=220))&&starPixels.slice(3).every(p=>p?.every(v=>Math.abs(v-148)<=2)),detail:JSON.stringify({starPixels})});
+    const shellPixel=paintedSample(controlsShot,controlPaint.shell.x,controlPaint.shell.y),footerPixel=paintedSample(controlsShot,controlPaint.footer.x,controlPaint.footer.y);
+    checks.push({name:mode+' / composer screenshot has matching gray shell and footer',ok:[shellPixel,footerPixel].every(p=>p?.every(v=>Math.abs(v-33)<=2)),detail:JSON.stringify({shellPixel,footerPixel})});
     await options.eval('chrome.storage.sync.set({extensionEnabled:false})');await wait(450);
     checks.push(...(await page.eval(`(${reportedControlsRestored.toString()})()`)).map(c=>({...c,name:mode+' / '+c.name})));
   }

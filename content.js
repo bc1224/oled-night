@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.53";
+  const VERSION = "0.6.54";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -626,11 +626,14 @@
     mapSurface(computed, "", mode, found);
     // Native dark dashboards distinguish raised cards with subtle shades.
     // Keep that authored depth; crushing both the page and its cards to black
-    // removes their boundaries. Flat layouts and compact controls still crush.
+    // removes their boundaries. A text composer's short shell and footer
+    // share that depth even before the draft grows to multiple lines.
     if (mode !== "soft" && found.bg && computed.backgroundImage === "none" && !paintsInk(computed) &&
         element !== document.documentElement && element !== document.body &&
         (element.childElementCount || element.textContent.trim()) &&
-        parseFloat(computed.width) >= 120 && parseFloat(computed.height) >= 64 &&
+        parseFloat(computed.width) >= 120 &&
+        (parseFloat(computed.height) >= 64 || (parseFloat(computed.height) >= 32 &&
+          element.closest('form')?.querySelector('textarea, [contenteditable="true"]'))) &&
         (parseFloat(computed.borderTopLeftRadius) >= 4 || computed.boxShadow !== "none")) {
       const bg = colors.parseColor(computed.backgroundColor);
       if (bg?.a >= .5 && colors.chroma(bg) < .1 && colors.luminance(bg) >= .005 && colors.luminance(bg) < .025)
@@ -887,8 +890,10 @@
   // while colored lines and bars keep their color.
   function decideSvg(svg, ctx, out) {
     const mode = modeForElement(svg, ctx);
-    const nativeIcon = mode === "crush" && ctx.recolorLightRegions &&
-      svg.closest('a, button, [role="button"], [role="radio"]');
+    // Read-only indicators (for example review stars) need the same neutral
+    // ink repair as clickable icons. The compact/neutral checks below still
+    // preserve large illustrations and colored artwork.
+    const nativeIcon = mode === "crush" && ctx.recolorLightRegions;
     if (mode !== "oled" && mode !== "soft" && !nativeIcon) return;
     const rect = svg.getBoundingClientRect();
     if (!rect.width || !rect.height) return;

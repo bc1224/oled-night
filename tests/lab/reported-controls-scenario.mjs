@@ -8,6 +8,23 @@ export async function reportedControlsScenario(){
   const composite=(a,b)=>{const values=(a.match(/[\d.]+/g)||[]).map(Number),alpha=values[3]??1,base=rgb(b);return 'rgb('+values.slice(0,3).map((v,i)=>Math.round(v*alpha+base[i]*(1-alpha))).join(', ')+')'};
   const backdrop=element=>{for(let node=element;node;node=node.parentElement||node.getRootNode()?.host){const bg=getComputedStyle(node).backgroundColor;if((bg.match(/[\d.]+/g)||[]).length===3||Number((bg.match(/[\d.]+/g)||[])[3])>=.99)return bg}return 'rgb(0, 0, 0)'};
   const out=[],check=(name,ok,detail)=>out.push({name,ok,detail:JSON.stringify(detail)});
+  const rating=document.getElementById('review-rating'),stars=Array.from(rating.querySelectorAll('svg'));
+  const starInk=svg=>{const s=getComputedStyle(svg.querySelector('polygon')),fill=rgb(s.fill);return getComputedStyle(svg).filter.includes('invert(1)')?'rgb('+fill.map(v=>255-v).join(',')+')':s.fill};
+  const starPaints=stars.map(starInk);
+  check('Backcountry all five review stars remain visible with filled ratings distinct',starPaints.every(ink=>ratio(ink,backdrop(rating))>=3)&&starPaints[0]!==starPaints[3]&&rating.getAttribute('aria-label')==='3 out of 5 stars',{starPaints,bg:backdrop(rating)});
+  const ratedPart=stars[0].querySelector('polygon');ratedPart.style.fill='#008a60';await wait();
+  check('Read-only colored rating artwork keeps its authored color',getComputedStyle(ratedPart).fill==='rgb(0, 138, 96)'&&getComputedStyle(stars[0]).filter==='none',{});
+  ratedPart.style.removeProperty('fill');await wait();
+  check('Review star remains visible after a live ink update',ratio(starInk(stars[0]),backdrop(rating))>=3,{});
+  const lateStar=document.createElementNS('http://www.w3.org/2000/svg','svg');lateStar.setAttribute('viewBox','0 0 16 16');lateStar.innerHTML='<g stroke="none"><polygon points="8,0 10,5 16,6 12,10 13,16 8,13 3,16 4,10 0,6 6,5"/></g>';stars[0].parentElement.append(lateStar);await wait();
+  check('Late-added read-only review star remains visible',ratio(starInk(lateStar),backdrop(rating))>=3,{});lateStar.remove();
+  const composer=document.getElementById('composer-shell'),editor=document.getElementById('composer-editor'),footer=document.getElementById('composer-footer');
+  for(const expanded of [false,true,false,true]){
+    editor.textContent=expanded?'A synthetic multiline draft.\nAnother line.':'';
+    composer.classList.toggle('expanded',expanded);await wait();
+    const shellBg=getComputedStyle(composer).backgroundColor,footerBg=getComputedStyle(footer).backgroundColor;
+    check('ChatGPT '+(expanded?'expanded':'empty')+' composer keeps one visible surface',shellBg==='rgb(33, 33, 33)'&&(!expanded||footerBg===shellBg)&&editor.textContent===(expanded?'A synthetic multiline draft.\nAnother line.':''),{shellBg,footerBg});
+  }
   const product=document.getElementById('chatgpt-product');
   check('ChatGPT product photo remains loaded without a darkening blend',product.complete&&product.naturalWidth>0&&getComputedStyle(product).mixBlendMode==='normal',{loaded:product.complete&&product.naturalWidth>0,blend:getComputedStyle(product).mixBlendMode});
   for(const blend of ['darken','normal','multiply']){
@@ -68,6 +85,8 @@ export async function reportedControlsScenario(){
 export function reportedControlsRestored(){
   const color=id=>getComputedStyle(document.getElementById(id)).backgroundColor;
   return [
+    {name:'disable restores authored black review stars and removes inversion',ok:getComputedStyle(document.querySelector('#review-rating polygon')).fill==='rgb(0, 0, 0)'&&getComputedStyle(document.querySelector('#review-rating svg')).filter==='none'},
+    {name:'disable restores both authored composer surfaces',ok:color('composer-shell')==='rgb(33, 33, 33)'&&color('composer-footer')==='rgb(33, 33, 33)'},
     {name:'disable restores authored ChatGPT image blend and tile',ok:getComputedStyle(document.getElementById('chatgpt-product')).mixBlendMode==='multiply'&&getComputedStyle(document.getElementById('chatgpt-product').parentElement).backgroundColor==='rgb(244, 244, 244)'},
     {name:'disable restores authored native card and page colors',ok:color('native-panel')==='rgb(28, 28, 28)'&&color('native-panel-page')==='rgb(21, 21, 21)'},
     {name:'disable restores selected currentColor icon without a filter',ok:getComputedStyle(document.getElementById('song-like-icon')).fill==='rgb(23, 23, 23)'&&getComputedStyle(document.getElementById('song-like-icon')).filter==='none'},
