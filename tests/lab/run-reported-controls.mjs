@@ -14,6 +14,9 @@ try{
     await page.go(`${server.origin}/reported-controls.html${mode==='recolor'?'?light':''}`);await wait(700);
     const result=await page.eval(`(${reportedControlsScenario.toString()})()`);checks.push(...result.map(c=>({...c,name:mode+' / '+c.name})));
     const shot=await page.screenshot();writeFileSync(join(output,mode+'.png'),shot);
+    const productBounds=await page.eval("(()=>{const r=document.getElementById('chatgpt-product').getBoundingClientRect();return {x:r.x,y:r.y}})()");
+    const productMatte=paintedSample(shot,productBounds.x+4,productBounds.y+4),productJacket=paintedSample(shot,productBounds.x+40,productBounds.y+40);
+    checks.push({name:mode+' / ChatGPT dark jacket and white photo matte retain original pixels',ok:productMatte?.every(v=>v>=250)&&productJacket?.every(v=>Math.abs(v-40)<=2),detail:JSON.stringify({productMatte,productJacket})});
     const likePaint=await page.eval("(()=>{const r=document.getElementById('song-like-icon').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,bg:getComputedStyle(document.getElementById('song-like')).backgroundColor.match(/[\\d.]+/g).slice(0,3).map(Number)}})()");
     const iconPaint=paintedSample(shot,likePaint.x,likePaint.y),inkLum=c=>c.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);
     const iconRatio=(Math.max(inkLum(iconPaint),inkLum(likePaint.bg))+.05)/(Math.min(inkLum(iconPaint),inkLum(likePaint.bg))+.05);

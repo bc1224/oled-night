@@ -8,6 +8,16 @@ export async function reportedControlsScenario(){
   const composite=(a,b)=>{const values=(a.match(/[\d.]+/g)||[]).map(Number),alpha=values[3]??1,base=rgb(b);return 'rgb('+values.slice(0,3).map((v,i)=>Math.round(v*alpha+base[i]*(1-alpha))).join(', ')+')'};
   const backdrop=element=>{for(let node=element;node;node=node.parentElement||node.getRootNode()?.host){const bg=getComputedStyle(node).backgroundColor;if((bg.match(/[\d.]+/g)||[]).length===3||Number((bg.match(/[\d.]+/g)||[])[3])>=.99)return bg}return 'rgb(0, 0, 0)'};
   const out=[],check=(name,ok,detail)=>out.push({name,ok,detail:JSON.stringify(detail)});
+  const product=document.getElementById('chatgpt-product');
+  check('ChatGPT product photo remains loaded without a darkening blend',product.complete&&product.naturalWidth>0&&getComputedStyle(product).mixBlendMode==='normal',{loaded:product.complete&&product.naturalWidth>0,blend:getComputedStyle(product).mixBlendMode});
+  for(const blend of ['darken','normal','multiply']){
+    product.style.mixBlendMode=blend;await wait();
+    check('ChatGPT product remains visible after live '+blend+' update',getComputedStyle(product).mixBlendMode==='normal'&&getComputedStyle(product).filter==='none',{blend:getComputedStyle(product).mixBlendMode,filter:getComputedStyle(product).filter});
+  }
+  product.style.removeProperty('mix-blend-mode');await wait();
+  const latePicture=document.createElement('picture'),lateProduct=document.createElement('img');lateProduct.id='late-chatgpt-product';lateProduct.className='product-photo';lateProduct.alt='Late synthetic jacket';lateProduct.src=product.src;latePicture.append(lateProduct);product.parentElement.append(latePicture);await wait();
+  check('ChatGPT late picture product remains visible',lateProduct.complete&&lateProduct.naturalWidth>0&&getComputedStyle(lateProduct).mixBlendMode==='normal',{blend:getComputedStyle(lateProduct).mixBlendMode});
+  latePicture.remove();
   const panel=document.getElementById('native-panel'),panelPage=document.getElementById('native-panel-page');
   const panelColor=getComputedStyle(panel).backgroundColor,pageColor=getComputedStyle(panelPage).backgroundColor;
   check('Hetzner native raised cards remain distinct from the OLED page',luminance(panelColor)>=.005&&luminance(panelColor)<.03&&panelColor!==pageColor,{panelColor,pageColor});
@@ -58,6 +68,7 @@ export async function reportedControlsScenario(){
 export function reportedControlsRestored(){
   const color=id=>getComputedStyle(document.getElementById(id)).backgroundColor;
   return [
+    {name:'disable restores authored ChatGPT image blend and tile',ok:getComputedStyle(document.getElementById('chatgpt-product')).mixBlendMode==='multiply'&&getComputedStyle(document.getElementById('chatgpt-product').parentElement).backgroundColor==='rgb(244, 244, 244)'},
     {name:'disable restores authored native card and page colors',ok:color('native-panel')==='rgb(28, 28, 28)'&&color('native-panel-page')==='rgb(21, 21, 21)'},
     {name:'disable restores selected currentColor icon without a filter',ok:getComputedStyle(document.getElementById('song-like-icon')).fill==='rgb(23, 23, 23)'&&getComputedStyle(document.getElementById('song-like-icon')).filter==='none'},
     {name:'disable restores authored switch thumb',ok:color('reload-thumb')==='rgb(18, 18, 18)'},

@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.52";
+  const VERSION = "0.6.53";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -1581,7 +1581,10 @@
       for (const img of list.images) {
         if (!img.isConnected) continue;
         const computed = ctx.style(img);
-        const found = recolor && DARKENING_BLENDS.test(computed.mixBlendMode) ? { blend: "normal" } : {};
+        // Automatic mode recolors light product tiles even on a native dark
+        // page. Their photos must stop multiplying against the darkened tile
+        // too; document polarity does not determine image visibility.
+        const found = DARKENING_BLENDS.test(computed.mixBlendMode) ? { blend: "normal" } : {};
         const rect = img.getBoundingClientRect();
         const opacity = Number(computed.opacity);
         if (isControlAsset(img, computed, img.currentSrc || img.src)) found["asset-icon"] = "1";
