@@ -600,8 +600,9 @@
     if (ctx.mode === "crush" && !ctx.recolorLightRegions) return null;
     if (!pseudo && element.childElementCount) return null;
     const control = pseudo ? element : element.parentElement;
-    if (control?.getAttribute("role") !== "switch" &&
-        !(control?.localName === "button" && control.hasAttribute("aria-checked"))) return null;
+    const role = control?.getAttribute("role");
+    if (role !== "switch" &&
+        !(control?.localName === "button" && !role && control.hasAttribute("aria-checked"))) return null;
     if ((!pseudo && element.textContent.trim()) || computed.backgroundImage !== "none" ||
         (pseudo && computed.content !== '""' && computed.content !== "''")) return null;
     const w = parseFloat(computed.width), h = parseFloat(computed.height);

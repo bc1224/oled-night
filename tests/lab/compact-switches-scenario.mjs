@@ -4,6 +4,7 @@ export function compactSwitchProbe(){
  for(const id of ids){const e=document.getElementById(id),r=e.getBoundingClientRect(),s=getComputedStyle(e),p=getComputedStyle(e,id==='before-switch'?'::before':'::after');
   elements[id]={x:r.x,y:r.y,state:e.getAttribute('aria-checked'),focused:document.activeElement===e,transform:p.transform,outline:s.outlineStyle,outlineWidth:s.outlineWidth,track:s.backgroundColor,thumb:p.backgroundColor}}
  return {elements,viewportWidth:innerWidth,active:document.documentElement.hasAttribute('data-oled-night-root'),version:document.documentElement.getAttribute('data-oled-night-version'),mode:document.documentElement.getAttribute('data-oled-night-mode'),fixture:location.pathname.split('/').at(-1),
+ markers:['unchecked-marker','checked-marker'].map(id=>{const e=document.getElementById(id),r=e.getBoundingClientRect();return {x:r.x,y:r.y,state:e.getAttribute('aria-checked')}}),
  colored:getComputedStyle(document.getElementById('colored-switch'),'::after').backgroundColor,
  decoration:getComputedStyle(document.getElementById('decorative-pill'),'::after').backgroundColor};
 }
@@ -16,9 +17,12 @@ export function compactSwitchPaint(bytes,probe,state,version,mode){
   checks.push({coverage:'selection',name:id+' '+state+' visible thumb pixels and position',ok:ratio>=3&&r.state===String(state)&&r.transform===(state?'matrix(1, 0, 0, 1, 18, 0)':'none'),detail:JSON.stringify({thumb,track,ratio,state:r.state,transform:r.transform})});
   if(r.focused){const ring=sample(r,22,-4),outside=sample(r,22,-8),contrast=ring&&outside?(Math.max(lum(ring),lum(outside))+.05)/(Math.min(lum(ring),lum(outside))+.05):0;checks.push({coverage:'selection',name:id+' keyboard focus has visible outline pixels',ok:r.outline!=='none'&&parseFloat(r.outlineWidth)>0&&contrast>=3,detail:JSON.stringify({ring,outside,contrast})})}
  }
+ const markers=probe.markers.map(r=>sample(r,14,14)),markerRatio=markers.every(Boolean)?(Math.max(...markers.map(lum))+.05)/(Math.min(...markers.map(lum))+.05):0;
+ checks.push({coverage:'selection',name:'non-switch checkbox markers retain distinct checked and unchecked pixels',ok:markerRatio>=3&&probe.markers[0].state==='false'&&probe.markers[1].state==='true',detail:JSON.stringify({markers,markerRatio})});
  const color=(probe.colored.match(/[\d.]+/g)||[]).slice(0,3).map(Number);
  checks.push({coverage:'surface',name:'colored generated thumb keeps its pink hue instead of neutral state ink',ok:color[0]>color[2]&&color[2]>color[1]*3&&color[0]>color[1]*3,detail:probe.colored});
- checks.push({coverage:'surface',name:'non-control decorative pill is not promoted to state ink',ok:probe.decoration!=='rgb(190, 190, 190)',detail:probe.decoration});
+ const decoration=lum((probe.decoration.match(/[\d.]+/g)||[]).slice(0,3).map(Number));
+ checks.push({coverage:'surface',name:'non-control decorative pill retains native or mapped surface treatment',ok:mode==='auto'?decoration>.9:decoration<.05,detail:probe.decoration});
  return checks;
 }
 export function compactSwitchRestored(){

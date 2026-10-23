@@ -14,6 +14,10 @@ button{cursor:pointer}
 .before-knob[aria-checked=true]::before{transform:translateX(18px)}
 .decorative{margin-top:20px}
 .colored::after{background:#e9328c}
+.check-marker{width:28px;height:28px;margin:14px 8px 0 0;background:#fff}
+.check-marker::after{width:14px;height:14px;left:7px;top:7px;background:#ddd;transform:none}
+.check-marker[aria-checked=true]{background:#fff}
+.check-marker[aria-checked=true]::after{background:#111;transform:none}
 </style>
 <div class="panel"><p data-lab-check="text">Compact generated thumbs</p>
 <button id="pseudo-switch" class="compact" type="button" role="switch" aria-label="Generated after setting" aria-checked="false" data-lab-check="switch"></button>
@@ -21,5 +25,6 @@ button{cursor:pointer}
 <p data-lab-check="text">Negative examples: decoration and colored artwork</p>
 <div id="decorative-pill" class="compact decorative" aria-hidden="true"></div>
 <button id="colored-switch" class="compact colored" type="button" role="switch" aria-label="Colored thumb setting" aria-checked="false"></button>
+<div><button id="unchecked-marker" class="compact check-marker" type="button" role="checkbox" aria-label="Unchecked non-switch marker" aria-checked="false"></button><button id="checked-marker" class="compact check-marker" type="button" role="checkbox" aria-label="Checked non-switch marker" aria-checked="true"></button></div>
 </div>
 <script>for(const b of document.querySelectorAll('button'))b.onclick=()=>b.setAttribute('aria-checked',String(b.getAttribute('aria-checked')!=='true'))</script>
