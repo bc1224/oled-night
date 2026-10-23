@@ -723,7 +723,7 @@ try {
   await sleep(100);
   check('slider changes do not rescan the document',await page.eval("window.tuningWatch.disconnect();window.tuningPasses===0"));
   check("slider step is cheap", slider < 120, `${slider} ms per step`);
-  if (!churn.ok || slider >= 120) await rowPerformanceDiagnostic({send,page,extension:ext,url:site('127.0.0.1','rows.html'),workload:churnWorkload,root:EXT});
+  if (!churn.ok || slider >= 120 || process.env.OLED_PROFILE_ROWS) await rowPerformanceDiagnostic({send,page,extension:ext,url:site('127.0.0.1','rows.html'),workload:churnWorkload,root:EXT});
 
   await resetSettings();
   await page.go(site("127.0.0.1", "light.html"));

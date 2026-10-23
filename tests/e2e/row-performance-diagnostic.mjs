@@ -18,7 +18,7 @@ export async function rowPerformanceDiagnostic({send,page,extension,url,workload
  writeFileSync(join(output,'failed-row-workload.cpuprofile'),JSON.stringify(profile));
  writeFileSync(join(output,'failed-row-state.json'),JSON.stringify({state,measured},null,2));
  const traceDone=send.nextEvent('Tracing.tracingComplete');await send('Tracing.end',{},page.sessionId);const {stream}=await traceDone;let trace='';
- while(true){const {result:r}=await send('IO.read',{handle:stream});trace+=r.base64Encoded?Buffer.from(r.data,'base64').toString():r.data;if(r.eof)break}await send('IO.close',{handle:stream});writeFileSync(join(output,'failed-row-trace.json'),trace);
+ while(true){const response=await send('IO.read',{handle:stream},page.sessionId);if(response.error)throw Error('Trace stream read: '+response.error.message);const r=response.result;trace+=r.base64Encoded?Buffer.from(r.data,'base64').toString():r.data;if(r.eof)break}await send('IO.close',{handle:stream},page.sessionId);writeFileSync(join(output,'failed-row-trace.json'),trace);
  const after=await metric(),comparisons=[{variant:'original',work:measured,scriptMs:1000*(after.ScriptDuration-before.ScriptDuration),styleMs:1000*(after.RecalcStyleDuration-before.RecalcStyleDuration),layoutMs:1000*(after.LayoutDuration-before.LayoutDuration)}];
  for(const variant of ['inspector-disabled','device-metrics','other-tabs-closed']){
   if(variant==='inspector-disabled'){await send('CSS.disable',{},page.sessionId);await send('DOM.disable',{},page.sessionId)}
