@@ -2705,8 +2705,11 @@
       ${surface}[data-oled-night-transparent-frame]:not([data-oled-night-page="none"]), ${surface}[data-oled-night-transparent-frame]:not([data-oled-night-page="none"]) body { background: transparent !important; }
       ${overrideRules()}
       html[data-oled-night-root] :focus-visible { outline-color: #66a3ff !important; }
-      ${root}:not([data-oled-night-page="none"]) * { scrollbar-color: rgb(58 58 66) transparent; }
-      ${root}:not([data-oled-night-page="none"]) ::selection { background: rgb(38 79 140) !important; color: #fff !important; }
+      /* Both properties inherit. A descendant-wide highlight rule makes Blink
+         maintain highlight paint on every changing row, even with no range
+         selected. Set one document highlight and let nested text inherit it. */
+      ${root}:not([data-oled-night-page="none"]) { scrollbar-color: rgb(58 58 66) transparent; }
+      ${root}:not([data-oled-night-page="none"])::selection { background: rgb(38 79 140) !important; color: #fff !important; }
       html[data-oled-night-root][data-oled-night-dim]:not([data-oled-night-invert]) :is(img, video) { filter: brightness(0.78) !important; }
       html[data-oled-night-invert] { filter: invert(1) hue-rotate(180deg) !important; background: #fff !important; }
       html[data-oled-night-root]:not([data-oled-night-invert]) img[${LOGO}] { filter: invert(1) hue-rotate(180deg) !important; }

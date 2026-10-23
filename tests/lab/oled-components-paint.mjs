@@ -8,6 +8,7 @@ export function oledComponentsPaint(bytes,probe,state='in',version){
  coverage='selection';const selected=sample('unit-'+state,14,14),empty=sample('unit-'+(state==='in'?'cm':'in'),14,14);
  const lum=c=>c?.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0),a=lum(selected),b=lum(empty),ratio=(Math.max(a,b)+.05)/(Math.min(a,b)+.05);
  check('selected '+state+' radio has a visible state-marker pixel',ratio>=3&&e['unit-'+state].checked&&!e['unit-'+(state==='in'?'cm':'in')].checked,{selected,empty,ratio});
+ check('text selection inherits readable colors from the document into nested content',probe.selection.root.bg==='rgb(38, 79, 140)'&&probe.selection.root.fg==='rgb(255, 255, 255)'&&probe.selection.nested.bg===probe.selection.root.bg&&probe.selection.nested.fg===probe.selection.root.fg,probe.selection);
  coverage='surface';const left=sample('header-band',4,4),middle=sample('header-nav',4,4),right=sample('header-band',e['header-band'].w-4,4);
  check('continuous header band has matching left, center and right pixels',near(left,middle)&&near(right,middle),{left,middle,right});
  for(const id of ['product-card','size-dialog','selected-tile']){const parent=id==='selected-tile'?'product-card':'content',p=sample(id,10,10),bg=id==='selected-tile'?sample('product-card',5,5):[0,0,0];check(id+' stays distinct from neighboring '+parent,!near(p,bg),{p,bg})}
