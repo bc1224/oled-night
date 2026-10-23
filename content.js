@@ -2395,7 +2395,19 @@
     let count = 0, length = 0, keyframes = false; const selectors = [];
     const inspect = rules => {for(const rule of rules) {
       if (++count > 512 || rule.type === 3) throw Error('Unbounded or indirect sheet');
-      if (rule.type === 7) { keyframes = true; continue; }
+      if (rule.type === 7) {
+        // Popup modules append opacity/transform entry keyframes repeatedly.
+        // These properties remain native, just like compositor-only inline
+        // writes. They introduce no paint consumer to find across unrelated,
+        // possibly unreadable sheets. Color/geometry/custom-property animation
+        // definitions still require the conservative consumer search below.
+        for (const frame of rule.cssRules) {
+          if (++count > 512) throw Error('Unbounded keyframe definition');
+          if (Array.from(frame.style).some(property =>
+            !/^(?:opacity|transform|translate|rotate|scale|will-change|animation-timing-function)$/.test(property))) keyframes = true;
+        }
+        continue;
+      }
       if (rule.selectorText) {
         // Event hit testing does not alter any color, image, geometry or
         // generated paint we measure. A late tooltip module often sets this
