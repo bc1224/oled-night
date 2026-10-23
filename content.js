@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.55";
+  const VERSION = "0.6.56";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -594,14 +594,16 @@
   }
 
   // A switch's moving knob is state ink, not a second panel to crush to
-  // black. Bound this to compact, empty, rounded children of semantic switches.
-  function switchThumb(element, computed, ctx) {
+  // black. Bound this to compact, empty, rounded children or generated knobs
+  // of semantic switches; generated knobs otherwise follow surface mapping.
+  function switchThumb(element, computed, ctx, pseudo = false) {
     if (ctx.mode === "crush" && !ctx.recolorLightRegions) return null;
-    if (element.childElementCount) return null;
-    const control = element.parentElement;
+    if (!pseudo && element.childElementCount) return null;
+    const control = pseudo ? element : element.parentElement;
     if (control?.getAttribute("role") !== "switch" &&
         !(control?.localName === "button" && control.hasAttribute("aria-checked"))) return null;
-    if (element.textContent.trim() || computed.backgroundImage !== "none") return null;
+    if ((!pseudo && element.textContent.trim()) || computed.backgroundImage !== "none" ||
+        (pseudo && computed.content !== '""' && computed.content !== "''")) return null;
     const w = parseFloat(computed.width), h = parseFloat(computed.height);
     if (!(w >= 8 && w <= 32 && h >= 8 && h <= 32 && w / h >= .5 && w / h <= 2 &&
         parseFloat(computed.borderTopLeftRadius) >= Math.min(w, h) / 4)) return null;
@@ -729,7 +731,7 @@
       // Raised buttons can paint their entire face in a generated layer
       // (PostHog's LemonButton__chrome). Their element itself is transparent,
       // so the ordinary light-island check cannot see the bright surface.
-      if (ctx.recolorLightRegions && element.closest('button, [role="button"]') && ctx.generated(element)) {
+      if (ctx.recolorLightRegions && element.closest('button, [role="button"], [role="switch"]') && ctx.generated(element)) {
         for (const pseudo of ["before", "after"]) {
           const style = getComputedStyle(element, `::${pseudo}`);
           const paint = colors.parseColor(style.backgroundColor);
@@ -739,6 +741,8 @@
               parseFloat(style.height) >= parseFloat(computed.height) * .7 &&
               paint?.a >= .5 && colors.luminance(paint) > .5)
             mapSurface(style, `${pseudo}-`, "oled", found);
+          const thumb = switchThumb(element, style, ctx, true);
+          if (thumb) found[`${pseudo}-bg`] = thumb;
         }
       }
       return found;
@@ -771,6 +775,8 @@
       if (pseudoStyle.content && pseudoStyle.content !== "none" && pseudoStyle.content !== "normal") {
         generatedInk = true;
         mapSurface(pseudoStyle, `${pseudo}-`, mode, found);
+        const thumb = switchThumb(element, pseudoStyle, ctx, true);
+        if (thumb) found[`${pseudo}-bg`] = thumb;
         if (isDataFill(element, pseudoStyle, ctx, true)) {
           found[`${pseudo}-bg`] = colors.mapDataPaint(colors.parseColor(pseudoStyle.backgroundColor));
           found.data = "1";

@@ -1,11 +1,12 @@
 const groups = {
-  'Interactions': ['oled-components','navigation-work','dropdowns','dark-dropdowns','state-surfaces','shadow-hover','cold-shadow','interaction-layout','media-navigation','frame-mutation','paint-updates','large-updates'],
+  'Interactions': ['compact-switches','oled-components','navigation-work','dropdowns','dark-dropdowns','state-surfaces','shadow-hover','cold-shadow','interaction-layout','media-navigation','frame-mutation','paint-updates','large-updates'],
   'Text & surfaces': ['light','dark','explicit-light','ink','surfaces','scope-light','scope-dark','scope-scheme','svg-outline'],
   'Media & data': ['indicators','chart','canvas','shop','ad-overlays','wide-wordmarks'],
   'App reproductions': ['youtube','gmail','email-newsletter','native-banner','booking-form','checkout','chatgpt-controls','chatgpt-streaming','google-sheets-colors','reddit-res','shadow-stability','apple-auth','apple-recovery','dmv-hero-text'],
   'Isolation & loading': ['components','protected','challenge','challenge-inline','frame','transparent-frame','slow','efficiency','report-fields','report-preview','generated-style']
 };
 const descriptions = {
+  'compact-switches':'Small switches with CSS ::before/::after thumbs: both logical states, native Space-key operation, visible focus, actual thumb/track pixels and disable restoration in Chrome and Firefox. Includes decoration and colored-thumb negatives. Based on a screenshot pattern; the original site is unknown',
   'chatgpt-streaming':'Native ChatGPT theme-token reproduction. Gallery shows three messages with the loaded browser mode; separate Chrome/Firefox CI selects the real native site adapter and verifies 180 messages, streaming, focus, scrolling, light/dark switching and disable restoration. Synthetic data; not a reproduction of a specific signed-in renderer crash',
   'oled-components':'Dark transparent product swatches, true logo/icon positives, IN/CM custom radio marker pixels, native keyboard selection and disable restoration; paired neighboring cards/dialogs/selected surfaces and continuous full-width header bands in Chrome and Firefox',
   'navigation-work':'2,500 article rows, hidden mega-menus with SVG icons and product swatches, unreadable third-party CSS, sticky-header classes, redundant state writes, inserted text and real theme changes; existing 150 ms stall budget in both engines',

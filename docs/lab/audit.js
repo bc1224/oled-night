@@ -24,6 +24,10 @@
         const preserved=filters.length===0||(inverted&&filters.length===2&&filters.every(f=>f===counter));
         out.push({name:id+' media filter chain',ok:preserved,coverage:'media',detail:(filters.join(' → ')||'none')+'; original pixel preservation is checked separately in engine regressions'});
       }
+      if(rules.includes('switch')){
+        const marker=doc.defaultView.getComputedStyle(e,'::'+(e.dataset.labPseudo||'after')),ratio=contrast(marker.backgroundColor,background(e));
+        out.push({name:id+' switch thumb ('+e.getAttribute('aria-checked')+')',coverage:'selection',ok:marker.content!=='none'&&ratio>=3,detail:ratio.toFixed(2)+':1; keyboard operation, thumb position and screenshot pixels checked in both engines'});
+      }
       if(rules.includes('selection')){
         const selected=e.checked===true||e.getAttribute('aria-checked')==='true',marker=doc.defaultView.getComputedStyle(e,'::after');
         const ratio=contrast(marker.backgroundColor,background(e));

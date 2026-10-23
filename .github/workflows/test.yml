@@ -54,6 +54,8 @@ jobs:
           node tests/lab/run-navigation-work.mjs
           node tests/lab/run-chatgpt-streaming.mjs
           node tests/lab/qa-interface.mjs
+          node tests/lab/run-compact-switches.mjs
+          node tests/lab/run-compact-switches-firefox.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
       - name: Component states, performance and reviewed visuals in Chrome
@@ -100,7 +102,9 @@ jobs:
         if: always()
         with:
           name: oled-components-pixels
-          path: dist/oled-components/
+          path: |
+            dist/oled-components/
+            dist/compact-switches/
           if-no-files-found: warn
       - uses: actions/upload-pages-artifact@v3
         if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
