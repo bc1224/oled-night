@@ -2458,6 +2458,19 @@
     } catch {return null;}
   }
 
+  function pageSheetFingerprint(node) {
+    try {
+      if (!node.isConnected || !node.sheet) return null;
+      const parts = []; let length = 0;
+      for (const rule of node.sheet.cssRules) {
+        const text = rule.cssText; length += text.length;
+        if (length > 262144) return null;
+        parts.push(text);
+      }
+      return parts.join('\n') + '\n' + node.sheet.disabled + '\n' + node.media;
+    } catch { return null; }
+  }
+
   function queuePageSheet(node, loaded = false) {
     const before = sheetSnapshots.get(node), scope = node.isConnected ? node.getRootNode() : before?.scope;
     if (scope instanceof ShadowRoot) {
@@ -2468,18 +2481,7 @@
     // A style element's load event follows its text mutation. Compare the
     // complete bounded CSSOM, not just selectors: declaration-only edits must
     // invalidate paint, and unreadable/large sheets cannot claim equivalence.
-    let fingerprint = null;
-    try {
-      if (node.isConnected && node.sheet) {
-        const parts = []; let length = 0;
-        for (const rule of node.sheet.cssRules) {
-          const text = rule.cssText; length += text.length;
-          if (length > 262144) break;
-          parts.push(text);
-        }
-        if (length <= 262144) fingerprint = parts.join('\n') + '\n' + node.sheet.disabled + '\n' + node.media;
-      }
-    } catch {}
+    const fingerprint = pageSheetFingerprint(node);
     if (loaded && fingerprint !== null && before?.fingerprint === fingerprint) return;
     const after = node.isConnected ? pageSheetSelectors(node) : before === undefined ? null : [];
     const previous = before?.selectors;
@@ -2958,7 +2960,7 @@
     schemeSensitive = ["r", "g", "b", "a"].some((channel) => pageColor[channel] !== original[channel]);
     pageColor = original;
     observer = new MutationObserver(onMutations);
-    for(const node of document.querySelectorAll('style, link[rel~="stylesheet"]')) if(isPageSheet(node)) sheetSnapshots.set(node,{selectors:pageSheetSelectors(node),fingerprint:null});
+    for(const node of document.querySelectorAll('style, link[rel~="stylesheet"]')) if(isPageSheet(node)) sheetSnapshots.set(node,{selectors:pageSheetSelectors(node),fingerprint:pageSheetFingerprint(node),scope:document});
     observer.observe(root, OBSERVE);
     document.addEventListener("visibilitychange", scheduleShadowDiscovery);
     document.addEventListener("visibilitychange", scheduleRefresh);

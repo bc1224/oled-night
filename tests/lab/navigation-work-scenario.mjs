@@ -1,5 +1,16 @@
 // Public DOM state changes model sticky navigation, redundant root-class writes,
 // dynamic article insertion and a real theme change; timings include paint.
+export async function initialSheetLoadScenario(){
+ const checks=[],sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms)),node=[...document.querySelectorAll('style')].find(e=>!e.id.startsWith('oled-night-'));
+ let polarityReads=0;const watch=new MutationObserver(records=>{polarityReads+=records.length});watch.observe(document.documentElement,{attributes:true,attributeFilter:['data-oled-night-measure-root']});
+ node.dispatchEvent(new Event('load'));await sleep(150);watch.disconnect();
+ checks.push({coverage:'performance',name:'a late unchanged initial stylesheet load does not queue a page refresh',ok:polarityReads===0,detail:JSON.stringify({polarityReads})});
+ const index=node.sheet.insertRule('.row span{color:rgb(244,126,56)}',node.sheet.cssRules.length);node.dispatchEvent(new Event('load'));await sleep(150);
+ const ink=getComputedStyle(document.querySelector('.row span')).color;
+ checks.push({coverage:'text',name:'a load notification after a genuine initial-sheet CSSOM edit still repaints affected ink',ok:ink===getComputedStyle(document.getElementById('theme-reference')).color,detail:ink});
+ node.sheet.deleteRule(index);node.dispatchEvent(new Event('load'));await sleep(80);return checks;
+}
+
 export async function navigationWorkScenario(){
  const checks=[],sleep=ms=>new Promise(r=>setTimeout(r,ms)),frames=[];
  let animationEnumerations=0;const nativeAnimations=Document.prototype.getAnimations;
