@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Navigation work regression</title><style>
+@media(prefers-reduced-motion:reduce){*,::before,::after{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+.lg\:layout{display:block}
+body{margin:0;background:#fff;color:#202124;font:14px sans-serif}header{position:sticky;top:0;background:#f7f7f7;padding:12px;z-index:2}.scrolled .sticky-label{background:#ddd}.sticky-label{display:inline-block;padding:8px}a{color:#222}a:hover,a:focus{background:#ddd;color:#111}.row{padding:3px;border-bottom:1px solid #eee}.row span{color:#444}.night-theme{background:#121212;color:#eee}.night-theme .row span{color:#eee}
+</style></head><body><header><span class="sticky-label" data-lab-check="text surface">Sticky navigation</span><a href="#last">Contents</a> <button id="update">Update article</button><p id="receipt" role="status">Ready</p><span id="theme-reference" style="color:rgb(244,126,56)">Theme ink</span> <span id="order-reference" style="color:rgb(234,96,48)">Ordered ink</span> <span id="link-reference" style="color:rgb(210,100,40)">Link ink</span></header><main id="article"></main><script>
+article.innerHTML=Array.from({length:2500},(_,i)=>`<div class="row"><span>Article section ${i}</span> <b>Detail</b> <a href="#last">Reference</a></div>`).join('');article.lastElementChild.id='last';
+const menus=document.createElement('nav');menus.id='mega-nav';menus.style.cssText='position:absolute;top:0;left:0';menus.innerHTML=Array.from({length:100},(_,i)=>`<button hidden aria-expanded="false" aria-controls="menu-${i}">Category ${i}</button><ul hidden id="menu-${i}">${Array.from({length:30},()=>'<li><a href="#last">Nested category</a></li>').join('')}</ul>`).join('');document.body.append(menus);
+document.body.append(document.createElement('late-navigation-widget'));
+const menuChildren=[...menus.children];menus.replaceChildren();for(let i=0;i<2;i++){const group=document.createElement('div');group.id='menu-group-'+i;group.hidden=true;group.append(...menuChildren.slice(i*100,(i+1)*100));menus.append(group)}
+for(const menu of menus.querySelectorAll('ul'))menu.insertAdjacentHTML('afterbegin','<li><a href="#last" aria-label="Menu icon"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="#111" d="M4 4h16v16H4z"/></svg></a><img width="24" height="24" class="product-photo" alt="Dark product swatch" src="data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\'%3E%3Cpath fill=\'%23283338\' d=\'M0 0h24v24H0z\'/%3E%3C/svg%3E"></li>');
+addEventListener('scroll',()=>document.body.classList.toggle('scrolled',scrollY>50),{passive:true});
+addEventListener('focusin',()=>{document.body.className=document.body.className});
+update.onclick=()=>{const e=document.createElement('p');e.textContent='New dynamic article text';e.style.color='#111';article.prepend(e)};
+</script></body></html>

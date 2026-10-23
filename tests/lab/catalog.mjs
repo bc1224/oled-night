@@ -1,18 +1,21 @@
 const groups = {
-  'Interactions': ['dropdowns','dark-dropdowns','state-surfaces','shadow-hover','cold-shadow','interaction-layout','media-navigation','frame-mutation','paint-updates','large-updates'],
+  'Interactions': ['oled-components','navigation-work','dropdowns','dark-dropdowns','state-surfaces','shadow-hover','cold-shadow','interaction-layout','media-navigation','frame-mutation','paint-updates','large-updates'],
   'Text & surfaces': ['light','dark','explicit-light','ink','surfaces','scope-light','scope-dark','scope-scheme','svg-outline'],
   'Media & data': ['indicators','chart','canvas','shop','ad-overlays','wide-wordmarks'],
-  'App reproductions': ['youtube','gmail','email-newsletter','native-banner','booking-form','checkout','chatgpt-controls','google-sheets-colors','reddit-res','shadow-stability','apple-auth','apple-recovery','dmv-hero-text'],
+  'App reproductions': ['youtube','gmail','email-newsletter','native-banner','booking-form','checkout','chatgpt-controls','chatgpt-streaming','google-sheets-colors','reddit-res','shadow-stability','apple-auth','apple-recovery','dmv-hero-text'],
   'Isolation & loading': ['components','protected','challenge','challenge-inline','frame','transparent-frame','slow','efficiency','report-fields','report-preview','generated-style']
 };
 const descriptions = {
+  'chatgpt-streaming':'Native ChatGPT theme-token reproduction. Gallery shows three messages with the loaded browser mode; separate Chrome/Firefox CI selects the real native site adapter and verifies 180 messages, streaming, focus, scrolling, light/dark switching and disable restoration. Synthetic data; not a reproduction of a specific signed-in renderer crash',
+  'oled-components':'Dark transparent product swatches, true logo/icon positives, IN/CM custom radio marker pixels, native keyboard selection and disable restoration; paired neighboring cards/dialogs/selected surfaces and continuous full-width header bands in Chrome and Firefox',
+  'navigation-work':'2,500 article rows, hidden mega-menus with SVG icons and product swatches, unreadable third-party CSS, sticky-header classes, redundant state writes, inserted text and real theme changes; existing 150 ms stall budget in both engines',
   'wide-wordmarks':'Synthetic compact navigation graphics: wide wordmarks and thin hamburger/close strokes at rest, focus, expanded and disabled states; late paths, colored logos, larger artwork and adjacent opacity motion preserved',
   'google-sheets-colors':'Synthetic Google-style fill-color palette: exact grayscale, saturated and pastel swatches, custom colors, dynamic updates and selection while the surrounding menu stays dark. Chrome and Firefox extension regressions; not a live document capture',
   'apple-recovery':'Issue #4: Apple-style account recovery with an editable captcha-input, readable floating label, protected provider widget and unchanged verification artwork',
   'large-updates':'2,500 fake inbox rows: native/active frame throughput, script/style/collected-memory budgets, bounded ownership, inherited text, background-only selection, CSSOM invalidation and animated fallback',
   'paint-updates':'Synthetic mail updates: paired native/active animation frame pacing, CPU and style work, bounded heap growth and prompt release of detached shadow components',
   'checkout':'Stripe-style fake checkout: monochrome payment icons, preserved payment brand colors, filled fields and animated accordion opening without pale frames; no payments or real customer data',
-  'chatgpt-controls':'Synthetic chat interface: filled/stroked Send and Stop sprites, voice, disabled and focus states, sidebar/response actions, menus/dialogs, late controls and narrow layouts; colored artwork preserved. Not a live ChatGPT audit',
+  'chatgpt-controls':'Synthetic chat interface: filled/stroked Send and Stop sprites, voice, disabled and focus states, sidebar/response actions, menus/dialogs, late controls and narrow layouts; colored artwork preserved. Separate Chrome/Firefox native-theme CI regression covers a 180-message streaming conversation, theme changes and restoration. Not a live ChatGPT audit',
   'generated-style':'Late CSSOM color and width transitions plus generated labels in document, adopted shadow sheets and exported parts; authored scopes are reconsidered after updates',
   'report-preview':'Public issue preview omits private text, field values, selectors, frame origins and URL paths; nothing sends before a click',
   'cold-shadow':'Roots attached after their hosts were scanned: resting nested controls become readable without hover or focus',

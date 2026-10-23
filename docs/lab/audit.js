@@ -18,8 +18,20 @@
       if(rules.includes('fill')){const ratio=contrast(s.backgroundColor,background(e.parentElement));out.push({name:id+' data fill',ok:ratio>=3,detail:ratio.toFixed(2)+':1'})}
       if(rules.includes('icon')){const ratio=contrast(s.backgroundColor,background(e.parentElement));out.push({name:id+' icon paint',ok:ratio>=3,detail:ratio.toFixed(2)+':1'})}
       if(rules.includes('logo-edge')&&active)out.push({name:id+' colored logo edge',ok:s.filter.includes('drop-shadow')&&!s.filter.includes('invert'),detail:s.filter});
-      if(rules.includes('media'))out.push({name:id+' media preserved',ok:s.filter==='none',detail:s.filter});
+      if(rules.includes('media')){
+        const filters=[];for(let node=e;node;node=node.parentElement||node.getRootNode().host){const f=doc.defaultView.getComputedStyle(node).filter;if(f!=='none')filters.push(f)}
+        const inverted=doc.documentElement.hasAttribute('data-oled-night-invert'),counter='invert(1) hue-rotate(180deg)';
+        const preserved=filters.length===0||(inverted&&filters.length===2&&filters.every(f=>f===counter));
+        out.push({name:id+' media filter chain',ok:preserved,coverage:'media',detail:(filters.join(' → ')||'none')+'; original pixel preservation is checked separately in engine regressions'});
+      }
+      if(rules.includes('selection')){
+        const selected=e.checked===true||e.getAttribute('aria-checked')==='true',marker=doc.defaultView.getComputedStyle(e,'::after');
+        const ratio=contrast(marker.backgroundColor,background(e));
+        out.push({name:id+' selection marker ('+(selected?'selected':'unselected')+')',coverage:'selection',ok:selected&&marker.content!=='none'?ratio>=3:null,detail:selected?ratio.toFixed(2)+':1; native keyboard and screenshot pixels are separate engine checks':'Unselected state; compare with the selected control'});
+      }
+      if(rules.includes('band')||rules.includes('separate')){const peer=doc.getElementById(e.dataset.labPair);if(peer){const a=background(e),b=background(peer);out.push({name:id+(rules.includes('band')?' continuous band':' neighboring surface'),coverage:'surface',ok:rules.includes('band')?a===b:a!==b,detail:a+' / '+b+'; paired paint samples are checked in CI'})}}
     }
+    for(const result of out)if(!result.coverage)result.coverage=/media|logo/.test(result.name)?'media':/surface|boundary|fill|icon/.test(result.name)?'surface':'text';
     if(!targets.length)out.push({name:'Historical fixture',ok:null,detail:'Use its targeted browser regressions; this case has no matrix audit annotations.'});return out;
   }
   global.OLEDLabAudit={audit,elements,lum,contrast,background};

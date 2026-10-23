@@ -19,6 +19,8 @@ assert.equal(colors.usesNativeSafeMode("www.youtube.com"), true);
 assert.equal(colors.usesNativeSafeMode("music.youtube.com"), true);
 assert.equal(colors.usesNativeSafeMode("notyoutube.com"), false);
 assert.equal(colors.usesNativeSafeMode("reddit.com"), false);
+for(const host of ['chatgpt.com','www.chatgpt.com','chat.openai.com']) assert.equal(colors.usesNativeChatTheme(host),true);
+for(const host of ['notchatgpt.com','chatgpt.com.example.org','openai.com','youtube.com']) assert.equal(colors.usesNativeChatTheme(host),false);
 console.log("color-utils: 17 assertions passed");
 const cachedColor = colors.parseColor('rgb(12, 34, 56)');
 assert.ok(Object.isFrozen(cachedColor));

@@ -51,7 +51,12 @@ try{
   checks=report.checks;completed=report.completed===true;
   if(!report.paintedHero?.dataUrl?.startsWith('data:image/png;base64,')||!report.paintedHero.probe)throw Error('Firefox painted hero capture is missing');
   const heroBytes=Buffer.from(report.paintedHero.dataUrl.slice('data:image/png;base64,'.length),'base64'),hero=report.paintedHero.probe;
-  const heroPaint=paintedInkContrast(heroBytes,hero.rect,[246,230,107]),artPaint=paintedSample(heroBytes,20,20),blueArt=paintedSample(heroBytes,20,230),redArt=paintedSample(heroBytes,560,54);
+  // captureVisibleTab returns device pixels; the probe uses CSS pixels. Windows
+  // display scaling can make these differ even in a headless Firefox profile.
+  const scale=hero.pixelRatio;if(!Number.isFinite(scale)||scale<=0)throw Error('Missing screenshot pixel ratio');
+  const heroRect=Object.fromEntries(Object.entries(hero.rect).map(([key,value])=>[key,value*scale]));
+  const heroPaint=paintedInkContrast(heroBytes,heroRect,[246,230,107]),artPaint=paintedSample(heroBytes,20*scale,20*scale),blueArt=paintedSample(heroBytes,20*scale,230*scale),redArt=paintedSample(heroBytes,560*scale,54*scale);
+  writeFileSync(join(root,'dist/lab-results/firefox-dmv-hero.png'),heroBytes);
   const pixelIs=(actual,expected)=>actual?.every((c,i)=>Math.abs(c-expected[i])<=3);
   checks.push(...regressionChecks('dmv-hero-text',hero.active,[{name:'DMV hero text retains readable ink over nested picture artwork',ok:hero.image.loaded&&hero.image.filter==='none'&&hero.picture.width===0&&hero.picture.height===0&&pixelIs(artPaint,[246,230,107])&&pixelIs(blueArt,[11,102,158])&&pixelIs(redArt,[219,62,66])&&heroPaint.ok,detail:JSON.stringify({probe:hero,paint:heroPaint,artPaint,blueArt,redArt})}]));
 }catch(e){checks.push({name:'Firefox lab execution',ok:false,detail:String(e)})}finally{clearTimeout(timer);if(runner)await runner.exit();await new Promise(r=>server.close(r));rmSync(temp,{recursive:true,force:true})}

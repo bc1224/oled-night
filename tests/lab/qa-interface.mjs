@@ -1,0 +1,23 @@
+import {componentReceipt} from './component-receipt.mjs';
+import {join,resolve} from 'node:path';import {mkdirSync,writeFileSync} from 'node:fs';import {buildLab} from '../../tools/build-lab.mjs';import {serveLab} from './server.mjs';import {launchChrome,wait} from './browser.mjs';
+const root=resolve(import.meta.dirname,'../..'),server=await serveLab(buildLab({output:join(root,'dist/qa-interface-site')}).output);let b;const checks=[],add=(name,ok)=>checks.push({name,ok:!!ok});
+try{b=await launchChrome();await b.send('Extensions.loadUnpacked',{path:join(root,'dist/chrome')});const page=await b.open(server.origin+'/lab/');await wait(600);
+ add('audit is disabled as soon as a different fixture starts loading',await page.eval("(()=>{[...document.querySelectorAll('#cases button')].find(b=>b.textContent.includes('Shop')).click();return document.getElementById('audit').disabled})()"));await wait(600);
+ await page.eval("document.getElementById('audit').click()");
+ add('audit receipt identifies the actually loaded fixture, mode, engine, version and state',await page.eval("(()=>{const s=document.getElementById('audit-identity')?.textContent||'';return /shop.html/.test(s)&&/Chrome/.test(s)&&/0\\.6\\./.test(s)&&/mode:/i.test(s)&&/state:/i.test(s)})()"));
+ add('QA shows five independent coverage dimensions',await page.eval("document.querySelectorAll('[data-coverage]').length===5"));
+ await page.eval("document.getElementById('frame').contentDocument.body.dispatchEvent(new Event('change',{bubbles:true}))");await wait(80);
+ add('changing a fixture state invalidates the old audit receipt',await page.eval("document.getElementById('audit-results').children.length===0&&/changed|stale/i.test(document.getElementById('audit-identity')?.textContent||'')"));
+ await page.eval("[...document.querySelectorAll('#cases button')].find(b=>b.textContent.includes('Oled Components')).click()");await wait(600);
+ await page.eval("document.getElementById('frame').contentWindow.location.hash='content'");await wait(120);
+ add('in-document anchor navigation retains the selected fixture identity',await page.eval("!document.getElementById('audit').disabled"));
+ await page.eval("document.getElementById('audit').click();document.getElementById('frame').contentDocument.getElementById('unit-cm').checked=true");await wait(350);
+ add('silent programmatic radio changes invalidate the recorded state',await page.eval("document.getElementById('audit-results').children.length===0"));
+ await page.eval("document.getElementById('frame').contentDocument.documentElement.removeAttribute('data-oled-night-mode')");await wait(80);
+ add('an unreported rendering mode cannot produce an audit',await page.eval("document.getElementById('audit').disabled&&/mode unavailable/i.test(document.getElementById('extension-state').textContent)"));
+ await page.eval("document.getElementById('frame').contentDocument.documentElement.setAttribute('data-oled-night-version','0.0.0')");await wait(80);
+ add('a loaded extension version mismatch disables auditing',await page.eval("document.getElementById('audit').disabled&&/mismatch/i.test(document.getElementById('extension-state').textContent)"));
+ await page.eval("document.getElementById('frame').src='fixtures/surfaces.html?theme=light'");await wait(500);
+ add('a loaded document that differs from the selected fixture cannot be audited',await page.eval("document.getElementById('audit').disabled"));
+}finally{await b?.close();await server.close()}
+mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/qa-interface.json'),JSON.stringify(componentReceipt('Chrome',{completed:true,fixtures:['QA interface'],modes:['auto','recolor'],states:['loaded','changed','restored'],coverage:['identity'],checks}),null,2));console.log(JSON.stringify(checks,null,2));if(checks.some(c=>!c.ok))process.exitCode=1;

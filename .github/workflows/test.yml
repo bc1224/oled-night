@@ -47,6 +47,15 @@ jobs:
       - uses: browser-actions/setup-firefox@v1
       - run: npm run lint:firefox
       - run: npm run test:firefox
+      - name: Product media, radio pixels and native keyboard, surface bands and QA identity
+        run: |
+          node tests/lab/run-oled-components.mjs
+          node tests/lab/run-oled-firefox.mjs
+          node tests/lab/run-navigation-work.mjs
+          node tests/lab/run-chatgpt-streaming.mjs
+          node tests/lab/qa-interface.mjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
       - name: Component states, performance and reviewed visuals in Chrome
         run: node tests/lab/run-chrome.mjs ${{ inputs.candidates && '--candidates' || '' }}
         env:
@@ -80,6 +89,12 @@ jobs:
         with:
           name: oled-night-lab-evidence
           path: dist/lab-results/
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oled-components-pixels
+          path: dist/oled-components/
           if-no-files-found: warn
       - uses: actions/upload-pages-artifact@v3
         if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}

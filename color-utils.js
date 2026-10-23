@@ -284,6 +284,10 @@
     return /(^|\.)youtube\.com$/i.test(String(hostname || ""));
   }
 
+  function usesNativeChatTheme(hostname) {
+    return /^(?:www\.)?chatgpt\.com$|^chat\.openai\.com$/i.test(String(hostname || ""));
+  }
+
   // Sites with a small hand-tuned profile on top of the generic recoloring.
   function siteProfile(hostname) {
     const host = String(hostname || "").toLowerCase();
@@ -294,5 +298,5 @@
     return "";
   }
 
-  scope.OledNightColors = { siteProfile, parseColor, luminance, chroma, textTier, mapIconPaint, mapDataPaint, mapBackground, mapForeground, mapBorder, mapGradient, mapShadow, gradientBackdrop, isProtectedMediaTag, usesNativeSafeMode };
+  scope.OledNightColors = { siteProfile, parseColor, luminance, chroma, textTier, mapIconPaint, mapDataPaint, mapBackground, mapForeground, mapBorder, mapGradient, mapShadow, gradientBackdrop, isProtectedMediaTag, usesNativeSafeMode, usesNativeChatTheme };
 })(globalThis);

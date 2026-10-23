@@ -16,9 +16,10 @@ export async function largeUpdatesScenario(){
  paintWatch.observe(rows[0],{subtree:true,attributes:true});rows[0].classList.add('hl');await sleep(80);paintWatch.disconnect();
  check('proven background-only selection avoids native subtree measurement',measurements===0&&window.OLEDLabAudit.lum(getComputedStyle(rows[0]).backgroundColor)<.16,String(measurements));
  const selectedBackground=getComputedStyle(rows[0]).backgroundColor;
- let pageWrote=false;const followingWrite=new MutationObserver(records=>{if(!pageWrote&&records.some(r=>['style','data-oled-night-bg'].includes(r.attributeName))){pageWrote=true;rows[2].style.color='#111'}});
- followingWrite.observe(rows[2],{attributes:true});rows[2].classList.add('hl');await sleep(160);followingWrite.disconnect();
- check('page style writes following owned background writes are still repaired',pageWrote&&window.OLEDLabAudit.lum(getComputedStyle(rows[2]).color)>.4);
+ rows[2].classList.add('hl');await sleep(80);
+ let pageWrote=false;const followingWrite=new MutationObserver(records=>{if(!pageWrote&&records.some(r=>r.attributeName==='style')&&rows[2].style.getPropertyValue('--oln-bg')!=='#fff'){pageWrote=true;rows[2].style.color='#111'}});
+ followingWrite.observe(rows[2],{attributes:true});rows[2].style.setProperty('--oln-bg','#fff');await sleep(160);followingWrite.disconnect();
+ check('page style writes following owned background writes are still repaired',pageWrote&&window.OLEDLabAudit.lum(getComputedStyle(rows[2]).color)>.4,JSON.stringify({pageWrote,color:getComputedStyle(rows[2]).color,shared:rows[2].getAttribute('data-oled-night-bg')}));
  rows[2].style.removeProperty('color');rows[2].classList.remove('hl');await sleep(80);
  rows[0].classList.remove('hl');await sleep(80);
  check('selection and resting paint stay visually distinct',getComputedStyle(rows[0]).backgroundColor!==selectedBackground);
@@ -30,7 +31,15 @@ export async function largeUpdatesScenario(){
  rows[0].querySelector('.c').classList.add('refreshed');rows[0].classList.add('hl');await sleep(80);descendantWatch.disconnect();
  check('same-delivery descendant edits invalidate cached row ink before selection',descendantReads>0&&window.OLEDLabAudit.contrast(getComputedStyle(rows[0].querySelector('.c')).color,getComputedStyle(rows[0]).backgroundColor)>=4.5,String(descendantReads));
  rows[0].querySelector('.c').classList.remove('refreshed');rows[0].classList.remove('hl');await sleep(80);
+ const editedLeaf=rows[1].querySelector('.c');editedLeaf.style.color='#111';editedLeaf.removeAttribute('data-oled-night');rows[1].classList.add('hl');await sleep(80);
+ check('same-delivery leaf style and marker removal invalidate selection proof',editedLeaf.hasAttribute('data-oled-night')&&window.OLEDLabAudit.contrast(getComputedStyle(editedLeaf).color,getComputedStyle(rows[1]).backgroundColor)>=4.5);
+ editedLeaf.style.removeProperty('color');rows[1].classList.remove('hl');await sleep(80);
  const authored=[...document.styleSheets].find(sheet=>!sheet.ownerNode?.id?.startsWith('oled-night-'));
+ const restingBackground=getComputedStyle(rows[0]).backgroundColor;
+ const priority=authored.insertRule('.row.priority{background:#fff!important}',authored.cssRules.length);
+ rows[0].classList.add('priority','hl');await sleep(100);
+ check('mapped row rules preserve authored important background priority',getComputedStyle(rows[0]).backgroundColor===restingBackground);
+ authored.deleteRule(priority);rows[0].classList.remove('priority','hl');await sleep(100);
  const late=authored.insertRule('.c{color:rgb(210,210,210)}',authored.cssRules.length);
  let lateReads=0;const lateWatch=new MutationObserver(records=>lateReads+=records.filter(r=>r.attributeName?.startsWith('data-oled-night-measure')).length);
  lateWatch.observe(rows[0],{subtree:true,attributes:true});rows[0].classList.add('hl');await sleep(80);lateWatch.disconnect();
@@ -38,6 +47,7 @@ export async function largeUpdatesScenario(){
  authored.deleteRule(late);rows[0].classList.remove('hl');await sleep(80);
  const inherited=document.createElement('style');inherited.textContent='.row.ink .c{color:#555}';document.head.append(inherited);await sleep(80);
  rows[0].classList.add('ink');await sleep(80);
+ check('uncertain descendant scopes retire mapped row rules',!document.getElementById('oled-night-row-paint'));
  check('descendant selection rules retain measured readable text',window.OLEDLabAudit.contrast(getComputedStyle(rows[0].querySelector('.c')).color,getComputedStyle(rows[0]).backgroundColor)>=4.5);
  let uncertainReads=0;const uncertainWatch=new MutationObserver(records=>uncertainReads+=records.filter(r=>r.attributeName?.startsWith('data-oled-night-measure')).length);
  uncertainWatch.observe(document.documentElement,{subtree:true,attributes:true});

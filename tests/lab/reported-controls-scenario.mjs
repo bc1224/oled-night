@@ -8,6 +8,9 @@ export async function reportedControlsScenario(){
   const composite=(a,b)=>{const values=(a.match(/[\d.]+/g)||[]).map(Number),alpha=values[3]??1,base=rgb(b);return 'rgb('+values.slice(0,3).map((v,i)=>Math.round(v*alpha+base[i]*(1-alpha))).join(', ')+')'};
   const backdrop=element=>{for(let node=element;node;node=node.parentElement||node.getRootNode()?.host){const bg=getComputedStyle(node).backgroundColor;if((bg.match(/[\d.]+/g)||[]).length===3||Number((bg.match(/[\d.]+/g)||[])[3])>=.99)return bg}return 'rgb(0, 0, 0)'};
   const out=[],check=(name,ok,detail)=>out.push({name,ok,detail:JSON.stringify(detail)});
+  const parsedCheck=document.getElementById('ads-grid').shadowRoot.getElementById('campaign-check'),parsedPaint=getComputedStyle(parsedCheck);
+  const parsedRatio=Math.max(ratio(parsedPaint.borderTopColor,backdrop(parsedCheck.parentElement)),ratio(parsedPaint.backgroundColor,backdrop(parsedCheck.parentElement)));
+  check('Ordinary shadow root attached during DOMContentLoaded has a visible unchecked control before interaction',!parsedCheck.checked&&parsedRatio>=3,{ratio:parsedRatio,bg:parsedPaint.backgroundColor,border:parsedPaint.borderTopColor});
   const rating=document.getElementById('review-rating'),stars=Array.from(rating.querySelectorAll('svg'));
   const starInk=svg=>{const s=getComputedStyle(svg.querySelector('polygon')),fill=rgb(s.fill);return getComputedStyle(svg).filter.includes('invert(1)')?'rgb('+fill.map(v=>255-v).join(',')+')':s.fill};
   const starPaints=stars.map(starInk);
