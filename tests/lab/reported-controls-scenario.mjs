@@ -82,12 +82,28 @@ export async function reportedControlsScenario(){
       if(checked){const tick=getComputedStyle(input,'::after');check('Apple Ads '+(i?'shadow':'light DOM')+' checked mark is readable',ratio(tick.webkitTextFillColor||tick.color,style.backgroundColor)>=3,{tick:tick.color,bg:style.backgroundColor})}
     }
   }
+  const profile=document.getElementById('profile-card'),profileColor=getComputedStyle(profile).backgroundColor;
+  for(const id of ['profile-heading','profile-more']){
+    const bg=getComputedStyle(document.getElementById(id)).backgroundColor;
+    check('LinkedIn matching '+id+' stays continuous with its native dark card',bg===profileColor&&bg==='rgb(27, 31, 35)',{bg,profileColor});
+  }
+  check('LinkedIn genuinely darker inset remains distinct',getComputedStyle(document.getElementById('profile-distinct')).backgroundColor==='rgb(0, 0, 0)',{});
+  const late=document.createElement('div');late.id='profile-late';late.style.background='#1b1f23';late.textContent='Late-loaded education';profile.append(late);await wait();
+  check('LinkedIn late matching content retains the card surface',getComputedStyle(late).backgroundColor===profileColor,{bg:getComputedStyle(late).backgroundColor});late.remove();
+  const more=document.getElementById('profile-more');more.focus();await wait();
+  const moreStyle=getComputedStyle(more),moreBg=moreStyle.backgroundColor;
+  check('LinkedIn truncation control retains readable, distinct keyboard focus',document.activeElement===more&&more.matches(':focus-visible')&&moreBg!==profileColor&&moreStyle.outlineStyle!=='none'&&ratio(moreStyle.webkitTextFillColor||moreStyle.color,moreBg)>=4.5,{bg:moreBg,focusVisible:more.matches(':focus-visible'),outline:moreStyle.outlineStyle});more.blur();await wait();
+  profile.style.background='#202020';await wait();
+  check('LinkedIn changed parent paint does not preserve a different inset',getComputedStyle(document.getElementById('profile-heading')).backgroundColor==='rgb(0, 0, 0)',{});
+  profile.style.removeProperty('background');await wait();
+  check('LinkedIn matching paint is restored after a parent update',getComputedStyle(document.getElementById('profile-heading')).backgroundColor===profileColor&&getComputedStyle(more).backgroundColor===profileColor,{});
   return out;
 }
 
 export function reportedControlsRestored(){
   const color=id=>getComputedStyle(document.getElementById(id)).backgroundColor;
   return [
+    {name:'disable restores all authored LinkedIn surfaces',ok:['profile-card','profile-heading','profile-more'].every(id=>color(id)==='rgb(27, 31, 35)')&&color('profile-distinct')==='rgb(17, 17, 17)'},
     {name:'disable restores authored black review stars and removes inversion',ok:getComputedStyle(document.querySelector('#review-rating polygon')).fill==='rgb(0, 0, 0)'&&getComputedStyle(document.querySelector('#review-rating svg')).filter==='none'},
     {name:'disable restores both authored composer surfaces',ok:color('composer-shell')==='rgb(33, 33, 33)'&&color('composer-footer')==='rgb(33, 33, 33)'},
     {name:'disable restores authored ChatGPT image blend and tile',ok:getComputedStyle(document.getElementById('chatgpt-product')).mixBlendMode==='multiply'&&getComputedStyle(document.getElementById('chatgpt-product').parentElement).backgroundColor==='rgb(244, 244, 244)'},

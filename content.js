@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.56";
+  const VERSION = "0.6.57";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -441,7 +441,7 @@
 
   function backdropOf(element, ctx) {
     const chain = [];
-    let result = { color: ctx.pageColor };
+    let result = { color: ctx.pageColor, mapped: "#000000" };
     for (let node = element; node; node = parentAcrossShadow(node)) {
       // <html>/<body> are painted black by our root rule; use their original color.
       if (node === document.documentElement || node === document.body) break;
@@ -514,6 +514,22 @@
     if (background) found[`${prefix}bg`] = background;
     if (gradient) found[`${prefix}img`] = gradient;
     if (shadow) found[`${prefix}shadow`] = shadow;
+  }
+
+  // Truncation fades reveal the surrounding surface, rather than adding a
+  // raised gradient panel. Rebase only single-color alpha fades that match
+  // that original backdrop; multicolor artwork keeps its normal mapping.
+  function mapBackdropFade(computed, backdrop) {
+    const image = computed.backgroundImage;
+    if (!backdrop.color || !backdrop.mapped || !/^linear-gradient\(/.test(image) || /url\(/.test(image)) return null;
+    const tokens = image.match(/rgba?\([^)]*\)/g) || [];
+    const colors = tokens.map(token => colorsApi().parseColor(token));
+    if (colors.length < 2 || !colors.every(color => color && ["r", "g", "b"].every(key => color[key] === backdrop.color[key])) ||
+        !colors.some(color => color.a < .95) || !colors.some(color => color.a >= .95)) return null;
+    return image.replace(/rgba?\([^)]*\)/g, token => {
+      const alpha = colorsApi().parseColor(token).a;
+      return alpha === 1 ? backdrop.mapped : `color-mix(in srgb, ${backdrop.mapped} ${alpha * 100}%, transparent)`;
+    });
   }
 
   function modeForElement(element, ctx) {
@@ -666,8 +682,29 @@
       if (bg?.a >= .5 && colors.chroma(bg) < .1 && colors.luminance(bg) >= .005 && colors.luminance(bg) < .025)
         found.bg = computed.backgroundColor;
     }
+    // A repeated native paint inside a retained card is the same surface,
+    // even when the text wrapper or truncation button is small and square.
+    // Keep genuinely different insets, controls and page canvases distinct.
+    if (mode !== "soft" && found.bg && computed.backgroundImage === "none" && !paintsInk(computed)) {
+      const bg = originalSurface.get(element)?.color;
+      if (bg?.a >= .95 && colors.chroma(bg) < .1 && colors.luminance(bg) >= .005 && colors.luminance(bg) < .025) {
+        const parent = backdropOf(parentAcrossShadow(element), ctx);
+        if (parent.retained && parent.color && ["r", "g", "b", "a"].every(key => bg[key] === parent.color[key]))
+          found.bg = computed.backgroundColor;
+      }
+    }
     const thumb = switchThumb(element, computed, ctx);
     if (thumb) found.bg = thumb;
+    // Flat list rows that repeat their canvas paint should not become little
+    // raised rectangles around transparent controls (appointment time slots).
+    if (mode === "oled" && found.bg && computed.backgroundImage === "none" && computed.boxShadow === "none" &&
+        element.matches('[role="listitem"], [role="list"], [role="row"], [role="cell"], [role="gridcell"]') && !element.matches(CONTROL) &&
+        ["TopLeft", "TopRight", "BottomLeft", "BottomRight"].every(corner => parseFloat(computed[`border${corner}Radius`]) === 0) &&
+        SIDES.every(([side]) => computed[`border${side}Style`] === "none" || parseFloat(computed[`border${side}Width`]) === 0)) {
+      const bg = originalSurface.get(element)?.color, parent = backdropOf(parentAcrossShadow(element), ctx);
+      if (bg?.a >= .95 && parent.mapped && parent.color?.a >= .95 &&
+          ["r", "g", "b", "a"].every(key => bg[key] === parent.color[key])) found.bg = parent.mapped;
+    }
     // Protect native links/buttons before their first interaction too. CSSOM
     // hydration can change their surface without a mutation or input event.
     // Other semantic controls gain the same protection on interaction. Native
@@ -714,6 +751,10 @@
       // shallow state update; it remains ink at either native lightness.
       found.bg = colors.mapForeground(colors.parseColor(computed.backgroundColor), 1);
     }
+    const nativeSurface = originalSurface.get(element);
+    if (nativeSurface) nativeSurface.retained = found.bg === computed.backgroundColor && computed.backgroundImage === "none" && !paintsInk(computed);
+    if (nativeSurface?.color && computed.backgroundImage === "none" && !paintsInk(computed))
+      nativeSurface.mapped = found.bg || computed.backgroundColor;
     if (element.matches("input, textarea, select")) found.field = "1";
     if (mode === "crush") {
       // The parent may have been recolored as a light UI island while this
@@ -776,6 +817,12 @@
       if (pseudoStyle.content && pseudoStyle.content !== "none" && pseudoStyle.content !== "normal") {
         generatedInk = true;
         mapSurface(pseudoStyle, `${pseudo}-`, mode, found);
+        if (mode === "oled" && pseudoStyle.position === "absolute" && !paintsInk(pseudoStyle) &&
+            !pseudoStyle.content.replace(/^["']|["']$/g, "").trim() &&
+            parseFloat(pseudoStyle.width) >= parseFloat(computed.width) * .7) {
+          const fade = mapBackdropFade(pseudoStyle, backdropOf(element, ctx));
+          if (fade) found[`${pseudo}-img`] = fade;
+        }
         const thumb = switchThumb(element, pseudoStyle, ctx, true);
         if (thumb) found[`${pseudo}-bg`] = thumb;
         if (isDataFill(element, pseudoStyle, ctx, true)) {

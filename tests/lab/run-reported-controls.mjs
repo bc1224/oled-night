@@ -4,6 +4,8 @@ import {launchChrome,wait} from './browser.mjs';
 import {serveLab} from './server.mjs';
 import {reportedControlsScenario,reportedControlsRestored} from './reported-controls-scenario.mjs';
 import {paintedInkContrast,paintedSample} from './painted-contrast.mjs';
+import {bookingSurfacesScenario,bookingSurfacesRestored} from './booking-surfaces-scenario.mjs';
+import {componentReceipt} from './component-receipt.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/reported-controls');mkdirSync(output,{recursive:true});
 const server=await serveLab(join(root,'tests/e2e/site'));let browser;const checks=[];
 try{
@@ -13,6 +15,12 @@ try{
     await options.eval(`chrome.storage.sync.set({extensionEnabled:true,globalEnabled:true,brightness:88,contrast:72,dimImages:false,siteRules:${mode==='auto'?'{}':"{'127.0.0.1':'recolor'}"}})`);await wait(450);
     await page.go(`${server.origin}/reported-controls.html${mode==='recolor'?'?light':''}`);await wait(700);
     const result=await page.eval(`(${reportedControlsScenario.toString()})()`);checks.push(...result.map(c=>({...c,name:mode+' / '+c.name})));
+    await page.eval("document.getElementById('profile-card').scrollIntoView()");await wait(150);
+    const profileShot=await page.screenshot();writeFileSync(join(output,mode+'-linkedin.png'),profileShot);
+    const profilePoints=await page.eval("(()=>{const point=(id,x,y)=>{const r=document.getElementById(id).getBoundingClientRect();return {x:r.right-x,y:r.y+y}};return [point('profile-card',5,5),point('profile-heading',5,3),point('profile-more',2,2)]})()");
+    const profilePixels=profilePoints.map(p=>paintedSample(profileShot,p.x,p.y));
+    checks.push({name:mode+' / LinkedIn card, heading and more button have continuous actual pixels',ok:profilePixels.every(p=>p?.every((v,i)=>Math.abs(v-[27,31,35][i])<=2)),detail:JSON.stringify(profilePixels)});
+    await page.eval('scrollTo(0,0)');await wait(150);
     const shot=await page.screenshot();writeFileSync(join(output,mode+'.png'),shot);
     const productBounds=await page.eval("(()=>{const r=document.getElementById('chatgpt-product').getBoundingClientRect();return {x:r.x,y:r.y}})()");
     const productMatte=paintedSample(shot,productBounds.x+4,productBounds.y+4),productJacket=paintedSample(shot,productBounds.x+40,productBounds.y+40);
@@ -34,11 +42,22 @@ try{
     await options.eval('chrome.storage.sync.set({extensionEnabled:false})');await wait(450);
     checks.push(...(await page.eval(`(${reportedControlsRestored.toString()})()`)).map(c=>({...c,name:mode+' / '+c.name})));
   }
+  for(const mode of ['auto','recolor']){
+    await options.eval(`chrome.storage.sync.set({extensionEnabled:true,siteRules:${mode==='auto'?'{}':"{'127.0.0.1':'recolor'}"}})`);await wait(450);
+    await page.go(server.origin+'/calendar-booking.html');await wait(700);
+    checks.push(...(await page.eval(`(${bookingSurfacesScenario.toString()})()`)).map(c=>({...c,name:mode+' / '+c.name})));
+    const calendarShot=await page.screenshot();writeFileSync(join(output,mode+'-calendar.png'),calendarShot);
+    const bookingPoints=await page.eval("(()=>{const slot=document.getElementById('booking-slot').getBoundingClientRect(),fade=document.getElementById('booking-description').getBoundingClientRect();return [{x:slot.x+2,y:slot.y+2},{x:fade.right-2,y:fade.bottom-1}]})()");
+    const bookingPixels=bookingPoints.map(p=>paintedSample(calendarShot,p.x,p.y));
+    checks.push({name:mode+' / Calendar slot canvas and description fade end are black actual pixels',ok:bookingPixels.every(p=>p?.every(v=>v<=2)),detail:JSON.stringify(bookingPixels)});
+    await options.eval('chrome.storage.sync.set({extensionEnabled:false})');await wait(450);
+    checks.push({...await page.eval(`(${bookingSurfacesRestored.toString()})()`),name:mode+' / Calendar disable restores authored surfaces'});
+  }
   await options.eval("chrome.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'deepen'}})");await wait(450);
   await page.go(server.origin+'/reported-controls.html');await wait(700);
   checks.push({name:'Explicit Deepen blacks only preserves bright generated surfaces',ok:await page.eval("getComputedStyle(document.getElementById('save-chrome'),'::after').backgroundColor==='rgb(255, 191, 25)'"),detail:''});
   checks.push({name:'Explicit Deepen preserves native raised card depth',ok:await page.eval("getComputedStyle(document.getElementById('native-panel')).backgroundColor==='rgb(28, 28, 28)'"),detail:''});
 }finally{await browser?.close();await server.close()}
 writeFileSync(join(output,'results.json'),JSON.stringify(checks,null,2));for(const c of checks)console.log((c.ok?'PASS ':'FAIL ')+c.name+' '+c.detail);
-mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-chrome.json'),JSON.stringify({engine:'Chrome',checks},null,2));
+mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-chrome.json'),JSON.stringify(componentReceipt('Chrome',{fixtures:['reported-controls.html','calendar-booking.html'],modes:['auto','recolor','deepen'],checks}),null,2));
 if(checks.some(c=>!c.ok))process.exitCode=1;

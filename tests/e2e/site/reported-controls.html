@@ -22,4 +22,12 @@ body{background:#131316;color:#eee;font:16px Arial;margin:24px}body.light{backgr
 document.getElementById('gold-switch').onclick=event=>{const button=event.currentTarget;button.setAttribute('aria-checked',String(button.getAttribute('aria-checked')!=='true'))};
 document.getElementById('reload').onclick=event=>{const button=event.currentTarget;button.setAttribute('aria-checked',String(button.getAttribute('aria-checked')!=='true'))};
 document.addEventListener('DOMContentLoaded',()=>{const shadow=document.getElementById('ads-grid').attachShadow({mode:'open'});shadow.innerHTML='<style>:host{display:block;background:white;color:#222;padding:16px}input{appearance:none;width:18px;height:18px;border:1px solid #999;border-radius:3px;background:white}input:checked{background:#0071e3}input:checked:after{content:"✓";color:white;display:block;text-align:center}input:focus-visible{outline:2px solid #0071e3;outline-offset:2px}</style><label><input id="campaign-check" type="checkbox"> Synthetic campaign</label>';},{once:true});
-</script></body></html>
+</script>
+<style>
+.profile-card{width:640px;max-width:90%;background:#1b1f23;border-radius:8px;padding:24px;color:#eee}
+.profile-heading,.profile-more{background:#1b1f23}.profile-heading{height:42px;width:100%}.profile-heading p{margin:0}
+.profile-description{position:relative;padding-right:90px}.profile-more{position:absolute;right:0;bottom:0;border:0;color:#bbb}
+.profile-distinct{background:#111;color:#eee;padding:8px}.profile-more:hover,.profile-more:focus-visible{background:#454545}
+</style>
+<section class="profile-card" id="profile-card"><div><div><div><a href="#profile-card"><div><div class="profile-heading" id="profile-heading"><div><p>People Operations Manager</p><p>Synthetic company · Full-time</p></div></div></div></a></div></div></div><p class="profile-description">A synthetic professional history with a truncated description.<button type="button" class="profile-more" id="profile-more">… more</button></p><div class="profile-distinct" id="profile-distinct">Separate inset panel</div></section>
+</body></html>
