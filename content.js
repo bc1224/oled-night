@@ -1465,7 +1465,12 @@
       const add = node => { if (!seen.has(node)) { seen.add(node); appendRefresh(head, node); } };
       for (const root of refresh) {
         let count = 0;
-        for (const node of refreshElements(root)) { add(node); if (++count === 96) break; }
+        // Retained sections already have readable dark paint. Recheck their
+        // leading surface promptly, then yield ordinary descendants to the
+        // bounded idle cursor. An eager 96-owner head could combine several
+        // flyout updates into a >150 ms input frame. Actual new content and
+        // native fields/selected states below still receive immediate repair.
+        for (const node of refreshElements(root)) { add(node); if (++count === 32) break; }
         for (const node of root.querySelectorAll('input, select, textarea, [aria-selected="true"], [aria-checked="true"], [aria-pressed="true"]'))
           if (!preservesColor(node)) add(node);
       }

@@ -72,6 +72,11 @@ export async function navigationWorkScenario(){
  const foreign=document.createElement('link'),foreignURL=new URL('navigation-opaque.css',location.href);foreignURL.hostname='localhost';foreign.rel='stylesheet';foreign.href=foreignURL.href;
  await new Promise((resolve,reject)=>{foreign.onload=resolve;foreign.onerror=()=>reject(Error('Cross-origin regression stylesheet failed to load'));document.head.append(foreign)});await sleep(150);
  let opaque=false;try{void foreign.sheet.cssRules}catch{opaque=true}
+ const bulkSheet=document.createElement('style');bulkSheet.textContent='.bulk-nav-theme span{color:#f60}';document.head.append(bulkSheet);
+ const bulk=document.createElement('section');bulk.innerHTML=Array.from({length:700},()=>'<span>Existing navigation copy</span>').join('')+'<input value="Retained value">';document.body.prepend(bulk);await sleep(150);
+ const firstTaskNodes=new Set();const bulkObserver=new MutationObserver(records=>{for(const r of records)if(r.target.localName==='span'&&r.attributeName?.startsWith('data-oled-night-measure'))firstTaskNodes.add(r.target)});bulkObserver.observe(bulk,{attributes:true,subtree:true});
+ bulk.classList.add('bulk-nav-theme');for(let i=0;i<6;i++)await Promise.resolve();bulkObserver.disconnect();
+ checks.push({coverage:'performance',name:'a retained large navigation refresh measures at most 32 ordinary nodes before yielding while preserving native fields',ok:firstTaskNodes.size<=32&&bulk.querySelector('input').value==='Retained value'&&Number(getComputedStyle(bulk.querySelector('input')).color.match(/[\d.]+/g)[0])>=180,detail:JSON.stringify({firstTaskNodes:firstTaskNodes.size})});bulk.remove();bulkSheet.remove();await sleep(100);
  const popup=document.createElement('div');popup.className='popup-module';popup.textContent='Dynamic popup';document.body.prepend(popup);await sleep(80);
  let polarityReads=0;const polarityObserver=new MutationObserver(records=>{polarityReads+=records.length});polarityObserver.observe(document.documentElement,{attributes:true,attributeFilter:['data-oled-night-measure-root']});
  const popupSheet=document.createElement('style');popupSheet.textContent='@keyframes popup-enter{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}.popup-module{color:#111;background:#fff;animation:popup-enter .2s linear}';document.head.append(popupSheet);await sleep(200);polarityObserver.disconnect();
@@ -113,3 +118,4 @@ export async function navigationWorkScenario(){
  checks.push({coverage:'performance',name:'navigation repaint never enumerates unrelated document animations',ok:animationEnumerations===0,detail:String(animationEnumerations)});
  return checks;
 }
+
