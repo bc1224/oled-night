@@ -663,7 +663,7 @@
     // unlabelled banners and email tables. Restrict colored native surfaces
     // to the existing UI scope; status colors and artwork keep their meaning.
     const lightIsland = nativeBackdrop && !nativeBackdrop.image && colors.luminance(nativeBackdrop.color) > 0.5 &&
-      ((colors.chroma(nativeBackdrop.color) < 0.1 && (element.childElementCount || element.textContent.trim())) ||
+      ((colors.chroma(nativeBackdrop.color) < 0.1 && (element.childElementCount || element.textContent.trim() || element.shadowRoot?.childElementCount)) ||
         element.closest(ctx.recolorLightRegions ? LIGHT_UI : DROPDOWN));
     const mode = lightIsland ? "oled" : localMode;
     mapSurface(computed, "", mode, found);

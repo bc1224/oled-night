@@ -11,6 +11,8 @@ export async function reportedControlsScenario(){
   const parsedCheck=document.getElementById('ads-grid').shadowRoot.getElementById('campaign-check'),parsedPaint=getComputedStyle(parsedCheck);
   const parsedRatio=Math.max(ratio(parsedPaint.borderTopColor,backdrop(parsedCheck.parentElement)),ratio(parsedPaint.backgroundColor,backdrop(parsedCheck.parentElement)));
   check('Ordinary shadow root attached during DOMContentLoaded has a visible unchecked control before interaction',!parsedCheck.checked&&parsedRatio>=3,{ratio:parsedRatio,bg:parsedPaint.backgroundColor,border:parsedPaint.borderTopColor});
+  const shadowLabel=parsedCheck.parentElement,shadowLabelStyle=getComputedStyle(shadowLabel),shadowLabelRatio=ratio(shadowLabelStyle.webkitTextFillColor||shadowLabelStyle.color,backdrop(shadowLabel));
+  check('Light shadow component keeps its label readable on a native dark page',shadowLabelRatio>=4.5,{ratio:shadowLabelRatio,bg:backdrop(shadowLabel),ink:shadowLabelStyle.color});
   const rating=document.getElementById('review-rating'),stars=Array.from(rating.querySelectorAll('svg'));
   const starInk=svg=>{const s=getComputedStyle(svg.querySelector('polygon')),fill=rgb(s.fill);return getComputedStyle(svg).filter.includes('invert(1)')?'rgb('+fill.map(v=>255-v).join(',')+')':s.fill};
   const starPaints=stars.map(starInk);
@@ -103,6 +105,7 @@ export async function reportedControlsScenario(){
 export function reportedControlsRestored(){
   const color=id=>getComputedStyle(document.getElementById(id)).backgroundColor;
   return [
+    {name:'disable restores light shadow component background and dark label',ok:color('ads-grid')==='rgb(255, 255, 255)'&&getComputedStyle(document.getElementById('ads-grid').shadowRoot.querySelector('label')).color==='rgb(34, 34, 34)'},
     {name:'disable restores all authored LinkedIn surfaces',ok:['profile-card','profile-heading','profile-more'].every(id=>color(id)==='rgb(27, 31, 35)')&&color('profile-distinct')==='rgb(17, 17, 17)'},
     {name:'disable restores authored black review stars and removes inversion',ok:getComputedStyle(document.querySelector('#review-rating polygon')).fill==='rgb(0, 0, 0)'&&getComputedStyle(document.querySelector('#review-rating svg')).filter==='none'},
     {name:'disable restores both authored composer surfaces',ok:color('composer-shell')==='rgb(33, 33, 33)'&&color('composer-footer')==='rgb(33, 33, 33)'},
