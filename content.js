@@ -2340,7 +2340,7 @@
       const selectors = []; let count = 0, valid = true;
       const inspect = rules => { for (const rule of rules) {
         if (++count > 8192 || rule.type === 3) { valid = false; return; }
-        if (rule.selectorText && !changesOnlyInteractionBehavior(rule.style)) selectors.push(rule.selectorText);
+        if (rule.selectorText) selectors.push(rule);
         if (rule.cssRules) inspect(rule.cssRules);
         if (!valid) return;
       }};
@@ -2356,7 +2356,13 @@
     const roots = new Set(), oldProbe = document.createElement(node.localName), newProbe = document.createElement(node.localName);
     if (previous !== null) oldProbe.setAttribute('class',previous);
     if (current !== null) newProbe.setAttribute('class',current);
-    for (const text of selectors) {
+    for (const rule of selectors) {
+      const text = rule.selectorText;
+      // Most rules cannot depend on this changed class. Inspect declarations
+      // only for possible dependencies; reading every unrelated declaration
+      // made repeated flyout class changes synchronous page-wide CSSOM work.
+      if (!affected.test(text) && !text.includes('\\') && !/\[\s*class\b/i.test(text)) continue;
+      if (changesOnlyInteractionBehavior(rule.style)) continue;
       if (text.includes('\\')) {
         // Utility sheets contain many escaped names such as .lg\:flex.
         // Unrelated names do not invalidate this proof. Decode only to detect

@@ -8,10 +8,10 @@ export async function largeUpdatesScenario(){
  plain.style.color='#111';await sleep(80);
  check('later explicit ink on a streamed leaf remains readable',window.OLEDLabAudit.lum(getComputedStyle(plain).color)>.4);
  plain.remove();await sleep(80);
- let pointerReads=0;const pointerWatch=new MutationObserver(records=>pointerReads+=records.filter(r=>r.attributeName?.startsWith('data-oled-night-measure')).length);
+ let pointerReads=0;const pointerTargets=[];const pointerWatch=new MutationObserver(records=>{const measured=records.filter(r=>r.attributeName?.startsWith('data-oled-night-measure'));pointerReads+=measured.length;for(const r of measured)if(pointerTargets.length<8)pointerTargets.push({tag:r.target.localName,id:r.target.id,classes:r.target.className,attribute:r.attributeName})});
  pointerWatch.observe(document.documentElement,{subtree:true,attributes:true});
  rows[0].querySelector('.c').dispatchEvent(new PointerEvent('pointerover',{bubbles:true,composed:true,relatedTarget:rows[1]}));await sleep(160);pointerWatch.disconnect();
- check('plain inbox pointer movement does not remeasure unchanged row paint',pointerReads===0,String(pointerReads));
+ check('plain inbox pointer movement does not remeasure unchanged row paint',pointerReads===0,JSON.stringify({pointerReads,pointerTargets,shared:rows[0].getAttribute('data-oled-night-bg'),row:rows[0].getAttribute('data-oled-night')}));
  let measurements=0;const paintWatch=new MutationObserver(records=>measurements+=records.filter(r=>r.attributeName?.startsWith('data-oled-night-measure')).length);
  paintWatch.observe(rows[0],{subtree:true,attributes:true});rows[0].classList.add('hl');await sleep(80);paintWatch.disconnect();
  check('proven background-only selection avoids native subtree measurement',measurements===0&&window.OLEDLabAudit.lum(getComputedStyle(rows[0]).backgroundColor)<.16,String(measurements));

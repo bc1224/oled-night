@@ -16,6 +16,11 @@ export async function navigationWorkScenario(){
  globalThis.getComputedStyle=function(node,...args){if(node.parentElement?.id==='article'||node.parentElement?.parentElement?.id==='article')articleReads++;return nativeComputed.call(this,node,...args)};
  document.documentElement.classList.add('nav-stuck');await sleep(150);globalThis.getComputedStyle=nativeComputed;
  checks.push({coverage:'performance',name:'sticky navigation scroll offsets do not reread unrelated article paint',ok:articleReads===0&&getComputedStyle(document.documentElement).scrollPaddingTop==='80px',detail:JSON.stringify({articleReads,padding:getComputedStyle(document.documentElement).scrollPaddingTop})});document.documentElement.classList.remove('nav-stuck');scrollSheet.remove();await sleep(100);
+ const unrelatedSheet=document.createElement('style');unrelatedSheet.textContent=Array.from({length:200},(_,i)=>`.unrelated-qa-${i}{background:#eee;color:#111}`).join('')+'html.nav-offset{scroll-padding-top:80px}';document.head.append(unrelatedSheet);await sleep(100);
+ const styleDescriptor=Object.getOwnPropertyDescriptor(CSSStyleRule.prototype,'style');let unrelatedStyleReads=0;
+ Object.defineProperty(CSSStyleRule.prototype,'style',{...styleDescriptor,get(){if(this.selectorText?.startsWith('.unrelated-qa-'))unrelatedStyleReads++;return styleDescriptor.get.call(this)}});
+ try{document.documentElement.classList.add('nav-offset');await sleep(120)}finally{Object.defineProperty(CSSStyleRule.prototype,'style',styleDescriptor)}
+ checks.push({coverage:'performance',name:'navigation class proof does not enumerate declarations of unrelated rules',ok:unrelatedStyleReads===0,detail:String(unrelatedStyleReads)});document.documentElement.classList.remove('nav-offset');unrelatedSheet.remove();await sleep(100);
  const late=document.createElement('style'),module=document.createElement('style');
  late.textContent='.client-js body:not(.overlay-open).scrolled .sticky-label{background:#ddd}';document.head.append(late);await sleep(80);
  for(let i=0;i<12;i++){
