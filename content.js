@@ -602,7 +602,7 @@
     const control = pseudo ? element : element.parentElement;
     const role = control?.getAttribute("role");
     if (role !== "switch" &&
-        !(control?.localName === "button" && !role && control.hasAttribute("aria-checked"))) return null;
+        !(control?.localName === "button" && (!pseudo || !role) && control.hasAttribute("aria-checked"))) return null;
     if ((!pseudo && element.textContent.trim()) || computed.backgroundImage !== "none" ||
         (pseudo && computed.content !== '""' && computed.content !== "''")) return null;
     const w = parseFloat(computed.width), h = parseFloat(computed.height);
