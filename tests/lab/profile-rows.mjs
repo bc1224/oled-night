@@ -11,7 +11,7 @@ const server=createServer((_,res)=>{res.setHeader('content-type','text/html');re
 try{
  browser=await launchChrome();const {id}=await browser.send('Extensions.loadUnpacked',{path:root});const options=await browser.open(`chrome-extension://${id}/options.html`),page=await browser.open();await page.size(1000,800);await browser.send('Performance.enable',{},page.sessionId);
  const metrics=async()=>Object.fromEntries((await browser.send('Performance.getMetrics',{},page.sessionId)).metrics.map(m=>[m.name,m.value]));
- for(const variant of ['native','active','light-scheme','root-none','no-row-sheet','no-extension-css','no-markers']){
+ for(const variant of ['native','active','transparent-body','transparent-html','root-none']){
   await options.eval(`chrome.storage.sync.clear().then(()=>chrome.storage.sync.set({extensionEnabled:${!variant.startsWith('native')},globalEnabled:true,siteRules:${variant==='auto'?'{}':"{'127.0.0.1':'recolor'}"}}))`);await wait(300);await page.go(`http://127.0.0.1:${server.address().port}/`);await wait(2000);let other;
   if(variant.endsWith('background'))other=await browser.open();else await browser.send('Page.bringToFront',{},page.sessionId);
   if(variant.startsWith('css-debugger')){await browser.send('DOM.enable',{},page.sessionId);await browser.send('CSS.enable',{},page.sessionId);if(variant==='css-debugger-disabled')await browser.send('CSS.disable',{},page.sessionId)}
@@ -20,6 +20,7 @@ try{
   if(variant==='literal-paint')await page.eval(`(()=>{for(const e of document.querySelectorAll('[data-oled-night]')){const c=getComputedStyle(e);for(const [key,property] of [['bg','backgroundColor'],['fg','color'],['bb','borderBottomColor']])if(e.style.getPropertyValue('--oln-'+key))e.style.setProperty('--oln-'+key,c[property])}})()`);
   if(variant==='simple-guards')await page.eval(`(()=>{for(const e of document.querySelectorAll('style[id^="oled-night-"]')){const s=e.sheet;for(let i=s.cssRules.length-1;i>=0;i--){const r=s.cssRules[i];if(r.selectorText?.includes('[data-oled-night-measure] *')){const text=r.cssText.replaceAll(':not([data-oled-night-measure], [data-oled-night-measure] *)',':not([data-oled-night-measure])');s.deleteRule(i);s.insertRule(text,i)}}}})()`);
   if(variant==='light-scheme')await page.eval(`(()=>{const s=document.createElement('style');s.id='oled-night-diagnostic';s.textContent=':is(html,body,body *,#oled-night-diag-a#oled-night-diag-b){color-scheme:light!important}';document.head.append(s)})()`);
+  if(variant==='transparent-body'||variant==='transparent-html')await page.eval(`(()=>{const s=document.createElement('style');s.id='oled-night-diagnostic';s.textContent=${JSON.stringify(':is('+(variant==='transparent-body'?'body':'html')+',#oled-night-diag-a#oled-night-diag-b){background:transparent!important}')};document.head.append(s)})()`);
   if(variant==='root-none')await page.eval(`document.documentElement.setAttribute('data-oled-night-page','none')`);
   if(variant==='no-row-sheet')await page.eval(`document.getElementById('oled-night-row-paint').sheet.disabled=true`);
   if(variant==='no-extension-css')await page.eval(`(()=>{for(const e of document.querySelectorAll('style[id^="oled-night-"]'))e.sheet.disabled=true})()`);
