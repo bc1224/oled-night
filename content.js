@@ -126,6 +126,7 @@
   let refreshIdle = false;
   let refreshBatchLimit = 32;
   let lastPaintFrame = null;
+  const retainedHeadFrames = new WeakMap();
   let parsedShadowCursor = null;
   let flushScheduled = false;
   let flushHandle = null;
@@ -687,7 +688,8 @@
           // centered navigation still form one band. Raised navigation cards
           // farther down the page retain their own surface and shadow.
           (computed.boxShadow === 'none' || element.matches('header, [role="banner"]') ||
-            element.getBoundingClientRect().top <= 4)) found.bg = '#000000';
+            /^(sticky|fixed)$/.test(computed.position) ||
+            (element.parentElement && /^(sticky|fixed)$/.test(ctx.style(element.parentElement).position)))) found.bg = '#000000';
     }
     // Full-width neutral navigation is page chrome, rather than a raised card.
     // Paint it opaque black so translucent flyouts cannot reveal a white page.
@@ -1469,6 +1471,13 @@
       const seen = new Set();
       const add = node => { if (!seen.has(node)) { seen.add(node); appendRefresh(head, node); } };
       for (const root of refresh) {
+        // Several mutation deliveries can precede the same paint. The old
+        // dark surface is still intact: do not measure its leading subtree
+        // repeatedly in that frame. Explicit new content and changed controls
+        // are processed separately below; the retained cursor still converges.
+        const frame = document.timeline?.currentTime;
+        if (frame != null && retainedHeadFrames.get(root) === frame) continue;
+        if (frame != null) retainedHeadFrames.set(root, frame);
         let count = 0;
         // Retained sections already have readable dark paint. Recheck their
         // leading surface promptly, then yield ordinary descendants to the

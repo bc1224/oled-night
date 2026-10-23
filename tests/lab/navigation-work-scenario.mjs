@@ -92,7 +92,15 @@ export async function navigationWorkScenario(){
  const bulk=document.createElement('section');bulk.innerHTML=Array.from({length:700},()=>'<span>Existing navigation copy</span>').join('')+'<input value="Retained value">';document.body.prepend(bulk);await sleep(150);
  const firstTaskNodes=new Set();const bulkObserver=new MutationObserver(records=>{for(const r of records)if(r.target.localName==='span'&&r.attributeName?.startsWith('data-oled-night-measure'))firstTaskNodes.add(r.target)});bulkObserver.observe(bulk,{attributes:true,subtree:true});
  bulk.classList.add('bulk-nav-theme');for(let i=0;i<6;i++)await Promise.resolve();bulkObserver.disconnect();
- checks.push({coverage:'performance',name:'a retained large navigation refresh measures at most 32 ordinary nodes before yielding while preserving native fields',ok:firstTaskNodes.size<=32&&bulk.querySelector('input').value==='Retained value'&&Number(getComputedStyle(bulk.querySelector('input')).color.match(/[\d.]+/g)[0])>=180,detail:JSON.stringify({firstTaskNodes:firstTaskNodes.size})});bulk.remove();bulkSheet.remove();await sleep(100);
+ checks.push({coverage:'performance',name:'a retained large navigation refresh measures at most 32 ordinary nodes before yielding while preserving native fields',ok:firstTaskNodes.size<=32&&bulk.querySelector('input').value==='Retained value'&&Number(getComputedStyle(bulk.querySelector('input')).color.match(/[\d.]+/g)[0])>=180,detail:JSON.stringify({firstTaskNodes:firstTaskNodes.size})});
+ await sleep(150);
+ let repeatedMeasurements=0;
+ const repeatedObserver=new MutationObserver(records=>{repeatedMeasurements+=records.filter(r=>r.target.localName==='span'&&r.attributeName==='data-oled-night-measure-self').length});
+ await new Promise(requestAnimationFrame);repeatedObserver.observe(bulk,{attributes:true,subtree:true});
+ for(let cycle=0;cycle<3;cycle++){bulk.classList.toggle('bulk-nav-theme');for(let i=0;i<6;i++)await Promise.resolve()}
+ repeatedObserver.disconnect();
+ checks.push({coverage:'performance',name:'repeated retained navigation mutations share one leading measurement in a frame',ok:repeatedMeasurements>0&&repeatedMeasurements<=64,detail:JSON.stringify({repeatedMeasurements})});
+ bulk.remove();bulkSheet.remove();await sleep(100);
  const popup=document.createElement('div');popup.className='popup-module';popup.textContent='Dynamic popup';document.body.prepend(popup);await sleep(80);
  let polarityReads=0;const polarityObserver=new MutationObserver(records=>{polarityReads+=records.length});polarityObserver.observe(document.documentElement,{attributes:true,attributeFilter:['data-oled-night-measure-root']});
  const popupSheet=document.createElement('style');popupSheet.textContent='@keyframes popup-enter{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}.popup-module{color:#111;background:#fff;animation:popup-enter .2s linear}';document.head.append(popupSheet);await sleep(200);polarityObserver.disconnect();
