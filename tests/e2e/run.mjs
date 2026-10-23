@@ -60,6 +60,7 @@ const toChrome = chrome.stdio[3], fromChrome = chrome.stdio[4];
 let nextId = 0, buffer = "";
 const pending = new Map();
 const exceptions = [];
+const protocolEvents = new Map();
 fromChrome.on("data", (chunk) => {
   buffer += chunk;
   let end;
@@ -67,10 +68,12 @@ fromChrome.on("data", (chunk) => {
     const message = JSON.parse(buffer.slice(0, end));
     buffer = buffer.slice(end + 1);
     if (message.id) pending.get(message.id)?.(message);
+    else if (protocolEvents.has(message.method)) {protocolEvents.get(message.method)(message.params);protocolEvents.delete(message.method);}
     else if (message.method === "Runtime.exceptionThrown") exceptions.push(message.params.exceptionDetails?.exception?.description || message.params.exceptionDetails?.text);
   }
 });
 const send = (method, params = {}, sessionId) => new Promise((r) => { const id = ++nextId; pending.set(id, r); toChrome.write(JSON.stringify({ id, method, params, sessionId }) + "\0"); });
+send.nextEvent=method=>new Promise(resolve=>protocolEvents.set(method,resolve));
 
 async function openTab(url, background = false) {
   const { result: { targetId } } = await send("Target.createTarget", { url: "about:blank", background });
