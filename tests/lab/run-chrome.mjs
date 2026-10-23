@@ -58,7 +58,8 @@ try {
     checks.push(...(await page.eval(`(${coldShadowScenario.toString()})()`)).map(c=>({...c,name:label+' / '+c.name})));
     const stateChecks=await page.eval(`(${matrixStates.toString()})()`);checks.push(...stateChecks.map(c=>({...c,name:label+' / '+c.name})));
     checks.push(...(await page.eval(`(${frameMutationScenario.toString()})()`)).map(c=>({...c,name:label+' / '+c.name})));
-    await page.eval('scrollTo(0,0)');await page.hover(1,1);await wait(150);checks.push(checkScreenshot({name:`chrome-${label}`,actual:await page.screenshot(),directory:join(root,'tests/lab/baselines',process.platform),artifacts:output,candidate:process.argv.includes('--candidates')}));
+    // The immutable old-runtime countercheck needs its own reviewed visuals.
+    await page.eval('scrollTo(0,0)');await page.hover(1,1);await wait(150);checks.push(checkScreenshot({name:`chrome-${label}`,actual:await page.screenshot(),directory:join(packageRoot,'tests/lab/baselines',process.platform),artifacts:output,candidate:process.argv.includes('--candidates')}));
     if(width===1200){for(const target of ['primary','cell-a','shadow-first','shadow-second','shadow-third']){
       const point=await page.eval(`(()=>{const e=window.OLEDLabAudit.elements(document).find(e=>e.id===${JSON.stringify(target)});e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`);
       // Read after the frame's callbacks: an earlier rAF callback can see the
