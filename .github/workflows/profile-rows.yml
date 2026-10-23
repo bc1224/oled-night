@@ -1,5 +1,11 @@
 name: Diagnose row rendering
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      paint_only:
+        description: Compare row paint costs without the full-suite diagnostic
+        type: boolean
+        default: false
 jobs:
   profile:
     runs-on: ubuntu-latest
@@ -20,6 +26,7 @@ jobs:
         env:
           CHROME_PATH: /usr/bin/google-chrome
       - name: Profile the full row-workload setup without changing its gates
+        if: ${{ !inputs.paint_only }}
         run: node tests/e2e/run.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
