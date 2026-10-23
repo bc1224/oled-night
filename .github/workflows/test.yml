@@ -87,6 +87,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
+          name: oled-performance-diagnostics
+          path: dist/performance/
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
           name: oled-night-lab-evidence
           path: dist/lab-results/
           if-no-files-found: warn

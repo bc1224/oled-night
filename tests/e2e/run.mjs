@@ -13,6 +13,7 @@ import { reportAttachmentsScenario } from './report-attachments-scenario.mjs';
 import { spriteAssetsScenario } from './sprite-assets-scenario.mjs';
 import { colorPaletteScenario, colorPaletteRestored } from './color-palette-scenario.mjs';
 import { chromeTestArgs } from '../lab/chrome-launch.mjs';
+import { rowPerformanceDiagnostic } from './row-performance-diagnostic.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // EXT_PATH lets the suite run against an unzipped release instead of the source tree.
@@ -718,6 +719,7 @@ try {
   await sleep(100);
   check('slider changes do not rescan the document',await page.eval("window.tuningWatch.disconnect();window.tuningPasses===0"));
   check("slider step is cheap", slider < 120, `${slider} ms per step`);
+  if (!churn.ok || slider >= 120) await rowPerformanceDiagnostic({send,page,extension:ext,url:site('127.0.0.1','rows.html'),workload:churnWorkload,root:EXT});
 
   await resetSettings();
   await page.go(site("127.0.0.1", "light.html"));
