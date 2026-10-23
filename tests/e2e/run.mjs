@@ -468,6 +468,7 @@ try {
   const forcedAutofill = await send("CSS.forcePseudoState", {nodeId:fieldNode.result.nodeId,forcedPseudoClasses:['autofill']}, page.sessionId);
   check("fields: native autofill paint covered with dark inset", !forcedAutofill.error && await page.eval("document.getElementById('genericField').matches(':autofill') && getComputedStyle(document.getElementById('genericField')).boxShadow.includes('1000px')") && lum(await css("genericField", "webkitTextFillColor")) > .5);
   await send("CSS.forcePseudoState", {nodeId:fieldNode.result.nodeId,forcedPseudoClasses:[]}, page.sessionId);
+  await send('CSS.disable',{},page.sessionId);await send('DOM.disable',{},page.sessionId);
   await page.eval("document.getElementById('shadowInteraction').shadowRoot.querySelector('button').focus()"); await sleep(80);
   check("dropdown: shadow focus-only surface darkened", await page.eval("getComputedStyle(document.getElementById('shadowInteraction').shadowRoot.querySelector('button')).backgroundColor !== 'rgb(238, 238, 238)'"));
   await setSettings({globalEnabled:false}); await sleep(400);

@@ -10,8 +10,9 @@ export async function largeUpdatesScenario(){
  plain.remove();await sleep(80);
  let pointerReads=0;const pointerTargets=[];const pointerWatch=new MutationObserver(records=>{const measured=records.filter(r=>r.attributeName?.startsWith('data-oled-night-measure'));pointerReads+=measured.length;for(const r of measured)if(pointerTargets.length<8)pointerTargets.push({tag:r.target.localName,id:r.target.id,classes:r.target.className,attribute:r.attributeName})});
  pointerWatch.observe(document.documentElement,{subtree:true,attributes:true});
+ document.documentElement.setAttribute('data-lab-pointer-probe','');await sleep(160);const controlReads=pointerReads;pointerReads=0;pointerTargets.length=0;
  rows[0].querySelector('.c').dispatchEvent(new PointerEvent('pointerover',{bubbles:true,composed:true,relatedTarget:rows[1]}));await sleep(160);pointerWatch.disconnect();
- check('plain inbox pointer movement does not remeasure unchanged row paint',pointerReads===0,JSON.stringify({pointerReads,pointerTargets,shared:rows[0].getAttribute('data-oled-night-bg'),row:rows[0].getAttribute('data-oled-night')}));
+ document.documentElement.removeAttribute('data-lab-pointer-probe');check('plain inbox pointer movement does not remeasure unchanged row paint',controlReads===0&&pointerReads===0,JSON.stringify({controlReads,pointerReads,pointerTargets,shared:rows[0].getAttribute('data-oled-night-bg'),row:rows[0].getAttribute('data-oled-night')}));
  let measurements=0;const paintWatch=new MutationObserver(records=>measurements+=records.filter(r=>r.attributeName?.startsWith('data-oled-night-measure')).length);
  paintWatch.observe(rows[0],{subtree:true,attributes:true});rows[0].classList.add('hl');await sleep(80);paintWatch.disconnect();
  check('proven background-only selection avoids native subtree measurement',measurements===0&&window.OLEDLabAudit.lum(getComputedStyle(rows[0]).backgroundColor)<.16,String(measurements));

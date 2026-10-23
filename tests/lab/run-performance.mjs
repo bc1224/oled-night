@@ -49,7 +49,8 @@ try{
   const counts=await options.eval(`(async()=>{const [tab]=await chrome.tabs.query({url:${JSON.stringify(server.origin+'/lab/fixtures/large-updates.html')}});return (await chrome.tabs.sendMessage(tab.id,{type:'oled-night-report'})).counts})()`);
   checks.push({name:'cheap background updates retain no viewport observations or deferred paint',ok:counts.observedPaint===0&&counts.deferredPaint===0,detail:JSON.stringify(counts)});
   await page.eval("document.querySelector('.row:last-child').classList.remove('hl')");await wait(80);
-  checks.push(...await page.eval(`(${largeUpdatesScenario.toString()})()`));
+  await options.eval(`(async()=>{const [tab]=await chrome.tabs.query({url:${JSON.stringify(server.origin+'/lab/fixtures/large-updates.html')}});await chrome.scripting.executeScript({target:{tabId:tab.id},func:()=>{const native=globalThis.getComputedStyle;globalThis.__oledPointerCalls=[];globalThis.__oledRestorePointerProbe=()=>{globalThis.getComputedStyle=native};globalThis.getComputedStyle=function(node,...args){if(document.documentElement.hasAttribute('data-lab-pointer-probe')&&globalThis.__oledPointerCalls.length<8)globalThis.__oledPointerCalls.push({node:node.localName+'.'+node.className,stack:new Error().stack});return native.call(this,node,...args)}}})})()`);
+  try{checks.push(...await page.eval(`(${largeUpdatesScenario.toString()})()`))}finally{const calls=await options.eval(`(async()=>{const [tab]=await chrome.tabs.query({url:${JSON.stringify(server.origin+'/lab/fixtures/large-updates.html')}});return(await chrome.scripting.executeScript({target:{tabId:tab.id},func:()=>{globalThis.__oledRestorePointerProbe?.();return globalThis.__oledPointerCalls}}))[0].result})()`);if(checks.some(c=>!c.ok))console.log('POINTER READ CALLERS '+JSON.stringify(calls))}
   console.log(JSON.stringify({passed:checks.filter(c=>c.ok).length,failed:checks.filter(c=>!c.ok)}));
  }
  if(process.env.OLED_PERF_PROFILE){
