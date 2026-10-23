@@ -1,5 +1,5 @@
 export function oledComponentsProbe(){
- const ids=['dark-swatch','black-swatch','real-logo','real-icon','unit-in','unit-cm','header-band','header-nav','product-card','size-dialog','selected-tile'];
+ const ids=['dark-swatch','black-swatch','real-logo','real-icon','unit-in','unit-cm','header-band','header-nav','product-card','size-dialog','selected-tile','shadow-nav-card'];
  const elements=Object.fromEntries(ids.map(id=>{const e=document.getElementById(id),s=getComputedStyle(e),r=e.getBoundingClientRect();return [id,{x:r.x,y:r.y,w:r.width,h:r.height,bg:s.backgroundColor,filter:s.filter,border:s.borderTopColor,after:getComputedStyle(e,'::after').backgroundColor,checked:e.checked,value:e.value}]}));
  const selection=element=>{const s=getComputedStyle(element,'::selection');return {bg:s.backgroundColor,fg:s.color}};
  return {active:document.documentElement.hasAttribute('data-oled-night-root'),version:document.documentElement.getAttribute('data-oled-night-version'),mode:document.documentElement.getAttribute('data-oled-night-mode'),fixture:location.pathname.split('/').at(-1),viewportWidth:innerWidth,elements,selection:{root:selection(document.documentElement),nested:selection(document.querySelector('.card p'))}};

@@ -11,7 +11,7 @@ export function oledComponentsPaint(bytes,probe,state='in',version){
  check('text selection inherits readable colors from the document into nested content',probe.selection.root.bg==='rgb(38, 79, 140)'&&probe.selection.root.fg==='rgb(255, 255, 255)'&&probe.selection.nested.bg===probe.selection.root.bg&&probe.selection.nested.fg===probe.selection.root.fg,probe.selection);
  coverage='surface';const left=sample('header-band',4,4),middle=sample('header-nav',4,4),right=sample('header-band',e['header-band'].w-4,4);
  check('continuous header band has matching left, center and right pixels',near(left,middle)&&near(right,middle),{left,middle,right});
- for(const id of ['product-card','size-dialog','selected-tile']){const parent=id==='selected-tile'?'product-card':'content',p=sample(id,10,10),bg=id==='selected-tile'?sample('product-card',5,5):[0,0,0];check(id+' stays distinct from neighboring '+parent,!near(p,bg),{p,bg})}
+ for(const id of ['product-card','size-dialog','selected-tile','shadow-nav-card']){const parent=id==='selected-tile'?'product-card':'content',p=sample(id,10,10),bg=id==='selected-tile'?sample('product-card',5,5):[0,0,0];check(id+' stays distinct from neighboring '+parent,!near(p,bg),{p,bg})}
  coverage='media';check('true logo and control icon remain visible',e['real-logo'].filter.includes('invert')&&/drop-shadow|invert/.test(e['real-icon'].filter),{logo:e['real-logo'].filter,icon:e['real-icon'].filter});
  check('true monochrome logo has visible painted pixels',lum(sample('real-logo',10,15))>.6,sample('real-logo',10,15));
  const iconPixels=[];for(let y=0;y<24;y++)for(let x=0;x<24;x++)iconPixels.push(sample('real-icon',x,y));

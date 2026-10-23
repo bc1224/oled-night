@@ -677,12 +677,17 @@
     // Cards, dialogs and control faces remain separate surface decisions.
     if (mode === 'oled' && computed.backgroundImage === 'none' && !paintsInk(computed) &&
         !element.matches(CONTROL) && !element.closest('[role="dialog"], dialog, [role="menu"], [role="listbox"]') &&
-        computed.boxShadow === 'none' && parseFloat(computed.borderTopLeftRadius) === 0) {
+        parseFloat(computed.borderTopLeftRadius) === 0 &&
+        parseFloat(computed.width) >= document.documentElement.clientWidth * .7 &&
+        parseFloat(computed.height) <= innerHeight * .4) {
       const bg = colors.parseColor(computed.backgroundColor);
       if (bg?.a >= .95 && colors.chroma(bg) <= .03 &&
           (element.matches('header, [role="banner"]') || element.querySelector('nav, [role="navigation"]')) &&
-          parseFloat(computed.width) >= document.documentElement.clientWidth * .7 &&
-          parseFloat(computed.height) <= innerHeight * .4) found.bg = '#000000';
+          // A page header can cast a separating shadow while its wrapper and
+          // centered navigation still form one band. Raised navigation cards
+          // farther down the page retain their own surface and shadow.
+          (computed.boxShadow === 'none' || element.matches('header, [role="banner"]') ||
+            element.getBoundingClientRect().top <= 4)) found.bg = '#000000';
     }
     // Full-width neutral navigation is page chrome, rather than a raised card.
     // Paint it opaque black so translucent flyouts cannot reveal a white page.
