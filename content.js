@@ -114,6 +114,7 @@
   let logoChecked = new WeakSet();
   let logoBudget = 80;
   const spriteDocuments = new Map();
+  const localSpriteWaiters = new Set();
   let inlineStyles = new WeakMap();
   const pendingTrees = new Set();
   const pendingSelf = new Set();
@@ -902,7 +903,15 @@
     let url, id;
     try { url = new URL(href, document.baseURI); id = decodeURIComponent(url.hash.slice(1)); } catch { return null; }
     if (!id || id.length > 256) return null;
-    if (href.startsWith("#")) return svg.getRootNode().getElementById(id);
+    if (href.startsWith("#")) {
+      const target = svg.getRootNode().getElementById(id);
+      // Parsing and client rendering can insert a button before its shared
+      // symbol. Revisit only unresolved compact icons when children arrive;
+      // a hidden symbol's own paint pass cannot repair its existing users.
+      if (!target && localSpriteWaiters.size < 256) localSpriteWaiters.add(svg);
+      else if (target) localSpriteWaiters.delete(svg);
+      return target;
+    }
     if (!/^https?:$/.test(url.protocol) || url.origin !== location.origin || url.username || url.password) return null;
     url.hash = "";
     const key = url.href;
@@ -2679,6 +2688,15 @@
     // our strong references on that mutation, including in background tabs,
     // rather than waiting for the sheet health timer or frame polling.
     if (removed.length) releaseDetachedComponents(removed);
+    if (localSpriteWaiters.size && records.some(record => record.type === 'childList')) {
+      for (const svg of localSpriteWaiters) {
+        if (!svg.isConnected) { localSpriteWaiters.delete(svg); continue; }
+        const use = svg.querySelector('use'), href = use?.getAttribute('href') || use?.getAttribute('xlink:href') || '';
+        let id; try { id = decodeURIComponent(href.slice(1)); } catch { localSpriteWaiters.delete(svg); continue; }
+        if (!href.startsWith('#')) { localSpriteWaiters.delete(svg); continue; }
+        if (svg.getRootNode().getElementById(id)) { localSpriteWaiters.delete(svg); pendingTrees.add(svg); }
+      }
+    }
     for (const root of changedRoots) if (shadowRoots.has(root)) ensureShadowSheet(root);
     if (scheduleBatch && (pendingTrees.size || pendingSelf.size || polarityDirty)) schedule(true);
   }
@@ -2867,6 +2885,7 @@
   function disable() {
     for (const entry of spriteDocuments.values()) { entry.controller.abort(); entry.waiting.clear(); }
     spriteDocuments.clear();
+    localSpriteWaiters.clear();
     stopYouTubeTheme?.();
     stopYouTubeTheme = null;
     document.removeEventListener("load", onSheetLoad, true);
