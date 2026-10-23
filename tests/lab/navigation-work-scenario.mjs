@@ -2,8 +2,20 @@
 // dynamic article insertion and a real theme change; timings include paint.
 export async function navigationWorkScenario(){
  const checks=[],sleep=ms=>new Promise(r=>setTimeout(r,ms)),frames=[];
+ let animationEnumerations=0;const nativeAnimations=Document.prototype.getAnimations;
+ Document.prototype.getAnimations=function(...args){animationEnumerations++;return nativeAnimations.apply(this,args)};
  let running=true,last=performance.now();const frame=t=>{frames.push(t-last);last=t;if(running)requestAnimationFrame(frame)};requestAnimationFrame(frame);
  document.documentElement.classList.add('client-js');
+ const grown=document.createElement('section');grown.innerHTML='<div><p>Initially small layout</p></div>';document.body.prepend(grown);await sleep(80);
+ const inheritedBefore=grown.getAttribute('data-oled-night')?.split(' ').includes('fg');
+ const inserted=grown.firstElementChild;inserted.insertAdjacentHTML('beforeend',Array.from({length:600},()=>'<p>Late article content</p>').join(''));await sleep(180);
+ const inheritedAfter=!!grown.getAttribute('data-oled-night')?.split(' ').includes('fg'),grownInk=getComputedStyle(inserted.lastElementChild).color;
+ checks.push({coverage:'performance',name:'late large sections retire unnecessary inherited layout ink while retaining readable content',ok:inheritedBefore===true&&inheritedAfter===false&&Number(grownInk.match(/[\d.]+/g)[0])>=180,detail:JSON.stringify({inheritedBefore,inheritedAfter,grownInk})});grown.remove();await sleep(80);
+ const scrollSheet=document.createElement('style');scrollSheet.textContent='html.nav-stuck{scroll-padding-top:80px}';document.head.append(scrollSheet);await sleep(100);
+ const nativeComputed=globalThis.getComputedStyle;let articleReads=0;
+ globalThis.getComputedStyle=function(node,...args){if(node.parentElement?.id==='article'||node.parentElement?.parentElement?.id==='article')articleReads++;return nativeComputed.call(this,node,...args)};
+ document.documentElement.classList.add('nav-stuck');await sleep(150);globalThis.getComputedStyle=nativeComputed;
+ checks.push({coverage:'performance',name:'sticky navigation scroll offsets do not reread unrelated article paint',ok:articleReads===0&&getComputedStyle(document.documentElement).scrollPaddingTop==='80px',detail:JSON.stringify({articleReads,padding:getComputedStyle(document.documentElement).scrollPaddingTop})});document.documentElement.classList.remove('nav-stuck');scrollSheet.remove();await sleep(100);
  const late=document.createElement('style'),module=document.createElement('style');
  late.textContent='.client-js body:not(.overlay-open).scrolled .sticky-label{background:#ddd}';document.head.append(late);await sleep(80);
  for(let i=0;i<12;i++){
@@ -16,6 +28,11 @@ export async function navigationWorkScenario(){
   await sleep(35);
  }
  await sleep(60);running=false;
+ const layoutSheet=document.createElement('style');layoutSheet.textContent='#article{transition:padding-left .4s linear}#article a{transition:color .2s linear}';document.head.append(layoutSheet);await sleep(150);
+ const article=document.getElementById('article');let motionWrites=0;
+ const layoutObserver=new MutationObserver(records=>{motionWrites+=records.filter(r=>r.oldValue?.includes('--oln-motion')).length});layoutObserver.observe(article,{attributes:true,attributeFilter:['style'],attributeOldValue:true});
+ article.querySelector('a').dispatchEvent(new PointerEvent('pointerover',{bubbles:true,relatedTarget:document.body}));await sleep(120);layoutObserver.disconnect();
+ checks.push({coverage:'performance',name:'layout-only ancestors retain native transitions without inherited motion rewrites',ok:motionWrites===0&&getComputedStyle(article).transitionProperty==='padding-left',detail:JSON.stringify({motionWrites,transition:getComputedStyle(article).transitionProperty})});layoutSheet.remove();
  const max=Math.max(...frames),p95=[...frames].sort((a,b)=>a-b)[Math.floor(frames.length*.95)];
  checks.push({coverage:'performance',name:'navigation, focus and repeated class writes keep every frame below 150 ms',ok:frames.length>=10&&max<150,detail:JSON.stringify({max,p95,frames:frames.length})});
  const expanded=document.createElement('style');expanded.textContent='#mega-nav [aria-expanded="true"]{color:rgb(244,126,56)}';document.head.append(expanded);
@@ -81,5 +98,7 @@ export async function navigationWorkScenario(){
  document.body.classList.add('late-ordinary-shadow');await sleep(120);
  const ordinaryInk=getComputedStyle(ordinary.shadowRoot.querySelector('span')).color;
  checks.push({coverage:'text',name:'a root refresh discovers a newly attached ordinary open shadow',ok:Number(ordinaryInk.match(/[\d.]+/g)[0])>=180,detail:ordinaryInk});ordinary.remove();document.body.classList.remove('late-ordinary-shadow');
+ Document.prototype.getAnimations=nativeAnimations;
+ checks.push({coverage:'performance',name:'navigation repaint never enumerates unrelated document animations',ok:animationEnumerations===0,detail:String(animationEnumerations)});
  return checks;
 }

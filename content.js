@@ -109,6 +109,7 @@
   })();
   let originalSurface = new WeakMap();
   let mediaCopies = new WeakMap();
+  let mediaCopyMeasurements = new WeakSet();
   let textTiers = new WeakMap();
   let logoChecked = new WeakSet();
   let logoBudget = 80;
@@ -122,6 +123,8 @@
   // existing 64-owner work bound. Invalidation requests one additional pass.
   const refreshRoots = new Map();
   let refreshFrame = null;
+  let refreshIdle = false;
+  let refreshBatchLimit = 32;
   let lastPaintFrame = null;
   let parsedShadowCursor = null;
   let flushScheduled = false;
@@ -813,7 +816,8 @@
     // avoids invalidating the whole document when a small chunk is measured.
     // A proven simple scope keeps inherited ink so newly streamed plain text
     // can reuse it without a measured paint batch on every animation frame.
-    if (!ctx.rememberInk && largeScopes.has(element) && element.childElementCount && !generatedInk &&
+    if (!ctx.rememberInk && (largeScopes.has(element) || element === document.body || element === document.documentElement) &&
+        element.childElementCount && !element.localName.includes('-') && !generatedInk &&
         computed.display !== 'list-item' && !element.matches(CONTROL) &&
         !element.isContentEditable && !Array.from(element.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim()))
       delete found.fg;
@@ -1395,7 +1399,7 @@
 
   function scheduleRefresh() {
     if (!observer || document.hidden || refreshFrame !== null || !refreshRoots.size) return;
-    refreshFrame = requestAnimationFrame(timestamp => {
+    const run = timestamp => {
       refreshFrame = null;
       if (!observer || document.hidden) return;
       onMutations(observer.takeRecords());
@@ -1406,7 +1410,7 @@
       let count = 0;
       for (const [root, state] of refreshRoots) {
         if (!root.isConnected) { refreshRoots.delete(root); continue; }
-        while (count < 96) {
+        while (count < refreshBatchLimit) {
           const next = state.cursor.next();
           if (next.done) {
             if (state.again) { state.cursor = refreshElements(root); state.again = false; }
@@ -1415,15 +1419,22 @@
           }
           if (next.value.isConnected) { appendRefresh(batch, next.value); count++; }
         }
-        if (count >= 96) break;
+        if (count >= refreshBatchLimit) break;
       }
       if (count) {
+        const started = performance.now();
         processBatch(batch, [], batch, true);
+        // Retained paint can wait for idle time. Adapt below the existing
+        // 96-node cap so complex CSS does not consume an entire input frame.
+        const elapsed = performance.now() - started;
+        refreshBatchLimit = Math.max(8, Math.min(96, Math.round(count * 6 / Math.max(1, elapsed))));
         observer.takeRecords();
         recentBackgroundWrites.clear(); recentSharedBackgrounds.clear();
       }
       scheduleRefresh();
-    });
+    };
+    refreshIdle = typeof requestIdleCallback === 'function';
+    refreshFrame = refreshIdle ? requestIdleCallback(() => run(document.timeline?.currentTime), {timeout:100}) : requestAnimationFrame(run);
   }
 
   function queueRefresh(root) {
@@ -1475,9 +1486,19 @@
       const sizes = new Map();
       for(let i=list.length-1;i>=0;i--) {
         const node=list[i], size=(sizes.get(node)||1);
-        if(size>512) largeScopes.add(node);
         const parent=parentAcrossShadow(node);if(parent) sizes.set(parent,(sizes.get(parent)||1)+size);
       }
+      // A delivery may insert many small sibling roots under a previously
+      // scanned parent. Include those uncollected common parents as well.
+      for (const [node, size] of sizes) if (size>512)
+        for (let ancestor = node; ancestor && !largeScopes.has(ancestor); ancestor = parentAcrossShadow(ancestor)) {
+          largeScopes.add(ancestor);
+          // Parser hydration can grow a layout after its first small scan.
+          // Retire its unnecessary inherited ink now, without collecting or
+          // repainting unrelated siblings. Otherwise every later native-style
+          // read on this ancestor restyles the entire newly large section.
+          if (!seen.has(ancestor) && !selves.includes(ancestor)) selves.push(ancestor);
+        }
     }
     for (const node of selves) {
       if (!seen.has(node) && node.isConnected && !isMedia(node) && !node.closest(MEDIA_SELECTOR) && !preservesColor(node)) { seen.add(node); list.push(node); }
@@ -1676,6 +1697,10 @@
     const documentContexts = new Map();
     const paintList = eagerPaintList(list, trees).filter(node => !inheritsPlainInk(node, paintScope, documentContexts));
     if (!paintList.length && !list.images.size && !list.icons.size) return;
+    // Media readiness changes the local copy's underlay, not the authored
+    // colors of every layout ancestor. Read its native inheritance chain,
+    // without recomputing and rewriting those unrelated layout decisions.
+    if (paintList.some(node => mediaCopyMeasurements.has(node))) ancestorMeasurement = true;
     for (const element of paintList) if (deferredPaint.has(element)) forgetDeferredPaint(element);
     const paintTrees = trees.filter(node => !deferredPaint.has(node));
     // Already-styled elements hide their original colors behind our overrides.
@@ -1685,7 +1710,6 @@
     // switch off just those elements. Inherited overrides (text, fill, stroke)
     // restyle their subtree either way, so they keep one switch per root.
     const measured = [], measuredSelf = [], measuredPseudo = [], calm = [], calmSelf = new Set();
-    let scoped = false;
     const marked = [...paintList, ...list.images].filter((element) => element.isConnected && element.hasAttribute(MARK));
     // Form fields have (almost) no subtree, so their inherited overrides are cheap to switch.
     const deep = (element) => INHERITED_KEYS.test(element.getAttribute(MARK)) && !element.matches("input, textarea, select");
@@ -1710,7 +1734,6 @@
           }
         }
       }
-      scoped = true;
     } else {
       // A shallow ancestor reread must never turn off every descendant's
       // overrides. A small click path can include the entire results layout.
@@ -1773,17 +1796,26 @@
       const split = value => value.split(/,(?![^()]*\))/).map(part => part.trim());
       const properties = split(style.transitionProperty), durations = split(style.transitionDuration);
       const easing = split(style.transitionTimingFunction), delays = split(style.transitionDelay);
-      const retained = [];
+      const retained = []; let colorTransition = false;
       properties.forEach((property, index) => {
         if (parseFloat(durations[index % durations.length]) <= 0) return;
+        if (COLOR_TRANSITION.test(property)) colorTransition = true;
         const props = property === "all" ? ["opacity", "transform", "translate", "rotate", "scale", "height", "width", "max-height", "max-width", "min-height", "min-width", "top", "right", "bottom", "left", "grid-template-rows", "grid-template-columns", "clip-path"] : [property];
         for (const prop of props) if (prop !== "none" && !COLOR_TRANSITION.test(prop)) retained.push(`${prop} ${durations[index % durations.length]} ${easing[index % easing.length]} ${delays[index % delays.length]}`);
       });
-      if (retained.length) {
-        node.style.setProperty("--oln-motion", retained.join(", "));
-        node.setAttribute(MOTION, "");
-        motion.push(node);
+      if (colorTransition) calmSelf.add(node);
+      else if (!PSEUDO_KEYS.test(node.getAttribute(MARK) || '')) calmSelf.delete(node);
+      // A layout-only ancestor needs no color guard. Writing the inherited
+      // motion variable there would invalidate its whole article subtree.
+      if (retained.length && (calmSelf.has(node) || calm.some(root => root === node || root.contains(node)))) {
+        motion.push([node, retained.join(", ")]);
       }
+    }
+    // Finish every transition read before setting guards. Interleaving these
+    // writes with computed-style reads repeatedly flushes unrelated page CSS.
+    for (const [node, transition] of motion) {
+      node.style.setProperty("--oln-motion", transition);
+      node.setAttribute(MOTION, "");
     }
     const measuresPolarity = batchPolarity && batchPolarity.dark === null;
     if (measuresPolarity) {
@@ -1798,17 +1830,6 @@
     if (measuresPolarity) {
       batchPolarity.dark = detectDarkPage();
       document.documentElement.toggleAttribute("data-oled-night-transparent-frame", isTransparentFrame());
-    }
-    if (scoped && needsCalm) {
-      // Like a subtree switch, finish the page's own color transitions before reading.
-      const batch = new Set([...paintList, ...list.images]);
-      for (const animation of document.getAnimations()) {
-        const target = animation.effect?.target;
-        if (animation instanceof CSSTransition && batch.has(target) && !calmSelf.has(target) && COLOR_TRANSITION.test(animation.transitionProperty)) {
-          calmSelf.add(target);
-          target.setAttribute(NOANIM_SELF, "");
-        }
-      }
     }
     const styles = new Map(), generatedScopes = new Map();
     const ctx = {
@@ -1871,6 +1892,8 @@
       if (unchanged(element, found)) continue;
       changed.add(element);
       if (!needsCalm && !PSEUDO_KEYS.test(Object.keys(found).join(" "))) continue;
+      if (!calmSelf.has(element) && !calm.some(root => root === element || root.contains(element)) &&
+          !PSEUDO_KEYS.test(Object.keys(found).join(' '))) continue;
       if (calmSelf.has(element) || element.closest(`[${NOANIM}]`)) continue;
       const keys = `${element.getAttribute(MARK) || ""} ${Object.keys(found).join(" ")}`;
       if (INHERITED_KEYS.test(keys)) calm.push(element); else calmSelf.add(element);
@@ -1916,7 +1939,8 @@
     if (first) getComputedStyle(first).color;
     for (const node of calm) node.removeAttribute(NOANIM);
     for (const node of calmSelf) node.removeAttribute(NOANIM_SELF);
-    for (const node of motion) { node.removeAttribute(MOTION); node.style.removeProperty("--oln-motion"); }
+    for (const [node] of motion) { node.removeAttribute(MOTION); node.style.removeProperty("--oln-motion"); }
+    for (const node of paintList) mediaCopyMeasurements.delete(node);
     lastPaintFrame = document.timeline?.currentTime ?? null;
   }
 
@@ -2175,9 +2199,7 @@
     for (const copy of copies) {
       if (!copy.isConnected) { copies.delete(copy); continue; }
       pendingTrees.add(copy);
-      // Native copy can inherit its color from above the tile. Measure those
-      // ancestors individually, without switching off their other descendants.
-      for (let parent = parentAcrossShadow(copy); parent; parent = parentAcrossShadow(parent)) pendingSelf.add(parent);
+      mediaCopyMeasurements.add(copy);
     }
   }
 
@@ -2295,6 +2317,14 @@
     return true;
   }
 
+  function changesOnlyInteractionBehavior(style) {
+    const properties = Array.from(style || []);
+    // Scroll target offsets affect the destination of native scrolling, not
+    // layout boxes or authored paint. Keep real top/padding/geometry rules.
+    return properties.length > 0 && properties.every(property =>
+      /^(?:pointer-events|cursor|touch-action|(?:-(?:webkit|moz)-)?user-select|overscroll-behavior(?:-[xy])?|scroll-behavior|scroll-(?:padding|margin)(?:-(?:top|right|bottom|left|block|inline)(?:-(?:start|end))?)?)$/.test(property));
+  }
+
   // A sticky-header class on the page does not necessarily restyle its article.
   // Narrow only with a complete readable CSSOM proof. Unknown selectors,
   // imports, shadow scopes and inherited root paint retain the full scan.
@@ -2310,7 +2340,7 @@
       const selectors = []; let count = 0, valid = true;
       const inspect = rules => { for (const rule of rules) {
         if (++count > 8192 || rule.type === 3) { valid = false; return; }
-        if (rule.selectorText) selectors.push(rule.selectorText);
+        if (rule.selectorText && !changesOnlyInteractionBehavior(rule.style)) selectors.push(rule.selectorText);
         if (rule.cssRules) inspect(rule.cssRules);
         if (!valid) return;
       }};
@@ -2370,8 +2400,7 @@
         // Event hit testing does not alter any color, image, geometry or
         // generated paint we measure. A late tooltip module often sets this
         // on every citation child; rereading those children is wasted work.
-        const properties = Array.from(rule.style || []);
-        if (properties.length && properties.every(p => /^(?:pointer-events|cursor|touch-action|(?:-(?:webkit|moz)-)?user-select|overscroll-behavior(?:-[xy])?|scroll-behavior)$/.test(p))) continue;
+        if (changesOnlyInteractionBehavior(rule.style)) continue;
         length += rule.selectorText.length; if(length > 32768 || /:host|::part|::slotted|&/.test(rule.selectorText)) throw Error('Uncertain selector scope');
         selectors.push(rule.selectorText.replace(/::?(?:before|after|placeholder)\b/g,''));
       } else if (!rule.cssRules) throw Error('Global stylesheet definition');
@@ -2413,7 +2442,6 @@
       pendingTrees.add(scope.host);
       return;
     }
-    const after = node.isConnected ? pageSheetSelectors(node) : before === undefined ? null : [];
     // A style element's load event follows its text mutation. Compare the
     // complete bounded CSSOM, not just selectors: declaration-only edits must
     // invalidate paint, and unreadable/large sheets cannot claim equivalence.
@@ -2430,6 +2458,7 @@
       }
     } catch {}
     if (loaded && fingerprint !== null && before?.fingerprint === fingerprint) return;
+    const after = node.isConnected ? pageSheetSelectors(node) : before === undefined ? null : [];
     const previous = before?.selectors;
     if(node.isConnected) sheetSnapshots.set(node,{selectors:after,fingerprint,scope}); else sheetSnapshots.delete(node);
     const full = () => {polarityDirty = true;pendingTrees.add(document.documentElement)};
@@ -2771,8 +2800,11 @@
     document.removeEventListener("visibilitychange", scheduleRefresh);
     if (shadowDiscoveryFrame !== null) cancelAnimationFrame(shadowDiscoveryFrame);
     shadowDiscoveryFrame = null;
-    if (refreshFrame !== null) cancelAnimationFrame(refreshFrame);
+    if (refreshFrame !== null) {
+      if (refreshIdle) cancelIdleCallback(refreshFrame); else cancelAnimationFrame(refreshFrame);
+    }
     refreshFrame = null;
+    refreshBatchLimit = 32;
     refreshRoots.clear();
     unresolvedShadowHosts.clear();
     observer?.disconnect();
@@ -2797,6 +2829,7 @@
     simpleScopeEpoch = 0;
     originalSurface = new WeakMap();
     mediaCopies = new WeakMap();
+    mediaCopyMeasurements = new WeakSet();
     textTiers = new WeakMap();
     removeEarly();
     const root = document.documentElement;
