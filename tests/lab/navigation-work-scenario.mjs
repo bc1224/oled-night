@@ -12,6 +12,11 @@ export async function navigationWorkScenario(){
  const inheritedAfter=!!grown.getAttribute('data-oled-night')?.split(' ').includes('fg'),grownInk=getComputedStyle(inserted.lastElementChild).color;
  checks.push({coverage:'performance',name:'late large sections retire unnecessary inherited layout ink while retaining readable content',ok:inheritedBefore===true&&inheritedAfter===false&&Number(grownInk.match(/[\d.]+/g)[0])>=180,detail:JSON.stringify({inheritedBefore,inheritedAfter,grownInk})});grown.remove();await sleep(80);
  const scrollSheet=document.createElement('style');scrollSheet.textContent='html.nav-stuck{scroll-padding-top:80px}';document.head.append(scrollSheet);await sleep(100);
+ // Earlier insertion/root setup can still have a bounded idle cursor running
+ // in Firefox. Isolate the following action from that work; a no-op probe
+ // reproduced those reads without changing nav-stuck at all.
+ const setupIdle=await new Promise(resolve=>{let quiet;const watch=new MutationObserver(records=>{if(records.some(r=>r.attributeName?.startsWith('data-oled-night-measure')))arm()});const finish=ok=>{clearTimeout(quiet);clearTimeout(deadline);watch.disconnect();resolve(ok)},arm=()=>{clearTimeout(quiet);quiet=setTimeout(()=>finish(true),250)},deadline=setTimeout(()=>finish(false),5000);watch.observe(document.documentElement,{attributes:true,subtree:true});arm()});
+ checks.push({name:'navigation measurement setup finishes its earlier paint refresh',ok:setupIdle});
  const nativeComputed=globalThis.getComputedStyle;let articleReads=0;const articleCallers=[];
  globalThis.getComputedStyle=function(node,...args){if(node.parentElement?.id==='article'||node.parentElement?.parentElement?.id==='article'){articleReads++;if(articleCallers.length<3)articleCallers.push(new Error().stack)}return nativeComputed.call(this,node,...args)};
  document.documentElement.classList.add('nav-stuck');await sleep(150);globalThis.getComputedStyle=nativeComputed;
