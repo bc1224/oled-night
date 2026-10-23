@@ -32,12 +32,6 @@ export async function chatgptInterfaceScenario(){
   const button=document.createElement('button');button.id='late-response';button.className='stop';button.setAttribute('aria-label','Late response action');button.setAttribute('data-paint-icon','');
   button.innerHTML='<svg viewBox="0 0 24 24"><use href="chatgpt-sprite.svg#send"/></svg>';$('response-actions').append(button);await wait(180);
   const icons=fixedIcons();check('all visible composer, menu, sidebar and response sprite patterns are readable',icons.every(i=>i.ratio>=3),JSON.stringify(icons));
-  const lateLocal=document.createElement('button');lateLocal.id='late-local';lateLocal.className='stop';lateLocal.setAttribute('aria-label','Late local action');lateLocal.setAttribute('data-paint-icon','');
-  lateLocal.innerHTML='<svg viewBox="0 0 24 24"><use href="#late-send"/></svg>';$('response-actions').append(lateLocal);await wait(180);
-  const definition=document.createElementNS('http://www.w3.org/2000/svg','svg');definition.style.display='none';
-  definition.innerHTML='<symbol id="late-send" viewBox="0 0 24 24"><path fill="#000" d="M11 21V8l-5 5-2-2 8-8 8 8-2 2-5-5v13z"/></symbol>';
-  document.body.append(definition);await wait(180);
-  check('a local symbol arriving after its button repairs the visible icon',paint(lateLocal).ratio>=3,JSON.stringify(paint(lateLocal)));
   check('authored SVG tiles and stylesheet-colored symbols are not inverted',['sprite-tile','sprite-dark-tile','css-logo'].every(id=>css($(id).querySelector('svg')).filter==='none'));
   check('interface has no horizontal overflow',document.documentElement.scrollWidth<=innerWidth);
   // Leave the opened menu and late response action visible for actual PNG tests.

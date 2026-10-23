@@ -6,6 +6,7 @@ import {reportedControlsScenario,reportedControlsRestored} from './reported-cont
 import {paintedInkContrast,paintedSample} from './painted-contrast.mjs';
 import {bookingSurfacesScenario,bookingSurfacesRestored} from './booking-surfaces-scenario.mjs';
 import {componentReceipt} from './component-receipt.mjs';
+import {sampleChatgptPixels} from './chatgpt-controls-paint.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/reported-controls');mkdirSync(output,{recursive:true});
 const server=await serveLab(join(root,'tests/e2e/site'));let browser;const checks=[];
 try{
@@ -39,6 +40,9 @@ try{
     checks.push({name:mode+' / review rating screenshot shows three bright and two muted stars',ok:starPixels.length===5&&starPixels.slice(0,3).every(p=>p?.every(v=>v>=220))&&starPixels.slice(3).every(p=>p?.every(v=>Math.abs(v-148)<=2)),detail:JSON.stringify({starPixels})});
     const shellPixel=paintedSample(controlsShot,controlPaint.shell.x,controlPaint.shell.y),footerPixel=paintedSample(controlsShot,controlPaint.footer.x,controlPaint.footer.y);
     checks.push({name:mode+' / composer screenshot has matching gray shell and footer',ok:[shellPixel,footerPixel].every(p=>p?.every(v=>Math.abs(v-33)<=2)),detail:JSON.stringify({shellPixel,footerPixel})});
+    await page.eval("document.getElementById('late-local').scrollIntoView({block:'center'})");await wait(150);
+    const localPaint=await sampleChatgptPixels(page,['late-local']);
+    checks.push({name:mode+' / late local symbol has readable actual pixels',ok:localPaint.icons.every(i=>i.ratio>=3),detail:JSON.stringify(localPaint)});
     await options.eval('chrome.storage.sync.set({extensionEnabled:false})');await wait(450);
     checks.push(...(await page.eval(`(${reportedControlsRestored.toString()})()`)).map(c=>({...c,name:mode+' / '+c.name})));
   }

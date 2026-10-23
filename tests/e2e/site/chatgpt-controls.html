@@ -26,6 +26,8 @@
   #sprite-dark-tile svg{background:#111}
 </style></head><body><main>
   <svg style="display:none" xmlns="http://www.w3.org/2000/svg"><symbol id="voice" viewBox="0 0 32 24"><path d="M8 10v4m4-7v10m4-14v18m4-14v10m4-7v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol></svg>
+  <svg style="display:none"><symbol id="send" viewBox="0 0 24 24"><path fill="#000" d="M11 21V8l-5 5-2-2 8-8 8 8-2 2-5-5v13z"/></symbol></svg>
+  <svg style="display:none"><symbol id="css-symbol" viewBox="0 0 24 24"><path fill="#000" d="M11 21V8l-5 5-2-2 8-8 8 8-2 2-5-5v13z"/></symbol></svg>
   <button class="plan" id="plan">Check my plan costs</button>
   <p>Synthetic interface patterns, not a capture or verification of the live ChatGPT app.</p>
   <div class="interface">
@@ -50,8 +52,6 @@
       <button class="stop" id="css-logo" aria-label="Colored artwork"><svg viewBox="0 0 24 24"><use href="#css-symbol"/></svg></button>
     </section>
   </div>
-  <svg style="display:none"><symbol id="send" viewBox="0 0 24 24"><path fill="#000" d="M11 21V8l-5 5-2-2 8-8 8 8-2 2-5-5v13z"/></symbol></svg>
-  <svg style="display:none"><symbol id="css-symbol" viewBox="0 0 24 24"><path fill="#000" d="M11 21V8l-5 5-2-2 8-8 8 8-2 2-5-5v13z"/></symbol></svg>
   <dialog id="preferences"><p>Synthetic preferences dialog</p><button class="stop" id="dialog-close" aria-label="Close dialog"><svg viewBox="0 0 24 24"><use href="chatgpt-sprite.svg#fixed-stroke"/></svg></button></dialog>
   <script>
     document.getElementById('tools').onclick=function(){const menu=document.getElementById('tools-menu');menu.hidden=!menu.hidden;this.setAttribute('aria-expanded',String(!menu.hidden))};

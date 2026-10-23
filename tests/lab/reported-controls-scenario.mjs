@@ -99,12 +99,20 @@ export async function reportedControlsScenario(){
   check('LinkedIn changed parent paint does not preserve a different inset',getComputedStyle(document.getElementById('profile-heading')).backgroundColor==='rgb(0, 0, 0)',{});
   profile.style.removeProperty('background');await wait();
   check('LinkedIn matching paint is restored after a parent update',getComputedStyle(document.getElementById('profile-heading')).backgroundColor===profileColor&&getComputedStyle(more).backgroundColor===profileColor,{});
+  const lateLocal=document.createElement('button');lateLocal.id='late-local';lateLocal.setAttribute('aria-label','Late local action');lateLocal.setAttribute('data-paint-icon','');
+  lateLocal.style.cssText='width:40px;height:40px;border:0;border-radius:50%;background:#fff;color:#000;display:grid;place-items:center';
+  lateLocal.innerHTML='<svg style="width:24px;height:24px;fill:currentColor" viewBox="0 0 24 24"><use href="#late-send"/></svg>';document.body.append(lateLocal);lateLocal.scrollIntoView({block:'center'});await wait();
+  const definition=document.createElementNS('http://www.w3.org/2000/svg','svg');definition.style.display='none';
+  definition.innerHTML='<symbol id="late-send" viewBox="0 0 24 24"><path fill="#000" d="M11 21V8l-5 5-2-2 8-8 8 8-2 2-5-5v13z"/></symbol>';document.body.append(definition);await wait();
+  const localFilter=getComputedStyle(lateLocal.querySelector('svg')).filter,localBackground=getComputedStyle(lateLocal).backgroundColor,localRatio=ratio(localFilter==='invert(1)'?'rgb(255,255,255)':'rgb(0,0,0)',localBackground);
+  check('a local symbol arriving after its button repairs the visible icon',localRatio>=3,{localFilter,localBackground,localRatio});
   return out;
 }
 
 export function reportedControlsRestored(){
   const color=id=>getComputedStyle(document.getElementById(id)).backgroundColor;
   return [
+    {name:'disable restores authored local sprite paint and button surface',ok:getComputedStyle(document.querySelector('#late-local svg')).filter==='none'&&color('late-local')==='rgb(255, 255, 255)'&&getComputedStyle(document.querySelector('#late-send path')).fill==='rgb(0, 0, 0)'},
     {name:'disable restores light shadow component background and dark label',ok:color('ads-grid')==='rgb(255, 255, 255)'&&getComputedStyle(document.getElementById('ads-grid').shadowRoot.querySelector('label')).color==='rgb(34, 34, 34)'},
     {name:'disable restores all authored LinkedIn surfaces',ok:['profile-card','profile-heading','profile-more'].every(id=>color(id)==='rgb(27, 31, 35)')&&color('profile-distinct')==='rgb(17, 17, 17)'},
     {name:'disable restores authored black review stars and removes inversion',ok:getComputedStyle(document.querySelector('#review-rating polygon')).fill==='rgb(0, 0, 0)'&&getComputedStyle(document.querySelector('#review-rating svg')).filter==='none'},
