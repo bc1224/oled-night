@@ -64,7 +64,6 @@ export async function largeUpdatesScenario(){
  for(const row of far)observer.observe(row,{attributes:true});
  for(const row of far)row.classList.add('hl');await sleep(80);observer.disconnect();
  check('offscreen updates retain dark paint without rewriting all rows',writes===0,JSON.stringify({writes}));
- check('restored stylesheet proof applies offscreen selection before viewport delivery',far.every(row=>getComputedStyle(row).backgroundColor===selectedBackground),JSON.stringify(far.map(row=>getComputedStyle(row).backgroundColor)));
  const row=far[0];row.scrollIntoView({block:'center'});await sleep(100);
  const css=getComputedStyle(row);check('approaching viewport shows the current selected row paint',css.backgroundColor===selectedBackground&&window.OLEDLabAudit.lum(css.backgroundColor)<.16,css.backgroundColor);
  check('refreshed row ink remains readable',window.OLEDLabAudit.contrast(getComputedStyle(row.querySelector('.c')).color,css.backgroundColor)>=4.5);

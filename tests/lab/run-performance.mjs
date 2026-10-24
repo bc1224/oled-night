@@ -6,6 +6,7 @@ import {serveLab} from './server.mjs';
 import {launchChrome,wait} from './browser.mjs';
 import {frameWorkload,frameChecks} from '../../docs/lab/performance.js';
 import {largeUpdatesScenario} from './large-updates-scenario.mjs';
+import {restoredSelectionScenario} from './restored-selection-scenario.mjs';
 const root=resolve(import.meta.dirname,'../..'),out=join(root,'dist/performance');
 mkdirSync(out,{recursive:true});
 const server=await serveLab(buildLab({output:join(out,'site')}).output);
@@ -51,6 +52,7 @@ try{
   await page.eval("document.querySelector('.row:last-child').classList.remove('hl')");await wait(80);
   await options.eval(`(async()=>{const [tab]=await chrome.tabs.query({url:${JSON.stringify(server.origin+'/lab/fixtures/large-updates.html')}});await chrome.scripting.executeScript({target:{tabId:tab.id},func:()=>{const native=globalThis.getComputedStyle;globalThis.__oledPointerCalls=[];globalThis.__oledRestorePointerProbe=()=>{globalThis.getComputedStyle=native};globalThis.getComputedStyle=function(node,...args){if(document.documentElement.hasAttribute('data-lab-pointer-probe')&&globalThis.__oledPointerCalls.length<8)globalThis.__oledPointerCalls.push({node:node.localName+'.'+node.className,stack:new Error().stack});return native.call(this,node,...args)}}})})()`);
   try{checks.push(...await page.eval(`(${largeUpdatesScenario.toString()})()`))}finally{const calls=await options.eval(`(async()=>{const [tab]=await chrome.tabs.query({url:${JSON.stringify(server.origin+'/lab/fixtures/large-updates.html')}});return(await chrome.scripting.executeScript({target:{tabId:tab.id},func:()=>{globalThis.__oledRestorePointerProbe?.();return globalThis.__oledPointerCalls}}))[0].result})()`);if(checks.some(c=>!c.ok))console.log('POINTER READ CALLERS '+JSON.stringify(calls))}
+  checks.push(...await page.eval(`(${restoredSelectionScenario.toString()})()`));
   console.log(JSON.stringify({passed:checks.filter(c=>c.ok).length,failed:checks.filter(c=>!c.ok)}));
  }
  if(process.env.OLED_PERF_PROFILE){
