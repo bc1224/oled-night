@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.59";
+  const VERSION = "0.6.60";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -1183,7 +1183,9 @@
   // sampled (the browser forbids it). Explicit compact logo assets get a light
   // edge instead: it reveals dark lettering without changing brand colors.
   function checkLogo(img, ctx) {
-    const namedLogo = img.matches('[itemprop~="logo"]') ||
+    // Studio wordmarks may be named only by their site's semantic data label.
+    const labelledLogo = img.matches('[data-tt$="logo" i], [data-tt$="wordmark" i]');
+    const namedLogo = labelledLogo || img.matches('[itemprop~="logo"]') ||
       /(?:^|[\s_./#-])(?:logo|wordmark)(?:[\s_./?#-]|$)/i.test(`${img.alt} ${img.className} ${img.id} ${img.currentSrc || img.src}`);
     // Pixel shape is supporting evidence, never permission to alter a photo.
     // Dark transparent product cutouts can look exactly like sparse black ink.
@@ -1225,7 +1227,8 @@
           // face. Inverting its whole bitmap turns that face white. Reserve
           // inversion for sparse ink (or a wide wordmark), not square badges.
           const sparseInk = solid / total < 0.4 || img.naturalWidth / img.naturalHeight > 2;
-          if (sparseInk && light / solid < 0.2 && colorful / solid < 0.25) img.setAttribute(LOGO, "");
+          // Explicitly labelled brand assets keep their original color pixels.
+          if (!labelledLogo && sparseInk && light / solid < 0.2 && colorful / solid < 0.25) img.setAttribute(LOGO, "");
           else if (namedLogo && light / solid < 0.7) img.setAttribute(LOGO_EDGE, "");
         }
       } catch {

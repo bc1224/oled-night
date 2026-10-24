@@ -235,18 +235,33 @@
     return withAlpha('rgb(190 190 190)', color.a);
   }
 
-  // Rewrites the colors inside a computed gradient. Returns null for url() images
-  // (real imagery is never touched) or when nothing changed.
+  // Adapt gradient layers independently. A sibling image/texture keeps its
+  // exact URL and layer position, including any color-like text inside it.
   function mapGradient(value, mode) {
     const text = String(value || "");
-    if (!/gradient\(/i.test(text) || /url\(/i.test(text)) return null;
+    if (!/gradient\(/i.test(text)) return null;
+    const layers = [];
+    let start = 0, depth = 0, quote = "";
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      if (char === "\\") { i++; continue; }
+      if (quote) { if (char === quote) quote = ""; continue; }
+      if (char === '"' || char === "'") { quote = char; continue; }
+      if (char === "(") depth++;
+      else if (char === ")") depth--;
+      else if (char === "," && depth === 0) { layers.push(text.slice(start, i)); start = i + 1; }
+    }
+    layers.push(text.slice(start));
     let changed = false;
-    const out = text.replace(COLOR_TOKEN, (token) => {
-      const mapped = mapBackground(parseColor(token), mode, true);
-      if (!mapped) return token;
-      changed = true;
-      return mapped;
-    });
+    const out = layers.map(layer => {
+      if (!/^\s*(?:repeating-)?(?:linear|radial|conic)-gradient\(/i.test(layer)) return layer;
+      return layer.replace(COLOR_TOKEN, token => {
+        const mapped = mapBackground(parseColor(token), mode, true);
+        if (!mapped) return token;
+        changed = true;
+        return mapped;
+      });
+    }).join(",");
     return changed ? out : null;
   }
 

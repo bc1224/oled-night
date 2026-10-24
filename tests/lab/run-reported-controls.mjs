@@ -8,6 +8,7 @@ import {bookingSurfacesScenario,bookingSurfacesRestored} from './booking-surface
 import {componentReceipt} from './component-receipt.mjs';
 import {sampleChatgptPixels} from './chatgpt-controls-paint.mjs';
 import {retainedSurfacesScenario} from './retained-surfaces-scenario.mjs';
+import {layeredSurfacesScenario,layeredSurfacesRestored} from './layered-surfaces-scenario.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/reported-controls');mkdirSync(output,{recursive:true});
 const server=await serveLab(join(root,'tests/e2e/site'));let browser;const checks=[];
 try{
@@ -65,6 +66,17 @@ try{
     await options.eval('chrome.storage.sync.set({extensionEnabled:false})');await wait(450);
     checks.push({...await page.eval(`(${bookingSurfacesRestored.toString()})()`),name:mode+' / Calendar disable restores authored surfaces'});
   }
+  for(const mode of ['auto','recolor']){
+    await options.eval(`chrome.storage.sync.set({extensionEnabled:true,siteRules:${mode==='auto'?'{}':"{'127.0.0.1':'recolor'}"}})`);await wait(450);
+    await page.go(server.origin+'/layered-surfaces.html');await wait(700);
+    checks.push(...(await page.eval(`(${layeredSurfacesScenario.toString()})()`)).map(c=>({...c,name:mode+' / '+c.name})));
+    const studioShot=await page.screenshot();writeFileSync(join(output,mode+'-tiktok-studio.png'),studioShot);
+    const points=await page.eval("(()=>{const shell=document.getElementById('studio-shell').getBoundingClientRect(),photo=document.getElementById('photo').getBoundingClientRect(),brand=document.getElementById('studio-brand').getBoundingClientRect();return {shell:{x:shell.right-8,y:shell.bottom-8},photo:{x:photo.x+20,y:photo.y+20},brand:{x:brand.x+8,y:brand.y+14}}})()");
+    const shellPixel=paintedSample(studioShot,points.shell.x,points.shell.y),photoPixel=paintedSample(studioShot,points.photo.x,points.photo.y),brandPixel=paintedSample(studioShot,points.brand.x,points.brand.y);
+    checks.push({name:mode+' / TikTok Studio shell paints dark and brand/media pixels stay original',ok:shellPixel?.every(v=>v<40)&&photoPixel?.every((v,i)=>Math.abs(v-[255,204,102][i])<=2)&&brandPixel?.every((v,i)=>Math.abs(v-[37,244,238][i])<=2),detail:JSON.stringify({shellPixel,photoPixel,brandPixel})});
+    await options.eval('chrome.storage.sync.set({extensionEnabled:false})');await wait(450);
+    checks.push({...await page.eval(`(${layeredSurfacesRestored.toString()})()`),name:mode+' / TikTok Studio disable restores authored layers'});
+  }
   await options.eval("chrome.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'deepen'}})");await wait(450);
   await page.go(server.origin+'/reported-controls.html');await wait(700);
   checks.push({name:'Explicit Deepen blacks only preserves bright generated surfaces',ok:await page.eval("getComputedStyle(document.getElementById('save-chrome'),'::after').backgroundColor==='rgb(255, 191, 25)'"),detail:''});
@@ -73,5 +85,5 @@ try{
   checks.push(...(await page.eval(`(${retainedSurfacesScenario.toString()})()`)).map(c=>({...c,name:'deepen / '+c.name})));
 }finally{await browser?.close();await server.close()}
 writeFileSync(join(output,'results.json'),JSON.stringify(checks,null,2));for(const c of checks)console.log((c.ok?'PASS ':'FAIL ')+c.name+' '+c.detail);
-mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-chrome.json'),JSON.stringify(componentReceipt('Chrome',{fixtures:['reported-controls.html','calendar-booking.html','retained-surfaces.html'],modes:['auto','recolor','deepen'],checks}),null,2));
+mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-chrome.json'),JSON.stringify(componentReceipt('Chrome',{fixtures:['reported-controls.html','calendar-booking.html','retained-surfaces.html','layered-surfaces.html'],modes:['auto','recolor','deepen'],checks}),null,2));
 if(checks.some(c=>!c.ok))process.exitCode=1;

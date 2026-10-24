@@ -12,6 +12,24 @@ assert.match(fade, /^linear-gradient\(rgba\(255, 255, 255, 0\), rgb\(calc\(14 \+
 assert.equal(colors.mapGradient("url(\"a.png\"), linear-gradient(red, blue)", "oled"), null);
 assert.equal(colors.mapGradient("none", "oled"), null);
 
+// A decorative image layer must not prevent the surrounding surface gradients
+// from adapting. Image URLs, including CSS-looking data and punctuation, stay
+// byte-for-byte intact.
+const texture = 'url("data:image/svg+xml,<svg fill=\'rgb(255, 255, 255)\'>(texture, only)</svg>")';
+const studio = 'linear-gradient(0deg, rgba(241, 174, 187, 0.01) 0%, rgba(241, 174, 187, 0.01) 100%), linear-gradient(rgba(0, 0, 0, 0.01), rgba(0, 0, 0, 0.02)), linear-gradient(111deg, rgb(254, 254, 254), rgb(252, 252, 252)), ' + texture;
+const studioMapped = colors.mapGradient(studio, "oled");
+assert.ok(studioMapped, "TikTok Studio surface gradients adapt beside a texture image");
+assert.ok(studioMapped.endsWith(texture), "the texture URL remains exact");
+assert.ok(!studioMapped.includes('rgb(254, 254, 254)'));
+assert.ok(studioMapped.startsWith(studio.slice(0, studio.indexOf('linear-gradient(111deg'))));
+const imageFirst = texture + ', linear-gradient(rgb(255, 255, 255), rgb(250, 250, 250))';
+assert.ok(colors.mapGradient(imageFirst, 'oled').startsWith(texture + ', linear-gradient(rgb(calc('));
+assert.equal(colors.mapGradient(texture, 'oled'), null);
+const imageSet = 'image-set(url("photo,a.png") 1x, url("photo(b).png") 2x)';
+assert.ok(colors.mapGradient(imageSet + ', radial-gradient(rgb(255, 255, 255), rgb(250, 250, 250))', 'oled').startsWith(imageSet + ', radial-gradient(rgb(calc('));
+assert.equal(colors.mapGradient('image-set(linear-gradient(rgb(255, 255, 255), rgb(250, 250, 250)) 1x)', 'oled'), null);
+console.log('layered surfaces: 8 assertions passed');
+
 // White glows become dim; dark shadows are untouched.
 assert.match(colors.mapShadow("rgb(255, 255, 255) 0px -16px 16px 0px", "oled"), /^rgb\(calc\(14 \+ 10 \*/);
 assert.equal(colors.mapShadow("rgba(0, 0, 0, 0.3) 0px 1px 2px 0px", "oled"), null);
