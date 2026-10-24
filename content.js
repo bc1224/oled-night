@@ -387,6 +387,11 @@
     for (const root of shadowRoots) ensureShadowSheet(root);
   }
 
+  function hasImageBackdrop(computed) {
+    return /url\(/i.test(computed.backgroundImage) && computed.backgroundRepeat.startsWith("no-repeat") &&
+      /cover|contain|100%/.test(computed.backgroundSize);
+  }
+
   // What an element originally painted behind its children: real imagery,
   // a color, or nothing (transparent).
   function surfaceInfo(computed) {
@@ -396,7 +401,7 @@
       if (/url\(/i.test(image)) {
         // Only full-bleed photos/banners protect text; icons, sprites and
         // repeating patterns under text must not leave dark text on black.
-        if (computed.backgroundRepeat.startsWith("no-repeat") && /cover|contain|100%/.test(computed.backgroundSize)) return { image: true };
+        if (hasImageBackdrop(computed)) return { image: true };
       } else {
         const stop = colors.gradientBackdrop(image);
         if (stop) return { color: stop };
@@ -504,7 +509,8 @@
   function mapSurface(computed, prefix, mode, found) {
     // Reuse only pure mappings of complete paint inputs, never element state.
     const key = JSON.stringify([mode, computed.backgroundColor, computed.backgroundImage, computed.boxShadow,
-      computed.maskImage, computed.webkitMaskImage, computed.webkitBackgroundClip, computed.backgroundClip]);
+      computed.maskImage, computed.webkitMaskImage, computed.webkitBackgroundClip, computed.backgroundClip,
+      hasImageBackdrop(computed)]);
     let mapped = surfaceMappings.get(key);
     if (!mapped) {
       mapped = {};
@@ -526,7 +532,7 @@
     }
     const alreadyBlack = original && mode !== "soft" && original.r <= 2 && original.g <= 2 && original.b <= 2;
     const background = alreadyBlack ? null : colors.mapBackground(original, mode);
-    const gradient = colors.mapGradient(computed.backgroundImage, mode);
+    const gradient = hasImageBackdrop(computed) ? null : colors.mapGradient(computed.backgroundImage, mode);
     const shadow = colors.mapShadow(computed.boxShadow, mode);
     if (background) found[`${prefix}bg`] = background;
     if (gradient) found[`${prefix}img`] = gradient;

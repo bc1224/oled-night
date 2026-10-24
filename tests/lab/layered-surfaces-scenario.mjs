@@ -13,6 +13,8 @@ export async function layeredSurfacesScenario(){
   checks.push({name:'TikTok Studio navigation remains readable',ok:ratio>=4.5,detail:JSON.stringify({nav,bg,ratio})});
   checks.push({name:'Image-first texture keeps its URL and adapts following gradient',ok:style('image-first').backgroundImage.startsWith(authored('image-first').split(', radial-gradient')[0]+', radial-gradient(')&&!style('image-first').backgroundImage.includes('rgb(255, 255, 255)'),detail:style('image-first').backgroundImage});
   checks.push({name:'Opaque media URL and geometry stay exact',ok:style('photo').backgroundImage.split(', linear-gradient')[0]===authored('photo').split(', linear-gradient')[0]&&style('photo').backgroundSize.split(',').every(size=>size.trim()==='cover')&&style('photo').filter==='none',detail:style('photo').backgroundImage});
+  checks.push({name:'Photo overlay keeps its original fade and readable dark caption',ok:style('hero').backgroundImage===authored('hero')&&rgb(style('hero').color).every(v=>v<30),detail:JSON.stringify({image:style('hero').backgroundImage,color:style('hero').color})});
+  checks.push({name:'Identical repeating decoration adapts independently of protected photo',ok:style('hero-pattern').backgroundImage!==authored('hero-pattern')&&rgb(style('hero-pattern').color).every(v=>v>100),detail:style('hero-pattern').backgroundImage});
   const selected=rgb(style('studio-selected').backgroundColor);
   checks.push({name:'TikTok Studio selected action keeps its red color',ok:selected[0]>60&&selected[0]>selected[1]*2&&selected[0]>selected[2]*2,detail:JSON.stringify(selected)});
   document.getElementById('studio-shell').classList.add('refreshed');
@@ -22,6 +24,6 @@ export async function layeredSurfacesScenario(){
 }
 
 export function layeredSurfacesRestored(){
-  const restored=['studio-shell','image-first','photo'].every(id=>{const element=document.getElementById(id);return getComputedStyle(element).backgroundImage===element.getAttribute('data-authored-image')});
+  const restored=['studio-shell','image-first','photo','hero','hero-pattern'].every(id=>{const element=document.getElementById(id);return getComputedStyle(element).backgroundImage===element.getAttribute('data-authored-image')});
   return {name:'TikTok Studio disable restores every authored image and gradient layer',ok:restored&&getComputedStyle(document.getElementById('studio-brand')).filter==='none',detail:''};
 }

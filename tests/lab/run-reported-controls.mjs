@@ -71,9 +71,9 @@ try{
     await page.go(server.origin+'/layered-surfaces.html');await wait(700);
     checks.push(...(await page.eval(`(${layeredSurfacesScenario.toString()})()`)).map(c=>({...c,name:mode+' / '+c.name})));
     const studioShot=await page.screenshot();writeFileSync(join(output,mode+'-tiktok-studio.png'),studioShot);
-    const points=await page.eval("(()=>{const shell=document.getElementById('studio-shell').getBoundingClientRect(),photo=document.getElementById('photo').getBoundingClientRect(),brand=document.getElementById('studio-brand').getBoundingClientRect();return {shell:{x:shell.right-8,y:shell.bottom-8},photo:{x:photo.x+20,y:photo.y+20},brand:{x:brand.x+8,y:brand.y+14}}})()");
-    const shellPixel=paintedSample(studioShot,points.shell.x,points.shell.y),photoPixel=paintedSample(studioShot,points.photo.x,points.photo.y),brandPixel=paintedSample(studioShot,points.brand.x,points.brand.y);
-    checks.push({name:mode+' / TikTok Studio shell paints dark and brand/media pixels stay original',ok:shellPixel?.every(v=>v<40)&&photoPixel?.every((v,i)=>Math.abs(v-[255,204,102][i])<=2)&&brandPixel?.every((v,i)=>Math.abs(v-[37,244,238][i])<=2),detail:JSON.stringify({shellPixel,photoPixel,brandPixel})});
+    const points=await page.eval("(()=>{const rect=id=>document.getElementById(id).getBoundingClientRect(),shell=rect('studio-shell'),photo=rect('photo'),brand=rect('studio-brand'),hero=rect('hero'),pattern=rect('hero-pattern');return {shell:{x:shell.right-8,y:shell.bottom-8},photo:{x:photo.x+20,y:photo.y+20},brand:{x:brand.x+8,y:brand.y+14},hero:{x:hero.right-8,y:hero.bottom-8},pattern:{x:pattern.right-8,y:pattern.bottom-8}}})()");
+    const sample=point=>paintedSample(studioShot,point.x,point.y),shellPixel=sample(points.shell),photoPixel=sample(points.photo),brandPixel=sample(points.brand),heroPixel=sample(points.hero),patternPixel=sample(points.pattern);
+    checks.push({name:mode+' / TikTok Studio shell and repeating decoration paint dark while brand, media and photo overlays stay original',ok:shellPixel?.every(v=>v<40)&&photoPixel?.every((v,i)=>Math.abs(v-[255,204,102][i])<=2)&&brandPixel?.every((v,i)=>Math.abs(v-[37,244,238][i])<=2)&&heroPixel?.every(v=>v>230)&&patternPixel?.every(v=>v<60),detail:JSON.stringify({shellPixel,photoPixel,brandPixel,heroPixel,patternPixel})});
     await options.eval('chrome.storage.sync.set({extensionEnabled:false})');await wait(450);
     checks.push({...await page.eval(`(${layeredSurfacesRestored.toString()})()`),name:mode+' / TikTok Studio disable restores authored layers'});
   }
