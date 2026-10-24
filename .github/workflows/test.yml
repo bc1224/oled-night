@@ -100,6 +100,7 @@ jobs:
           path: dist/*.zip
   lab-matrix:
     name: Full lab in ${{ matrix.browser }}
+    needs: [test]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
