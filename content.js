@@ -1196,7 +1196,7 @@
       return element;
     };
     const svg = node('svg', {'data-oled-night-logo-filter':'', 'aria-hidden':'true', width:'1', height:'1'});
-    svg.style.cssText = 'position:absolute;pointer-events:none;overflow:hidden';
+    svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;overflow:hidden';
     const filter = node('filter', {id:'oled-night-logo-ink', x:'0', y:'0', width:'1', height:'1', primitiveUnits:'objectBoundingBox', 'color-interpolation-filters':'sRGB'});
     const add = (name, attrs) => filter.append(node(name, attrs));
     add('feColorMatrix', {in:'SourceGraphic', type:'saturate', values:'0', result:'gray'});
@@ -1273,8 +1273,8 @@
         if (clear / total > 0.3 && solid / total > 0.02) {
           // A filled app icon can have transparent rounded corners and a dark
           // face. Inverting its whole bitmap turns that face white. Reserve
-          // inversion for sparse ink (or a wide wordmark), not square badges.
-          const sparseInk = solid / total < 0.4 || img.naturalWidth / img.naturalHeight > 2;
+          // inversion for sparse ink, not filled badges of any aspect ratio.
+          const sparseInk = solid / total < 0.4;
           // Explicitly labelled brand assets keep their original color pixels.
           if (!labelledLogo && sparseInk && light / solid < 0.2 && colorful === 0) img.setAttribute(LOGO, "");
           else if (namedLogo && light / solid < 0.7) { ensureLogoFilter(img); img.setAttribute(LOGO_INK, ""); }
@@ -2825,7 +2825,7 @@
       img[${MARK}~="faded-icon"]${on} { opacity: 0.65 !important; filter: drop-shadow(0 0 1px #888) !important; }
       [${MARK}~="asset-icon"]${on} { filter: drop-shadow(0 0 0.75px #ddd) drop-shadow(0 0 0.75px #ddd) !important; }
       [${MARK}~="icon-invert"]${on} { filter: invert(1) !important; }
-      img[${LOGO_INK}]:not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) { filter: url("#oled-night-logo-ink") !important; }
+      img[${LOGO_INK}]:is(*, #oled-night-logo-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) { filter: url("#oled-night-logo-ink") !important; }
       [${NOANIM}], [${NOANIM}] *, [${NOANIM}]::before, [${NOANIM}]::after, [${NOANIM}] *::before, [${NOANIM}] *::after { transition: none !important; }
       [${NOANIM_SELF}], [${NOANIM_SELF}]::before, [${NOANIM_SELF}]::after { transition: none !important; }
       [${NOANIM}][${MOTION}], [${NOANIM}] [${MOTION}], [${NOANIM_SELF}][${MOTION}] { transition: var(--oln-motion) !important; }

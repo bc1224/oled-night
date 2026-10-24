@@ -5,7 +5,7 @@ export function logoContrastProbe(){
   const points={};
   for(const img of images){const r=img.getBoundingClientRect();points[img.id]={x:r.x,y:r.y,filter:getComputedStyle(img).filter};}
   const crossOriginReadBlocked=document.getElementById('remote-logo').dataset.pageCanvasBlocked==='true';
-  return {points,crossOriginReadBlocked,pixelRatio:devicePixelRatio,active:document.documentElement.hasAttribute('data-oled-night-root')};
+  return {points,crossOriginReadBlocked,pixelRatio:devicePixelRatio,active:document.documentElement.hasAttribute('data-oled-night-root'),smallFilter:getComputedStyle(document.getElementById('shadow-logo-host').shadowRoot.querySelector('.icon-logo')).filter};
 }
 
 export function logoContrastPaint(bytes,probe){
@@ -24,11 +24,13 @@ export function logoContrastPaint(bytes,probe){
   }
   for(const [id,bg] of [['white-logo',[255,255,255]],['badge-logo',[24,24,24]],['remote-white-logo',[255,255,255]],['remote-badge-logo',[24,24,24]]])checks.push({name:id+' opaque plate and dark ink stay original',ok:near(at(id,5,5),bg)&&near(at(id,24,40),[24,24,24]),detail:JSON.stringify({plate:at(id,5,5),ink:at(id,24,40)})});
   checks.push({name:'Product media stays original',ok:near(at('product-image',24,40),[24,24,24])&&probe.points['product-image'].filter==='none',detail:JSON.stringify(at('product-image',24,40))});
+  checks.push({name:'Wide solid badge with transparent margins keeps its dark plate',ok:near(at('transparent-badge-logo',40,40),[24,24,24]),detail:JSON.stringify(at('transparent-badge-logo',40,40))});
+  checks.push({name:'Small shadow logo ink filter wins over generic UI icon glow',ok:probe.smallFilter.includes('oled-night-logo-ink')&&!probe.smallFilter.includes('drop-shadow'),detail:probe.smallFilter});
   checks.push({name:'Cross-origin logo remains unreadable to page canvas',ok:probe.crossOriginReadBlocked,detail:''});
   return checks;
 }
 
 export function logoContrastRestored(){
   const shadow=document.getElementById('shadow-logo-host').shadowRoot;
-  return {name:'Disabling restores every logo and removes filter resources',ok:[...document.images,shadow.querySelector('img')].every(img=>getComputedStyle(img).filter==='none')&&!document.querySelector('[data-oled-night-logo-filter]')&&!shadow.querySelector('[data-oled-night-logo-filter]'),detail:''};
+  return {name:'Disabling restores every logo and removes filter resources',ok:[...document.images,...shadow.querySelectorAll('img')].every(img=>getComputedStyle(img).filter==='none')&&!document.querySelector('[data-oled-night-logo-filter]')&&!shadow.querySelector('[data-oled-night-logo-filter]'),detail:''};
 }
