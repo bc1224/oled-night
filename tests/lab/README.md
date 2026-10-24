@@ -36,6 +36,8 @@ node tools/live-report.mjs
 
 Both adapters load the packaged extension into disposable browser profiles. Their temporary loopback servers are owned by the test process and closed at exit; no persistent watcher or helper is installed. Chrome uses a fresh debugging pipe; this never attaches to everyday Chrome or changes its extension.
 
+The reported-controls adapters also replay native profile card paints across repeated chunked layout refreshes in Automatic, Recolor and Deepen modes. The larger synthetic layout places the enclosing card and its title/truncation paints in separate chunks; it checks changed parent colors, restoration and keyboard focus. This catches the LinkedIn 0.6.58 miss that the earlier small, initially correct card fixture could not expose. Chrome additionally samples the rendered pixels after the refreshes. Signed-in post-update LinkedIn rendering remains a separate live verification.
+
 Chrome checks light/dark originals, desktop/mobile rendering, real pointer hover, nested focus, toggles, modals, dynamic content, and extension disable/re-enable. Firefox runs the shared state and timing workload with the Firefox package. Existing Chrome/Firefox regressions remain required alongside the matrix. The repeated state assertions are checks, **not a count of distinct components or sites**.
 
 Text checks use 4.5:1 contrast (3:1 for disabled examples); data fills use 3:1 against their track. The 1.25:1 boundary threshold is a regression heuristic, not a WCAG conformance claim. Transparent solid backgrounds are composited over their ancestors. Image/gradient backdrops, text shadows and closed roots need their targeted regressions or visual review.

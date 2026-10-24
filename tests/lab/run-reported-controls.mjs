@@ -7,6 +7,7 @@ import {paintedInkContrast,paintedSample} from './painted-contrast.mjs';
 import {bookingSurfacesScenario,bookingSurfacesRestored} from './booking-surfaces-scenario.mjs';
 import {componentReceipt} from './component-receipt.mjs';
 import {sampleChatgptPixels} from './chatgpt-controls-paint.mjs';
+import {retainedSurfacesScenario} from './retained-surfaces-scenario.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/reported-controls');mkdirSync(output,{recursive:true});
 const server=await serveLab(join(root,'tests/e2e/site'));let browser;const checks=[];
 try{
@@ -48,6 +49,13 @@ try{
   }
   for(const mode of ['auto','recolor']){
     await options.eval(`chrome.storage.sync.set({extensionEnabled:true,siteRules:${mode==='auto'?'{}':"{'127.0.0.1':'recolor'}"}})`);await wait(450);
+    await page.go(server.origin+'/retained-surfaces.html'+(mode==='recolor'?'?light':''));await wait(700);
+    checks.push(...(await page.eval(`(${retainedSurfacesScenario.toString()})()`)).map(c=>({...c,name:mode+' / '+c.name})));
+    await page.eval("document.getElementById('refresh-card').scrollIntoView()");await wait(150);
+    const refreshShot=await page.screenshot();writeFileSync(join(output,mode+'-linkedin-refresh.png'),refreshShot);
+    const refreshPoints=await page.eval("(()=>{const point=id=>{const r=document.getElementById(id).getBoundingClientRect(),inset=id==='refresh-card'?12:2;return {x:r.right-inset,y:r.y+inset}};return ['refresh-card','refresh-heading','refresh-more'].map(point)})()");
+    const refreshPixels=refreshPoints.map(p=>paintedSample(refreshShot,p.x,p.y));
+    checks.push({name:mode+' / LinkedIn title and more pixels match the native card after repeated refresh',ok:refreshPixels.every(p=>p?.every((v,i)=>Math.abs(v-[27,31,35][i])<=2)),detail:JSON.stringify(refreshPixels)});
     await page.go(server.origin+'/calendar-booking.html');await wait(700);
     checks.push(...(await page.eval(`(${bookingSurfacesScenario.toString()})()`)).map(c=>({...c,name:mode+' / '+c.name})));
     const calendarShot=await page.screenshot();writeFileSync(join(output,mode+'-calendar.png'),calendarShot);
@@ -61,7 +69,9 @@ try{
   await page.go(server.origin+'/reported-controls.html');await wait(700);
   checks.push({name:'Explicit Deepen blacks only preserves bright generated surfaces',ok:await page.eval("getComputedStyle(document.getElementById('save-chrome'),'::after').backgroundColor==='rgb(255, 191, 25)'"),detail:''});
   checks.push({name:'Explicit Deepen preserves native raised card depth',ok:await page.eval("getComputedStyle(document.getElementById('native-panel')).backgroundColor==='rgb(28, 28, 28)'"),detail:''});
+  await page.go(server.origin+'/retained-surfaces.html');await wait(700);
+  checks.push(...(await page.eval(`(${retainedSurfacesScenario.toString()})()`)).map(c=>({...c,name:'deepen / '+c.name})));
 }finally{await browser?.close();await server.close()}
 writeFileSync(join(output,'results.json'),JSON.stringify(checks,null,2));for(const c of checks)console.log((c.ok?'PASS ':'FAIL ')+c.name+' '+c.detail);
-mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-chrome.json'),JSON.stringify(componentReceipt('Chrome',{fixtures:['reported-controls.html','calendar-booking.html'],modes:['auto','recolor','deepen'],checks}),null,2));
+mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-chrome.json'),JSON.stringify(componentReceipt('Chrome',{fixtures:['reported-controls.html','calendar-booking.html','retained-surfaces.html'],modes:['auto','recolor','deepen'],checks}),null,2));
 if(checks.some(c=>!c.ok))process.exitCode=1;

@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.58";
+  const VERSION = "0.6.59";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -451,6 +451,20 @@
       if (ctx.backdrop.has(node)) { result = ctx.backdrop.get(node); break; }
       chain.push(node);
       const surface = originalSurface.has(node) ? originalSurface.get(node) : surfaceInfo(ctx.style(node));
+      // A retained layout is refreshed in chunks. An ancestor outside this
+      // chunk was measured afresh but not decided again; keep its native
+      // surface proof only while the authored paint still matches. Remember
+      // that refreshed proof for the next chunk too.
+      const retained = ctx.retainedAncestors.get(node);
+      if (retained && !originalSurface.has(node)) {
+        const computed = ctx.style(node);
+        if (surface?.color && computed.backgroundImage === "none" && !paintsInk(computed) &&
+            ["r", "g", "b", "a"].every(key => surface.color[key] === retained.color[key])) {
+          surface.retained = true;
+          surface.mapped = computed.backgroundColor;
+        }
+        originalSurface.set(node, surface);
+      }
       if (surface) { result = surface; break; }
       // Full-bleed media in either adjacent sibling can paint behind a text
       // overlay (retail cards and hero sections). It is still real imagery
@@ -1803,6 +1817,7 @@
     // switch off just those elements. Inherited overrides (text, fill, stroke)
     // restyle their subtree either way, so they keep one switch per root.
     const measured = [], measuredSelf = [], measuredPseudo = [], calm = [], calmSelf = new Set();
+    const retainedAncestors = new Map();
     const marked = [...paintList, ...list.images].filter((element) => element.isConnected && element.hasAttribute(MARK));
     // Form fields have (almost) no subtree, so their inherited overrides are cheap to switch.
     const deep = (element) => INHERITED_KEYS.test(element.getAttribute(MARK)) && !element.matches("input, textarea, select");
@@ -1821,7 +1836,10 @@
         const ancestors = new Set();
         for (const element of paintList) for (let parent = parentAcrossShadow(element); parent; parent = parentAcrossShadow(parent)) {
           if (ancestors.has(parent)) break;
-          ancestors.add(parent); originalSurface.delete(parent);
+          ancestors.add(parent);
+          const surface = originalSurface.get(parent);
+          if (surface?.retained && surface.color) retainedAncestors.set(parent, surface);
+          originalSurface.delete(parent);
           if (parent.hasAttribute(MARK) && !marked.includes(parent)) {
             measuredSelf.push(parent); calmSelf.add(parent);
           }
@@ -1933,6 +1951,7 @@
       pageColor,
       gmail: document.documentElement.getAttribute("data-oled-night-site") === "gmail",
       backdrop: new Map(),
+      retainedAncestors,
       media: new Map(),
       generated: element => {
         // Native quotes/controls and slotted content may use UA or another

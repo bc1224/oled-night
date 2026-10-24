@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Native profile surfaces across layout refreshes</title>
+<style>
+body{background:#131316;color:#eee;font:16px Arial;margin:24px}body.light{background:white;color:#222}
+.profile{width:700px;padding:24px;background:#1b1f23;border-radius:8px}
+.heading,.more{background:#1b1f23;color:#eee}.heading{height:42px}.heading p{margin:0}
+.description{position:relative;padding-right:90px}.more{position:absolute;right:0;bottom:0;border:0}
+.more:focus-visible{background:#454545;outline:2px solid #80bfff}.distinct{background:#111;padding:8px}
+.contents{display:contents}.status{color:#eee}.scrolled{color:#ddd}.changed .profile{background:#202020}
+</style></head><body><main id="layout"><section class="profile" id="refresh-card">
+<div id="before-heading" aria-hidden="true"></div>
+<div class="contents"><div><div><div><div><div><div><div><div><div><div><div><div>
+<a href="#refresh-card"><div class="heading" id="refresh-heading"><div><p>Product Manager</p><p>Synthetic company</p></div></div></a>
+</div></div></div></div></div></div></div></div></div></div></div></div></div>
+<p class="description">A synthetic professional history.<button class="more" id="refresh-more">… more</button></p>
+<div class="distinct" id="refresh-distinct">Distinct inset</div></section><div id="page-content"></div><p class="status">Page status</p></main>
+<script>
+// A large application rechecks its retained layout in bounded chunks. Put the
+// card and its repeated paint in different chunks, without private site data.
+document.getElementById('before-heading').append(...Array.from({length:40},()=>document.createElement('div')));
+document.getElementById('page-content').append(...Array.from({length:600},()=>{const p=document.createElement('p');p.textContent='Synthetic page content';return p}));
+if(location.search.includes('light'))document.body.classList.add('light');
+</script></body></html>
