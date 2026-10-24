@@ -95,6 +95,8 @@
   let simpleScopeFingerprint = null;
   let compiledPaintScope = null;
   let simpleScopeEpoch = 0;
+  const simpleScopeIdentities = new Map();
+  let simpleScopeIdentity = 0;
   let recentBackgroundWrites = new Map();
   let recentSharedBackgrounds = new Map();
   const sharedBackgrounds = new Map();
@@ -1682,9 +1684,18 @@
           }
       }
       if (key !== simpleScopeFingerprint) { uncertain(); simpleScopeFingerprint = key; simpleScopeEpoch++; }
+      // Temporary sheets can disappear before an offscreen row is revisited.
+      // Reuse its ink proof only when the complete authored CSS is identical.
+      // Keep four bounded fingerprints; snapshots retain only numeric IDs.
+      let identity = simpleScopeIdentities.get(key);
+      if (identity === undefined) {
+        identity = ++simpleScopeIdentity;
+        if (simpleScopeIdentities.size >= 4) simpleScopeIdentities.delete(simpleScopeIdentities.keys().next().value);
+      } else simpleScopeIdentities.delete(key);
+      simpleScopeIdentities.set(key, identity);
       // Cache only compiled strings/colors. Every call still checks the full
       // CSSOM fingerprint, including insertRule and adopted sheet changes.
-      compiledPaintScope = { epoch: simpleScopeEpoch, rules, mayAnimate, movingPaint };
+      compiledPaintScope = { epoch: simpleScopeEpoch, identity, rules, mayAnimate, movingPaint };
       return compiledPaintScope;
     } catch { return uncertain(); }
   }
@@ -2011,7 +2022,7 @@
           node.setAttribute(SHARED_BG, sharedToken);
           if (recentSharedBackgrounds.size < 2048) recentSharedBackgrounds.set(node, sharedToken);
         }
-        containerPaint.set(node, {found: { ...found }, classes: node.getAttribute("class") || "", scopeEpoch: paintScope.epoch, inkProof, declarative, sharedToken});
+        containerPaint.set(node, {found: { ...found }, classes: node.getAttribute("class") || "", scopeEpoch: paintScope.epoch, scopeIdentity: paintScope.identity, inkProof, declarative, sharedToken});
       }
       else containerPaint.delete(node);
     }
@@ -2319,7 +2330,7 @@
     // integrity proof rather than rebuilding CSS signatures for every row.
     if (!scopes.has(document)) scopes.set(document, simplePaintScope());
     const scope = scopes.get(document);
-    if (!scope || scope.mayAnimate || snapshot.scopeEpoch !== scope.epoch) return false;
+    if (!scope || scope.mayAnimate || (snapshot.scopeEpoch !== scope.epoch && snapshot.scopeIdentity !== scope.identity)) return false;
     const current = node.getAttribute("class") || "";
     if (snapshot.classes === current) { forgetDeferredPaint(node); return true; }
     // Simple-scope selectors depend only on tag/classes. Repeated rows share
@@ -2383,7 +2394,7 @@
         if (recentSharedBackgrounds.size < 2048) recentSharedBackgrounds.set(node, sharedToken);
       }
       containerPaint.set(node, {found, effectivePaint: next.bg, sharedToken, classes: current,
-        scopeEpoch: scope.epoch, inkProof: snapshot.inkProof});
+        scopeEpoch: scope.epoch, scopeIdentity: scope.identity, inkProof: snapshot.inkProof});
       return true;
     }
     node.removeAttribute(SHARED_BG);
@@ -2395,7 +2406,7 @@
       applied.set(node, signatureOf(next));
       if (recentBackgroundWrites.size < 2048) recentBackgroundWrites.set(node, node.getAttribute('style'));
     }
-    containerPaint.set(node, { found: next, classes: current, scopeEpoch: scope.epoch, inkProof: snapshot.inkProof });
+    containerPaint.set(node, { found: next, classes: current, scopeEpoch: scope.epoch, scopeIdentity: scope.identity, inkProof: snapshot.inkProof });
     return true;
   }
 
@@ -2949,6 +2960,8 @@
     simpleScopeFingerprint = null;
     compiledPaintScope = null;
     simpleScopeEpoch = 0;
+    simpleScopeIdentities.clear();
+    simpleScopeIdentity = 0;
     originalSurface = new WeakMap();
     mediaCopies = new WeakMap();
     mediaCopyMeasurements = new WeakSet();
