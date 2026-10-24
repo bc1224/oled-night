@@ -7,7 +7,7 @@ export async function bookingScenario(){
   }
   const hint=getComputedStyle($('booking-placeholder'),'::placeholder');
   check('placeholder is readable and distinct',a.contrast(hint.color,a.background($('booking-placeholder')))>=4.5&&hint.color!==css($('booking-value')).color,hint.color);
-  check('named colored logo gains contrast without inversion',css($('booking-logo')).filter.includes('drop-shadow')&&!css($('booking-logo')).filter.includes('invert'),css($('booking-logo')).filter);
+  check('named colored logo receives local ink correction without inversion or glow',css($('booking-logo')).filter.includes('oled-night-logo-ink')&&!/invert|drop-shadow/.test(css($('booking-logo')).filter),css($('booking-logo')).filter);
   check('masked back icon remains visible',a.lum(css($('booking-back')).backgroundColor)>.5,css($('booking-back')).backgroundColor);
   $('booking-value').focus();await new Promise(r=>setTimeout(r,150));
   check('field focus has an outline',css($('booking-value')).outlineStyle!=='none');

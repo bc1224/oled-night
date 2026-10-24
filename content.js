@@ -1212,7 +1212,16 @@
     add('feComposite', {in:'dark', in2:'neutralPaint', operator:'in', result:'ink'});
     add('feComposite', {in:'ink', in2:'sparse', operator:'in', result:'eligible'});
     add('feColorMatrix', {in:'eligible', type:'matrix', values:'0 0 0 0 .72157 0 0 0 0 .72157 0 0 0 0 .72157 0 0 0 1 0', result:'lift'});
-    add('feComposite', {in:'lift', in2:'SourceGraphic', operator:'atop'});
+    // Very dark blue/burgundy ink also needs light. Limit this curve by source
+    // luminance, so bright brand accents retain their original painted pixels.
+    add('feColorMatrix', {in:'SourceGraphic', type:'matrix', values:'0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.7008 -5.7216 -.5776 0 2.5', result:'darkColor'});
+    add('feComposite', {in:'darkColor', in2:'sparse', operator:'in', result:'colorMask'});
+    const brighter = node('feComponentTransfer', {in:'SourceGraphic', result:'brighter'});
+    for (const channel of ['R','G','B']) brighter.append(node('feFunc'+channel, {type:'gamma', amplitude:'1', exponent:'.5', offset:'0'}));
+    filter.append(brighter);
+    add('feComposite', {in:'brighter', in2:'colorMask', operator:'in', result:'colorLift'});
+    add('feComposite', {in:'colorLift', in2:'SourceGraphic', operator:'atop', result:'colorBase'});
+    add('feComposite', {in:'lift', in2:'colorBase', operator:'atop'});
     svg.append(filter);
     (scope === document ? document.body || document.documentElement : scope).append(svg);
   }

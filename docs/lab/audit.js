@@ -17,7 +17,7 @@
       if(rules.includes('boundary')){const ratio=contrast(s.borderTopColor,background(e));out.push({name:id+' boundary',ok:s.borderTopStyle!=='none'&&parseFloat(s.borderTopWidth)>0&&ratio>=1.25,detail:ratio.toFixed(2)+':1'})}
       if(rules.includes('fill')){const ratio=contrast(s.backgroundColor,background(e.parentElement));out.push({name:id+' data fill',ok:ratio>=3,detail:ratio.toFixed(2)+':1'})}
       if(rules.includes('icon')){const ratio=contrast(s.backgroundColor,background(e.parentElement));out.push({name:id+' icon paint',ok:ratio>=3,detail:ratio.toFixed(2)+':1'})}
-      if(rules.includes('logo-edge')&&active)out.push({name:id+' colored logo edge',ok:s.filter.includes('drop-shadow')&&!s.filter.includes('invert'),detail:s.filter});
+      if(rules.includes('logo-edge')&&active)out.push({name:id+' colored logo ink without glow',ok:s.filter.includes('oled-night-logo-ink')&&!/invert|drop-shadow/.test(s.filter),detail:s.filter});
       if(rules.includes('media')){
         const filters=[];for(let node=e;node;node=node.parentElement||node.getRootNode().host){const f=doc.defaultView.getComputedStyle(node).filter;if(f!=='none')filters.push(f)}
         const inverted=doc.documentElement.hasAttribute('data-oled-night-invert'),counter='invert(1) hue-rotate(180deg)';

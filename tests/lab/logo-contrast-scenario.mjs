@@ -10,12 +10,16 @@ export function logoContrastProbe(){
 
 export function logoContrastPaint(bytes,probe){
   const checks=[],at=(id,x,y)=>{const p=probe.points[id];return paintedSample(bytes,(p.x+x)*probe.pixelRatio,(p.y+y)*probe.pixelRatio)},near=(a,b)=>a?.every((v,i)=>Math.abs(v-b[i])<=2);
+  const lum=c=>c.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0),contrast=(a,b)=>(Math.max(lum(a),lum(b))+.05)/(Math.min(lum(a),lum(b))+.05);
   checks.push({name:'Logo regression runs with the extension active',ok:probe.active,detail:''});
   for(const id of ['mixed-logo','remote-logo','shadow-logo']){
     const ink=at(id,24,40),red=at(id,188,40),yellow=at(id,216,40);
     const gaps=[at(id,18,40),at(id,29,40),at(id,24,18),at(id,24,61)];
     checks.push({name:id+' dark ink is readable inside its original shape',ok:ink?.every(v=>v>=140&&v<=235),detail:JSON.stringify(ink)});
     checks.push({name:id+' saturated accents keep their original pixels',ok:near(red,[245,34,50])&&near(yellow,[255,204,0]),detail:JSON.stringify({red,yellow})});
+    const navy=at(id,164,40),burgundy=at(id,202,40),background=at(id,5,5);
+    checks.push({name:id+' dark blue ink becomes readable and stays blue',ok:navy&&navy[2]>navy[1]&&navy[1]>navy[0]&&contrast(navy,background)>=3,detail:JSON.stringify(navy)});
+    checks.push({name:id+' dark burgundy ink becomes readable and keeps its color order',ok:burgundy&&burgundy[0]>burgundy[2]&&burgundy[2]>burgundy[1]&&contrast(burgundy,background)>=3,detail:JSON.stringify(burgundy)});
     checks.push({name:id+' transparent edge and gaps have no halo',ok:gaps.every(p=>near(p,at(id,5,5))),detail:JSON.stringify(gaps)});
   }
   for(const [id,bg] of [['white-logo',[255,255,255]],['badge-logo',[24,24,24]],['remote-white-logo',[255,255,255]],['remote-badge-logo',[24,24,24]]])checks.push({name:id+' opaque plate and dark ink stay original',ok:near(at(id,5,5),bg)&&near(at(id,24,40),[24,24,24]),detail:JSON.stringify({plate:at(id,5,5),ink:at(id,24,40)})});
