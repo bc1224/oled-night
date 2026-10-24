@@ -3036,7 +3036,7 @@
     logoChecked = new WeakSet();
     logoBudget = 80;
     for (const scope of [document, ...shadowRoots]) {
-      scope.querySelector('[data-oled-night-logo-filter]')?.remove();
+      for (const resource of scope.querySelectorAll('[data-oled-night-logo-filter]')) resource.remove();
       if (scope !== document) for (const type of INTERACTION_EVENTS) scope.removeEventListener(type, onInteraction, true);
       for (const node of scope.querySelectorAll(`[${MEASURE}], [${NOANIM}], [${MEASURE_SELF}], [${NOANIM_SELF}], [${MEASURE_PSEUDO}], [${MEASURE_ROOT}], [${LOGO}], [${LOGO_INK}], [${SHARED_BG}]`)) {
         for (const name of [MEASURE, NOANIM, MEASURE_SELF, NOANIM_SELF, MEASURE_PSEUDO, MEASURE_ROOT, LOGO, LOGO_INK, SHARED_BG]) node.removeAttribute(name);
