@@ -58,12 +58,6 @@ jobs:
           node tests/lab/run-compact-switches-firefox.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
-      - name: Component states, performance and reviewed visuals in Chrome
-        run: node tests/lab/run-chrome.mjs ${{ inputs.candidates && '--candidates' || '' }}
-        env:
-          CHROME_PATH: /usr/bin/google-chrome
-      - name: Component states and performance in Firefox
-        run: npm run test:lab:firefox
       - name: Known CVS synthetic regression (publish failures separately)
         id: cvs_stress
         continue-on-error: true
@@ -80,12 +74,6 @@ jobs:
         id: cvs_receipt
         run: |
           node --input-type=module -e "import {readFileSync} from 'node:fs'; import {summarizeLive} from './tools/live-report.mjs'; console.log('status='+summarizeLive(JSON.parse(readFileSync('dist/lab-results/live-smoke.json'))).status)" >> "$GITHUB_OUTPUT"
-      - name: Build browsable lab with passing evidence
-        if: ${{ !inputs.candidates }}
-        run: |
-          npm run build:lab
-          node tools/lab-report.mjs
-          node tools/live-report.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -95,7 +83,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: oled-night-lab-evidence
+          name: oled-night-lab-primary
           path: dist/lab-results/
           if-no-files-found: warn
       - uses: actions/upload-artifact@v4
@@ -106,14 +94,80 @@ jobs:
             dist/oled-components/
             dist/compact-switches/
           if-no-files-found: warn
-      - uses: actions/upload-pages-artifact@v3
-        if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
-        with:
-          path: dist/site
       - uses: actions/upload-artifact@v4
         with:
           name: oled-night-zip
           path: dist/*.zip
+  lab-matrix:
+    name: Full lab in ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [Chrome, Firefox]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node tools/package.mjs
+      - uses: browser-actions/setup-firefox@v1
+        if: ${{ matrix.browser == 'Firefox' }}
+      - name: Component states, performance and reviewed visuals in Chrome
+        if: ${{ matrix.browser == 'Chrome' }}
+        run: node tests/lab/run-chrome.mjs ${{ inputs.candidates && '--candidates' || '' }}
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+      - name: Component states and performance in Firefox
+        if: ${{ matrix.browser == 'Firefox' }}
+        run: npm run test:lab:firefox
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oled-night-lab-${{ matrix.browser }}
+          path: dist/lab-results/
+          if-no-files-found: error
+  lab-evidence:
+    name: Verify and assemble full lab evidence
+    needs: [test, lab-matrix]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: oled-night-lab-primary
+          path: dist/lab-results/
+      - uses: actions/download-artifact@v4
+        with:
+          name: oled-night-lab-Chrome
+          path: dist/lab-results/
+      - uses: actions/download-artifact@v4
+        with:
+          name: oled-night-lab-Firefox
+          path: dist/lab-results/
+      - name: Build browsable lab with passing evidence
+        if: ${{ !inputs.candidates }}
+        run: |
+          npm run build:lab
+          node tools/lab-report.mjs
+          node tools/live-report.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oled-night-lab-evidence
+          path: dist/lab-results/
+          if-no-files-found: error
+      - uses: actions/upload-pages-artifact@v3
+        if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+        with:
+          path: dist/site
   reported-controls:
     name: Reported control contrast in Chrome and Firefox
     runs-on: ubuntu-latest
@@ -142,7 +196,7 @@ jobs:
             dist/reported-controls/*.png
   extension-regression-gate:
     name: CVS extension release gate
-    needs: [test, reported-controls]
+    needs: [test, reported-controls, lab-evidence]
     runs-on: ubuntu-latest
     steps:
       - name: Require the known synthetic regression to pass for store submission
@@ -160,7 +214,7 @@ jobs:
           fi
   deploy:
     if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
-    needs: [test, reported-controls]
+    needs: [test, reported-controls, lab-evidence]
     runs-on: ubuntu-latest
     permissions:
       pages: write
