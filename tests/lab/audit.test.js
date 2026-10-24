@@ -13,3 +13,16 @@ assert.equal(a.audit(testDoc).find(c=>c.name==='field primary value')?.ok,false,
 style.webkitTextFillColor='rgb(224, 224, 224)';
 assert.equal(a.audit(testDoc).find(c=>c.name==='field primary value')?.ok,true);
 console.log('PASS public audit catches dark text-fill and muted filled values');
+target.dataset.labCheck='logo-edge';
+for(const [filter,expected] of [
+  ['drop-shadow(rgb(221, 221, 221) 0px 0px 1px)',true],
+  ['url("#oled-night-logo-ink")',true],
+  ['none',false],
+  ['invert(1)',false],
+  ['url("#unrelated-filter")',false],
+  ['drop-shadow(0 0 1px white) invert(1)',false]
+]){
+  style.filter=filter;
+  assert.equal(a.audit(testDoc).find(c=>c.name.startsWith('field colored logo'))?.ok,expected,'shared audit must recognize historical and current logo correction while rejecting missing or inverted treatment: '+filter);
+}
+console.log('PASS shared logo audit keeps the immutable historical treatment valid');
