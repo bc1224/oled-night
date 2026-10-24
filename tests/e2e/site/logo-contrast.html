@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><base href="/different/base/"><title>Local logo contrast regression</title><style>
+html,body{margin:0;background:#141418;color:#ddd;font:14px system-ui}main{padding:20px}section{display:flex;align-items:center;height:88px;gap:20px}img{display:block;width:240px;height:80px;object-fit:contain}p{margin:0}
+</style></head><body><main></main><script>
+const transparent='<svg xmlns="http://www.w3.org/2000/svg" width="240" height="80"><g fill="#181818"><path d="M20 20h8v40h-8zM36 20h8v40h-8zM52 20h8v40h-8zM68 20h8v40h-8zM84 20h8v40h-8zM100 20h8v40h-8zM116 20h8v40h-8zM132 20h8v40h-8zM148 20h8v40h-8z"/></g><path fill="#f52232" d="M180 20h16v40h-16z"/><path fill="#ffcc00" d="M208 20h16v40h-16z"/></svg>';
+const data=svg=>'data:image/svg+xml,'+encodeURIComponent(svg);
+for(const [id,src,product] of [
+ ['mixed-logo',data(transparent)],
+ ['remote-logo',location.origin.replace('127.0.0.1','localhost')+'/logo-contrast.svg'],
+ ['remote-white-logo',location.origin.replace('127.0.0.1','localhost')+'/logo-contrast-white.svg'],
+ ['remote-badge-logo',location.origin.replace('127.0.0.1','localhost')+'/logo-contrast-badge.svg'],
+ ['white-logo',data(transparent.replace('<g fill=', '<path fill="white" d="M0 0h240v80H0z"/><g fill='))],
+ ['badge-logo',data(transparent.replace('<g fill=', '<path fill="#181818" d="M0 0h240v80H0z"/><g fill='))],
+ ['product-image',data(transparent),true]
+]){const section=document.createElement('section'),img=document.createElement('img');img.id=id;img.width=240;img.height=80;img.alt=product?'Product photo':'Example logo';img.src=src;if(product)section.setAttribute('itemtype','https://schema.org/Product');else img.setAttribute('itemprop','logo');section.append(img,document.createTextNode(id));document.querySelector('main').append(section)}
+const host=document.createElement('div');host.id='shadow-logo-host';document.querySelector('main').append(host);const shadow=host.attachShadow({mode:'open'});shadow.innerHTML='<style>img{display:block;width:240px;height:80px}</style><img id="shadow-logo" width="240" height="80" itemprop="logo" alt="Example logo">';shadow.querySelector('img').src=data(transparent);
+const remote=document.getElementById('remote-logo');const verifyRead=()=>{let blocked=false;try{const c=document.createElement('canvas'),ctx=c.getContext('2d');ctx.drawImage(remote,0,0);ctx.getImageData(0,0,1,1)}catch(error){blocked=error.name==='SecurityError'}remote.dataset.pageCanvasBlocked=String(blocked)};if(remote.complete)verifyRead();else remote.addEventListener('load',verifyRead,{once:true});
+</script></body></html>

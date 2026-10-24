@@ -36,7 +36,7 @@
   const MANY_MARKED = 150;
   const COLOR_TRANSITION = /^all$|color|background|border|shadow|fill|stroke/;
   const LOGO = "data-oled-night-logo";
-  const LOGO_EDGE = "data-oled-night-logo-edge";
+  const LOGO_INK = "data-oled-night-logo-ink";
   // "Multiply"-style blends hide a photo's white background on a light page;
   // over black they turn the whole photo black (Amazon product images).
   const DARKENING_BLENDS = /^(multiply|darken|color-burn|plus-darker)$/;
@@ -1183,11 +1183,42 @@
     }
   }
 
-  // Dark, mostly transparent images (logos and wordmarks like Wikipedia's)
-  // disappear on black. Sample a thumbnail of the pixels; if the visible part
-  // is dark and colorless, flip its lightness. Cross-origin images can't be
-  // sampled (the browser forbids it). Explicit compact logo assets get a light
-  // edge instead: it reveals dark lettering without changing brand colors.
+  // Rendering-only filters can lift neutral ink without reading remote pixels.
+  // Thin transparent lettering qualifies; solid neutral plates veto the lift.
+  // All output stays inside SourceGraphic's alpha, so there is no outside glow.
+  function ensureLogoFilter(img) {
+    const scope = img.getRootNode();
+    if (scope.querySelector('[data-oled-night-logo-filter]')) return;
+    const ns = 'http://www.w3.org/2000/svg';
+    const node = (name, attrs) => {
+      const element = document.createElementNS(ns, name);
+      for (const [key, value] of Object.entries(attrs)) element.setAttribute(key, value);
+      return element;
+    };
+    const svg = node('svg', {'data-oled-night-logo-filter':'', 'aria-hidden':'true', width:'1', height:'1'});
+    svg.style.cssText = 'position:absolute;pointer-events:none;overflow:hidden';
+    const filter = node('filter', {id:'oled-night-logo-ink', x:'0', y:'0', width:'1', height:'1', primitiveUnits:'objectBoundingBox', 'color-interpolation-filters':'sRGB'});
+    const add = (name, attrs) => filter.append(node(name, attrs));
+    add('feColorMatrix', {in:'SourceGraphic', type:'saturate', values:'0', result:'gray'});
+    add('feBlend', {in:'SourceGraphic', in2:'gray', mode:'difference', result:'chroma'});
+    add('feColorMatrix', {in:'chroma', type:'matrix', values:'0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -8 -8 -8 0 1', result:'neutral'});
+    add('feComposite', {in:'neutral', in2:'SourceAlpha', operator:'in', result:'neutralPaint'});
+    // A filled icon/photographic plate has a broad neutral interior. Thin ink
+    // has none. Expand any surviving interior to veto the entire image lift.
+    add('feMorphology', {in:'neutralPaint', operator:'erode', radius:'.04 .24', result:'plateCore'});
+    add('feMorphology', {in:'plateCore', operator:'dilate', radius:'1', result:'plate'});
+    add('feColorMatrix', {in:'plate', type:'matrix', values:'0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1 1', result:'sparse'});
+    add('feColorMatrix', {in:'SourceGraphic', type:'matrix', values:'0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.2756 -4.2912 -.4332 0 2', result:'dark'});
+    add('feComposite', {in:'dark', in2:'neutralPaint', operator:'in', result:'ink'});
+    add('feComposite', {in:'ink', in2:'sparse', operator:'in', result:'eligible'});
+    add('feColorMatrix', {in:'eligible', type:'matrix', values:'0 0 0 0 .72157 0 0 0 0 .72157 0 0 0 0 .72157 0 0 0 1 0', result:'lift'});
+    add('feComposite', {in:'lift', in2:'SourceGraphic', operator:'atop'});
+    svg.append(filter);
+    (scope === document ? document.body || document.documentElement : scope).append(svg);
+  }
+
+  // Sample at most 96 pixels per side when permitted. Cross-origin logos use
+  // the same paint-only mask, without another request or a canvas read bypass.
   function checkLogo(img, ctx) {
     // Studio wordmarks may be named only by their site's semantic data label.
     const labelledLogo = img.matches('[data-tt$="logo" i], [data-tt$="wordmark" i]');
@@ -1196,17 +1227,19 @@
     // Pixel shape is supporting evidence, never permission to alter a photo.
     // Dark transparent product cutouts can look exactly like sparse black ink.
     if (isProductMedia(img) || (!namedLogo && !isControlAsset(img, ctx.style(img), img.currentSrc || img.src))) {
-      img.removeAttribute(LOGO); img.removeAttribute(LOGO_EDGE); return;
+      img.removeAttribute(LOGO); img.removeAttribute(LOGO_INK); return;
     }
     if (backdropOf(img, ctx).image) {
       img.removeAttribute(LOGO);
-      img.removeAttribute(LOGO_EDGE);
+      img.removeAttribute(LOGO_INK);
       return;
     }
     if (logoChecked.has(img) || logoBudget <= 0) return;
     logoChecked.add(img);
     logoBudget--;
+    const checked = logoChecked;
     const run = () => {
+      if (!active || checked !== logoChecked || !img.isConnected) return;
       try {
         // Keep the aspect ratio and enough resolution that thin lettering survives.
         const scale = Math.min(1, 96 / Math.max(img.naturalWidth, img.naturalHeight));
@@ -1234,13 +1267,13 @@
           // inversion for sparse ink (or a wide wordmark), not square badges.
           const sparseInk = solid / total < 0.4 || img.naturalWidth / img.naturalHeight > 2;
           // Explicitly labelled brand assets keep their original color pixels.
-          if (!labelledLogo && sparseInk && light / solid < 0.2 && colorful / solid < 0.25) img.setAttribute(LOGO, "");
-          else if (namedLogo && light / solid < 0.7) img.setAttribute(LOGO_EDGE, "");
+          if (!labelledLogo && sparseInk && light / solid < 0.2 && colorful === 0) img.setAttribute(LOGO, "");
+          else if (namedLogo && light / solid < 0.7) { ensureLogoFilter(img); img.setAttribute(LOGO_INK, ""); }
         }
       } catch {
         // No extra request or canvas security bypass. Only assets explicitly
         // named as logos qualify; ordinary photos and mail attachments do not.
-        if (namedLogo) img.setAttribute(LOGO_EDGE, "");
+        if (namedLogo) { ensureLogoFilter(img); img.setAttribute(LOGO_INK, ""); }
       }
     };
     if (img.complete) run(); else img.addEventListener("load", run, { once: true });
@@ -1999,7 +2032,7 @@
           if (!backdrop.image && colorsApi().luminance(backdrop.color) > 0.65) found["faded-icon"] = "1";
         }
         imageDecisions.push([img, found]);
-        if (recolor && rect.width >= 12 && rect.height >= 12 && rect.width <= 420 && rect.height <= 160) logoCandidates.push(img);
+        if (rect.width >= 12 && rect.height >= 12 && rect.width <= 420 && rect.height <= 160) logoCandidates.push(img);
       }
     }
     for (const node of measured) node.removeAttribute(MEASURE);
@@ -2783,6 +2816,7 @@
       img[${MARK}~="faded-icon"]${on} { opacity: 0.65 !important; filter: drop-shadow(0 0 1px #888) !important; }
       [${MARK}~="asset-icon"]${on} { filter: drop-shadow(0 0 0.75px #ddd) drop-shadow(0 0 0.75px #ddd) !important; }
       [${MARK}~="icon-invert"]${on} { filter: invert(1) !important; }
+      img[${LOGO_INK}]:not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) { filter: url("#oled-night-logo-ink") !important; }
       [${NOANIM}], [${NOANIM}] *, [${NOANIM}]::before, [${NOANIM}]::after, [${NOANIM}] *::before, [${NOANIM}] *::after { transition: none !important; }
       [${NOANIM_SELF}], [${NOANIM_SELF}]::before, [${NOANIM_SELF}]::after { transition: none !important; }
       [${NOANIM}][${MOTION}], [${NOANIM}] [${MOTION}], [${NOANIM_SELF}][${MOTION}] { transition: var(--oln-motion) !important; }
@@ -2841,7 +2875,7 @@
       html[data-oled-night-root][data-oled-night-dim]:not([data-oled-night-invert]) :is(img, video) { filter: brightness(0.78) !important; }
       html[data-oled-night-invert] { filter: invert(1) hue-rotate(180deg) !important; background: #fff !important; }
       html[data-oled-night-root]:not([data-oled-night-invert]) img[${LOGO}] { filter: invert(1) hue-rotate(180deg) !important; }
-      html[data-oled-night-root]:not([data-oled-night-invert]) img[${LOGO_EDGE}] { filter: drop-shadow(0 0 1px #ddd) drop-shadow(0 0 1px #ddd) !important; }
+      html[data-oled-night-root]:not([data-oled-night-invert]) img[${LOGO_INK}] { filter: url("#oled-night-logo-ink") !important; }
       /* Apple's auth widget paints autofill with an inset shadow and explicit
          text-fill, independently of color. Cover UA autofill/preview paint in
          every input state; keep a separate focus outline visible. */
@@ -3002,9 +3036,10 @@
     logoChecked = new WeakSet();
     logoBudget = 80;
     for (const scope of [document, ...shadowRoots]) {
+      scope.querySelector('[data-oled-night-logo-filter]')?.remove();
       if (scope !== document) for (const type of INTERACTION_EVENTS) scope.removeEventListener(type, onInteraction, true);
-      for (const node of scope.querySelectorAll(`[${MEASURE}], [${NOANIM}], [${MEASURE_SELF}], [${NOANIM_SELF}], [${MEASURE_PSEUDO}], [${MEASURE_ROOT}], [${LOGO}], [${LOGO_EDGE}], [${SHARED_BG}]`)) {
-        for (const name of [MEASURE, NOANIM, MEASURE_SELF, NOANIM_SELF, MEASURE_PSEUDO, MEASURE_ROOT, LOGO, LOGO_EDGE, SHARED_BG]) node.removeAttribute(name);
+      for (const node of scope.querySelectorAll(`[${MEASURE}], [${NOANIM}], [${MEASURE_SELF}], [${NOANIM_SELF}], [${MEASURE_PSEUDO}], [${MEASURE_ROOT}], [${LOGO}], [${LOGO_INK}], [${SHARED_BG}]`)) {
+        for (const name of [MEASURE, NOANIM, MEASURE_SELF, NOANIM_SELF, MEASURE_PSEUDO, MEASURE_ROOT, LOGO, LOGO_INK, SHARED_BG]) node.removeAttribute(name);
       }
       for (const element of scope.querySelectorAll(`[${MARK}]`)) {
         element.removeAttribute(MARK);

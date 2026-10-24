@@ -9,6 +9,7 @@ import {componentReceipt} from './component-receipt.mjs';
 import {sampleChatgptPixels} from './chatgpt-controls-paint.mjs';
 import {retainedSurfacesScenario} from './retained-surfaces-scenario.mjs';
 import {layeredSurfacesScenario,layeredSurfacesRestored} from './layered-surfaces-scenario.mjs';
+import {logoContrastProbe,logoContrastPaint,logoContrastRestored} from './logo-contrast-scenario.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/reported-controls');mkdirSync(output,{recursive:true});
 const server=await serveLab(join(root,'tests/e2e/site'));let browser;const checks=[];
 try{
@@ -71,12 +72,19 @@ try{
     await page.go(server.origin+'/layered-surfaces.html');await wait(700);
     checks.push(...(await page.eval(`(${layeredSurfacesScenario.toString()})()`)).map(c=>({...c,name:mode+' / '+c.name})));
     const studioShot=await page.screenshot();writeFileSync(join(output,mode+'-tiktok-studio.png'),studioShot);
-    const points=await page.eval("(()=>{const rect=id=>document.getElementById(id).getBoundingClientRect(),shell=rect('studio-shell'),photo=rect('photo'),brand=rect('studio-brand'),hero=rect('hero'),pattern=rect('hero-pattern');return {shell:{x:shell.right-8,y:shell.bottom-8},photo:{x:photo.x+20,y:photo.y+20},brand:{x:brand.x+8,y:brand.y+14},hero:{x:hero.right-8,y:hero.bottom-8},pattern:{x:pattern.right-8,y:pattern.bottom-8}}})()");
+    const points=await page.eval("(()=>{const rect=id=>document.getElementById(id).getBoundingClientRect(),shell=rect('studio-shell'),photo=rect('photo'),brand=rect('studio-brand'),hero=rect('hero'),pattern=rect('hero-pattern');return {shell:{x:shell.right-8,y:shell.bottom-8},photo:{x:photo.x+20,y:photo.y+20},brand:{x:brand.x+8,y:brand.y+14},ink:{x:brand.x+40,y:brand.y+14},hero:{x:hero.right-8,y:hero.bottom-8},pattern:{x:pattern.right-8,y:pattern.bottom-8}}})()");
     const sample=point=>paintedSample(studioShot,point.x,point.y),shellPixel=sample(points.shell),photoPixel=sample(points.photo),brandPixel=sample(points.brand),heroPixel=sample(points.hero),patternPixel=sample(points.pattern);
     checks.push({name:mode+' / TikTok Studio shell and repeating decoration paint dark while brand, media and photo overlays stay original',ok:shellPixel?.every(v=>v<40)&&photoPixel?.every((v,i)=>Math.abs(v-[255,204,102][i])<=2)&&brandPixel?.every((v,i)=>Math.abs(v-[37,244,238][i])<=2)&&heroPixel?.every(v=>v>230)&&patternPixel?.every(v=>v<60),detail:JSON.stringify({shellPixel,photoPixel,brandPixel,heroPixel,patternPixel})});
+    checks.push({name:mode+' / TikTok Studio dark wordmark pixels become readable without a halo',ok:sample(points.ink)?.every(v=>v>=140&&v<=235),detail:JSON.stringify(sample(points.ink))});
     await options.eval('chrome.storage.sync.set({extensionEnabled:false})');await wait(450);
     checks.push({...await page.eval(`(${layeredSurfacesRestored.toString()})()`),name:mode+' / TikTok Studio disable restores authored layers'});
   }
+  await options.eval("chrome.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'auto'}})");await wait(450);
+  await page.go(server.origin+'/logo-contrast.html');await wait(700);
+  const logoProbe=await page.eval(`(${logoContrastProbe.toString()})()`),logoShot=await page.screenshot();
+  writeFileSync(join(output,'logo-contrast.png'),logoShot);checks.push(...logoContrastPaint(logoShot,logoProbe));
+  await options.eval('chrome.storage.sync.set({extensionEnabled:false})');await wait(450);
+  checks.push(await page.eval(`(${logoContrastRestored.toString()})()`));
   await options.eval("chrome.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'deepen'}})");await wait(450);
   await page.go(server.origin+'/reported-controls.html');await wait(700);
   checks.push({name:'Explicit Deepen blacks only preserves bright generated surfaces',ok:await page.eval("getComputedStyle(document.getElementById('save-chrome'),'::after').backgroundColor==='rgb(255, 191, 25)'"),detail:''});
@@ -85,5 +93,5 @@ try{
   checks.push(...(await page.eval(`(${retainedSurfacesScenario.toString()})()`)).map(c=>({...c,name:'deepen / '+c.name})));
 }finally{await browser?.close();await server.close()}
 writeFileSync(join(output,'results.json'),JSON.stringify(checks,null,2));for(const c of checks)console.log((c.ok?'PASS ':'FAIL ')+c.name+' '+c.detail);
-mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-chrome.json'),JSON.stringify(componentReceipt('Chrome',{fixtures:['reported-controls.html','calendar-booking.html','retained-surfaces.html','layered-surfaces.html'],modes:['auto','recolor','deepen'],checks}),null,2));
+mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-chrome.json'),JSON.stringify(componentReceipt('Chrome',{fixtures:['reported-controls.html','calendar-booking.html','retained-surfaces.html','layered-surfaces.html','logo-contrast.html'],modes:['auto','recolor','deepen'],checks}),null,2));
 if(checks.some(c=>!c.ok))process.exitCode=1;

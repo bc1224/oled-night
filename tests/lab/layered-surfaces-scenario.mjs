@@ -5,7 +5,7 @@ export async function layeredSurfacesScenario(){
   const lum=c=>c.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
   const shell=style('studio-shell'),image=shell.backgroundImage;
   const logo=document.getElementById('studio-brand');
-  checks.push({name:'TikTok Studio explicitly named logo stays visible without changing brand colors',ok:logo.hasAttribute('data-oled-night-logo-edge')&&style('studio-brand').filter.includes('drop-shadow'),detail:style('studio-brand').filter});
+  checks.push({name:'TikTok Studio explicitly named logo receives an ink filter without outside glow',ok:logo.hasAttribute('data-oled-night-logo-ink')&&style('studio-brand').filter.includes('oled-night-logo-ink')&&!style('studio-brand').filter.includes('drop-shadow'),detail:style('studio-brand').filter});
   checks.push({name:'TikTok Studio white shell gradients adapt beside texture URL',ok:!image.includes('rgb(254, 254, 254)')&&!image.includes('rgb(252, 252, 252)')&&document.getElementById('studio-shell').getAttribute('data-oled-night').split(' ').includes('img'),detail:image});
   const url=value=>value.slice(value.indexOf('url('));
   checks.push({name:'TikTok Studio decorative image URL stays exact',ok:url(image)===url(authored('studio-shell')),detail:''});
