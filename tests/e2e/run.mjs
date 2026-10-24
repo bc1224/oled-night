@@ -14,6 +14,7 @@ import { spriteAssetsScenario } from './sprite-assets-scenario.mjs';
 import { colorPaletteScenario, colorPaletteRestored } from './color-palette-scenario.mjs';
 import { chromeTestArgs } from '../lab/chrome-launch.mjs';
 import { rowPerformanceDiagnostic } from './row-performance-diagnostic.mjs';
+import { youtubeMusicScenario } from './youtube-music-scenario.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // EXT_PATH lets the suite run against an unzipped release instead of the source tree.
@@ -202,6 +203,7 @@ try {
   await resetSettings();
 
   // Light page: recolor, text emphasis, icons, borders, tints, frames, streaming.
+  await youtubeMusicScenario({page,ext,site,send,setSettings,resetSettings,check,sleep});
   if (process.env.OLED_TEST_SCOPE === "youtube") break suite;
 
   await page.go(site("127.0.0.1", "ad-overlays.html"));

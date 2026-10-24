@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.57";
+  const VERSION = "0.6.58";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -2859,7 +2859,11 @@
       html[data-oled-night-invert] :is(img, video, iframe, embed, object) { filter: invert(1) hue-rotate(180deg) !important; }
       html[data-oled-night-root][data-oled-night-youtube] body,
       html[data-oled-night-root][data-oled-night-youtube] ytd-app,
-      html[data-oled-night-root][data-oled-night-youtube] #content,
+      /* #content is also the transparent play overlay on Music thumbnails.
+         Paint only known page canvases, never every repeated internal ID. */
+      html[data-oled-night-root][data-oled-night-youtube] ytd-app > #content,
+      html[data-oled-night-root][data-oled-night-youtube] ytd-page-manager > #content,
+      html[data-oled-night-root][data-oled-night-youtube] ytmusic-app-layout > #content,
       html[data-oled-night-root][data-oled-night-youtube] ytd-page-manager { background-color: var(--oled-night-page) !important; }
       html[data-oled-night-root][data-oled-night-youtube] ytd-app {
         --yt-spec-text-primary: var(--oled-night-youtube-primary) !important;

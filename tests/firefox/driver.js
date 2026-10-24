@@ -11,6 +11,26 @@
   const inspect = async func => (await browser.scripting.executeScript({target:{tabId:tab.id},func}))[0].result;
   try {
     await browser.storage.sync.clear();
+    await browser.storage.sync.set({extensionEnabled:false});
+    await open('youtube-music.html');
+    // Match the Chrome fixture's isolated-world native-safe-mode test seam.
+    await inspect(()=>{globalThis.OledNightColors.usesNativeSafeMode=()=>true;});
+    await browser.storage.sync.set({extensionEnabled:true});await wait(350);
+    check('YouTube Music canvas stays black without obscuring loaded artwork',await inspect(()=>{
+      const img=document.querySelector('img'),overlay=document.querySelector('ytmusic-item-thumbnail-overlay-renderer > #content');
+      return document.documentElement.hasAttribute('data-oled-night-youtube')&&
+        getComputedStyle(document.querySelector('ytmusic-app-layout > #content')).backgroundColor==='rgb(0, 0, 0)'&&
+        getComputedStyle(overlay).backgroundColor==='rgba(0, 0, 0, 0)'&&img.complete&&img.naturalWidth===480&&getComputedStyle(img).filter==='none';
+    }));
+    check('YouTube Music delayed thumbnail overlays remain transparent',await inspect(()=>{
+      const item=document.querySelector('ytmusic-two-row-item-renderer').cloneNode(true);
+      item.querySelector('#artwork').removeAttribute('id');document.getElementById('items').append(item);
+      return [...document.querySelectorAll('ytmusic-item-thumbnail-overlay-renderer > #content')].every(e=>getComputedStyle(e).backgroundColor==='rgba(0, 0, 0, 0)');
+    }));
+    await browser.storage.sync.set({extensionEnabled:false});await wait(250);
+    check('YouTube Music pause restores native canvas and artwork',await inspect(()=>
+      !document.documentElement.hasAttribute('data-oled-night-youtube')&&getComputedStyle(document.querySelector('ytmusic-app-layout > #content')).backgroundColor==='rgb(19, 19, 19)'&&getComputedStyle(document.querySelector('ytmusic-item-thumbnail-overlay-renderer > #content')).backgroundColor==='rgba(0, 0, 0, 0)'));
+    await browser.storage.sync.clear();
     for(const mode of ['auto','recolor']){
       await browser.storage.sync.set({extensionEnabled:true,globalEnabled:true,siteRules:{'127.0.0.1':mode}});
       await open('google-sheets-colors.html');

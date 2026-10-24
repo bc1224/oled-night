@@ -1,0 +1,20 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Music thumbnail overlays</title><style>
+body{margin:0;background:#131313;color:white}
+ytmusic-app,ytmusic-app-layout{display:block}
+ytmusic-app-layout > #content{background:#131313;padding:30px;min-height:400px}
+ytmusic-two-row-item-renderer{display:inline-block;margin:10px}
+.image-wrapper{display:block;position:relative;width:240px;height:135px}
+ytmusic-thumbnail-renderer,yt-img-shadow,img{display:block;width:100%;height:100%}
+ytmusic-item-thumbnail-overlay-renderer,ytmusic-background-overlay-renderer,
+ytmusic-item-thumbnail-overlay-renderer > #content{display:block;position:absolute;inset:0}
+ytmusic-background-overlay-renderer{background:linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.5));opacity:.000001}
+.image-wrapper:hover ytmusic-background-overlay-renderer{opacity:1}
+ytmusic-item-thumbnail-overlay-renderer > #content{display:grid;place-items:center;background:transparent}
+.play{color:white;font-size:32px}
+</style></head><body><ytmusic-app><ytmusic-app-layout id="layout"><div id="content" class="style-scope ytmusic-app">
+<h1>Music</h1><div id="items"><ytmusic-two-row-item-renderer><a class="image-wrapper" id="artwork">
+<ytmusic-thumbnail-renderer><yt-img-shadow><img alt="Colorful album artwork" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='270'%3E%3Cpath fill='%23e65b37' d='M0 0h240v270H0z'/%3E%3Cpath fill='%23268fc7' d='M240 0h240v270H240z'/%3E%3C/svg%3E"></yt-img-shadow></ytmusic-thumbnail-renderer>
+<ytmusic-item-thumbnail-overlay-renderer><ytmusic-background-overlay-renderer id="background"></ytmusic-background-overlay-renderer><div id="content" class="style-scope ytmusic-item-thumbnail-overlay-renderer"><span class="play">▶</span></div></ytmusic-item-thumbnail-overlay-renderer>
+</a></ytmusic-two-row-item-renderer></div>
+</div></ytmusic-app-layout></ytmusic-app></body></html>
