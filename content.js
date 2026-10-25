@@ -718,6 +718,39 @@
     }
     const thumb = switchThumb(element, computed, ctx);
     if (thumb) found.bg = thumb;
+    // Apple-style checkboxes hide the native input and paint its label cover.
+    // That inset shadow is the control boundary, not a decorative dark shadow.
+    if ((mode === "oled" || mode === "soft") && element.classList.contains("form-input__label__cover") &&
+        !element.childElementCount && !element.textContent.trim() && computed.backgroundImage === "none" &&
+        parseFloat(computed.width) >= 8 && parseFloat(computed.width) <= 32 &&
+        parseFloat(computed.height) >= 8 && parseFloat(computed.height) <= 32) {
+      const control = element.closest("label")?.control;
+      if (control?.matches('input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled)')) {
+        found.shadow = "rgb(160 160 168) 0px 0px 0px 1px inset";
+        const fill = colors.parseColor(computed.backgroundColor);
+        // A brightened face can erase its white checkmark. Keep an authored
+        // dark accent behind that marker; the boundary stays visible outside.
+        if (control.checked && fill?.a >= .5 && colors.chroma(fill) > .15 && colors.luminance(fill) < .3)
+          found.bg = computed.backgroundColor;
+      }
+    }
+    // The read-only popularity component encodes a value with tiny filled and
+    // empty circles. Preserve that state instead of mapping both to surfaces.
+    if ((mode === "oled" || mode === "soft") && element.classList.contains("popularity-dots__dot") &&
+        !element.childElementCount && !element.textContent.trim() && computed.backgroundImage === "none" &&
+        parseFloat(computed.width) > 0 && parseFloat(computed.width) <= 12 &&
+        parseFloat(computed.height) > 0 && parseFloat(computed.height) <= 12) {
+      const owner = element.getRootNode().host || element.closest("apui-wc-popularity-dots");
+      if (owner?.localName === "apui-wc-popularity-dots" && owner.getAttribute("aria-readonly") === "true") {
+        if (element.classList.contains("popularity-dots__dot--on")) {
+          found.bg = colors.mapDataPaint(colors.parseColor(computed.backgroundColor));
+          found.shadow = "none";
+        } else {
+          found.shadow = "rgb(160 160 168) 0px 0px 0px 1px inset";
+        }
+        found.data = "1";
+      }
+    }
     // Flat list rows that repeat their canvas paint should not become little
     // raised rectangles around transparent controls (appointment time slots).
     if (mode === "oled" && found.bg && computed.backgroundImage === "none" && computed.boxShadow === "none" &&
@@ -2290,6 +2323,12 @@
         else queueInteraction(path[0], true, currentPaint);
       }
       if (control) settleTrees.add(control);
+    }
+    // A hidden native choice can paint its state in an associated sibling
+    // label. That label is outside the input's event path and subtree.
+    if ((event.type === "input" || event.type === "change") &&
+        control?.matches('input[type="checkbox"], input[type="radio"]')) {
+      for (const label of control.labels || []) queueInteraction(label, true, currentPaint);
     }
     const group = path.find(node => node.matches(STATE_GROUP));
     if (group && (!stop || path.indexOf(group) < path.indexOf(stop))) queueInteraction(group, true, currentPaint);

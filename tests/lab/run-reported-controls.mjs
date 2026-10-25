@@ -14,6 +14,8 @@ import {googleAnalyticsScenario,googleAnalyticsProbe,googleAnalyticsRestored} fr
 import {googleAnalyticsPaint} from './google-analytics-paint.mjs';
 import {appStoreIconsProbe,appStoreIconsRestored,appStoreIconsToggle} from './app-store-icons-scenario.mjs';
 import {appStoreIconsPaint} from './app-store-icons-paint.mjs';
+import {appleAdsControlsScenario,appleAdsControlsProbe,appleAdsControlsRestored} from './apple-ads-controls-scenario.mjs';
+import {appleAdsControlsPaint} from './apple-ads-controls-paint.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/reported-controls');mkdirSync(output,{recursive:true});
 const server=await serveLab(join(root,'tests/e2e/site'));let browser;const checks=[];
 try{
@@ -109,8 +111,19 @@ try{
     await options.eval('chrome.storage.sync.set({extensionEnabled:false})');await wait(450);
     checks.push(await page.eval(`(${appStoreIconsRestored.toString()})()`));
   }
+  for(const [mode,appearance] of [['auto','oled'],['recolor','oled'],['recolor','soft']]){
+    await options.eval(`chrome.storage.sync.set({extensionEnabled:true,appearance:${JSON.stringify(appearance)},siteRules:${mode==='auto'?'{}':"{'127.0.0.1':'recolor'}"}})`);await wait(450);
+    await page.go(server.origin+'/apple-ads-controls.html');await wait(700);
+    checks.push(...(await page.eval(`(${appleAdsControlsScenario.toString()})()`)).map(c=>({...c,name:mode+' / '+appearance+' / '+c.name})));
+    const shot=await page.screenshot();writeFileSync(join(output,'apple-ads-'+mode+'-'+appearance+'.png'),shot);
+    checks.push(...appleAdsControlsPaint(shot,await page.eval(`(${appleAdsControlsProbe.toString()})()`)).map(c=>({...c,name:mode+' / '+appearance+' / '+c.name})));
+    await options.eval('chrome.storage.sync.set({extensionEnabled:false})');await wait(450);
+    checks.push(await page.eval(`(${appleAdsControlsRestored.toString()})()`));
+  }
   await options.eval("chrome.storage.sync.set({appearance:'oled'})");
   await options.eval("chrome.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'deepen'}})");await wait(450);
+  await page.go(server.origin+'/apple-ads-controls.html');await wait(700);
+  checks.push({...await page.eval(`(${appleAdsControlsRestored.toString()})()`),name:'Apple Ads Explicit Deepen preserves native controls'});
   await page.go(server.origin+'/reported-controls.html');await wait(700);
   checks.push({name:'Explicit Deepen blacks only preserves bright generated surfaces',ok:await page.eval("getComputedStyle(document.getElementById('save-chrome'),'::after').backgroundColor==='rgb(255, 191, 25)'"),detail:''});
   checks.push({name:'Explicit Deepen preserves native raised card depth',ok:await page.eval("getComputedStyle(document.getElementById('native-panel')).backgroundColor==='rgb(28, 28, 28)'"),detail:''});
@@ -118,5 +131,5 @@ try{
   checks.push(...(await page.eval(`(${retainedSurfacesScenario.toString()})()`)).map(c=>({...c,name:'deepen / '+c.name})));
 }finally{await browser?.close();await server.close()}
 writeFileSync(join(output,'results.json'),JSON.stringify(checks,null,2));for(const c of checks)console.log((c.ok?'PASS ':'FAIL ')+c.name+' '+c.detail);
-mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-chrome.json'),JSON.stringify(componentReceipt('Chrome',{fixtures:['app-store-icons.html','google-analytics.html','reported-controls.html','calendar-booking.html','retained-surfaces.html','layered-surfaces.html','logo-contrast.html'],modes:['auto','recolor','deepen'],checks}),null,2));
+mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-chrome.json'),JSON.stringify(componentReceipt('Chrome',{fixtures:['apple-ads-controls.html','app-store-icons.html','google-analytics.html','reported-controls.html','calendar-booking.html','retained-surfaces.html','layered-surfaces.html','logo-contrast.html'],modes:['auto','recolor','soft','deepen'],checks}),null,2));
 if(checks.some(c=>!c.ok))process.exitCode=1;
