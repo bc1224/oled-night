@@ -7,6 +7,56 @@
 
 ## 0.6.62
 
+- Keep Google Analytics chart axes and legend labels readable in OLED and Soft Dark appearances, and darken its country map without changing other canvases or chart-series colors.
+- Cover dynamic label redraws, site isolation and restoration on disable. This changes rendering on Google Analytics webpages; it does not add analytics collection to OLED Night. No new permissions; Chrome theme remains 1.0.3.
+
+## 0.6.61
+
+- Lift dark neutral and colored logo lettering without an outside glow, retaining transparent edges, bright accents, solid icon plates and product media.
+- Include bounded logo checks on native dark pages in Automatic mode; clean rendering filters on disable, including shadow roots. Add Chrome and Firefox pixel coverage. No new permissions or tracking; Chrome theme remains 1.0.3.
+
+## 0.6.60
+
+- Darken TikTok Studio's layered shell and sidebar gradients while preserving image URLs, layer order, full-bleed photographs and caption overlays.
+- Include the unreleased 0.6.59 LinkedIn repair for black title/truncation strips after scrolling. Add browser, pixel and cache-isolation regressions; retain existing performance gates.
+
+## 0.6.58
+
+- Preserve readable SVG music-control symbols, including disabled Skip, selected Follow and Shuffle states.
+- Keep proven retained-card colors stable through later background updates without adding viewport work for unchanged surfaces. The separate Downdetector report remains unverified.
+
+## 0.6.57
+
+- Keep LinkedIn profile headings and Google Calendar booking surfaces continuous inside native dark cards while preserving focus, selection and artwork.
+- Repair light shadow-component labels on dark pages and SVG controls whose shared symbol arrives late. Add repeated-update, restoration and rendered-pixel checks.
+
+## 0.6.56
+
+- Keep CSS-generated switch thumbs visible in both states without changing decorative shapes or colored thumbs.
+- Add Chrome and Firefox keyboard, state, focus and actual thumb/track pixel regressions with existing performance and media gates retained.
+
+## 0.6.55
+
+- Preserve product photos, transparent color swatches and selected radio indicators; keep related header surfaces continuous and raised cards distinct.
+- Bound large page updates and reduce focus/navigation work. Use ChatGPT's native palette with CSS-only OLED base surfaces for streaming conversations.
+
+## 0.6.54
+
+- Keep filled/unfilled rating stars visible, including Backcountry, without changing the rating.
+- Give ChatGPT's empty and expanded composer a consistent raised surface. Cover live updates, expansion/collapse and disable restoration.
+
+## 0.6.53
+
+- Preserve product photos on native dark pages by correcting multiply/darken blending against a recolored tile.
+- Add Chrome and Firefox live-image/restoration checks and Chrome rendered-pixel coverage for the native-dark product-image case.
+
+## 0.6.52
+
+- Keep Suno-style selected button icons readable after darkening and avoid inverting already-lightened ink.
+- Retain raised native dark cards in Hetzner Cloud Console. Add selection, live-update, disable and explicit Deepen-mode regressions.
+
+## 0.6.62
+
 - Restore readable Google Analytics chart axes and legends while preserving data series colors.
 - Darken the Analytics map canvas without filtering map controls or other canvases. Disabling OLED Night restores the original chart and map paint.
 

@@ -14,9 +14,15 @@ Follow Google's [Chrome Web Store API setup](https://developer.chrome.com/docs/w
 
 ## Current release
 
+Use the [latest GitHub release](https://github.com/bc1224/oled-night/releases/latest) for current source and download assets, and [CHANGELOG.md](CHANGELOG.md) for release summaries. Version 0.6.62 improves Google Analytics chart labels and country-map rendering; 0.6.61 introduced readable dark logo ink without an outside glow. Companion Chrome theme remains 1.0.3. Store approval and installed-browser updates are separate; check the public listing before claiming a version is available there.
+
+Chrome description source is `store/LISTING.md`; Firefox description is `store/FIREFOX-LISTING.txt`. Both describe optional reviewed screenshots and direct public issue submission. Updating these descriptions does not require uploading a new extension package. Preserve pending package reviews.
+
 When a necessary fix supersedes a pending Chrome review, the manual workflow's `replace_pending_version` input may name that exact older version. After the exact-source test gate, the uploader cancels only a matching pending review, confirms cancellation, then uploads and submits the newer package. Blank preserves pending reviews. A different version, unknown state or failed confirmation stops replacement. Do not use this for an unrelated pending release or duplicate an already submitted version.
 
 For private Chrome validation details, a manual workflow run can supply `diagnostic_public_key` as a base64-encoded RSA PEM public key. On a Chrome API failure, the workflow saves an AES-256-GCM report with its key encrypted using RSA-OAEP-SHA256, retained for one day. Keep the matching private key outside the repository and delete it after inspection. Public logs contain only sanitized status and reason codes. This option does not change the submission request.
+
+## Historical release: 0.6.38
 
 Version **0.6.38** batches frame-created surfaces before paint and includes site event-handler writes before draining observer records. It retains the late-root interaction fix. No new permissions; theme remains 1.0.3.
 
