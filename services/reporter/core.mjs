@@ -7,10 +7,11 @@ async function maintainerAccess(request,env){
   if(!/^Bearer [A-Za-z0-9_]{8,255}$/.test(authorization||''))return json({error:'Maintainer authentication required'},401);
   try{
     // Authenticate the caller, never the service's issue-creation credential.
-    // A fixed origin and redirect refusal keep caller tokens out of other hosts.
+    // Workers supports manual redirects. Reject non-200 responses below so a
+    // redirect cannot forward caller tokens to another host.
     const response=await (env.fetch||fetch)('https://api.github.com/user',{
       headers:{Authorization:authorization,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'OLED-Night-Reporter'},
-      redirect:'error',signal:AbortSignal.timeout(12000)
+      redirect:'manual',signal:AbortSignal.timeout(12000)
     });
     if(response.status===401)return json({error:'Maintainer authentication required'},401);
     if(response.status!==200)return json({error:'Maintainer authentication unavailable'},503);
@@ -71,7 +72,7 @@ export async function receiveReport(request,env,storage){
   let response;
   try{response=await (env.fetch||fetch)('https://api.github.com/repos/bc1224/oled-night/issues',{
     method:'POST',headers:{Authorization:'Bearer '+env.GITHUB_TOKEN,'Content-Type':'application/json',Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'OLED-Night-Reporter'},
-    body:JSON.stringify({title:'Private OLED Night report',body,labels:['oled-report']}),signal:AbortSignal.timeout(12000),redirect:'error'
+    body:JSON.stringify({title:'Private OLED Night report',body,labels:['oled-report']}),signal:AbortSignal.timeout(12000),redirect:'manual'
   })}catch{return json({error:'GitHub response was unavailable. This report will not be sent twice.'},502)}
   if(!response.ok){
     // A definitive rejection is safe to retry; ambiguous server errors are not.

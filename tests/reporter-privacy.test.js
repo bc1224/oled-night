@@ -7,6 +7,9 @@ function fixture(){
  const storage={get:async k=>{reads.push(k);return structuredClone(map.get(k))},put:async(k,v)=>map.set(k,structuredClone(v)),delete:async k=>map.delete(k),getAlarm:async()=>null,setAlarm:async()=>{}};
  const env={GITHUB_TOKEN:'synthetic_service_credential',fetch:async(url,options)=>{
   calls.push({url,...options});
+  // Workerd supports follow and manual. Node's additional error mode must not
+  // mask a hosted intake or authenticated-read failure in these boundary tests.
+  if(options.redirect==='error')throw new TypeError('Unsupported Worker redirect mode');
   if(url==='https://api.github.com/user')return Response.json({login:'bc1224',type:'User'});
   return Response.json({html_url:'https://github.com/bc1224/oled-night/issues/123'},{status:201});
  }};
@@ -51,7 +54,7 @@ test('old clients retain scrubbed details privately with only a generic public t
  assert.equal(Buffer.from(await screenshot.arrayBuffer()).toString('base64'),image.data);
  for(const call of calls.filter(row=>row.url.endsWith('/user'))){
   assert.equal(call.headers.Authorization,'Bearer '+ownerToken);
-  assert.equal(call.redirect,'error');
+  assert.equal(call.redirect,'manual');
  }
 });
 test('wrong identity and every identity-provider error fail closed for reports and legacy images',async()=>{
@@ -87,4 +90,18 @@ test('authorized legacy images still work and expired records cannot be read bef
  assert.equal((await readReport(get('/v1/reports/'+id,ownerToken),storage,env)).status,404);
  assert.equal((await readScreenshot(get('/v1/screenshots/not-an-id',ownerToken),storage,env)).status,404);
  assert.equal((await readReport(get('/v1/reports/not-an-id',ownerToken),storage,env)).status,404);
+});
+test('issue-creation redirects fail closed without forwarding service credentials',async()=>{
+ const {receiveReport}=await import('../services/reporter/core.mjs');
+ const {storage,env,calls}=fixture();
+ env.fetch=async(url,options)=>{
+  calls.push({url,...options});
+  return new Response(null,{status:302,headers:{Location:'https://attacker.example'}});
+ };
+ const raw={requestId:crypto.randomUUID(),description:'synthetic redirect check',report:{host:'example.com',version:'0.6.63'}};
+ const response=await receiveReport(new Request('https://reporter.test/v1/issues',{method:'POST',headers:{'x-client-id':'synthetic'},body:JSON.stringify(raw)}),env,storage);
+ assert.equal(response.status,502);
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].url,'https://api.github.com/repos/bc1224/oled-night/issues');
+ assert.equal(calls[0].redirect,'manual');
 });
