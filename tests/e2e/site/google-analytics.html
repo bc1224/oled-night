@@ -1,0 +1,24 @@
+<!doctype html>
+<html><meta charset="utf-8"><title>Analytics chart paint fixture</title>
+<style>
+body{margin:32px;background:#fff;color:#202124;font:16px Arial}
+section{background:#fff;padding:24px;width:680px;border:1px solid #dadce0}
+ga-line-chart,ga-geo-chart-simple{display:block;margin-bottom:24px}
+svg{overflow:visible}.x-axis text,.y-axis text{fill:#5f6368}.legend text{fill:rgba(0,0,0,.87)}
+.series{stroke:#1a73e8;stroke-width:3;fill:none}.benchmark{stroke:#129eaf;fill:none}
+ga-geo-chart-simple canvas{width:330px;height:220px}button{background:#fff;color:#333}
+</style>
+<h1>Analytics</h1><section><h2>Active users</h2>
+<ga-line-chart><svg width="620" height="180">
+<path id="series" class="series" d="M10 90L100 120L200 80L300 110L430 85L560 110"/>
+<path id="benchmark" class="benchmark" d="M10 100L560 100"/>
+<g class="x-axis"><text id="axis" x="10" y="145" fill="currentColor"><tspan>18</tspan><tspan dy="14" x="10">Oct</tspan></text></g>
+<g class="y-axis"><text x="590" y="100" fill="currentColor">2</text></g>
+<g class="legend"><g class="legend-entry"><text id="legend" x="50" y="175">Last 7 days</text></g></g>
+</svg></ga-line-chart>
+<ga-geo-chart-simple><div role="region" aria-label="Map"><canvas id="map" width="330" height="220"></canvas><button id="zoom">Zoom in</button></div></ga-geo-chart-simple>
+<canvas id="unrelated" width="80" height="40"></canvas>
+</section>
+<script>
+for(const id of ['map','unrelated']){const c=document.getElementById(id).getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,c.canvas.width,c.canvas.height);c.fillStyle='#f1f3f4';c.fillRect(30,20,170,130);c.fillStyle='#1a73e8';c.fillRect(100,80,15,15)}
+</script></html>

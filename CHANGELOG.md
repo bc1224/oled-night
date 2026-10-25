@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.62
+
+- Restore readable Google Analytics chart axes and legends while preserving data series colors.
+- Darken the Analytics map canvas without filtering map controls or other canvases. Disabling OLED Night restores the original chart and map paint.
+
 ## 0.6.51
 
 - Give the report form enough height even when OLED Night is paused, with fixed actions and a scrolling body.

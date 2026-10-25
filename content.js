@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.61";
+  const VERSION = "0.6.62";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -2885,6 +2885,16 @@
       html[data-oled-night-invert] { filter: invert(1) hue-rotate(180deg) !important; background: #fff !important; }
       html[data-oled-night-root]:not([data-oled-night-invert]) img[${LOGO}] { filter: invert(1) hue-rotate(180deg) !important; }
       html[data-oled-night-root]:not([data-oled-night-invert]) img[${LOGO_INK}] { filter: url("#oled-night-logo-ink") !important; }
+      /* Analytics paints SVG labels independently of HTML color. Lift only
+         its axis and legend ink, leaving the data series and swatches intact. */
+      ${root}[data-oled-night-site="google-analytics"]:is([data-oled-night-mode="oled"], [data-oled-night-mode="soft"]) :is(ga-line-chart, ga-bar-chart, pie-chart) :is(.x-axis, .y-axis, .legend) :is(text, tspan):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) {
+        fill: hsl(0 0% var(--oln-light, 88%)) !important;
+      }
+      /* This map is a light Google Maps canvas. Filter the map pixels alone;
+         its controls, attribution, and unrelated canvases keep normal paint. */
+      ${root}[data-oled-night-site="google-analytics"]:is([data-oled-night-mode="oled"], [data-oled-night-mode="soft"]) ga-geo-chart-simple canvas:not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) {
+        filter: invert(1) hue-rotate(180deg) !important;
+      }
       /* Apple's auth widget paints autofill with an inset shadow and explicit
          text-fill, independently of color. Cover UA autofill/preview paint in
          every input state; keep a separate focus outline visible. */

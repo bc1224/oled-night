@@ -10,6 +10,8 @@ import {sampleChatgptPixels} from './chatgpt-controls-paint.mjs';
 import {retainedSurfacesScenario} from './retained-surfaces-scenario.mjs';
 import {layeredSurfacesScenario,layeredSurfacesRestored} from './layered-surfaces-scenario.mjs';
 import {logoContrastProbe,logoContrastPaint,logoContrastRestored} from './logo-contrast-scenario.mjs';
+import {googleAnalyticsScenario,googleAnalyticsProbe,googleAnalyticsRestored} from './google-analytics-scenario.mjs';
+import {googleAnalyticsPaint} from './google-analytics-paint.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/reported-controls');mkdirSync(output,{recursive:true});
 const server=await serveLab(join(root,'tests/e2e/site'));let browser;const checks=[];
 try{
@@ -85,6 +87,16 @@ try{
   writeFileSync(join(output,'logo-contrast.png'),logoShot);checks.push(...logoContrastPaint(logoShot,logoProbe));
   await options.eval('chrome.storage.sync.set({extensionEnabled:false})');await wait(450);
   checks.push(await page.eval(`(${logoContrastRestored.toString()})()`));
+  for(const appearance of ['oled','soft']){
+    await options.eval(`chrome.storage.sync.set({extensionEnabled:true,appearance:${JSON.stringify(appearance)},siteRules:{'127.0.0.1':'recolor'}})`);await wait(450);
+    await page.go(server.origin+'/google-analytics.html');await wait(700);
+    checks.push(...(await page.eval(`(${googleAnalyticsScenario.toString()})()`)).map(c=>({...c,name:appearance+' / '+c.name})));
+    const shot=await page.screenshot();writeFileSync(join(output,'google-analytics-'+appearance+'.png'),shot);
+    checks.push(...googleAnalyticsPaint(shot,await page.eval(`(${googleAnalyticsProbe.toString()})()`)));
+    await options.eval('chrome.storage.sync.set({extensionEnabled:false})');await wait(450);
+    checks.push(await page.eval(`(${googleAnalyticsRestored.toString()})()`));
+  }
+  await options.eval("chrome.storage.sync.set({appearance:'oled'})");
   await options.eval("chrome.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'deepen'}})");await wait(450);
   await page.go(server.origin+'/reported-controls.html');await wait(700);
   checks.push({name:'Explicit Deepen blacks only preserves bright generated surfaces',ok:await page.eval("getComputedStyle(document.getElementById('save-chrome'),'::after').backgroundColor==='rgb(255, 191, 25)'"),detail:''});
@@ -93,5 +105,5 @@ try{
   checks.push(...(await page.eval(`(${retainedSurfacesScenario.toString()})()`)).map(c=>({...c,name:'deepen / '+c.name})));
 }finally{await browser?.close();await server.close()}
 writeFileSync(join(output,'results.json'),JSON.stringify(checks,null,2));for(const c of checks)console.log((c.ok?'PASS ':'FAIL ')+c.name+' '+c.detail);
-mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-chrome.json'),JSON.stringify(componentReceipt('Chrome',{fixtures:['reported-controls.html','calendar-booking.html','retained-surfaces.html','layered-surfaces.html','logo-contrast.html'],modes:['auto','recolor','deepen'],checks}),null,2));
+mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-chrome.json'),JSON.stringify(componentReceipt('Chrome',{fixtures:['google-analytics.html','reported-controls.html','calendar-booking.html','retained-surfaces.html','layered-surfaces.html','logo-contrast.html'],modes:['auto','recolor','deepen'],checks}),null,2));
 if(checks.some(c=>!c.ok))process.exitCode=1;
