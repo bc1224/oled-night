@@ -10,12 +10,10 @@ assert.equal(r.scrub({...raw,host:'https://example.com/private?token=PRIVATE'}).
 assert.equal(r.scrub({...raw,host:'127.0.0.1'}).host,'');
 assert.equal(r.scrub({...raw,lowContrast:[{color:'url(https://PRIVATE)',ratio:Infinity}]}).lowContrast[0].color,undefined);
 const url=new URL(r.issueUrl(clean));
-assert.equal(url.origin,'https://github.com');
-assert.equal(url.pathname,'/bc1224/oled-night/issues/new');
-assert.ok(url.searchParams.get('body').includes('oled-report-v1'));
-assert.ok(!url.searchParams.get('body').includes('PRIVATE'));
+assert.equal(url.href,'https://bc1224.github.io/oled-night/#report-a-problem');
+assert.equal(url.search,'','legacy draft links never encode report contents into a public URL');
 assert.equal(r.scrub({...raw,lowContrast:Array(200).fill(raw.lowContrast[0])}).lowContrast.length,12);
-console.log('PASS public reports allowlist diagnostics and omit private page data');
+console.log('PASS reports allowlist diagnostics and legacy draft links direct users to private intake');
 (async()=>{
  const opened=[],openTab=tab=>opened.push(tab);
  assert.equal(await r.openDraft(raw,{requestConsent:()=>false,openTab}),false);

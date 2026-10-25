@@ -5,9 +5,9 @@ Bug reports and pull requests are welcome.
 ## Reporting a site that looks wrong
 1. On the broken page, open the OLED Night popup and click **Report a broken site** to preview scrubbed diagnostics.
 2. Add optional notes. If useful, choose **Screenshot this page**, paste, drop or select an image. Review it and choose **Use screenshot**.
-3. Choose **Submit report** to create a public GitHub issue through the reporting service. No GitHub account is required. Firefox asks for optional sharing consent; declining keeps dark mode working. Nothing is uploaded before submission.
+3. Choose **Submit report** to send the report privately to the maintainer through the reporting service. No GitHub account is required. Only a generic tracking issue is public. Firefox asks for optional sharing consent; declining keeps dark mode working. Nothing is uploaded before submission.
 
-Automatic diagnostics omit page text, field values, URL paths, query strings, identifiers and cookies. Reports include the current domain, previewed diagnostics and any notes or screenshot you choose. Review them for private information: issues and attached images are public. Images are hosted for up to 30 days; GitHub may retain cached copies. See the [privacy policy](store/PRIVACY.md).
+Automatic diagnostics omit page text, field values, URL paths, query strings, identifiers and cookies. Reports include the current domain, previewed diagnostics and any notes or screenshot you choose. Review them before sharing with the maintainer. Details and screenshots are stored privately for up to 30 days. GitHub receives only a generic title and tracking ID. Anything you manually post to GitHub issues or comments is public. See the [privacy policy](store/PRIVACY.md) and [maintainer retrieval instructions](PRIVATE_REPORTS.md).
 
 **Save full report locally** is a separate download. It can contain short visible text snippets and element identifiers. Review it before sharing; never attach private account data or screenshots of sensitive pages. Normal recoloring stays local, with no analytics or tracking.
 

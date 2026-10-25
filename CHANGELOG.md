@@ -4,6 +4,8 @@
 
 - Keep App Store privacy and accessibility icons readable when the page already inverts their SVG wrappers for dark mode.
 - Preserve authored icon colors through that inversion in Automatic and Recolor modes, including inherited currentColor and two tone badges. Cover rendered pixels, live filter changes and disabling the extension in Chrome and Firefox.
+- Store optional report details and screenshots privately for up to 30 days, including reports sent by older clients. Publish only a generic GitHub tracking issue and require verified maintainer authentication for all report and image reads, including old screenshot URLs.
+- Clarify private submission and public comments in the popup, website and store privacy copy. Add explicit local maintainer retrieval and legacy preservation tools; keep real reports out of source and releases.
 
 ## 0.6.62
 

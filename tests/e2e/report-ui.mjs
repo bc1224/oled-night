@@ -19,6 +19,7 @@ try {
   await tab.size(360,600);
   await tab.go(`chrome-extension://${id}/popup.html`);
   await tab.eval("document.getElementById('report').click()");await wait(80);
+  assert.equal(await tab.eval("document.getElementById('reportDisclosure').textContent.includes('private to the maintainer')&&document.getElementById('reportDisclosure').textContent.includes('generic tracking issue')"),true,'private intake disclosure is visible before submission');
   writeFileSync(join(out,'paused-report.png'),await tab.screenshot());
   assert.ok(await tab.eval('document.body.getBoundingClientRect().height>=580'),'opening a report expands a paused toolbar popup to a usable height');
   assert.equal(await tab.eval('document.activeElement.id'),'reportDescription','report opens ready for native keyboard paste');
@@ -45,6 +46,7 @@ try {
   writeFileSync(join(out,'report.png'),await tab.screenshot());
   await tab.eval("document.getElementById('reportDescription').value='Button is unreadable';document.getElementById('reportSubmit').click();document.getElementById('reportSubmit').click()");await wait(80);
   assert.equal(await tab.eval("window.__submissions.length===1&&!document.getElementById('reportPreview').open&&document.getElementById('reportSuccess').open"),true,'one submit shows success and closes report');
+  assert.equal(await tab.eval("document.getElementById('reportSuccess').textContent.includes('private to the maintainer')&&document.getElementById('reportSuccess').textContent.includes('comments is public')&&document.getElementById('reportIssueLink').textContent==='View public tracking issue'"),true,'success distinguishes private contents from public comments');
   assert.equal(await tab.eval("'data:'+window.__submissions[0].screenshot.type+';base64,'+window.__submissions[0].screenshot.data===window.__attachedImage"),true,'submitted attachment is exactly the reviewed image');
   writeFileSync(join(out,'success.png'),await tab.screenshot());
   console.log('PASS screenshot review, visible footer, single submit and success popup');

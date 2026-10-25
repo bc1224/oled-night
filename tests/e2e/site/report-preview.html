@@ -1,12 +1,12 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><title>Scrubbed public report preview</title>
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Scrubbed private report preview</title>
 <style>body{background:white;color:#222;font:16px system-ui;margin:24px}pre{white-space:pre-wrap;border:1px solid #888;padding:12px;max-width:650px}button{padding:12px}</style>
-<h1 data-lab-check="text">Public report preview</h1>
+<h1 data-lab-check="text">Private report preview</h1>
 <p data-lab-check="text">Synthetic diagnostics only. Submitting an issue requires an explicit click. This lab simulates the service without contacting GitHub.</p>
 <button id="report" data-lab-check="text surface">Report a broken site</button>
 <dialog id="confirm" aria-labelledby="confirmation-title" aria-describedby="disclosure">
 <h2 id="confirmation-title">Send a bug report?</h2>
-<p id="disclosure">This sends the domain, extension settings and technical diagnostics shown below through our hosted service as a public GitHub issue. No browsing history log, page text, field values, screenshots or URL paths are included. Click Submit issue to publish it directly. Submitted issues are public and retained by GitHub; Request hashes and issue links expire within 49 hours; report bodies are not retained by the service. Automation may reproduce, fix and test the bug; releases require passing tests and independent review.</p>
-<pre id="preview" data-lab-check="text border"></pre><button id="cancel" autofocus>Cancel</button><button id="send">Submit issue</button></dialog>
+<p id="disclosure">This sends the domain, extension settings and technical diagnostics shown below privately to the maintainer through our hosted service for up to 30 days. No browsing history log, page text, field values or URL paths are included. Click Submit report to send it. Only a generic public tracking issue is created, with no report details or image link. Anything you manually post in GitHub comments is public. Request hashes and issue links expire within 49 hours. Automation may reproduce, fix and test the bug; releases require passing tests and independent review.</p>
+<pre id="preview" data-lab-check="text border"></pre><button id="cancel" autofocus>Cancel</button><button id="send">Submit report</button></dialog>
 <p id="privacy-result" data-lab-check="text"></p>
 <script src="../report-utils.js"></script><script>
 const raw={host:'example.com',version:'0.6.41',mode:'oled',active:true,userAgent:'PRIVATE_AGENT',settings:{brightness:88,contrast:72},lowContrast:[{text:'PRIVATE_TEXT',element:'#PRIVATE_ID',color:'rgb(34, 34, 34)',background:'rgb(255, 255, 255)',ratio:1.32}]};

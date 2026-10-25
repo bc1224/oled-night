@@ -768,7 +768,7 @@ try {
   await click("report");
   const reportPreview=await popup.eval("({open:document.getElementById('reportPreview').open,text:document.getElementById('reportDiagnostics').textContent,policy:document.getElementById('reportPreview').textContent})");
   check("report preview opens locally without sending data",reportPreview.open && await ext.eval("chrome.tabs.query({}).then(t=>t.length)")===beforeReportTabs);
-  check("report preview excludes private page text and selectors",!/PRIVATE|SENTINEL|element|userAgent|origins/.test(reportPreview.text) && reportPreview.policy.includes('retained by GitHub')&&reportPreview.policy.includes('No browsing-history log'),reportPreview.text);
+  check("report preview excludes private page text and selectors",!/PRIVATE|SENTINEL|element|userAgent|origins/.test(reportPreview.text) && reportPreview.policy.includes('stored privately')&&reportPreview.policy.includes('No browsing-history log'),reportPreview.text);
   await click("reportCancel");
   check("report cancel sends nothing",await popup.eval("!document.getElementById('reportPreview').open") && await ext.eval("chrome.tabs.query({}).then(t=>t.length)")===beforeReportTabs);
   await popup.eval("window.__originalFetch=window.fetch;window.__submissions=[];window.fetch=async (url,options)=>{window.__submissions.push({url,body:options.body});return Response.json({url:'https://github.com/bc1224/oled-night/issues/123'},{status:201})};");
