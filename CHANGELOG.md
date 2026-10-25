@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.63
+
+- Keep App Store privacy and accessibility icons readable when the page already inverts their SVG wrappers for dark mode.
+- Preserve authored icon colors through that inversion in Automatic and Recolor modes, including inherited currentColor and two tone badges. Cover rendered pixels, live filter changes and disabling the extension in Chrome and Firefox.
+
 ## 0.6.62
 
 - Keep Google Analytics chart axes and legend labels readable in OLED and Soft Dark appearances, and darken its country map without changing other canvases or chart-series colors.
