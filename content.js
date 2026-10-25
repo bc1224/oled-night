@@ -725,7 +725,7 @@
         parseFloat(computed.width) >= 8 && parseFloat(computed.width) <= 32 &&
         parseFloat(computed.height) >= 8 && parseFloat(computed.height) <= 32) {
       const control = element.closest("label")?.control;
-      if (control?.matches('input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled)')) {
+      if (control?.matches('input[type="checkbox"]:not(:disabled)')) {
         found.shadow = "rgb(160 160 168) 0px 0px 0px 1px inset";
         const fill = colors.parseColor(computed.backgroundColor);
         // A brightened face can erase its white checkmark. Keep an authored
@@ -2324,10 +2324,10 @@
       }
       if (control) settleTrees.add(control);
     }
-    // A hidden native choice can paint its state in an associated sibling
+    // A hidden native checkbox can paint its state in an associated sibling
     // label. That label is outside the input's event path and subtree.
     if ((event.type === "input" || event.type === "change") &&
-        control?.matches('input[type="checkbox"], input[type="radio"]')) {
+        control?.matches('input[type="checkbox"]')) {
       for (const label of control.labels || []) queueInteraction(label, true, currentPaint);
     }
     const group = path.find(node => node.matches(STATE_GROUP));

@@ -9,6 +9,7 @@ export async function appleAdsControlsScenario(){
   check('updated popularity retains three filled and two empty values',dots.filter(d=>d.classList.contains('popularity-dots__dot--on')).length===3&&popularity.getAttribute('aria-valuenow')==='3'&&getComputedStyle(dots[2]).backgroundColor===getComputedStyle(dots[0]).backgroundColor,{value:popularity.getAttribute('aria-valuenow'),updated:getComputedStyle(dots[2]).backgroundColor});
   check('control and dot geometry remain unchanged',parseFloat(getComputedStyle(cover).width)===16&&dots.every(d=>parseFloat(getComputedStyle(d).width)===6),{});
   check('unrelated decorative inset is not promoted to a control boundary',!getComputedStyle(document.getElementById('unrelated')).boxShadow.includes('160, 160, 168'),{});
+  check('unrelated radio cover retains generic paint handling',!getComputedStyle(document.getElementById('radio-cover')).boxShadow.includes('160, 160, 168'),{});
   return checks;
 }
 export function appleAdsControlsProbe(){
