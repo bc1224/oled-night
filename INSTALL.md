@@ -1,5 +1,9 @@
 # Installing OLED Night
 
+For normal installation and automatic updates, use the [Chrome Web Store](https://chromewebstore.google.com/detail/oled-night/afffgalhockmjmknnaljghdneaeichbl) or [Mozilla Add-ons for Firefox](https://addons.mozilla.org/en-US/firefox/addon/oled-night/). Firefox desktop 142 or newer is supported. The Chrome theme is separate and does not work in Firefox. See [FIREFOX.md](FIREFOX.md) for temporary Firefox development installs.
+
+## Manual Chrome or Chromium installation
+
 Download [`oled-night.zip`](https://github.com/bc1224/oled-night/releases/latest/download/oled-night.zip). It works in Chrome, Edge, Brave and other Chromium browsers.
 
 1. Unzip the file into a folder you'll keep, such as `Documents\OLED Night`. Don't delete the folder afterwards: the browser loads the extension from it.
@@ -28,6 +32,7 @@ The extension darkens websites. To make Chrome's own tab bar, toolbar and new-ta
 
 ## Using it
 - Click the toolbar icon to switch it on or off, pick a mode for the current site, and adjust brightness and contrast.
-- **Alt+Shift+D** turns the current site on or off.
+- **Alt+Shift+E** pauses or resumes OLED Night everywhere while preserving site rules; **Alt+Shift+D** turns the current site on or off.
 - Alternate keys are **Ctrl+Shift+9** for OLED Night everywhere and **Ctrl+Shift+8** for the current site (Command on macOS). The popup and Settings show assigned keys; use **Settings & defaults → Change shortcuts** if a key is unavailable.
-- If a site looks wrong, try **Deepen blacks only** or **Invert** for that site. If it still looks wrong, click **Report a broken site**, preview the scrubbed diagnostics and open a GitHub draft. Issues are public; keep private details and sensitive screenshots out. Full local report downloads can contain visible text and identifiers, so review them before sharing.
+- If a site looks wrong, try **Deepen blacks only**, **Invert** for a compatible canvas app, or **Off** for that site. Figma always keeps its native colors.
+- To report a problem, choose **Report a broken site**, review the diagnostics and add optional notes. Use **Screenshot this page**, paste, drop or choose an image, review it, then choose **Use screenshot**. Nothing is uploaded until **Submit report** creates a public GitHub issue. No GitHub sign-in is required. Keep private details out of notes and screenshots. Full local report downloads can contain text and identifiers, so review them before sharing.

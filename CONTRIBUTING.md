@@ -4,12 +4,15 @@ Bug reports and pull requests are welcome.
 
 ## Reporting a site that looks wrong
 1. On the broken page, open the OLED Night popup and click **Report a broken site** to preview scrubbed diagnostics.
-2. Choose **Open GitHub draft**, describe the bug and submit the issue there. Firefox asks for optional sharing consent first. Drafts omit page text, field values, URL paths, identifiers, screenshots and cookies.
+2. Add optional notes. If useful, choose **Screenshot this page**, paste, drop or select an image. Review it and choose **Use screenshot**.
+3. Choose **Submit report** to create a public GitHub issue through the reporting service. No GitHub account is required. Firefox asks for optional sharing consent; declining keeps dark mode working. Nothing is uploaded before submission.
+
+Automatic diagnostics omit page text, field values, URL paths, query strings, identifiers and cookies. Reports include the current domain, previewed diagnostics and any notes or screenshot you choose. Review them for private information: issues and attached images are public. Images are hosted for up to 30 days; GitHub may retain cached copies. See the [privacy policy](store/PRIVACY.md).
 
 **Save full report locally** is a separate download. It can contain short visible text snippets and element identifiers. Review it before sharing; never attach private account data or screenshots of sensitive pages. Normal recoloring stays local, with no analytics or tracking.
 
 ## Working on the code
-No build step and no dependencies are needed beyond Node 20+ and Chrome.
+Unpacked development needs no build step. Use Node.js 22 or newer and Chrome; `npm ci` installs the browser test tooling. Runtime packages contain no npm dependencies.
 
 1. Load the folder with **Load unpacked** at `chrome://extensions`.
 2. After you edit, click the reload arrow on the extension card and refresh the tab.
@@ -24,7 +27,7 @@ No build step and no dependencies are needed beyond Node 20+ and Chrome.
 Please keep changes focused, and explain what site or behavior they fix.
 
 ## Release downloads
-Run `node tools/package.mjs` and attach both versioned ZIPs plus `dist/oled-night.zip` and `dist/oled-night-theme.zip` to each GitHub release. Mark the release as latest when ready. The website and README use GitHub's `/releases/latest/download/` links, so they automatically follow that release without a website edit. Keep the stable asset names on every release.
+Run `node tools/package.mjs` for a new release and publish the versioned Chrome extension, Firefox extension, companion theme and reviewer source ZIPs, plus stable aliases `oled-night.zip`, `oled-night-firefox.zip` and `oled-night-theme.zip`. The website and README follow GitHub's latest release through those aliases. Keep every published version's assets immutable and do not bump an unchanged theme. Exact-source tests and store submission requirements are in [STORE_SUBMISSION.md](STORE_SUBMISSION.md). Store submission, approval and installed-browser updates are separate steps.
 
 ## Firefox
-See [FIREFOX.md](FIREFOX.md) for building and running the Firefox preview. `npm ci` installs test tooling only; runtime packages contain no npm dependencies. Run Firefox lint and runtime checks in addition to Chrome checks when changing shared code. Do not publish an unsigned Firefox ZIP as a permanent installer.
+Use the [Mozilla Add-ons listing](https://addons.mozilla.org/en-US/firefox/addon/oled-night/) for normal installation. See [FIREFOX.md](FIREFOX.md) for temporary development installs. Run Firefox lint and runtime checks in addition to Chrome checks when changing shared code. Do not present an unsigned Firefox ZIP as a permanent installer.
