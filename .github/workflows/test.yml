@@ -32,7 +32,6 @@ jobs:
         run: node tests/e2e/run.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
-          OLED_PROFILE_ROWS: '1'
       - name: Report UI, screenshot review and submission feedback
         run: node tests/e2e/report-ui.mjs
         env:

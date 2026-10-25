@@ -3147,15 +3147,22 @@
   // Brightness/contrast live in two root custom properties that every mapped
   // color references (custom properties also inherit into shadow trees).
   function applyTuning() {
-    const tuning = Settings.tuningFor(settings, hostname());
+    const host = hostname(), tuning = Settings.tuningFor(settings, host);
     const root = document.documentElement.style;
     const brightness = clamp(tuning.brightness, 40, 100);
     root.setProperty("--oln-light", `${brightness}%`);
     root.setProperty("--oln-strength", String(clamp(tuning.contrast, 0, 100) / 100));
     if (tuning.dimImages) document.documentElement.setAttribute("data-oled-night-dim", "");
     else document.documentElement.removeAttribute("data-oled-night-dim");
-    root.setProperty("--oled-night-youtube-primary", `hsl(0 0% ${brightness}%)`);
-    root.setProperty("--oled-night-youtube-secondary", `hsl(0 0% ${Math.max(40, brightness - 18)}%)`);
+    // Only YouTube consumes this inherited palette. Other pages should not
+    // carry unused values through every descendant during brightness changes.
+    if (colorsApi().usesNativeSafeMode(host)) {
+      root.setProperty("--oled-night-youtube-primary", `hsl(0 0% ${brightness}%)`);
+      root.setProperty("--oled-night-youtube-secondary", `hsl(0 0% ${Math.max(40, brightness - 18)}%)`);
+    } else {
+      root.removeProperty("--oled-night-youtube-primary");
+      root.removeProperty("--oled-night-youtube-secondary");
+    }
   }
 
   function enable() {
