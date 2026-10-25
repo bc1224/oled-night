@@ -14,7 +14,7 @@ Follow Google's [Chrome Web Store API setup](https://developer.chrome.com/docs/w
 
 ## Current release
 
-Use the [latest GitHub release](https://github.com/bc1224/oled-night/releases/latest) for current source and download assets, and [CHANGELOG.md](CHANGELOG.md) for release summaries. Version 0.6.62 improves Google Analytics chart labels and country-map rendering; 0.6.61 introduced readable dark logo ink without an outside glow. Companion Chrome theme remains 1.0.3. Store approval and installed-browser updates are separate; check the public listing before claiming a version is available there.
+Use the [latest GitHub release](https://github.com/bc1224/oled-night/releases/latest) for current source and download assets, and [CHANGELOG.md](CHANGELOG.md) for release summaries. Version 0.6.64 improves App Store privacy and accessibility icons, Apple Ads checkbox and popularity-dot contrast, and private report submission. Companion Chrome theme remains 1.0.3. Store approval and installed-browser updates are separate; check the public listing before claiming a version is available there.
 
 Chrome description source is `store/LISTING.md`; Firefox description is `store/FIREFOX-LISTING.txt`. Both describe optional reviewed screenshots, private report contents and generic public tracking issues. Updating these descriptions does not require uploading a new extension package. Preserve pending package reviews. Deploy and verify the private reporter before releasing packages or copy that promises private intake. See [PRIVATE_REPORTS.md](PRIVATE_REPORTS.md).
 
