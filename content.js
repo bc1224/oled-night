@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.62";
+  const VERSION = "0.6.63";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -1035,6 +1035,27 @@
     return paints.find(p => p.fixed && colors.luminance(p.color) < .2)?.color || null;
   }
 
+  function hasAuthoredIconInversion(svg, rect, ctx) {
+    let inverted = false;
+    for (let owner = svg, depth = 0; owner && depth < 5; owner = owner.parentElement, depth++) {
+      const style = ctx.style(owner);
+      if (owner !== svg) {
+        // Only transparent, icon-sized wrappers participate. A filtered card
+        // or page also transforms its backdrop and is a different paint seam.
+        if (owner.childElementCount !== 1 || owner.textContent.trim()) break;
+        const background = colorsApi().parseColor(style.backgroundColor);
+        if (background?.a > 0) break;
+        const bounds = owner.getBoundingClientRect();
+        if (bounds.width > rect.width + 2 || bounds.height > rect.height + 2) break;
+      }
+      const filter = style.filter;
+      if (filter === "none") continue;
+      if (!/^invert\((?:1|100%)\)$/.test(filter)) return false;
+      inverted = !inverted;
+    }
+    return inverted;
+  }
+
   // Small inline SVG icons with a hard-coded dark fill/stroke would vanish on
   // black. Larger SVGs are charts/illustrations: their near-white area fills
   // and gradient stops (App Store Connect sparklines) are darkened instead,
@@ -1065,6 +1086,16 @@
       }
     }
     const icon = (rect.width <= 64 && rect.height <= 64) || compactLogo;
+    if (icon && hasAuthoredIconInversion(svg, rect, ctx)) {
+      // App Store dark mode already inverts its privacy/accessibility wrappers.
+      // Preserve their original ink, including inherited currentColor, so our
+      // SVG inversion or foreground mapping does not undo the native repair.
+      for (const part of [svg, ...svg.querySelectorAll(ICON_PARTS)]) {
+        const style = ctx.style(part);
+        out.push([part, { fg: style.color, fill: style.fill, stroke: style.stroke }]);
+      }
+      return;
+    }
     if (icon && svg.closest('a,button,[role="button"],[role="radio"]')) {
       const fixed = fixedSpriteInk(svg, ctx);
       if (fixed) {

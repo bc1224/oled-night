@@ -12,6 +12,8 @@ import {layeredSurfacesScenario,layeredSurfacesRestored} from './layered-surface
 import {logoContrastProbe,logoContrastPaint,logoContrastRestored} from './logo-contrast-scenario.mjs';
 import {googleAnalyticsScenario,googleAnalyticsProbe,googleAnalyticsRestored} from './google-analytics-scenario.mjs';
 import {googleAnalyticsPaint} from './google-analytics-paint.mjs';
+import {appStoreIconsProbe,appStoreIconsRestored,appStoreIconsToggle} from './app-store-icons-scenario.mjs';
+import {appStoreIconsPaint} from './app-store-icons-paint.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/reported-controls');mkdirSync(output,{recursive:true});
 const server=await serveLab(join(root,'tests/e2e/site'));let browser;const checks=[];
 try{
@@ -96,6 +98,17 @@ try{
     await options.eval('chrome.storage.sync.set({extensionEnabled:false})');await wait(450);
     checks.push(await page.eval(`(${googleAnalyticsRestored.toString()})()`));
   }
+  for(const mode of ['auto','recolor']){
+    await options.eval(`chrome.storage.sync.set({extensionEnabled:true,appearance:'oled',siteRules:${mode==='auto'?'{}':"{'127.0.0.1':'recolor'}"}})`);await wait(450);
+    await page.go(server.origin+'/app-store-icons.html');await wait(700);
+    for(const state of ['initial','native-filter-removed','native-filter-restored']){
+      if(state!=='initial'){await page.eval(`(${appStoreIconsToggle.toString()})()`);await wait(450)}
+      const shot=await page.screenshot();writeFileSync(join(output,'app-store-'+mode+'-'+state+'.png'),shot);
+      checks.push(...appStoreIconsPaint(shot,await page.eval(`(${appStoreIconsProbe.toString()})()`)).map(c=>({...c,name:mode+' / '+state+' / '+c.name})));
+    }
+    await options.eval('chrome.storage.sync.set({extensionEnabled:false})');await wait(450);
+    checks.push(await page.eval(`(${appStoreIconsRestored.toString()})()`));
+  }
   await options.eval("chrome.storage.sync.set({appearance:'oled'})");
   await options.eval("chrome.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'deepen'}})");await wait(450);
   await page.go(server.origin+'/reported-controls.html');await wait(700);
@@ -105,5 +118,5 @@ try{
   checks.push(...(await page.eval(`(${retainedSurfacesScenario.toString()})()`)).map(c=>({...c,name:'deepen / '+c.name})));
 }finally{await browser?.close();await server.close()}
 writeFileSync(join(output,'results.json'),JSON.stringify(checks,null,2));for(const c of checks)console.log((c.ok?'PASS ':'FAIL ')+c.name+' '+c.detail);
-mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-chrome.json'),JSON.stringify(componentReceipt('Chrome',{fixtures:['google-analytics.html','reported-controls.html','calendar-booking.html','retained-surfaces.html','layered-surfaces.html','logo-contrast.html'],modes:['auto','recolor','deepen'],checks}),null,2));
+mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-chrome.json'),JSON.stringify(componentReceipt('Chrome',{fixtures:['app-store-icons.html','google-analytics.html','reported-controls.html','calendar-booking.html','retained-surfaces.html','layered-surfaces.html','logo-contrast.html'],modes:['auto','recolor','deepen'],checks}),null,2));
 if(checks.some(c=>!c.ok))process.exitCode=1;
