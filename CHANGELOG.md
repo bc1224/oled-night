@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.62
+
+- Keep Google Analytics chart axes and legend labels readable in OLED and Soft Dark appearances, and darken its country map without changing other canvases or chart-series colors.
+- Cover dynamic label redraws, site isolation and restoration on disable. This changes rendering on Google Analytics webpages; it does not add analytics collection to OLED Night. No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.61
 
 - Lift dark neutral and colored logo lettering without an outside glow, retaining transparent edges, bright accents, solid icon plates and product media.
