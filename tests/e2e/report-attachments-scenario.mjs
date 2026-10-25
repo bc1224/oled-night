@@ -8,6 +8,7 @@ export async function reportAttachmentsScenario(){
   const transfer=()=>{const dt=new DataTransfer();dt.items.add(file);return dt};
   const ready=async()=>{for(let i=0;i<40;i++){if(!$('reportSubmit').disabled)return;await new Promise(r=>setTimeout(r,25))}throw Error('Screenshot preparation did not finish')};
   add('screenshot confirmation starts empty and optional',$('reportPreview').open&&$('reportScreenshotImage').hidden&&!$('reportSubmit').disabled);
+  add('visible confirmation explains private contents and generic public tracking',/private to the maintainer/.test($('reportDisclosure').textContent)&&/30 days/.test($('reportDisclosure').textContent)&&/generic tracking issue/.test($('reportDisclosure').textContent));
   add('report opens with an editable native paste target',document.activeElement===$('reportDescription'));
   $('reportScreenshotCapture').focus();
   $('reportScreenshotCapture').dispatchEvent(new KeyboardEvent('keydown',{key:'v',ctrlKey:true,bubbles:true}));

@@ -12,7 +12,7 @@ Free and open-source extension for Chrome and Firefox desktop · readable text �
   <a href="https://chromewebstore.google.com/detail/oled-night-chrome-theme/pkdklfocgpcnijiggfddneadmhacbpmf">Chrome Web Store theme</a> ·
   <a href="https://bc1224.github.io/oled-night/">Website</a> ·
   <a href="INSTALL.md">Install guide</a> ·
-  <a href="https://github.com/bc1224/oled-night/issues">Report a site</a>
+  <a href="https://bc1224.github.io/oled-night/#report-a-problem">Report a site privately</a>
 </p>
 
 ![Before and after OLED Night on an email inbox](store/images/screenshot-1-before-after.png)
@@ -32,10 +32,10 @@ Every dark mode extension I tried either left everything grey, or made sites dar
 - **Per-site modes:** automatic, full recolor, deepen blacks only, invert (canvas apps), or off. Each site can also have its own brightness, contrast and image dimming.
 - **Keyboard shortcuts:** <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> turns OLED Night on or off everywhere; <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> toggles the current site. Both are customizable in your browser's extension shortcut settings.
 - **Schedule and settings backup.** Export or restore your settings, including per-site choices.
-- **Optional screenshot reports.** Capture the current page, paste, drop or select an image, review it, and explicitly submit a public GitHub issue. No GitHub account is required.
+- **Optional private screenshot reports.** Capture the current page, paste, drop or select an image, review it, and explicitly submit it privately to the maintainer. Only a generic tracking issue is public. No GitHub account is required.
 - **Native colors for design tools.** Figma stays in its original colors, including when you explicitly enable a site rule.
 - **Readable logos.** Dark logo lettering can be lightened without an outside glow while bright brand accents and product images stay protected.
-- **No automatic analytics or background tracking.** The extension does not log your browsing history. Settings stay in browser storage and can sync through your browser profile. Optional reports share the previewed domain and technical diagnostics, plus any notes or screenshot you choose to include. GitHub issues and attached images are public. See the [privacy policy](store/PRIVACY.md).
+- **No automatic analytics or background tracking.** The extension does not log your browsing history. Settings stay in browser storage and can sync through your browser profile. Optional reports share the previewed domain and technical diagnostics, plus any notes or screenshot you choose to include, privately with the maintainer for up to 30 days. GitHub receives only a generic tracking reference. See the [privacy policy](store/PRIVACY.md).
 
 ## Install
 Install the [OLED Night extension](https://chromewebstore.google.com/detail/oled-night/afffgalhockmjmknnaljghdneaeichbl) from the Chrome Web Store. For a matching black browser window, install the [OLED Night Chrome theme](https://chromewebstore.google.com/detail/oled-night-chrome-theme/pkdklfocgpcnijiggfddneadmhacbpmf) too. Store installs update automatically.
@@ -63,7 +63,7 @@ The switch beside **OLED Night** and **Alt+Shift+E** pause or resume the extensi
 | Invert | For compatible canvas apps, such as spreadsheets: flips the page, then flips images back. Figma always keeps its native colors |
 | Off | Never touches the site |
 
-If a site still looks wrong, click **Report a broken site** in the popup. Add optional notes, then choose **Screenshot this page** or paste, drop or select an image. Review the image and choose **Use screenshot**. Nothing is uploaded until you choose **Submit report**, which creates a public GitHub issue through the reporting service without a GitHub sign-in. A success popup confirms submission. Attached images are hosted publicly for up to 30 days; GitHub may retain cached copies. Keep private details out of notes and screenshots. Fixes require reproduction, tests and review. Full local report downloads can contain visible text and identifiers, so review them before sharing.
+If a site still looks wrong, click **Report a broken site** in the popup. Add optional notes, then choose **Screenshot this page** or paste, drop or select an image. Review the image and choose **Use screenshot**. Nothing is uploaded until you choose **Submit report**. The reporting service stores your scrubbed diagnostics, notes and any screenshot privately for up to 30 days, accessible only with the maintainer's GitHub authentication. It creates a generic public tracking issue with no hostname, notes, diagnostics or screenshot link. No GitHub sign-in is required to submit. A success popup confirms submission. Anything you manually add to a public GitHub issue or comment is public. Fixes require reproduction, tests and review. Full local report downloads can contain visible text and identifiers, so review them before sharing.
 
 ## How it works
 OLED Night doesn't run one filter over the whole page. It works out a color for each element on its own: backgrounds, text, borders, SVG icons, chart fills, gradients, shadows and `::before`/`::after`. It keeps each text's original emphasis and remembers what was originally behind it. Every update reads all the styles it needs first and writes the changes after, so a batch costs a single style recalculation. Brightness and contrast are CSS variables, so moving a slider never re-scans the page.

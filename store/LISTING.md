@@ -25,12 +25,12 @@ Upload `dist/oled-night-<version>.zip` (build it with `node tools/package.mjs`).
 > • OLED Night does not record or save your browsing history. Settings and per-site preferences use your browser's storage and can sync through your browser profile. The developer cannot see them.
 > • Recoloring runs locally and does not upload page text or entered values.
 >
-> OPTIONAL PUBLIC BUG REPORTS
+> OPTIONAL PRIVATE BUG REPORTS
 > • Choose Report a broken site to preview scrubbed technical diagnostics and add optional notes.
 > • Use Screenshot this page, paste, drop or choose an image. Review it and choose Use screenshot. Nothing is uploaded until you choose Submit report.
-> • The reporting service creates a public GitHub issue directly. No GitHub account is required. Reports include the current domain, previewed diagnostics and any notes or image you choose to share.
+> • The reporting service stores your domain, previewed diagnostics, notes and any screenshot privately for up to 30 days. Only the maintainer can retrieve them with GitHub authentication. No GitHub account is required to submit.
 > • Automatic diagnostics exclude page text, entered values, URL paths, query strings, cookies and browser identifiers. Notes and screenshots can contain private information, so review them before submitting.
-> • GitHub retains public issues. Cloudflare temporarily retains request hashes, counters and issue links for up to 49 hours; it does not store raw network addresses or report bodies. Attached images are hosted publicly for up to 30 days. GitHub may retain cached copies.
+> • GitHub receives only a generic public tracking issue, with no domain, details, diagnostics or image link. Anything you manually add in GitHub issues or comments is public. Cloudflare retains scrubbed reports and images privately for up to 30 days, and abuse/deduplication records for up to 49 hours. Raw network addresses are not stored by the service.
 > • Full diagnostic reports can be saved locally and reviewed before you share them yourself.
 >
 > WHAT IT DOES
@@ -65,7 +65,7 @@ Regenerate the images with `node tools/store-assets.mjs`.
 > Makes web pages dark (true black) for comfortable reading, with per-site controls.
 
 **Permission justifications:**
-- `host_permissions: <all_urls>`: The extension reads styles locally to recolor pages. Full local diagnostic downloads may include short visible text snippets. Optional public bug reports share the previewed domain and technical diagnostics after explicit submission, plus notes or a screenshot the user chooses. Automatic diagnostics exclude page text and entered values. Screenshots and notes can contain personal information and are reviewed before submission.
+- `host_permissions: <all_urls>`: The extension reads styles locally to recolor pages. Full local diagnostic downloads may include short visible text snippets. Optional private bug reports share the previewed domain and technical diagnostics with the maintainer after explicit submission, plus notes or a screenshot the user chooses. Automatic diagnostics exclude page text and entered values. Screenshots and notes can contain personal information and are reviewed before submission.
 - `clipboardRead` (optional): Reads an image only after the user chooses the screenshot paste action.
 - `storage`: Saves the user's settings and per-site choices in Chrome sync storage.
 - `activeTab`: Lets the popup and the keyboard shortcut identify the current site so its settings can be shown and changed.
@@ -73,7 +73,7 @@ Regenerate the images with `node tools/store-assets.mjs`.
 
 **Remote code:** No, the extension does not use remote code. All code ships in the package.
 
-**Data usage:** Disclose Web history for the domain in optional bug reports and Website content for optional notes and screenshots. Explain that recoloring and full diagnostic downloads are local, while optional public reports share the previewed domain, technical diagnostics and any notes or image the user chooses to submit. Confirm all three certifications (no selling, no unrelated use, no creditworthiness use). Keep dashboard disclosures consistent with the privacy policy; the upload API does not update these fields.
+**Data usage:** Disclose Web history for the domain in optional bug reports and Website content for optional notes and screenshots. Explain that recoloring and full diagnostic downloads are local, while optional reports share the previewed domain, technical diagnostics and any notes or image privately with the maintainer for up to 30 days. Only a generic tracking issue is public. Confirm all three certifications (no selling, no unrelated use, no creditworthiness use). Keep dashboard disclosures consistent with the privacy policy; the upload API does not update these fields.
 
 **Privacy policy URL:** Host `store/PRIVACY.md` somewhere public (for example a GitHub repo or gist, or your own site) and paste the link.
 
