@@ -2,12 +2,13 @@
 
 <h1 align="center">OLED Night</h1>
 
-<p align="center"><b>True-black dark mode for every website, without breaking it.</b><br>
-Free and open-source Chrome extension � Firefox desktop preview · readable text · images untouched · per-site control</p>
+<p align="center"><b>True-black dark mode, readable text, and per-site control.</b><br>
+Free and open-source extension for Chrome and Firefox desktop · readable text · images preserved · per-site control</p>
 
 <p align="center">
   <a href="https://github.com/bc1224/oled-night/releases/latest/download/oled-night.zip"><b>Download latest ZIP</b></a> ·
   <a href="https://chromewebstore.google.com/detail/oled-night/afffgalhockmjmknnaljghdneaeichbl">Chrome Web Store extension</a> ·
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/oled-night/">Firefox Add-ons</a> ·
   <a href="https://chromewebstore.google.com/detail/oled-night-chrome-theme/pkdklfocgpcnijiggfddneadmhacbpmf">Chrome Web Store theme</a> ·
   <a href="https://bc1224.github.io/oled-night/">Website</a> ·
   <a href="INSTALL.md">Install guide</a> ·
@@ -30,8 +31,11 @@ Every dark mode extension I tried either left everything grey, or made sites dar
 - **No white flash.** Pages go black before they draw, and updates are batched.
 - **Per-site modes:** automatic, full recolor, deepen blacks only, invert (canvas apps), or off. Each site can also have its own brightness, contrast and image dimming.
 - **Keyboard shortcuts:** <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> turns OLED Night on or off everywhere; <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> toggles the current site. Both are customizable in your browser's extension shortcut settings.
-- **Schedule, settings backup, and a "report a broken site" button.**
-- **No browsing-history log.** OLED Night does not record or save your browsing history. Optional bug reports share only the current site's domain and previewed technical diagnostics. GitHub retains reports you submit; your per-site settings stay in browser storage. See the [privacy policy](store/PRIVACY.md).
+- **Schedule and settings backup.** Export or restore your settings, including per-site choices.
+- **Optional screenshot reports.** Capture the current page, paste, drop or select an image, review it, and explicitly submit a public GitHub issue. No GitHub account is required.
+- **Native colors for design tools.** Figma stays in its original colors, including when you explicitly enable a site rule.
+- **Readable logos.** Dark logo lettering can be lightened without an outside glow while bright brand accents and product images stay protected.
+- **No automatic analytics or background tracking.** The extension does not log your browsing history. Settings stay in browser storage and can sync through your browser profile. Optional reports share the previewed domain and technical diagnostics, plus any notes or screenshot you choose to include. GitHub issues and attached images are public. See the [privacy policy](store/PRIVACY.md).
 
 ## Install
 Install the [OLED Night extension](https://chromewebstore.google.com/detail/oled-night/afffgalhockmjmknnaljghdneaeichbl) from the Chrome Web Store. For a matching black browser window, install the [OLED Night Chrome theme](https://chromewebstore.google.com/detail/oled-night-chrome-theme/pkdklfocgpcnijiggfddneadmhacbpmf) too. Store installs update automatically.
@@ -56,10 +60,10 @@ The switch beside **OLED Night** and **Alt+Shift+E** pause or resume the extensi
 | On (automatic) | Recolors light sites; on dark sites, only deepens their blacks |
 | Full recolor | Always recolors, even if the site looks dark |
 | Deepen blacks only | Only pushes the darkest greys to true black |
-| Invert | For canvas apps (Sheets, Figma): flips the page, then flips images back |
+| Invert | For compatible canvas apps, such as spreadsheets: flips the page, then flips images back. Figma always keeps its native colors |
 | Off | Never touches the site |
 
-If a site still looks wrong, click **Report a broken site** in the popup. Add optional notes and use **Screenshot this site**, paste, drop or choose an image. Click the thumbnail to review it, then **Submit report** to create a public GitHub issue. A success popup confirms submission. Reports are checked daily; fixes require reproduction, tests and review. Issues are public; keep private details out. Full local report downloads can contain visible text and identifiers, so review them before sharing.
+If a site still looks wrong, click **Report a broken site** in the popup. Add optional notes, then choose **Screenshot this page** or paste, drop or select an image. Review the image and choose **Use screenshot**. Nothing is uploaded until you choose **Submit report**, which creates a public GitHub issue through the reporting service without a GitHub sign-in. A success popup confirms submission. Attached images are hosted publicly for up to 30 days; GitHub may retain cached copies. Keep private details out of notes and screenshots. Fixes require reproduction, tests and review. Full local report downloads can contain visible text and identifiers, so review them before sharing.
 
 ## How it works
 OLED Night doesn't run one filter over the whole page. It works out a color for each element on its own: backgrounds, text, borders, SVG icons, chart fills, gradients, shadows and `::before`/`::after`. It keeps each text's original emphasis and remembers what was originally behind it. Every update reads all the styles it needs first and writes the changes after, so a batch costs a single style recalculation. Brightness and contrast are CSS variables, so moving a slider never re-scans the page.
@@ -77,7 +81,7 @@ OLED Night doesn't run one filter over the whole page. It works out a color for 
 No build step. Load the folder with **Load unpacked**, then:
 ```
 for t in tests/*.test.js; do node "$t"; done   # unit tests
-node tests/e2e/run.mjs                          # real extension in headless Chrome, 46 checks
+node tests/e2e/run.mjs                          # real extension in headless Chrome
 node tools/package.mjs                          # dist/ zips for the extension and the theme
 node tools/store-assets.mjs                     # screenshots for the README and website
 ```

@@ -1,17 +1,24 @@
-OLED Night turns website backgrounds true black while keeping text readable and images in their original colors. Made for OLED displays, and works on other screens too.
+OLED Night turns website backgrounds true black while keeping text readable and images in their original colors. Made for OLED displays, and useful on other screens too.
 
-• Automatic dark mode, full recolor, deepen blacks only, invert, or off for each site.
-• Per-site brightness, contrast, and optional image dimming.
-• Schedule and Alt+Shift+D shortcut.
-• Settings backup and optional broken-site reports.
+• Automatic dark mode, full recolor, deepen blacks only, invert for compatible canvas apps, or Off for each site.
+• Per-site text brightness, surface contrast and optional image dimming, with saved site choices taking priority over defaults.
+• A global pause that keeps your rules, schedule and settings; settings export/import.
+• Alt+Shift+E pauses or resumes everywhere; Alt+Shift+D toggles this site. Alternate shortcuts are Ctrl+Shift+9 and Ctrl+Shift+8 (Command instead of Ctrl on macOS). The popup shows Firefox's assigned shortcuts; you can customize them.
+• Readable dark logo lettering without an outside glow. Figma keeps its native colors even when explicitly enabled. ChatGPT uses its native palette with OLED base surfaces for responsive streaming.
 
-OLED Night does not record or save your browsing history. No ads, analytics or tracking. Website access is used to recolor pages locally. Your settings, including per-site preferences, use your browser's sync storage; these are preferences, not a record of visits.
+NO AUTOMATIC ANALYTICS OR BACKGROUND TRACKING
+The extension has no ads, analytics or browsing-history log. Recoloring runs locally and does not upload page text or entered values. Settings and per-site preferences use browser storage and can sync through your browser profile; these are preferences, not a record of visits.
 
-Firefox's optional browsing-activity permission only covers sharing the current site's domain in a bug report. It does not enable history tracking. In 0.6.41, preview the scrubbed technical diagnostics, optionally describe the problem, then choose Submit issue. Our Cloudflare-hosted reporting service creates a public GitHub issue directly; no GitHub sign-in or draft is required. Automatic diagnostics exclude page text, entered values, URL paths, cookies and screenshots. Declining permission leaves dark mode working normally.
+OPTIONAL PUBLIC REPORTS
+Choose Report a broken site to preview scrubbed diagnostics and add optional notes. Use Screenshot this page, paste, drop or choose an image, review it, then choose Use screenshot. Nothing is uploaded until Submit report. Our Cloudflare-hosted service creates a public GitHub issue directly, without a GitHub sign-in.
 
-GitHub retains submitted public issues. The service retains only temporary request hashes, daily counters and issue links for up to 49 hours, with a daily salted address hash for abuse limits; it does not store report bodies or raw network addresses. Full local report downloads can contain short text snippets and site addresses; review them before sharing them yourself. Keep personal information out of descriptions.
+Firefox's optional browsing-activity consent covers the current domain in your report; technical-data consent covers diagnostics. Optional website-content consent covers a screenshot you explicitly include. Clipboard access is optional and used only for explicit paste. Declining leaves dark mode working.
 
-Free and open source. Firefox desktop 142 or later. Some sites may need a different mode or to be turned off.
+Automatic diagnostics exclude page text, entered values, URL paths, query strings, cookies and browser identifiers. Reports include the previewed domain, diagnostics and any notes or image you choose to share. Review notes and screenshots for private information: issues and attached images are public.
+
+GitHub retains submitted issues. The reporting service retains request hashes, counters and issue links for up to 49 hours, with a daily salted address hash for abuse limits. It does not store raw addresses or report bodies. Attached images are hosted publicly for up to 30 days; GitHub may retain cached copies. Full local report downloads can contain text snippets and site addresses; review them before sharing.
+
+Free and open source. Firefox desktop 142 or later. Some pages restrict extensions, and some sites need another mode or a site exception. Firefox Android and a Firefox browser theme are not supported.
 
 Source and support: https://github.com/bc1224/oled-night
 Privacy policy: https://github.com/bc1224/oled-night/blob/main/store/PRIVACY.md

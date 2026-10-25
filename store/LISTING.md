@@ -17,37 +17,39 @@ Upload `dist/oled-night-<version>.zip` (build it with `node tools/package.mjs`).
 **Language:** English
 
 **Description:**
-> OLED Night makes every website true black, the kind of black that switches OLED pixels off, without the usual dark-mode side effects.
+
+> OLED Night makes web pages true black while keeping text readable, images in their original colors and each site's controls within reach. Made for OLED displays, and useful on other screens too.
 >
 > LOCAL RECOLORING. NO BACKGROUND TRACKING.
-> • No analytics, background telemetry, ads or OLED Night account. Recoloring runs locally.
-> • OLED Night does not record or save your browsing history. Your settings, including per-site preferences, live in your browser's sync storage. The developer never sees them.
-> • Page text and field values are not uploaded. Optional reports share only the previewed domain and technical diagnostics with GitHub.
-> • "Report a broken site" previews scrubbed diagnostics and submits a public GitHub issue through our hosted service only when you choose. Full reports can still be saved locally.
-> • Firefox's optional browsing-activity permission is only for sharing the current site's domain in a bug report, not history tracking. Declining keeps dark mode working normally.
-> • GitHub retains submitted public issues. Our Cloudflare-hosted reporting service temporarily retains request hashes and issue links for deduplication. Notes and diagnostic bodies are not stored by the service; a screenshot you explicitly paste, drop or select is hosted publicly for up to 30 days. Nothing is captured automatically or submitted before confirmation.
+> • The extension has no analytics, background telemetry, ads or OLED Night account.
+> • OLED Night does not record or save your browsing history. Settings and per-site preferences use your browser's storage and can sync through your browser profile. The developer cannot see them.
+> • Recoloring runs locally and does not upload page text or entered values.
 >
-> 100% OPEN SOURCE (GPL-3.0)
-> Every line of code is public on GitHub: https://github.com/bc1224/oled-night
-> • Read exactly what runs on your pages before you install.
-> • Every version is tagged on GitHub with its changelog and a downloadable build.
-> • Report a broken site or request a feature in GitHub Issues.
+> OPTIONAL PUBLIC BUG REPORTS
+> • Choose Report a broken site to preview scrubbed technical diagnostics and add optional notes.
+> • Use Screenshot this page, paste, drop or choose an image. Review it and choose Use screenshot. Nothing is uploaded until you choose Submit report.
+> • The reporting service creates a public GitHub issue directly. No GitHub account is required. Reports include the current domain, previewed diagnostics and any notes or image you choose to share.
+> • Automatic diagnostics exclude page text, entered values, URL paths, query strings, cookies and browser identifiers. Notes and screenshots can contain private information, so review them before submitting.
+> • GitHub retains public issues. Cloudflare temporarily retains request hashes, counters and issue links for up to 49 hours; it does not store raw network addresses or report bodies. Attached images are hosted publicly for up to 30 days. GitHub may retain cached copies.
+> • Full diagnostic reports can be saved locally and reviewed before you share them yourself.
 >
 > WHAT IT DOES
-> • Real recoloring, not a blanket filter: photos, videos and artwork keep their true colors.
-> • Readable text: main, secondary and muted text keep their emphasis instead of all turning the same grey.
-> • Works on already-dark sites: it only deepens their greys to true black and leaves the design alone.
-> • Handles modern web apps: web components, embedded frames, chat widgets, charts and modern CSS colors.
-> • Leaves "verify you are human" checks (Cloudflare Turnstile, reCAPTCHA, hCaptcha and others) untouched so they keep working.
-> • No white flash while pages load.
-> • Per-site modes: automatic, full recolor, deepen blacks only, invert (for canvas apps such as spreadsheets and design tools), or off.
-> • Per-site brightness and contrast, plus optional image dimming.
-> • A schedule (for example, only at night) and a keyboard shortcut (Alt+Shift+D) to switch any site on or off.
-> • Settings sync through your browser profile; export and import them as a file.
+> • True-black page backgrounds with distinct raised cards and panels.
+> • Readable primary, secondary and muted text, plus dark logo lettering without an outside glow. Photos, video, artwork and bright brand accents stay protected.
+> • Automatic dark mode, full recolor, deepen blacks only, invert for compatible canvas apps, or Off for each site.
+> • Per-site text brightness, surface contrast and optional image dimming. All sites holds the defaults; saved site choices take priority.
+> • Figma always keeps its native design colors, even when explicitly enabled. ChatGPT uses its native palette with OLED base surfaces for responsive streaming.
+> • Scheduling and settings export/import.
+> • Alt+Shift+E pauses or resumes OLED Night everywhere; Alt+Shift+D toggles the current site. Alternate shortcuts are Ctrl+Shift+9 and Ctrl+Shift+8 (Command instead of Ctrl on macOS). Customize them in your browser; the popup shows the assigned keys.
+> • Handles modern CSS colors, web components, embedded frames and changing page content. Verification widgets are excluded from recoloring.
 >
-> WHY IT ASKS TO RUN ON EVERY SITE
-> Recoloring pages is the whole job, so it has to run on the pages you visit. It only changes colors. Its other permissions just save your settings (storage) and let the popup and shortcut see which site you're on (activeTab, scripting).
+> Some pages restrict extensions, and some sites may need another mode or a site exception. The separate OLED Night Chrome theme darkens Chrome's own window; it is optional and does not work in Firefox.
 >
+> WHY IT ASKS FOR WEBSITE ACCESS
+> Website access lets the extension read styles and recolor pages locally. Storage saves settings; activeTab identifies the current site for the popup and shortcuts; scripting checks whether the tab can be reached. Clipboard access is optional and used only for the explicit screenshot paste action.
+>
+> Free and open source under GPL-3.0.
+> Source and support: https://github.com/bc1224/oled-night
 > Privacy policy: https://github.com/bc1224/oled-night/blob/main/store/PRIVACY.md
 
 **Graphic assets:**
@@ -63,17 +65,18 @@ Regenerate the images with `node tools/store-assets.mjs`.
 > Makes web pages dark (true black) for comfortable reading, with per-site controls.
 
 **Permission justifications:**
-- `host_permissions: <all_urls>`: The extension reads styles locally to recolor pages. Full local diagnostic downloads may include short visible text snippets. Optional public bug reports share only the previewed domain and technical diagnostics after the user chooses; page text and entered values are excluded from those reports.
+- `host_permissions: <all_urls>`: The extension reads styles locally to recolor pages. Full local diagnostic downloads may include short visible text snippets. Optional public bug reports share the previewed domain and technical diagnostics after explicit submission, plus notes or a screenshot the user chooses. Automatic diagnostics exclude page text and entered values. Screenshots and notes can contain personal information and are reviewed before submission.
+- `clipboardRead` (optional): Reads an image only after the user chooses the screenshot paste action.
 - `storage`: Saves the user's settings and per-site choices in Chrome sync storage.
 - `activeTab`: Lets the popup and the keyboard shortcut identify the current site so its settings can be shown and changed.
 - `scripting`: Lets the popup check whether the current tab can be reached (to offer a Reload button), and removes a page script that versions before 0.6.15 registered for the experimental "reach inside locked web components" setting. No code is injected into pages.
 
 **Remote code:** No, the extension does not use remote code. All code ships in the package.
 
-**Data usage:** Disclose Web history for the domain used in settings and optional bug reports, and Website content for local diagnostic snippets. Explain that recoloring and full reports are local, while optional public bug reports share only the previewed domain and technical diagnostics. Confirm all three certifications (no selling, no unrelated use, no creditworthiness use). Keep dashboard disclosures consistent with the privacy policy; the upload API does not update these fields.
+**Data usage:** Disclose Web history for the domain in optional bug reports and Website content for optional notes and screenshots. Explain that recoloring and full diagnostic downloads are local, while optional public reports share the previewed domain, technical diagnostics and any notes or image the user chooses to submit. Confirm all three certifications (no selling, no unrelated use, no creditworthiness use). Keep dashboard disclosures consistent with the privacy policy; the upload API does not update these fields.
 
 **Privacy policy URL:** Host `store/PRIVACY.md` somewhere public (for example a GitHub repo or gist, or your own site) and paste the link.
 
 ## Distribution tab
-- Visibility: **Unlisted** lets you share a link with specific people without appearing in search. Switch to Public later if you want.
+- Visibility: **Public** for the existing published extension. Preserve its current countries and distribution settings when changing copy.
 - Regions: all.

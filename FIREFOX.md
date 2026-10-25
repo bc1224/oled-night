@@ -1,41 +1,42 @@
-# Firefox desktop preview
+# Firefox desktop
 
-OLED Night shares its darkening engine and settings UI between Chrome and Firefox. Firefox 142 or newer is required. The Mozilla Add-ons submission is awaiting review. Until approval, the preview ZIP is for temporary installation only.
-
-## Try it from the repo
-
-1. Download or clone this repository. Install Node.js 22 or newer.
-2. Run `node tools/package.mjs` from the repository folder (no npm dependencies needed for packaging).
-3. In Firefox, open `about:debugging#/runtime/this-firefox`.
-4. Click **Load Temporary Add-on**, then select `dist/firefox/manifest.json`.
-5. Open a normal website and pin OLED Night from the Extensions menu. Grant website access if Firefox asks.
-
-Firefox removes temporary add-ons when it restarts. Load it again to continue testing. Browser settings pages and Mozilla Add-ons pages restrict extensions.
-
-You can download the unsigned [Firefox preview ZIP](https://github.com/bc1224/oled-night/releases/latest/download/oled-night-firefox.zip) from GitHub releases, extract it and load its manifest temporarily. You can also download the `oled-night-zip` artifact from a successful [Tests workflow](https://github.com/bc1224/oled-night/actions/workflows/test.yml), extract `oled-night-firefox.zip`, and select its manifest as above. GitHub may require sign-in to download artifacts.
+Install [OLED Night from Mozilla Add-ons](https://addons.mozilla.org/en-US/firefox/addon/oled-night/) for a signed extension and automatic updates. Firefox desktop 142 or newer is required. The Firefox extension shares its darkening engine and settings UI with Chrome. The companion Chrome theme is a separate product and does not work in Firefox.
 
 ## What is included
 
-- The same darkening engine, per-site controls, schedule, settings backup and diagnostic JSON reports.
-- Apple sign-in field and Reddit Enhancement Suite fixes.
-- Optional closed-shadow component support (off by default), read through the extension API without changing the page.
-- Firefox-specific shortcut instructions. The separate Chrome browser theme is not included.
+- Automatic dark mode, full recolor, deepen blacks, invert and per-site Off controls.
+- Per-site text brightness, surface contrast and optional image dimming, plus a global pause that preserves saved rules.
+- Scheduling, settings backup and customizable global/site keyboard shortcuts. The popup shows the keys actually assigned by Firefox.
+- Optional broken-site reports with previewed diagnostics, notes and a screenshot you explicitly capture, paste, drop or select. Nothing is uploaded until Submit report. Reports create public GitHub issues without a GitHub sign-in.
+- Readable dark logo lettering and protected media, native ChatGPT colors, and native-color protection on Figma.
+
+Some pages restrict extensions, and some sites need another mode or a site exception. Figma keeps its native colors even when explicitly enabled. Firefox Android is not supported.
+
+## Temporary installation for development
+
+1. Download or clone this repository. Install Node.js 22 or newer.
+2. Run `node tools/package.mjs` from the repository folder. Packaging needs no npm dependencies.
+3. In Firefox, open `about:debugging#/runtime/this-firefox`.
+4. Choose **Load Temporary Add-on**, then select `dist/firefox/manifest.json`.
+5. Open a normal website, pin OLED Night, and grant website access if Firefox asks.
+
+The unsigned [Firefox ZIP](https://github.com/bc1224/oled-night/releases/latest/download/oled-night-firefox.zip) from GitHub is for this temporary installation. Firefox removes temporary add-ons when it restarts. Use the Mozilla Add-ons listing for normal installation and updates. A GitHub release can be newer than the version approved by Mozilla.
+
+## Privacy and permissions
+
+The extension has no automatic analytics, ads, background tracking or browsing-history log. Settings use browser storage and can sync through your browser profile.
+
+Firefox's optional browsing-activity and technical-data consent covers the current domain and scrubbed diagnostics in a report you choose to submit. Optional website-content consent covers a screenshot you explicitly include. Declining keeps dark mode working. Clipboard access is optional and requested only for the explicit paste action.
+
+Notes, images and submitted issues are public. Review them for private information before submitting. See the [privacy policy](store/PRIVACY.md) for service retention, screenshot hosting and local report downloads.
 
 ## Development checks
 
-```
+```sh
 npm ci
 node tools/package.mjs
 npm run lint:firefox
 npm run test:firefox
 ```
 
-The test runner uses Mozilla web-ext and a temporary headless Firefox profile, not your browsing profile. Set `FIREFOX_PATH` if Firefox is installed outside its standard location. Tests use local fixture pages; they do not log into real accounts.
-
-## Permanent installation and distribution
-
-A maintainer must submit `dist/oled-night-firefox-<version>.zip` to Mozilla for signing. The manifest declares a stable add-on ID, no required data collection, and optional browsingActivity and technicalAndInteraction consent for user-requested scrubbed GitHub reports. Declining consent keeps dark mode working. Review these declarations when changing data handling.
-
-After Mozilla approval, add the actual Add-ons listing URL to README and the website. Do not point an Install for Firefox button at the unsigned ZIP. A signed `.xpi` can also be attached to GitHub releases; self-distributed updates need their own update manifest if they are not served through the listed channel.
-
-No Mozilla listing or approval is implied by this preview. Firefox Android and a Firefox browser theme are outside this port.
+The tests use temporary browser profiles and local fixtures, not your browsing profile or real accounts. Set `FIREFOX_PATH` if needed. See [STORE_SUBMISSION.md](STORE_SUBMISSION.md) for signed-release submission and metadata updates. Store review and public rollout are separate from publishing a GitHub release.
