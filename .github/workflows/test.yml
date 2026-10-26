@@ -36,7 +36,7 @@ jobs:
         run: node tests/e2e/report-ui.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
-      - name: Stable Gmail and generic text under native pointer, focus and updates
+      - name: Stable Gmail text, vector updates and responsive rich reply typing
         run: node tests/e2e/text-hover.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome

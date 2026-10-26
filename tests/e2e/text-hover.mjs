@@ -7,6 +7,7 @@ import {execFileSync} from 'node:child_process';
 import {launchChrome,wait} from '../lab/browser.mjs';
 import {runtimeDigest} from '../lab/runtime-proof.mjs';
 import {textHoverEvents} from './text-hover-scenario.mjs';
+import {startReplyTyping} from './reply-typing-scenario.mjs';
 
 const root=resolve(import.meta.dirname,'../..');
 const extension=resolve(process.env.EXT_PATH||root);
@@ -46,6 +47,7 @@ try {
     {name:'generic native dark automatic',host:'hover-fixture.invalid',mode:'global',appearance:'oled'},
     {name:'generic explicit deepen',host:'hover-fixture.invalid',mode:'deepen',appearance:'oled'}
   ]){
+  if(process.env.OLED_REPLY_TYPING_ONLY)continue;
   if(process.env.OLED_TEXT_HOVER_CASE&&!test.name.includes(process.env.OLED_TEXT_HOVER_CASE))continue;
   await options.eval(`chrome.storage.sync.set(${JSON.stringify({extensionEnabled:true,brightness:test.brightness||88,appearance:test.appearance,siteRules:{[test.host]:test.mode}})})`);
   const url=`https://${test.host}/oled-night-synthetic-text-hover?original=${test.original||'dark'}`;
@@ -73,7 +75,7 @@ try {
     checks.push({name:`${test.name}: brightness stays stable during native hover ${target}`,ok:hovered&&frames.length>1&&!changedFrame&&JSON.stringify(after)===JSON.stringify(before),before,after,samples:frames.length,changedFrame,status});
   }
   const events=await page.eval(`(${textHoverEvents.toString()})()`);
-  for(const property of ['hoverStable','slotMutationStable','focusStable','mutationStable','insertionStable','artworkPreserved'])checks.push({name:`${test.name}: ${property}`,ok:events[property],events,status});
+  for(const property of ['hoverStable','slotMutationStable','focusStable','mutationStable','insertionStable','artworkUpdateStable','artworkPreserved'])checks.push({name:`${test.name}: ${property}`,ok:events[property],events,status});
   const linkPoint=await page.eval(`(()=>{const r=document.getElementById('stateLink').getBoundingClientRect();return{x:r.x+10,y:r.y+r.height/2}})()`);
   await page.eval(`document.activeElement.blur()`);await page.hover(1,1);await wait(150);
   const restingLink=await page.eval(`getComputedStyle(document.getElementById('stateLink')).color`);
@@ -95,12 +97,42 @@ try {
   const original=await snapshot(),expected=test.original==='light'?'rgb(85, 85, 85)':'rgb(34, 34, 34)';
   checks.push({name:`${test.name}: disabling restores authored text and vector ink`,ok:ids.every(id=>original[id]===(id.startsWith('slotted')?'rgb(34, 34, 34)':['symbol','vectorLabel'].includes(id)?expected+';none':expected)),original,expected,status});
   }
+  if(!process.env.OLED_TEXT_HOVER_CASE)for(const host of ['mail.google.com','hover-fixture.invalid']){
+    const pairs=[];
+    for(const order of [[true,false],[false,true],[true,false]]){
+      const pair={};
+      for(const active of order){
+        await options.eval(`chrome.storage.sync.set(${JSON.stringify({extensionEnabled:active,brightness:88,appearance:'oled',siteRules:{[host]:host==='mail.google.com'?'global':'recolor'}})})`);
+        await page.go(`https://${host}/oled-night-synthetic-reply`);await wait(450);
+        await page.eval(`(()=>{const rows=Array.from({length:1500},(_,i)=>'<p><span>Synthetic message '+i+'</span></p>').join('');const history=document.createElement('div');history.id='replyHistory';history.innerHTML=rows;document.body.prepend(history);const box=document.createElement('div');box.className='a3s';box.innerHTML='<div id="replyEditor" role="textbox" aria-label="Synthetic reply" contenteditable="true" style="min-height:60px"><div id="replyDraft"></div><span id="replyFlag">Draft state</span><blockquote id="replyQuote">'+rows+'</blockquote></div>';document.body.prepend(box);const style=document.createElement('style');style.textContent='#replyFlag{background:#ffeedd;color:#111}#replyEditor:has(#replyDraft:empty) #replyFlag{background:#aaddff}';document.head.append(style)})()`);
+        await wait(650);
+        const enabled=await page.eval(`document.documentElement.hasAttribute('data-oled-night-root')`);
+        assert.equal(enabled,active,'typing comparison must use the intended extension state');
+        await page.eval(`(${startReplyTyping.toString()})()`);await wait(500);
+        const expected='Synthetic reply text. '.repeat(3).trimEnd();
+        for(const char of expected){
+          await browser.send('Input.dispatchKeyEvent',{type:'keyDown',key:char},page.sessionId);
+          await browser.send('Input.insertText',{text:char},page.sessionId);await wait(25);
+          await browser.send('Input.dispatchKeyEvent',{type:'keyUp',key:char},page.sessionId);
+        }
+        await wait(50);
+        pair[active?'active':'native']=await page.eval('globalThis.__replyTyping.finish()');
+        checks.push({name:`${host}: ${active?'enabled':'disabled'} native reply input is preserved`,ok:pair[active?'active':'native'].text==='Draft:'+expected&&pair[active?'active':'native'].inputs===expected.length,detail:pair[active?'active':'native']});
+        if(active){
+          const state=await page.eval(`(async()=>{const flag=document.getElementById('replyFlag'),draft=document.getElementById('replyDraft'),before=getComputedStyle(flag).backgroundColor;draft.textContent='';document.getElementById('replyEditor').dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'deleteContentBackward'}));await new Promise(resolve=>setTimeout(resolve,800));return{before,after:getComputedStyle(flag).backgroundColor,empty:!draft.textContent}})()`);
+          checks.push({name:`${host}: rich editor descendant state converges after typing pauses`,ok:state.empty&&state.before!==state.after&&state.after.match(/[\d.]+/g).slice(0,3).every(value=>Number(value)<128),state});
+        }
+      }
+      pairs.push(pair);
+    }
+    checks.push({name:`${host}: reply typing stays responsive without repeatedly measuring message history`,ok:pairs.every(pair=>pair.active.latencies.length===pair.active.inputs&&pair.active.p95<=pair.native.p95+33&&Math.max(0,...pair.active.longTasks)<150&&pair.active.repeatedMeasurements===0&&pair.active.subtreeSwitches===0),pairs});
+  }
   assert.deepEqual(requestErrors,[]);
   assert.deepEqual(browser.errors,[]);
   assert(checks.length>0,'at least one text-hover case must run');
 }finally{if(browser)await browser.close()}
 mkdirSync(join(root,'dist/lab-results'),{recursive:true});
-writeFileSync(join(root,'dist/lab-results/text-hover-chrome.json'),JSON.stringify({engine:'Chrome',browser:browserVersion.product,version,sha,runtimeHash,checkedAt:new Date().toISOString(),completed:true,candidate:!!process.env.OLED_TEXT_HOVER_CASE,fixtures:['text-hover.html'],modes:['automatic','recolor','deepen','oled','soft','brightness50'],states:['rest','pointer-frames','focus','mutation','slot-update','insert','authored-hover','disabled'],checks:checks.map(check=>({...check,coverage:check.name.endsWith('artworkPreserved')?'media':'text'}))},null,2));
+writeFileSync(join(root,'dist/lab-results/text-hover-chrome.json'),JSON.stringify({engine:'Chrome',browser:browserVersion.product,version,sha,runtimeHash,checkedAt:new Date().toISOString(),completed:true,candidate:!!(process.env.OLED_TEXT_HOVER_CASE||process.env.OLED_REPLY_TYPING_ONLY),fixtures:['text-hover.html'],modes:['automatic','recolor','deepen','oled','soft','brightness50'],states:['rest','pointer-frames','focus','mutation','slot-update','insert','authored-hover','disabled','reply-typing'],checks:checks.map(check=>({...check,coverage:check.name.endsWith('artworkPreserved')?'media':'text'}))},null,2));
 for(const check of checks)console.log(`${check.ok?'PASS':'FAIL'} ${check.name}${check.ok?'':' '+JSON.stringify(check)}`);
 console.log(`${checks.filter(check=>check.ok).length}/${checks.length} text hover checks passed (${version})`);
 process.exitCode=checks.some(check=>!check.ok)?1:0;

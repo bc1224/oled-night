@@ -1212,6 +1212,15 @@
     const outline = svg.getAttribute("fill") === "none" || referenced?.getAttribute("fill") === "none";
     const paleToDark = (color) => (color && color.a >= 0.08 && colors.luminance(color) > 0.6 && colors.chroma(color) < 0.25
       ? colors.mapBackground(color, mode) : null);
+    const currentColorPaint = (part, name, computed) => {
+      if (computed[name] !== computed.color) return false;
+      for (let node = part; node; node = node.parentElement) {
+        const paint = node.style?.[name] || node.getAttribute(name) || "";
+        if (paint) return paint.trim().toLowerCase() === "currentcolor";
+        if (node === svg) break;
+      }
+      return false;
+    };
     for (const part of [svg, ...svg.querySelectorAll(icon ? ICON_PARTS : CHART_PARTS)]) {
       const computed = getComputedStyle(part);
       const found = {};
@@ -1232,8 +1241,16 @@
         // A <use> referencing <symbol fill="none"> must stay unfilled. Its
         // inherited computed fill looks dark even though the authored symbol
         // deliberately draws only strokes.
-        if (fill && !(outline && (part === svg || part.localName === "use"))) found.fill = fill;
-        if (stroke) found.stroke = stroke;
+        // Keep currentColor as an inherited binding. Freezing it to a mapped
+        // fill on a group would hide a descendant's later authored color.
+        if (fill && !(outline && (part === svg || part.localName === "use"))) {
+          if (currentColorPaint(part, "fill", computed)) found.fg = fill;
+          else found.fill = fill;
+        }
+        if (stroke) {
+          if (currentColorPaint(part, "stroke", computed)) found.fg = stroke;
+          else found.stroke = stroke;
+        }
       } else if (part.localName === "stop") {
         const stop = paleToDark(colors.parseColor(computed.stopColor));
         if (stop) found.stop = stop;
@@ -2339,6 +2356,7 @@
     if (nativeSelect) return;
     const found = path.find(node => node.matches(CONTROL));
     const control = found && found !== document.body && found !== document.documentElement ? found : null;
+    const editing = control?.isContentEditable && /^(?:key|input$)/.test(event.type);
     if (control) interactionSurfaces.add(control);
     // Existing background AND ink overrides protect the current paint. Native
     // dark mode may own only a background; new native focus ink then needs the
@@ -2366,7 +2384,19 @@
     }
     // Descendant rules of changed elements (".row:hover .label") need their subtree.
     const controlChanged = control && (!stop || path.indexOf(control) < path.indexOf(stop));
-    if (controlChanged) queueInteraction(control, true, currentPaint);
+    if (editing) {
+      // Rich replies can include thousands of quoted nodes. Keystrokes change
+      // the selection's text, not every quoted message. DOM/style mutations
+      // still repair their actual targets; broad state selectors settle once
+      // typing pauses, rather than restarting a whole-editor scan per key.
+      const selection = control.getRootNode().getSelection?.() || document.getSelection();
+      for (const endpoint of [selection?.anchorNode, selection?.focusNode]) {
+        let node = endpoint instanceof Element ? endpoint : endpoint?.parentElement;
+        for (; node && node !== control && control.contains(node); node = node.parentElement)
+          queueInteraction(node, false, currentPaint);
+      }
+      settleTrees.add(control);
+    } else if (controlChanged) queueInteraction(control, true, currentPaint);
     else {
       // Non-semantic triggers and plain text hover must not promote the
       // entire page layout to a subtree reread. Ancestor state is checked
@@ -2853,6 +2883,10 @@
           else if(node instanceof Element) for(const sheet of node.querySelectorAll('style, link[rel~="stylesheet"]')) if(isPageSheet(sheet)) queuePageSheet(sheet);
         }
         for (const node of record.addedNodes) if (node.nodeType === Node.ELEMENT_NODE) pendingTrees.add(node);
+        if (target.isContentEditable && [...record.addedNodes, ...record.removedNodes].some(node => node.nodeType === Node.TEXT_NODE))
+          pendingSelf.add(target);
+      } else if (record.type === "characterData" && target.parentElement?.isContentEditable) {
+        pendingSelf.add(target.parentElement);
       } else if (record.attributeName === SHARED_BG) {
         pendingTrees.add(target);
       } else if (record.attributeName === "class" || STATE_ATTRIBUTES.includes(record.attributeName)) {

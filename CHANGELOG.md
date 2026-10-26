@@ -3,6 +3,7 @@
 ## 0.6.66
 
 - Keep inherited text brightness stable when moving the pointer over Gmail messages and other recolored pages. Hover, focus and small content updates now measure the original ancestor colors instead of recoloring an already-mapped foreground again.
+- Keep rich reply typing local to the edited text instead of repeatedly scanning quoted messages. Recheck broader editor selectors after typing pauses, and preserve dynamically colored currentColor artwork.
 - Add native-pointer Gmail and generic-page regressions in OLED and Soft Dark, plus Firefox coverage for inherited text, shadow and assigned content, vector ink, dynamic updates, artwork preservation and restoration. Keep genuine authored hover colors responsive, including at reduced brightness.
 - No new permissions; Chrome theme remains 1.0.3.
 

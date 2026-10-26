@@ -10,7 +10,7 @@
       const status=await browser.tabs.sendMessage(tab.id,{type:'oled-night-status'});
       checks.push({name:`inherited text ${appearance}: correct active fixture and mode`,ok:status.active&&status.mode===(appearance==='soft'?'soft':'oled')&&status.version===browser.runtime.getManifest().version,detail:JSON.stringify(status)});
       const text=await inspect(textHoverEvents);
-      for(const property of ['hoverStable','slotMutationStable','focusStable','mutationStable','insertionStable','artworkPreserved'])
+      for(const property of ['hoverStable','slotMutationStable','focusStable','mutationStable','insertionStable','artworkUpdateStable','artworkPreserved'])
         checks.push({name:`inherited text ${appearance}: ${property}`,ok:text[property],detail:text[property]?undefined:JSON.stringify(text)});
       await browser.storage.sync.set({extensionEnabled:false});await wait(350);
       checks.push({name:`inherited text ${appearance}: disabling restores authored text and vector ink`,ok:await inspect(()=>

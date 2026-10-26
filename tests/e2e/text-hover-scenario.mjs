@@ -27,6 +27,10 @@ export async function textHoverEvents(){
   const inserted=document.createElement('p');inserted.textContent='New synthetic inherited text';
   document.getElementById('last').after(inserted);await wait();
   const insertionStable=getComputedStyle(inserted).color===before[0];inserted.remove();
-  return {hoverStable,slotMutationStable,focusStable,mutationStable,insertionStable,before,steps,
+  const symbol=document.getElementById('symbol');symbol.style.color='rgb(0, 200, 5)';await wait();
+  const coloredArtwork=getComputedStyle(symbol).fill==='rgb(0, 200, 5)';
+  symbol.style.removeProperty('color');await wait();
+  const artworkUpdateStable=coloredArtwork&&JSON.stringify(colors())===JSON.stringify(before);
+  return {hoverStable,slotMutationStable,focusStable,mutationStable,insertionStable,artworkUpdateStable,before,steps,
     artworkPreserved:getComputedStyle(document.getElementById('artText')).color==='rgb(34, 34, 34)'};
 }
