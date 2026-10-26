@@ -618,6 +618,11 @@ try {
   await setSettings({ schedule: { enabled: true, start: hhmm(new Date(now.getTime() + 2 * 3600e3)), end: hhmm(new Date(now.getTime() + 3 * 3600e3)) } });
   await other.go(site("localhost", "light.html"));
   check("schedule: off outside the window", (await other.eval("document.documentElement.hasAttribute('data-oled-night-root')")) === false);
+  // These fixtures have finished. Their storage-driven enable/disable work
+  // must not compete with later measurements in another, background tab.
+  await send('Target.closeTarget', {targetId: other.targetId});
+  await send('Target.closeTarget', {targetId: challenge.targetId});
+  await send('Target.activateTarget', {targetId: page.targetId});
   await resetSettings();
   await sleep(300);
 
@@ -705,8 +710,10 @@ try {
     for (const active of order) {
       await setSettings({globalEnabled: active}); await sleep(400);
       await page.go(site("127.0.0.1", "rows.html"), 2500);
-      const enabled = await page.eval("document.documentElement.hasAttribute('data-oled-night-root')");
-      pair.pageOnly = (pair.pageOnly ?? true) && (active ? enabled : !enabled);
+      const state = await page.eval("({enabled:document.documentElement.hasAttribute('data-oled-night-root'),visible:!document.hidden})");
+      const webPages = (await send('Target.getTargets')).result.targetInfos.filter(target => target.type === 'page' && /^https?:/.test(target.url));
+      pair.pageOnly = (pair.pageOnly ?? true) && state.visible && webPages.length === 1 &&
+        webPages[0].targetId === page.targetId && (active ? state.enabled : !state.enabled);
       const before = (await send('Performance.getMetrics', {}, page.sessionId)).result.metrics.find(m => m.name === 'RecalcStyleCount').value;
       pair[active ? 'active' : 'native'] = await page.eval(`(${churnWorkload.toString()})()`);
       const after = (await send('Performance.getMetrics', {}, page.sessionId)).result.metrics.find(m => m.name === 'RecalcStyleCount').value;
