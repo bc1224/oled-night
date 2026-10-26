@@ -40,3 +40,6 @@ assert.equal(colors.siteProfile('analytics.google.com'), 'google-analytics');
 assert.equal(colors.siteProfile('ANALYTICS.GOOGLE.COM'), 'google-analytics');
 assert.equal(colors.siteProfile('analytics.google.com.evil.example'), '');
 assert.equal(colors.siteProfile('maps.google.com'), '');
+assert.equal(colors.siteProfile('docs.google.com'), 'google-docs');
+assert.equal(colors.siteProfile('DOCS.GOOGLE.COM'), 'google-docs');
+assert.equal(colors.siteProfile('docs.google.com.evil.example'), '');

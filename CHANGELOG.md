@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.65
+
+- Make Google Docs document canvases dark with readable light text in Automatic and Full recolor, including newly inserted page canvases and Soft Dark appearance.
+- Keep the display treatment scoped to document canvases. Preserve saved/exported pixels, unrelated canvases, explicit preserved colors and Deepen mode; avoid double inversion in Invert mode.
+- Add Chrome and Firefox rendered-pixel regressions and document the displayed-artwork color tradeoff. No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.64
 
 - Keep App Store privacy and accessibility icons readable when the page already inverts their SVG wrappers for dark mode.

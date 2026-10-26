@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.64";
+  const VERSION = "0.6.65";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -2964,6 +2964,11 @@
          its controls, attribution, and unrelated canvases keep normal paint. */
       ${root}[data-oled-night-site="google-analytics"]:is([data-oled-night-mode="oled"], [data-oled-night-mode="soft"]) ga-geo-chart-simple canvas:not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) {
         filter: invert(1) hue-rotate(180deg) !important;
+      }
+      /* Docs draws the page and its text into one bitmap. Change display paint
+         only; document/export pixels remain native. Deepen keeps native colors. */
+      ${root}[data-oled-night-site="google-docs"]:is([data-oled-night-mode="oled"], [data-oled-night-mode="soft"]) canvas.kix-canvas-tile-content:not([data-oled-night-preserve-colors], [data-oled-night-preserve-colors] *):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) {
+        filter: invert(1) hue-rotate(180deg) brightness(var(--oln-light, 88%)) !important;
       }
       /* Apple's auth widget paints autofill with an inset shadow and explicit
          text-fill, independently of color. Cover UA autofill/preview paint in

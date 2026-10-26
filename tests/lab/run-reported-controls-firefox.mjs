@@ -15,12 +15,14 @@ import {appStoreIconsProbe,appStoreIconsRestored,appStoreIconsToggle} from './ap
 import {appStoreIconsPaint} from './app-store-icons-paint.mjs';
 import {appleAdsControlsScenario,appleAdsControlsProbe,appleAdsControlsRestored} from './apple-ads-controls-scenario.mjs';
 import {appleAdsControlsPaint} from './apple-ads-controls-paint.mjs';
+import {googleDocsScenario,googleDocsProbe,googleDocsRestored} from './google-docs-scenario.mjs';
+import {googleDocsPaint} from './google-docs-paint.mjs';
 const root=resolve(import.meta.dirname,'../..'),temp=mkdtempSync(join(tmpdir(),'oled-reported-controls-'));
 let receive,runner,timer;const result=new Promise(r=>receive=r);
 const server=createServer((req,res)=>{
   if(req.method==='POST'&&req.url==='/result'){let body='';req.on('data',c=>body+=c);req.on('end',()=>{try{receive(JSON.parse(body));res.end('ok')}catch{res.writeHead(400);res.end()}});return}
   const path=new URL(req.url,'http://localhost').pathname;
-  if(!['/apple-ads-controls.html','/app-store-icons.html','/google-analytics.html','/reported-controls.html','/calendar-booking.html','/retained-surfaces.html','/layered-surfaces.html','/logo-contrast.html','/logo-contrast.svg','/logo-contrast-white.svg','/logo-contrast-badge.svg'].includes(path)){res.writeHead(404);res.end();return}
+  if(!['/google-docs.html','/apple-ads-controls.html','/app-store-icons.html','/google-analytics.html','/reported-controls.html','/calendar-booking.html','/retained-surfaces.html','/layered-surfaces.html','/logo-contrast.html','/logo-contrast.svg','/logo-contrast-white.svg','/logo-contrast-badge.svg'].includes(path)){res.writeHead(404);res.end();return}
   res.setHeader('content-type',path.endsWith('.svg')?'image/svg+xml':'text/html');res.end(readFileSync(join(root,'tests/e2e/site',path.slice(1))));
 });
 let report={engine:'Firefox',checks:[]};
@@ -28,7 +30,7 @@ try{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${server.address().port}`;
   cpSync(join(root,'dist/firefox'),temp,{recursive:true});
   const manifest=JSON.parse(readFileSync(join(temp,'manifest.json')));manifest.background.scripts.push('reported-driver.js');writeFileSync(join(temp,'manifest.json'),JSON.stringify(manifest));
-  writeFileSync(join(temp,'reported-driver.js'),`const scenario=${reportedControlsScenario.toString()},restored=${reportedControlsRestored.toString()},booking=${bookingSurfacesScenario.toString()},bookingRestored=${bookingSurfacesRestored.toString()},retained=${retainedSurfacesScenario.toString()},layered=${layeredSurfacesScenario.toString()},layeredRestored=${layeredSurfacesRestored.toString()},logoProbe=${logoContrastProbe.toString()},logoRestored=${logoContrastRestored.toString()},ga=${googleAnalyticsScenario.toString()},gaProbe=${googleAnalyticsProbe.toString()},gaRestored=${googleAnalyticsRestored.toString()},appStoreProbe=${appStoreIconsProbe.toString()},appStoreRestored=${appStoreIconsRestored.toString()},appStoreToggle=${appStoreIconsToggle.toString()},appleAds=${appleAdsControlsScenario.toString()},appleAdsProbe=${appleAdsControlsProbe.toString()},appleAdsRestored=${appleAdsControlsRestored.toString()};
+  writeFileSync(join(temp,'reported-driver.js'),`const scenario=${reportedControlsScenario.toString()},restored=${reportedControlsRestored.toString()},booking=${bookingSurfacesScenario.toString()},bookingRestored=${bookingSurfacesRestored.toString()},retained=${retainedSurfacesScenario.toString()},layered=${layeredSurfacesScenario.toString()},layeredRestored=${layeredSurfacesRestored.toString()},logoProbe=${logoContrastProbe.toString()},logoRestored=${logoContrastRestored.toString()},ga=${googleAnalyticsScenario.toString()},gaProbe=${googleAnalyticsProbe.toString()},gaRestored=${googleAnalyticsRestored.toString()},appStoreProbe=${appStoreIconsProbe.toString()},appStoreRestored=${appStoreIconsRestored.toString()},appStoreToggle=${appStoreIconsToggle.toString()},appleAds=${appleAdsControlsScenario.toString()},appleAdsProbe=${appleAdsControlsProbe.toString()},appleAdsRestored=${appleAdsControlsRestored.toString()},docs=${googleDocsScenario.toString()},docsProbe=${googleDocsProbe.toString()},docsRestored=${googleDocsRestored.toString()};
   (async()=>{
     const out=[],captures=[],sleep=ms=>new Promise(r=>setTimeout(r,ms));let tab,completed=false;
     const inspect=async func=>(await browser.scripting.executeScript({target:{tabId:tab.id},func}))[0].result;
@@ -92,6 +94,21 @@ try{
         await browser.storage.sync.set({extensionEnabled:false});await sleep(500);
         out.push(await inspect(appleAdsRestored));await browser.tabs.remove(tab.id);tab=null;
       }
+      for(const [mode,appearance] of [['auto','oled'],['recolor','oled'],['recolor','soft']]){
+        await browser.storage.sync.set({extensionEnabled:true,appearance,siteRules:mode==='auto'?{}:{'127.0.0.1':'recolor'}});
+        tab=await browser.tabs.create({url:${JSON.stringify(origin)}+'/google-docs.html'});await sleep(1200);
+        out.push(...(await inspect(docs)).map(c=>({...c,name:mode+' / '+appearance+' / '+c.name})));
+        captures.push({kind:'google-docs-'+mode+'-'+appearance,probe:await inspect(docsProbe),image:await browser.tabs.captureVisibleTab(tab.windowId,{format:'png'})});
+        await browser.storage.sync.set({extensionEnabled:false});await sleep(500);
+        out.push(await inspect(docsRestored));await browser.tabs.remove(tab.id);tab=null;
+      }
+      for(const mode of ['deepen','invert']){
+        await browser.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':mode}});
+        tab=await browser.tabs.create({url:${JSON.stringify(origin)}+'/google-docs.html'});await sleep(1200);
+        await inspect(()=>document.documentElement.setAttribute('data-oled-night-site','google-docs'));
+        out.push({...await inspect(docsRestored),name:mode+' / Docs canvas is not inverted a second time'});
+        await browser.tabs.remove(tab.id);tab=null;
+      }
       await browser.storage.sync.set({appearance:'oled'});
       await browser.storage.sync.set({extensionEnabled:true,siteRules:{'127.0.0.1':'deepen'}});
       tab=await browser.tabs.create({url:${JSON.stringify(origin)}+'/apple-ads-controls.html'});await sleep(1200);
@@ -110,11 +127,11 @@ try{
   runner=await webExt.cmd.run({sourceDir:temp,artifactsDir:temp,firefox:process.env.FIREFOX_PATH||(process.platform==='win32'?'C:/Program Files/Mozilla Firefox/firefox.exe':'firefox'),args:['-headless','--width=1024','--height=1000'],noReload:true,noInput:true},{shouldExitProgram:false});
   report=await Promise.race([result,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Reported controls Firefox timed out')),180000)})]);
   if(!Array.isArray(report.checks))throw Error('Malformed Firefox result');
-  for(const capture of report.captures){const bytes=Buffer.from(capture.image.split(',')[1],'base64');mkdirSync(join(root,'dist/reported-controls'),{recursive:true});writeFileSync(join(root,'dist/reported-controls/firefox-'+(capture.kind||'logo-contrast')+'.png'),bytes);report.checks.push(...(capture.kind?.startsWith('apple-ads')?appleAdsControlsPaint(bytes,capture.probe).map(c=>({...c,name:capture.kind+' / '+c.name})):capture.kind?.startsWith('app-store')?appStoreIconsPaint(bytes,capture.probe):capture.kind?.startsWith('google-analytics')?googleAnalyticsPaint(bytes,capture.probe):logoContrastPaint(bytes,capture.probe)))}
+  for(const capture of report.captures){const bytes=Buffer.from(capture.image.split(',')[1],'base64');mkdirSync(join(root,'dist/reported-controls'),{recursive:true});writeFileSync(join(root,'dist/reported-controls/firefox-'+(capture.kind||'logo-contrast')+'.png'),bytes);report.checks.push(...(capture.kind?.startsWith('google-docs')?googleDocsPaint(bytes,capture.probe):capture.kind?.startsWith('apple-ads')?appleAdsControlsPaint(bytes,capture.probe).map(c=>({...c,name:capture.kind+' / '+c.name})):capture.kind?.startsWith('app-store')?appStoreIconsPaint(bytes,capture.probe):capture.kind?.startsWith('google-analytics')?googleAnalyticsPaint(bytes,capture.probe):logoContrastPaint(bytes,capture.probe)))}
   delete report.captures;
 }catch(e){report={engine:'Firefox',completed:false,checks:[{name:'Firefox reported control runner',ok:false,detail:String(e)}]}}
 finally{clearTimeout(timer);await runner?.exit();await new Promise(r=>server.close(r));rmSync(temp,{recursive:true,force:true})}
-mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-firefox.json'),JSON.stringify(componentReceipt('Firefox',{...report,fixtures:['apple-ads-controls.html','app-store-icons.html','google-analytics.html','reported-controls.html','calendar-booking.html','retained-surfaces.html','layered-surfaces.html','logo-contrast.html'],modes:['auto','recolor','soft','deepen']}),null,2));
+mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-firefox.json'),JSON.stringify(componentReceipt('Firefox',{...report,fixtures:['google-docs.html','apple-ads-controls.html','app-store-icons.html','google-analytics.html','reported-controls.html','calendar-booking.html','retained-surfaces.html','layered-surfaces.html','logo-contrast.html'],modes:['auto','recolor','soft','deepen','invert']}),null,2));
 for(const c of report.checks.filter(c=>!c.ok))console.log('FAIL '+c.name+': '+c.detail);
 console.log(report.checks.filter(c=>c.ok).length+'/'+report.checks.length+' Firefox reported control checks passed');
 if(!report.completed||report.checks.some(c=>!c.ok))process.exitCode=1;

@@ -308,6 +308,7 @@
     const host = String(hostname || "").toLowerCase();
     if (host === "mail.google.com") return "gmail";
     if (host === "analytics.google.com") return "google-analytics";
+    if (host === "docs.google.com") return "google-docs";
     if (/(^|\.)amazon\.com$/.test(host)) return "amazon";
     if (/^(idmsa|appleid|appstoreconnect)\.apple\.com$/.test(host)) return "apple-auth";
     if (/(^|\.)reddit\.com$/.test(host)) return "reddit";

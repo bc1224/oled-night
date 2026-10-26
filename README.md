@@ -61,6 +61,8 @@ The switch beside **OLED Night** and **Alt+Shift+E** pause or resume the extensi
 | Full recolor | Always recolors, even if the site looks dark |
 | Deepen blacks only | Only pushes the darkest greys to true black |
 | Invert | For compatible canvas apps, such as spreadsheets: flips the page, then flips images back. Figma always keeps its native colors |
+
+Google Docs document pages use dark display colors in Automatic and Full recolor. This also changes the displayed colors of artwork embedded in the document canvas. Choose Deepen blacks only or Off when checking original document colors. Saved documents and exports keep their original colors.
 | Off | Never touches the site |
 
 If a site still looks wrong, click **Report a broken site** in the popup. Add optional notes, then choose **Screenshot this page** or paste, drop or select an image. Review the image and choose **Use screenshot**. Nothing is uploaded until you choose **Submit report**. The reporting service stores your scrubbed diagnostics, notes and any screenshot privately for up to 30 days, accessible only with the maintainer's GitHub authentication. It creates a generic public tracking issue with no hostname, notes, diagnostics or screenshot link. No GitHub sign-in is required to submit. A success popup confirms submission. Anything you manually add to a public GitHub issue or comment is public. Fixes require reproduction, tests and review. Full local report downloads can contain visible text and identifiers, so review them before sharing.
