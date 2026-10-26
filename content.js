@@ -1200,7 +1200,15 @@
           const fg = colors.mapForeground(colors.parseColor(ctx.style(svg).color), 1);
           out.push([svg, {fg}], ...currentParts.map(part => [part, {fg}]));
         } else {
-          out.push([svg, neutral && unreadable ? {"icon-invert":"1"} : {}], ...currentParts.map(part => [part, {}]));
+          // Invert native paint, rather than an ancestor's remapped currentColor.
+          // Hold that measured ink while the whole neutral badge is inverted.
+          const hold = part => {
+            const style = ctx.style(part);
+            return {fg: style.color, fill: style.fill, stroke: style.stroke};
+          };
+          const invert = neutral && unreadable;
+          out.push([svg, invert ? {"icon-invert":"1", ...hold(svg)} : {}],
+            ...currentParts.map(part => [part, invert ? hold(part) : {}]));
         }
       }
       return;
@@ -1212,15 +1220,6 @@
     const outline = svg.getAttribute("fill") === "none" || referenced?.getAttribute("fill") === "none";
     const paleToDark = (color) => (color && color.a >= 0.08 && colors.luminance(color) > 0.6 && colors.chroma(color) < 0.25
       ? colors.mapBackground(color, mode) : null);
-    const currentColorPaint = (part, name, computed) => {
-      if (computed[name] !== computed.color) return false;
-      for (let node = part; node; node = node.parentElement) {
-        const paint = node.style?.[name] || node.getAttribute(name) || "";
-        if (paint) return paint.trim().toLowerCase() === "currentcolor";
-        if (node === svg) break;
-      }
-      return false;
-    };
     for (const part of [svg, ...svg.querySelectorAll(icon ? ICON_PARTS : CHART_PARTS)]) {
       const computed = getComputedStyle(part);
       const found = {};
@@ -1244,11 +1243,11 @@
         // Keep currentColor as an inherited binding. Freezing it to a mapped
         // fill on a group would hide a descendant's later authored color.
         if (fill && !(outline && (part === svg || part.localName === "use"))) {
-          if (currentColorPaint(part, "fill", computed)) found.fg = fill;
+          if (computed.fill === computed.color) { found.fg = fill; found.fill = "currentColor"; }
           else found.fill = fill;
         }
         if (stroke) {
-          if (currentColorPaint(part, "stroke", computed)) found.fg = stroke;
+          if (computed.stroke === computed.color) { found.fg = stroke; found.stroke = "currentColor"; }
           else found.stroke = stroke;
         }
       } else if (part.localName === "stop") {

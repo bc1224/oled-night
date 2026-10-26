@@ -1,6 +1,25 @@
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 
+// Explicit diagnostic runs capture the first cold trial, rather than a warm
+// replay after failure. They never authorize a release or replace its trials.
+export async function startColdChurnDiagnostic({send,page}) {
+ await send('Tracing.start',{categories:'devtools.timeline,blink,v8,disabled-by-default-v8.gc',transferMode:'ReturnAsStream'},page.sessionId);
+ await send('Profiler.enable',{},page.sessionId);await send('Profiler.start',{},page.sessionId);
+ return Object.fromEntries((await send('Performance.getMetrics',{},page.sessionId)).result.metrics.map(m=>[m.name,m.value]));
+}
+export async function finishColdChurnDiagnostic({send,page,root,before,work}) {
+ const after=Object.fromEntries((await send('Performance.getMetrics',{},page.sessionId)).result.metrics.map(m=>[m.name,m.value]));
+ const {result:{profile}}=await send('Profiler.stop',{},page.sessionId);
+ const output=join(root,'dist/performance');mkdirSync(output,{recursive:true});
+ writeFileSync(join(output,'cold-churn-workload.cpuprofile'),JSON.stringify(profile));
+ const done=send.nextEvent('Tracing.tracingComplete');await send('Tracing.end',{},page.sessionId);const {stream}=await done;let trace='';
+ while(true){const response=await send('IO.read',{handle:stream},page.sessionId);if(response.error)throw Error(response.error.message);const r=response.result;trace+=r.base64Encoded?Buffer.from(r.data,'base64').toString():r.data;if(r.eof)break}
+ await send('IO.close',{handle:stream},page.sessionId);writeFileSync(join(output,'cold-churn-trace.json'),trace);
+ const metrics={work,scriptMs:1000*(after.ScriptDuration-before.ScriptDuration),styleMs:1000*(after.RecalcStyleDuration-before.RecalcStyleDuration),layoutMs:1000*(after.LayoutDuration-before.LayoutDuration)};
+ writeFileSync(join(output,'cold-churn-metrics.json'),JSON.stringify(metrics,null,2));console.log('COLD CHURN DIAGNOSTIC '+JSON.stringify(metrics));
+}
+
 // Capture a separate diagnostic only after the unchanged benchmark has failed.
 // Profiling must not change the measurements that decide whether a release passes.
 export async function rowPerformanceDiagnostic({send,page,extension,url,workload,root}) {

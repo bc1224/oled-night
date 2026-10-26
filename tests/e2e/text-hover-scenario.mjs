@@ -1,7 +1,7 @@
 // Runs at the DOM/event boundary in either browser, without engine internals.
 export async function textHoverEvents(){
   const wait=()=>new Promise(resolve=>setTimeout(resolve,180));
-  const nodes=[...['first','second','third','fourth','last','control','symbol','vectorLabel','slottedFirst','slottedSecond'].map(id=>document.getElementById(id)),
+  const nodes=[...['first','second','third','fourth','last','control','symbol','cssSymbol','vectorLabel','slottedFirst','slottedSecond'].map(id=>document.getElementById(id)),
     ...document.getElementById('shadowHost').shadowRoot.querySelectorAll('p')];
   const colors=()=>nodes.map(node=>{const style=getComputedStyle(node);return node instanceof SVGElement?style.fill+';'+style.stroke:style.color});
   const before=colors(),steps=[];
@@ -27,10 +27,13 @@ export async function textHoverEvents(){
   const inserted=document.createElement('p');inserted.textContent='New synthetic inherited text';
   document.getElementById('last').after(inserted);await wait();
   const insertionStable=getComputedStyle(inserted).color===before[0];inserted.remove();
-  const symbol=document.getElementById('symbol');symbol.style.color='rgb(0, 200, 5)';await wait();
-  const coloredArtwork=getComputedStyle(symbol).fill==='rgb(0, 200, 5)';
-  symbol.style.removeProperty('color');await wait();
-  const artworkUpdateStable=coloredArtwork&&JSON.stringify(colors())===JSON.stringify(before);
+  let artworkUpdateStable=true;
+  for(const id of ['symbol','cssSymbol']){
+    const symbol=document.getElementById(id);symbol.style.color='rgb(0, 200, 5)';await wait();
+    const coloredArtwork=getComputedStyle(symbol).fill==='rgb(0, 200, 5)'&&getComputedStyle(symbol.ownerSVGElement).filter==='none';
+    symbol.style.removeProperty('color');await wait();
+    artworkUpdateStable&&=coloredArtwork&&JSON.stringify(colors())===JSON.stringify(before);
+  }
   const richButton=document.getElementById('richButton'),richShape=document.getElementById('richShape');
   richButton.focus();await wait();
   const restingShape=getComputedStyle(richShape).fill;

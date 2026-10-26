@@ -16,7 +16,7 @@ const runtimeHash=runtimeDigest(file=>readFileSync(join(extension,file)));
 let sha=null;
 try{sha=execFileSync('git',['rev-parse','HEAD'],{cwd:extension,encoding:'utf8',windowsHide:true,stdio:['ignore','pipe','ignore']}).trim()}catch{}
 const fixture=readFileSync(join(root,'tests/e2e/site/text-hover.html'),'utf8');
-const ids=['first','second','third','fourth','last','control','shadowFirst','shadowSecond','symbol','vectorLabel','slottedFirst','slottedSecond'];
+const ids=['first','second','third','fourth','last','control','shadowFirst','shadowSecond','symbol','cssSymbol','vectorLabel','slottedFirst','slottedSecond'];
 const checks=[],requestErrors=[];
 let browser;
 let browserVersion;
@@ -63,7 +63,7 @@ try {
   const snapshot=()=>page.eval(snapshotExpression);
   await page.hover(1,1);await wait(180);
   const before=await snapshot();
-  for(const target of ['first','second','third','last','control','shadowFirst','shadowSecond','slottedFirst','slottedSecond','symbol','vectorLabel','first']) {
+  for(const target of ['first','second','third','last','control','shadowFirst','shadowSecond','slottedFirst','slottedSecond','symbol','cssSymbol','vectorLabel','first']) {
     const point=await page.eval(`(()=>{const e=document.getElementById('${target}')||document.getElementById('shadowHost').shadowRoot.getElementById('${target}');const r=e.getBoundingClientRect();return{x:r.x+Math.min(10,r.width/2),y:r.y+r.height/2}})()`);
     await page.eval(`(()=>{globalThis.__textHoverFrames=[];const until=performance.now()+260;function sample(){globalThis.__textHoverFrames.push(${snapshotExpression});if(performance.now()<until)requestAnimationFrame(sample)}requestAnimationFrame(sample)})()`);
     await page.hover(point.x,point.y);
@@ -95,7 +95,7 @@ try {
   }
   await options.eval('chrome.storage.sync.set({extensionEnabled:false})');await wait(450);
   const original=await snapshot(),expected=test.original==='light'?'rgb(85, 85, 85)':'rgb(34, 34, 34)';
-  checks.push({name:`${test.name}: disabling restores authored text and vector ink`,ok:ids.every(id=>original[id]===(id.startsWith('slotted')?'rgb(34, 34, 34)':['symbol','vectorLabel'].includes(id)?expected+';none':expected)),original,expected,status});
+  checks.push({name:`${test.name}: disabling restores authored text and vector ink`,ok:ids.every(id=>original[id]===(id.startsWith('slotted')?'rgb(34, 34, 34)':['symbol','cssSymbol','vectorLabel'].includes(id)?expected+';none':expected)),original,expected,status});
   }
   if(!process.env.OLED_TEXT_HOVER_CASE)for(const host of ['mail.google.com','hover-fixture.invalid']){
     const pairs=[];

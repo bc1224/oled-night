@@ -15,7 +15,7 @@
       await browser.storage.sync.set({extensionEnabled:false});await wait(350);
       checks.push({name:`inherited text ${appearance}: disabling restores authored text and vector ink`,ok:await inspect(()=>
         [...document.querySelectorAll('p,li,button,a'),...document.getElementById('shadowHost').shadowRoot.querySelectorAll('p')].every(node=>getComputedStyle(node).color==='rgb(34, 34, 34)')&&
-        ['symbol','vectorLabel'].every(id=>getComputedStyle(document.getElementById(id)).fill==='rgb(34, 34, 34)'))});
+        ['symbol','cssSymbol','vectorLabel'].every(id=>getComputedStyle(document.getElementById(id)).fill==='rgb(34, 34, 34)'))});
       await browser.tabs.remove(tab.id);tab=null;
     }
   }catch(error){checks.push({name:'inherited text execution',ok:false,detail:String(error.stack||error)})}

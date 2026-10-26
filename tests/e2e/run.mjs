@@ -13,7 +13,7 @@ import { reportAttachmentsScenario } from './report-attachments-scenario.mjs';
 import { spriteAssetsScenario } from './sprite-assets-scenario.mjs';
 import { colorPaletteScenario, colorPaletteRestored } from './color-palette-scenario.mjs';
 import { chromeTestArgs } from '../lab/chrome-launch.mjs';
-import { rowPerformanceDiagnostic } from './row-performance-diagnostic.mjs';
+import { rowPerformanceDiagnostic, startColdChurnDiagnostic, finishColdChurnDiagnostic } from './row-performance-diagnostic.mjs';
 import { youtubeMusicScenario } from './youtube-music-scenario.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -715,7 +715,9 @@ try {
       pair.pageOnly = (pair.pageOnly ?? true) && state.visible && webPages.length === 1 &&
         webPages[0].targetId === page.targetId && (active ? state.enabled : !state.enabled);
       const before = (await send('Performance.getMetrics', {}, page.sessionId)).result.metrics.find(m => m.name === 'RecalcStyleCount').value;
+      const cold = process.env.OLED_TRACE_CHURN && pairs.length === 0 && active ? await startColdChurnDiagnostic({send,page}) : null;
       pair[active ? 'active' : 'native'] = await page.eval(`(${churnWorkload.toString()})()`);
+      if(cold)await finishColdChurnDiagnostic({send,page,root:EXT,before:cold,work:pair.active});
       const after = (await send('Performance.getMetrics', {}, page.sessionId)).result.metrics.find(m => m.name === 'RecalcStyleCount').value;
       if (active) stylePasses.push({frames: pair.active.frames, recalculations: after - before});
     }
@@ -880,4 +882,5 @@ try {
   try { rmSync(profile, { recursive: true, force: true }); } catch {}
 }
 console.log(`\n${passes} passed, ${failures} failed`);
-process.exit(failures ? 1 : 0);
+if(process.env.OLED_TRACE_CHURN)console.log('Diagnostic-only profiling cannot authorize a release.');
+process.exit(failures || process.env.OLED_TRACE_CHURN ? 1 : 0);
