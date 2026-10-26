@@ -2354,7 +2354,8 @@
     // The browser owns the open popup. Its static option rules are already
     // installed; synchronous select event restyles delay native opening.
     if (nativeSelect) return;
-    const found = path.find(node => node.matches(CONTROL));
+    const found = path.find(node => node.matches(CONTROL) ||
+      (node.hasAttribute('contenteditable') && node.isContentEditable));
     const control = found && found !== document.body && found !== document.documentElement ? found : null;
     const editing = control?.isContentEditable &&
       (control.hasAttribute('contenteditable') || control.getAttribute('role') === 'textbox') &&

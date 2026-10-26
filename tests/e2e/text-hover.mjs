@@ -99,12 +99,14 @@ try {
   }
   if(!process.env.OLED_TEXT_HOVER_CASE)for(const host of ['mail.google.com','hover-fixture.invalid']){
     const pairs=[];
-    for(const order of [[true,false],[false,true],[true,false]]){
-      const pair={};
+    for(const [index,order] of [[true,false],[false,true],[true,false]].entries()){
+      const editable=host==='mail.google.com'?'true':index===1?'plaintext-only':'';
+      const pair={editable};
       for(const active of order){
         await options.eval(`chrome.storage.sync.set(${JSON.stringify({extensionEnabled:active,brightness:88,appearance:'oled',siteRules:{[host]:host==='mail.google.com'?'global':'recolor'}})})`);
         await page.go(`https://${host}/oled-night-synthetic-reply`);await wait(450);
         await page.eval(`(()=>{const rows=Array.from({length:1500},(_,i)=>'<p><span>Synthetic message '+i+'</span></p>').join('');const history=document.createElement('div');history.id='replyHistory';history.innerHTML=rows;document.body.prepend(history);const box=document.createElement('div');box.className='a3s';box.innerHTML='<div id="replyEditor" role="textbox" aria-label="Synthetic reply" contenteditable="true" style="min-height:60px"><div id="replyDraft"></div><span id="replyFlag">Draft state</span><blockquote id="replyQuote">'+rows+'</blockquote></div>';document.body.prepend(box);const style=document.createElement('style');style.textContent='#replyFlag{background:#ffeedd;color:#111}#replyEditor:has(#replyDraft:empty) #replyFlag{background:#aaddff}';document.head.append(style)})()`);
+        await page.eval(`document.getElementById('replyEditor').setAttribute('contenteditable',${JSON.stringify(editable)})`);
         await wait(650);
         const enabled=await page.eval(`document.documentElement.hasAttribute('data-oled-night-root')`);
         assert.equal(enabled,active,'typing comparison must use the intended extension state');
