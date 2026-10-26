@@ -31,6 +31,13 @@ export async function textHoverEvents(){
   const coloredArtwork=getComputedStyle(symbol).fill==='rgb(0, 200, 5)';
   symbol.style.removeProperty('color');await wait();
   const artworkUpdateStable=coloredArtwork&&JSON.stringify(colors())===JSON.stringify(before);
-  return {hoverStable,slotMutationStable,focusStable,mutationStable,insertionStable,artworkUpdateStable,before,steps,
+  const richButton=document.getElementById('richButton'),richShape=document.getElementById('richShape');
+  richButton.focus();await wait();
+  const restingShape=getComputedStyle(richShape).fill;
+  richButton.dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true,composed:true}));await wait();
+  const keyboardGreen=getComputedStyle(richShape).fill==='rgb(0, 200, 5)'&&getComputedStyle(richShape.ownerSVGElement).filter==='none';
+  richButton.dispatchEvent(new KeyboardEvent('keyup',{key:' ',bubbles:true,composed:true}));await wait();
+  const keyboardControlStable=keyboardGreen&&getComputedStyle(richShape).fill===restingShape;
+  return {hoverStable,slotMutationStable,focusStable,mutationStable,insertionStable,artworkUpdateStable,keyboardControlStable,before,steps,
     artworkPreserved:getComputedStyle(document.getElementById('artText')).color==='rgb(34, 34, 34)'};
 }

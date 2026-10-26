@@ -2356,7 +2356,9 @@
     if (nativeSelect) return;
     const found = path.find(node => node.matches(CONTROL));
     const control = found && found !== document.body && found !== document.documentElement ? found : null;
-    const editing = control?.isContentEditable && /^(?:key|input$)/.test(event.type);
+    const editing = control?.isContentEditable &&
+      (control.hasAttribute('contenteditable') || control.getAttribute('role') === 'textbox') &&
+      /^(?:key|input$)/.test(event.type);
     if (control) interactionSurfaces.add(control);
     // Existing background AND ink overrides protect the current paint. Native
     // dark mode may own only a background; new native focus ink then needs the

@@ -75,7 +75,7 @@ try {
     checks.push({name:`${test.name}: brightness stays stable during native hover ${target}`,ok:hovered&&frames.length>1&&!changedFrame&&JSON.stringify(after)===JSON.stringify(before),before,after,samples:frames.length,changedFrame,status});
   }
   const events=await page.eval(`(${textHoverEvents.toString()})()`);
-  for(const property of ['hoverStable','slotMutationStable','focusStable','mutationStable','insertionStable','artworkUpdateStable','artworkPreserved'])checks.push({name:`${test.name}: ${property}`,ok:events[property],events,status});
+  for(const property of ['hoverStable','slotMutationStable','focusStable','mutationStable','insertionStable','artworkUpdateStable','keyboardControlStable','artworkPreserved'])checks.push({name:`${test.name}: ${property}`,ok:events[property],events,status});
   const linkPoint=await page.eval(`(()=>{const r=document.getElementById('stateLink').getBoundingClientRect();return{x:r.x+10,y:r.y+r.height/2}})()`);
   await page.eval(`document.activeElement.blur()`);await page.hover(1,1);await wait(150);
   const restingLink=await page.eval(`getComputedStyle(document.getElementById('stateLink')).color`);

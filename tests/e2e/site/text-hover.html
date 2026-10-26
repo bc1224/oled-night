@@ -1,10 +1,11 @@
-<!doctype html><html><head><meta charset="utf-8"><style>
+<!doctype html><html><head><meta charset="utf-8"><style id="fixture-style">
 body{background:#131416;color:#ddd;font:14px Arial;margin:30px}
 .a3s{color:#222}p,li{padding:5px}
 .light body{background:#fff;color:#222}.light .a3s{color:#555}
 button,a{color:inherit;background:transparent;border:0;padding:6px}
 #stateLink:hover,#stateLink:focus{background:#fff;color:#006699}
 #statePanel{background:#fff;color:#222;padding:8px}#statePanel:hover{background:#171717}
+#richButton path{fill:#111}
 .art{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='30'%3E%3Crect width='120' height='30' fill='yellow'/%3E%3C/svg%3E");background-size:cover;background-repeat:no-repeat;width:120px;color:#222}
 </style></head><body><div class="nH a98 iY"><div class="a3s"><div>
 <p id="first">Synthetic greeting and first paragraph.</p>
@@ -17,8 +18,14 @@ button,a{color:inherit;background:transparent;border:0;padding:6px}
 <svg width="180" height="24" aria-label="Synthetic vector label"><text id="vectorLabel" x="0" y="18" fill="currentColor">Synthetic vector text</text></svg>
 <p class="art" id="artText">Text over artwork</p>
 <div id="statePanel"><span id="stateCopy">Synthetic background state</span></div>
+<div contenteditable="true"><button id="richButton" type="button"><svg width="20" height="20"><path id="richShape" fill="#111" d="M0 0h20v20H0z"/></svg>Native control inside editable content</button></div>
 </div></div></div></body></html>
 <script>
 if(new URL(location.href).searchParams.get('original')==='light')document.documentElement.classList.add('light');
 document.getElementById('shadowHost').attachShadow({mode:'open'}).innerHTML='<p id="shadowFirst">Nested synthetic first paragraph.</p><p id="shadowSecond">Nested synthetic second paragraph.</p><slot name="copy" style="color:#222"></slot>';
+const keyPaint=[...document.getElementById('fixture-style').sheet.cssRules].find(rule=>rule.selectorText==='#richButton path');
+for(const type of ['keydown','keyup'])document.getElementById('richButton').addEventListener(type,event=>{
+  if(event.key!==' ')return;
+  keyPaint.style.fill=type==='keydown'?'rgb(0,200,5)':'#111';
+});
 </script>
