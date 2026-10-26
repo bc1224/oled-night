@@ -14,7 +14,7 @@ Follow Google's [Chrome Web Store API setup](https://developer.chrome.com/docs/w
 
 ## Current release
 
-Use the [latest GitHub release](https://github.com/bc1224/oled-night/releases/latest) for current source and download assets, and [CHANGELOG.md](CHANGELOG.md) for release summaries. Version 0.6.65 adds readable dark Google Docs document canvases and includes the earlier App Store icon, Apple Ads control and private-reporting fixes. Companion Chrome theme remains 1.0.3. Store approval and installed-browser updates are separate; check the public listing before claiming a version is available there.
+Use the [latest GitHub release](https://github.com/bc1224/oled-night/releases/latest) for current source and download assets, and [CHANGELOG.md](CHANGELOG.md) for release summaries. Version 0.6.66 keeps text brightness stable during hover, focus and updates in Gmail and other recolored pages, and includes the earlier Google Docs canvas, icon, control and private-reporting fixes. Companion Chrome theme remains 1.0.3. Store approval and installed-browser updates are separate; check the public listing before claiming a version is available there.
 
 Chrome description source is `store/LISTING.md`; Firefox description is `store/FIREFOX-LISTING.txt`. Both describe optional reviewed screenshots, private report contents and generic public tracking issues. Updating these descriptions does not require uploading a new extension package. Preserve pending package reviews. Deploy and verify the private reporter before releasing packages or copy that promises private intake. See [PRIVATE_REPORTS.md](PRIVATE_REPORTS.md).
 

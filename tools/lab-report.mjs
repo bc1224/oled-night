@@ -1,7 +1,7 @@
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 const root=resolve(import.meta.dirname,'..'),directory=join(root,'dist/lab-results');
-const names=['chrome','firefox','oled-components-chrome','oled-components-firefox','navigation-work-chrome','chatgpt-streaming-chrome','qa-interface','compact-switches-chrome','compact-switches-firefox'];
+const names=['chrome','firefox','oled-components-chrome','oled-components-firefox','navigation-work-chrome','chatgpt-streaming-chrome','qa-interface','compact-switches-chrome','compact-switches-firefox','text-hover-chrome','text-hover-firefox'];
 const reports=names.map(name=>JSON.parse(readFileSync(join(directory,name+'.json'))));
 if(reports.some(r=>!r.completed||r.candidate||!r.checks.length||r.checks.some(c=>!c.ok)))throw Error('Incomplete, failed or candidate runs cannot become a public passing receipt');
 if(reports.some(r=>r.sha!==reports[0].sha||r.version!==reports[0].version||r.runtimeHash!==reports[0].runtimeHash))throw Error('Browser reports must verify the same source, packaged runtime and version');

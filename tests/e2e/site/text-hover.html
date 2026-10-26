@@ -1,0 +1,24 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{background:#131416;color:#ddd;font:14px Arial;margin:30px}
+.a3s{color:#222}p,li{padding:5px}
+.light body{background:#fff;color:#222}.light .a3s{color:#555}
+button,a{color:inherit;background:transparent;border:0;padding:6px}
+#stateLink:hover,#stateLink:focus{background:#fff;color:#006699}
+#statePanel{background:#fff;color:#222;padding:8px}#statePanel:hover{background:#171717}
+.art{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='30'%3E%3Crect width='120' height='30' fill='yellow'/%3E%3C/svg%3E");background-size:cover;background-repeat:no-repeat;width:120px;color:#222}
+</style></head><body><div class="nH a98 iY"><div class="a3s"><div>
+<p id="first">Synthetic greeting and first paragraph.</p>
+<p id="second">Synthetic second paragraph with inherited text.</p>
+<ul><li id="third">Synthetic first bullet item</li><li id="fourth">Synthetic second bullet item</li></ul>
+<p id="last">Synthetic closing paragraph.</p>
+<button id="control">Synthetic control</button><a id="stateLink" href="#">Authored hover</a>
+<div id="shadowHost"><span id="slottedFirst" slot="copy">Assigned synthetic first text.</span><span id="slottedSecond" slot="copy">Assigned synthetic second text.</span></div>
+<svg width="40" height="24" aria-label="Synthetic icon"><path id="symbol" fill="currentColor" d="M0 0h24v24H0z"/></svg>
+<svg width="180" height="24" aria-label="Synthetic vector label"><text id="vectorLabel" x="0" y="18" fill="currentColor">Synthetic vector text</text></svg>
+<p class="art" id="artText">Text over artwork</p>
+<div id="statePanel"><span id="stateCopy">Synthetic background state</span></div>
+</div></div></div></body></html>
+<script>
+if(new URL(location.href).searchParams.get('original')==='light')document.documentElement.classList.add('light');
+document.getElementById('shadowHost').attachShadow({mode:'open'}).innerHTML='<p id="shadowFirst">Nested synthetic first paragraph.</p><p id="shadowSecond">Nested synthetic second paragraph.</p><slot name="copy" style="color:#222"></slot>';
+</script>

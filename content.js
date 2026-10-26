@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.65";
+  const VERSION = "0.6.66";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -305,6 +305,11 @@
     if (node.parentElement) return node.parentElement;
     const parent = node.parentNode;
     return parent && parent.host ? parent.host : null;
+  }
+
+  function inheritanceParent(node) {
+    // Assigned content inherits a slot's ink before its light-DOM parent.
+    return node.assignedSlot || parentAcrossShadow(node);
   }
 
   function adoptShadowRoot(root) {
@@ -1933,7 +1938,44 @@
     // restyle their subtree either way, so they keep one switch per root.
     const measured = [], measuredSelf = [], measuredPseudo = [], calm = [], calmSelf = new Set();
     const retainedAncestors = new Map();
+    const inheritanceRoots = [...paintList, ...list.icons];
     const marked = [...paintList, ...list.images].filter((element) => element.isConnected && element.hasAttribute(MARK));
+    const markedSet = new Set(marked);
+    let inheritsMappedInk = false;
+    let foregroundOnly = true;
+    if (!ancestorMeasurement) {
+      // A shallow hover or mutation batch can inherit our mapped foreground
+      // from an unchanged ancestor outside the batch. Measure that authored
+      // inheritance chain too, or each pass can promote muted text to primary.
+      const ancestors = new Set();
+      for (const element of inheritanceRoots) {
+        for (let parent = inheritanceParent(element); parent && !ancestors.has(parent); parent = inheritanceParent(parent)) {
+          ancestors.add(parent);
+          if (!markedSet.has(parent) && INHERITED_KEYS.test(parent.getAttribute(MARK) || "")) {
+            inheritsMappedInk = true;
+            if ((parent.getAttribute(MARK) || "").split(" ").some(key => key !== "fg" && INHERITED_KEYS.test(key))) {
+              foregroundOnly = false;
+              break;
+            }
+          }
+        }
+        if (!foregroundOnly) break;
+      }
+    }
+    const includeAncestors = () => {
+      const ancestors = new Set(), added = [];
+      for (const element of inheritanceRoots) for (let parent = inheritanceParent(element); parent; parent = inheritanceParent(parent)) {
+        if (ancestors.has(parent)) break;
+        ancestors.add(parent);
+        const surface = originalSurface.get(parent);
+        if (surface?.retained && surface.color) retainedAncestors.set(parent, surface);
+        originalSurface.delete(parent);
+        if (parent.hasAttribute(MARK) && !markedSet.has(parent)) {
+          measuredSelf.push(parent); calmSelf.add(parent); added.push(parent);
+        }
+      }
+      return added;
+    };
     // Form fields have (almost) no subtree, so their inherited overrides are cheap to switch.
     const deep = (element) => INHERITED_KEYS.test(element.getAttribute(MARK)) && !element.matches("input, textarea, select");
     if (ancestorMeasurement || (marked.length <= MANY_MARKED && !marked.some(deep))) {
@@ -1948,17 +1990,7 @@
         // overrides on unrelated siblings. The page keeps its previous dark
         // paint between chunks; each chunk reads current, rather than cached,
         // ancestor colors and backdrops, including across shadow boundaries.
-        const ancestors = new Set();
-        for (const element of paintList) for (let parent = parentAcrossShadow(element); parent; parent = parentAcrossShadow(parent)) {
-          if (ancestors.has(parent)) break;
-          ancestors.add(parent);
-          const surface = originalSurface.get(parent);
-          if (surface?.retained && surface.color) retainedAncestors.set(parent, surface);
-          originalSurface.delete(parent);
-          if (parent.hasAttribute(MARK) && !marked.includes(parent)) {
-            measuredSelf.push(parent); calmSelf.add(parent);
-          }
-        }
+        includeAncestors();
       }
     } else {
       // A shallow ancestor reread must never turn off every descendant's
@@ -2082,6 +2114,28 @@
         return computed;
       }
     };
+    if (inheritsMappedInk) {
+      // Bright primary ink on a currently light native backdrop already has
+      // the same emphasis after mapping. Keep that proven no-op path local.
+      // Muted ink, dark backdrops, artwork and SVG inheritance need the real
+      // ancestor colors. Inspect this batch's current paint before deciding.
+      for (const element of inheritanceRoots) originalSurface.delete(element);
+      const colors = colorsApi();
+      const stablePrimary = foregroundOnly && inheritanceRoots.every(element => {
+        if (textTiers.get(element) !== 1 || ctx.generated(element)) return false;
+        const ink = colors.parseColor(ctx.style(element).color), backdrop = backdropOf(element, ctx);
+        return ink && colors.chroma(ink) < .1 && colors.luminance(ink) > .5 &&
+          !backdrop.image && colors.luminance(backdrop.color) > .5;
+      });
+      if (!stablePrimary) {
+        for (const node of includeAncestors()) {
+          node.setAttribute(NOANIM_SELF, "");
+          node.setAttribute(MEASURE_SELF, "");
+        }
+        styles.clear();
+        ctx.backdrop.clear();
+      }
+    }
     const decisions = paintList.map((element) => decide(element, ctx));
     const iconDecisions = [];
     for (const icon of list.icons) if (icon.isConnected) decideSvg(icon, ctx, iconDecisions);

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.66
+
+- Keep inherited text brightness stable when moving the pointer over Gmail messages and other recolored pages. Hover, focus and small content updates now measure the original ancestor colors instead of recoloring an already-mapped foreground again.
+- Add native-pointer Gmail and generic-page regressions in OLED and Soft Dark, plus Firefox coverage for inherited text, shadow and assigned content, vector ink, dynamic updates, artwork preservation and restoration. Keep genuine authored hover colors responsive, including at reduced brightness.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.65
 
 - Make Google Docs document canvases dark with readable light text in Automatic and Full recolor, including newly inserted page canvases and Soft Dark appearance.

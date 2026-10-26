@@ -36,6 +36,10 @@ jobs:
         run: node tests/e2e/report-ui.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
+      - name: Stable Gmail and generic text under native pointer, focus and updates
+        run: node tests/e2e/text-hover.mjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
       - name: Package
         run: node tools/package.mjs
       - name: Shortcut conflicts and immediate background updates in real Chrome
@@ -47,6 +51,8 @@ jobs:
       - uses: browser-actions/setup-firefox@v1
       - run: npm run lint:firefox
       - run: npm run test:firefox
+      - name: Inherited text and vector hover, focus and updates in Firefox
+        run: node tests/firefox/run.mjs --text-hover
       - name: Product media, radio pixels and native keyboard, surface bands and QA identity
         run: |
           node tests/lab/run-oled-components.mjs

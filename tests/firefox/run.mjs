@@ -1,10 +1,12 @@
 import { createServer } from 'node:http';
-import { cpSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, writeFileSync, rmSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import webExt from 'web-ext';
 import {reportAttachmentsScenario} from '../e2e/report-attachments-scenario.mjs';
 import {colorPaletteScenario,colorPaletteRestored} from '../e2e/color-palette-scenario.mjs';
+import {textHoverEvents} from '../e2e/text-hover-scenario.mjs';
+import {componentReceipt} from '../lab/component-receipt.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const temp = mkdtempSync(join(tmpdir(), 'oled-night-firefox-test-'));
@@ -30,7 +32,8 @@ try {
   const manifest = JSON.parse(readFileSync(join(temp, 'manifest.json')));
   manifest.background.scripts.push('test-driver.js');
   writeFileSync(join(temp, 'manifest.json'), JSON.stringify(manifest));
-  writeFileSync(join(temp, 'test-driver.js'), `const TEST_ORIGIN = ${JSON.stringify(origin)};\nconst colorPaletteScenario = ${colorPaletteScenario.toString()};\nconst colorPaletteRestored = ${colorPaletteRestored.toString()};\n` + readFileSync(join(root, 'tests/firefox/driver.js'), 'utf8'));
+  const driver=process.argv.includes('--text-hover')?'text-hover-driver.js':'driver.js';
+  writeFileSync(join(temp, 'test-driver.js'), `const TEST_ORIGIN = ${JSON.stringify(origin)};\nconst textHoverEvents = ${textHoverEvents.toString()};\nconst colorPaletteScenario = ${colorPaletteScenario.toString()};\nconst colorPaletteRestored = ${colorPaletteRestored.toString()};\n` + readFileSync(join(root, 'tests/firefox',driver), 'utf8'));
   for (const page of ['options.html', 'popup.html']) {
     const path = join(temp, page);
     writeFileSync(path, readFileSync(path, 'utf8').replace('</body>', '<script src="test-ui.js"></script></body>'));
@@ -38,6 +41,13 @@ try {
   writeFileSync(join(temp, 'test-ui.js'), 'const reportAttachmentsScenario='+reportAttachmentsScenario.toString()+';\n'+readFileSync(join(root, 'tests/firefox/ui.js'),'utf8'));
   runner = await webExt.cmd.run({ sourceDir: temp, artifactsDir: temp, firefox: process.env.FIREFOX_PATH || (process.platform === 'win32' ? 'C:/Program Files/Mozilla Firefox/firefox.exe' : 'firefox'), args: ['-headless'], noReload: true, noInput: true }, { shouldExitProgram: false });
   const checks = await Promise.race([result, new Promise((_, reject) => { timer = setTimeout(() => reject(Error('Firefox tests timed out')), 90000); })]);
+  if(process.argv.includes('--text-hover')){
+    mkdirSync(join(root,'dist/lab-results'),{recursive:true});
+    writeFileSync(join(root,'dist/lab-results/text-hover-firefox.json'),JSON.stringify(componentReceipt('Firefox',{
+      completed:true,fixtures:['text-hover.html'],modes:['recolor-oled','recolor-soft'],states:['pointer-events','focus','mutation','slot-update','insert','disabled'],
+      checks:checks.map(check=>({...check,coverage:check.name.endsWith('artworkPreserved')?'media':'text'}))
+    }),null,2));
+  }
   for (const c of checks) console.log(`${c.ok ? 'PASS' : 'FAIL'} ${c.name}${c.detail ? ': ' + c.detail : ''}`);
   if (checks.some(c => !c.ok)) process.exitCode = 1;
   console.log(`${checks.filter(c => c.ok).length}/${checks.length} Firefox checks passed`);
