@@ -1828,7 +1828,11 @@
           const background = colorsApi().parseColor(rule.style.backgroundColor);
           for (const selector of selectors) {
             const classes = selector.match(/\.[\w-]+/g) || [];
-            rules.push({selector,classes,backgroundOnly,background,priority:[
+            rules.push({selector,classes,backgroundOnly,background,
+              ink:rule.style.color,inkColor:colorsApi().parseColor(rule.style.color),
+              resetsInk:!!rule.style.getPropertyValue('all'),
+              inkPriority:[rule.style.getPropertyPriority('color') === 'important' ? 1 : 0,0,classes.length,/^[a-z]/i.test(selector) ? 1 : 0],
+              priority:[
               rule.style.getPropertyPriority('background-color') === 'important' ? 1 : 0,
               classes.length, /^[a-z]/i.test(selector) ? 1 : 0]});
           }
@@ -1870,6 +1874,33 @@
     }
     for (const parent of path) cache.set(parent, safe);
     return safe;
+  }
+
+  // Find the nearest winning absolute ink in a complete simple scope. This
+  // also covers a bold child inheriting an already-native span's ink. Stop
+  // when an outside override hides that source, or native/unknown CSS wins.
+  function hasNativeInkSource(node, ink, scope) {
+    if (!scope || scope.mayAnimate || !ink) return false;
+    for (; node; node = inheritanceParent(node)) {
+      if (node.style.getPropertyValue('all')) return false;
+      let color = null, priority = null, value = '';
+      if (node.style.color) {
+        value = node.style.color; color = colorsApi().parseColor(value);
+        priority = [node.style.getPropertyPriority('color') === 'important' ? 1 : 0,1,0,0];
+      }
+      for (const rule of scope.rules) {
+        if ((!rule.ink && !rule.resetsInk) || !node.matches(rule.selector)) continue;
+        if (rule.resetsInk) return false;
+        const higher = !priority || rule.inkPriority.some((part,index) =>
+          part > priority[index] && rule.inkPriority.slice(0,index).every((before,i) => before === priority[i]));
+        const equal = priority && rule.inkPriority.every((part,index) => part === priority[index]);
+        if (higher || equal) { priority = rule.inkPriority; color = rule.inkColor; value = rule.ink; }
+      }
+      if (color) return ['r','g','b','a'].every(key => (color[key] ?? 1) === (ink[key] ?? 1));
+      if (priority ? !/^(inherit|unset)$/i.test(value.trim()) :
+          !/^(html|body|div|section|main|article|header|footer|nav|aside|ul|ol|li|p|span|b|strong|em|i|small|h[1-6])$/.test(node.localName)) return false;
+    }
+    return false;
   }
 
   function inheritsPlainInk(node, scope, contexts) {
@@ -2131,19 +2162,22 @@
       }
     };
     if (inheritsMappedInk) {
-      // Bright primary ink on a currently light native backdrop already has
-      // the same emphasis after mapping. Keep that proven no-op path local.
-      // Muted ink, dark backdrops, artwork and SVG inheritance need the real
-      // ancestor colors. Inspect this batch's current paint before deciding.
+      // Primary ink and independently owned native ink can stay local on a
+      // light native backdrop. Switching a page wrapper's foreground for a
+      // secondary-colored leaf would restyle every unrelated message twice.
       for (const element of inheritanceRoots) originalSurface.delete(element);
       const colors = colorsApi();
-      const stablePrimary = foregroundOnly && inheritanceRoots.every(element => {
-        if (textTiers.get(element) !== 1 || ctx.generated(element)) return false;
+      const inkScope = foregroundOnly ? paintScope || simplePaintScope() : null;
+      const stableInk = foregroundOnly && inheritanceRoots.every(element => {
+        const primary = textTiers.get(element) === 1;
+        if (!primary && (!inkScope || inkScope.mayAnimate)) return false;
+        if (ctx.generated(element)) return false;
         const ink = colors.parseColor(ctx.style(element).color), backdrop = backdropOf(element, ctx);
-        return ink && colors.chroma(ink) < .1 && colors.luminance(ink) > .5 &&
-          !backdrop.image && colors.luminance(backdrop.color) > .5;
+        if (!ink || backdrop.image || colors.luminance(backdrop.color) <= .5) return false;
+        return (primary && colors.chroma(ink) < .1 && colors.luminance(ink) > .5) ||
+          (plainDocumentContext(element, documentContexts) && hasNativeInkSource(element, ink, inkScope));
       });
-      if (!stablePrimary) {
+      if (!stableInk) {
         for (const node of includeAncestors()) {
           node.setAttribute(NOANIM_SELF, "");
           node.setAttribute(MEASURE_SELF, "");

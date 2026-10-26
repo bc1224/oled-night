@@ -6,6 +6,7 @@ import webExt from 'web-ext';
 import {reportAttachmentsScenario} from '../e2e/report-attachments-scenario.mjs';
 import {colorPaletteScenario,colorPaletteRestored} from '../e2e/color-palette-scenario.mjs';
 import {textHoverEvents} from '../e2e/text-hover-scenario.mjs';
+import {inkLocalityScenario} from '../e2e/ink-locality-scenario.mjs';
 import {componentReceipt} from '../lab/component-receipt.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
@@ -33,7 +34,7 @@ try {
   manifest.background.scripts.push('test-driver.js');
   writeFileSync(join(temp, 'manifest.json'), JSON.stringify(manifest));
   const driver=process.argv.includes('--text-hover')?'text-hover-driver.js':'driver.js';
-  writeFileSync(join(temp, 'test-driver.js'), `const TEST_ORIGIN = ${JSON.stringify(origin)};\nconst textHoverEvents = ${textHoverEvents.toString()};\nconst colorPaletteScenario = ${colorPaletteScenario.toString()};\nconst colorPaletteRestored = ${colorPaletteRestored.toString()};\n` + readFileSync(join(root, 'tests/firefox',driver), 'utf8'));
+  writeFileSync(join(temp, 'test-driver.js'), `const TEST_ORIGIN = ${JSON.stringify(origin)};\nconst textHoverEvents = ${textHoverEvents.toString()};\n${driver==='text-hover-driver.js'?'const inkLocalityScenario = '+inkLocalityScenario.toString()+';\n':''}const colorPaletteScenario = ${colorPaletteScenario.toString()};\nconst colorPaletteRestored = ${colorPaletteRestored.toString()};\n` + readFileSync(join(root, 'tests/firefox',driver), 'utf8'));
   for (const page of ['options.html', 'popup.html']) {
     const path = join(temp, page);
     writeFileSync(path, readFileSync(path, 'utf8').replace('</body>', '<script src="test-ui.js"></script></body>'));
@@ -44,7 +45,7 @@ try {
   if(process.argv.includes('--text-hover')){
     mkdirSync(join(root,'dist/lab-results'),{recursive:true});
     writeFileSync(join(root,'dist/lab-results/text-hover-firefox.json'),JSON.stringify(componentReceipt('Firefox',{
-      completed:true,fixtures:['text-hover.html'],modes:['recolor-oled','recolor-soft'],states:['pointer-events','focus','mutation','slot-update','insert','disabled'],
+      completed:true,fixtures:['text-hover.html','ink-locality.html'],modes:['recolor-oled','recolor-soft'],states:['pointer-events','focus','mutation','slot-update','insert','disabled','ancestor-locality'],
       checks:checks.map(check=>({...check,coverage:check.name.endsWith('artworkPreserved')?'media':'text'}))
     }),null,2));
   }

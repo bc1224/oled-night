@@ -702,6 +702,7 @@ try {
   // Performance under constant page churn and slider drags.
   const pairs = [];
   const stylePasses = [];
+  const ancestorReads = [];
   await send('Performance.enable', {}, page.sessionId);
   // Three fresh paired trials, with order counterbalanced. Keep every result;
   // use median throughput but fail on any active stall at the original budget.
@@ -714,17 +715,20 @@ try {
       const webPages = (await send('Target.getTargets')).result.targetInfos.filter(target => target.type === 'page' && /^https?:/.test(target.url));
       pair.pageOnly = (pair.pageOnly ?? true) && state.visible && webPages.length === 1 &&
         webPages[0].targetId === page.targetId && (active ? state.enabled : !state.enabled);
+      await page.eval(`(()=>{window.rowAncestorReads=0;window.rowAncestorWatch=new MutationObserver(records=>{window.rowAncestorReads+=records.filter(record=>record.oldValue===null).length});for(const node of [document.documentElement,document.body,document.getElementById('list')])window.rowAncestorWatch.observe(node,{attributes:true,attributeOldValue:true,attributeFilter:['data-oled-night-measure','data-oled-night-measure-self']})})()`);
       const before = (await send('Performance.getMetrics', {}, page.sessionId)).result.metrics.find(m => m.name === 'RecalcStyleCount').value;
       const cold = process.env.OLED_TRACE_CHURN && pairs.length === 0 && active ? await startColdChurnDiagnostic({send,page}) : null;
       pair[active ? 'active' : 'native'] = await page.eval(`(${churnWorkload.toString()})()`);
       if(cold)await finishColdChurnDiagnostic({send,page,root:EXT,before:cold,work:pair.active});
       const after = (await send('Performance.getMetrics', {}, page.sessionId)).result.metrics.find(m => m.name === 'RecalcStyleCount').value;
+      ancestorReads.push({active,switches:await page.eval("window.rowAncestorReads+=window.rowAncestorWatch.takeRecords().filter(record=>record.oldValue===null).length;window.rowAncestorWatch.disconnect();window.rowAncestorReads")});
       if (active) stylePasses.push({frames: pair.active.frames, recalculations: after - before});
     }
     pairs.push(pair);
   }
   const churn = judgeChurn(pairs);
   check("churn avoids long stalls and retains page-only tick rate", churn.ok, JSON.stringify(churn));
+  check('background-only rows and native secondary ink leave page ancestors alone',ancestorReads.every(result=>result.switches===0),JSON.stringify(ancestorReads));
   check('transition-free churn avoids an extra style measurement per update', stylePasses.every(p => p.recalculations <= 2.25 * p.frames + 3), JSON.stringify(stylePasses));
   await resetSettings(); await sleep(400);
   await sleep(500);

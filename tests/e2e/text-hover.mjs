@@ -8,6 +8,7 @@ import {launchChrome,wait} from '../lab/browser.mjs';
 import {runtimeDigest} from '../lab/runtime-proof.mjs';
 import {textHoverEvents} from './text-hover-scenario.mjs';
 import {startReplyTyping} from './reply-typing-scenario.mjs';
+import {inkLocalityScenario} from './ink-locality-scenario.mjs';
 
 const root=resolve(import.meta.dirname,'../..');
 const extension=resolve(process.env.EXT_PATH||root);
@@ -16,6 +17,7 @@ const runtimeHash=runtimeDigest(file=>readFileSync(join(extension,file)));
 let sha=null;
 try{sha=execFileSync('git',['rev-parse','HEAD'],{cwd:extension,encoding:'utf8',windowsHide:true,stdio:['ignore','pipe','ignore']}).trim()}catch{}
 const fixture=readFileSync(join(root,'tests/e2e/site/text-hover.html'),'utf8');
+const localityFixture=readFileSync(join(root,'tests/e2e/site/ink-locality.html'),'utf8');
 const ids=['first','second','third','fourth','last','control','shadowFirst','shadowSecond','symbol','cssSymbol','vectorLabel','slottedFirst','slottedSecond'];
 const checks=[],requestErrors=[];
 let browser;
@@ -26,7 +28,7 @@ try {
     browser.send('Fetch.fulfillRequest',{
       requestId:message.params.requestId,responseCode:200,
       responseHeaders:[{name:'Content-Type',value:'text/html'}],
-      body:Buffer.from(fixture).toString('base64')
+      body:Buffer.from(message.params.request.url.includes('synthetic-ink-locality')?localityFixture:fixture).toString('base64')
     },message.sessionId).catch(error=>requestErrors.push(error.message));
   }});
   browserVersion=await browser.send('Browser.getVersion');
@@ -47,6 +49,7 @@ try {
     {name:'generic native dark automatic',host:'hover-fixture.invalid',mode:'global',appearance:'oled'},
     {name:'generic explicit deepen',host:'hover-fixture.invalid',mode:'deepen',appearance:'oled'}
   ]){
+  if(process.env.OLED_INK_LOCALITY_ONLY)continue;
   if(process.env.OLED_REPLY_TYPING_ONLY)continue;
   if(process.env.OLED_TEXT_HOVER_CASE&&!test.name.includes(process.env.OLED_TEXT_HOVER_CASE))continue;
   await options.eval(`chrome.storage.sync.set(${JSON.stringify({extensionEnabled:true,brightness:test.brightness||88,appearance:test.appearance,siteRules:{[test.host]:test.mode}})})`);
@@ -97,7 +100,7 @@ try {
   const original=await snapshot(),expected=test.original==='light'?'rgb(85, 85, 85)':'rgb(34, 34, 34)';
   checks.push({name:`${test.name}: disabling restores authored text and vector ink`,ok:ids.every(id=>original[id]===(id.startsWith('slotted')?'rgb(34, 34, 34)':['symbol','cssSymbol','vectorLabel'].includes(id)?expected+';none':expected)),original,expected,status});
   }
-  if(!process.env.OLED_TEXT_HOVER_CASE)for(const host of ['mail.google.com','hover-fixture.invalid']){
+  if(!process.env.OLED_TEXT_HOVER_CASE&&!process.env.OLED_INK_LOCALITY_ONLY)for(const host of ['mail.google.com','hover-fixture.invalid']){
     const pairs=[];
     for(const [index,order] of [[true,false],[false,true],[true,false]].entries()){
       const editable=host==='mail.google.com'?'true':index===1?'plaintext-only':'';
@@ -129,12 +132,19 @@ try {
     }
     checks.push({name:`${host}: reply typing stays responsive without repeatedly measuring message history`,ok:pairs.every(pair=>pair.active.latencies.length===pair.active.inputs&&pair.active.p95<=pair.native.p95+33&&Math.max(0,...pair.active.longTasks)<150&&pair.active.repeatedMeasurements===0&&pair.active.subtreeSwitches===0),pairs});
   }
+  if(!process.env.OLED_TEXT_HOVER_CASE&&!process.env.OLED_REPLY_TYPING_ONLY)for(const appearance of ['oled','soft']){
+    await options.eval(`chrome.storage.sync.set(${JSON.stringify({extensionEnabled:true,appearance,brightness:88,siteRules:{'hover-fixture.invalid':'recolor'}})})`);
+    await page.go('https://hover-fixture.invalid/oled-night-synthetic-ink-locality');await wait(700);
+    assert.equal(await page.eval(`document.documentElement.getAttribute('data-oled-night-mode')`),appearance);
+    const result=await page.eval(`(${inkLocalityScenario.toString()})()`);
+    for(const property of ['paddingStable','ownedColorChanges','localMeasurements','inheritedStable'])checks.push({name:`${appearance}: owned and inherited ink ${property}`,ok:result[property],result});
+  }
   assert.deepEqual(requestErrors,[]);
   assert.deepEqual(browser.errors,[]);
   assert(checks.length>0,'at least one text-hover case must run');
 }finally{if(browser)await browser.close()}
 mkdirSync(join(root,'dist/lab-results'),{recursive:true});
-writeFileSync(join(root,'dist/lab-results/text-hover-chrome.json'),JSON.stringify({engine:'Chrome',browser:browserVersion.product,version,sha,runtimeHash,checkedAt:new Date().toISOString(),completed:true,candidate:!!(process.env.OLED_TEXT_HOVER_CASE||process.env.OLED_REPLY_TYPING_ONLY),fixtures:['text-hover.html'],modes:['automatic','recolor','deepen','oled','soft','brightness50'],states:['rest','pointer-frames','focus','mutation','slot-update','insert','authored-hover','disabled','reply-typing'],checks:checks.map(check=>({...check,coverage:check.name.endsWith('artworkPreserved')?'media':'text'}))},null,2));
+writeFileSync(join(root,'dist/lab-results/text-hover-chrome.json'),JSON.stringify({engine:'Chrome',browser:browserVersion.product,version,sha,runtimeHash,checkedAt:new Date().toISOString(),completed:true,candidate:!!(process.env.OLED_TEXT_HOVER_CASE||process.env.OLED_REPLY_TYPING_ONLY||process.env.OLED_INK_LOCALITY_ONLY),fixtures:['text-hover.html','ink-locality.html'],modes:['automatic','recolor','deepen','oled','soft','brightness50'],states:['rest','pointer-frames','focus','mutation','slot-update','insert','authored-hover','disabled','reply-typing','ancestor-locality'],checks:checks.map(check=>({...check,coverage:check.name.endsWith('artworkPreserved')?'media':'text'}))},null,2));
 for(const check of checks)console.log(`${check.ok?'PASS':'FAIL'} ${check.name}${check.ok?'':' '+JSON.stringify(check)}`);
 console.log(`${checks.filter(check=>check.ok).length}/${checks.length} text hover checks passed (${version})`);
 process.exitCode=checks.some(check=>!check.ok)?1:0;

@@ -9,6 +9,10 @@ on:
         description: Capture screenshot candidates for explicit review (cannot deploy)
         type: boolean
         default: false
+      trace_churn:
+        description: Profile the first cold churn trial (diagnostic only, cannot release)
+        type: boolean
+        default: false
 concurrency:
   group: tests-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -32,7 +36,7 @@ jobs:
         run: node tests/e2e/run.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
-          OLED_TRACE_CHURN: ${{ github.event_name == 'workflow_dispatch' && inputs.candidates && '1' || '' }}
+          OLED_TRACE_CHURN: ${{ github.event_name == 'workflow_dispatch' && inputs.trace_churn && '1' || '' }}
       - name: Report UI, screenshot review and submission feedback
         run: node tests/e2e/report-ui.mjs
         env:
