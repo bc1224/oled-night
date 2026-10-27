@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.66";
+  const VERSION = "0.6.67";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -828,8 +828,23 @@
       if (ctx.recolorLightRegions && nativeBackdrop && !nativeBackdrop.image && text?.a >= 0.95 &&
           colors.chroma(text) < 0.1 && colors.luminance(text) < 0.2) {
         const bg = colors.luminance(nativeBackdrop.color), ink = colors.luminance(text);
-        if (bg < 0.2 && (Math.max(bg, ink) + 0.05) / (Math.min(bg, ink) + 0.05) < 4.5)
-          found.fg = colors.mapForeground(text, 1);
+        if (bg < 0.2 && (Math.max(bg, ink) + 0.05) / (Math.min(bg, ink) + 0.05) < 4.5) {
+          // Empty layout ancestors do not paint text. Giving them inherited
+          // ink forces a document-wide restyle whenever a leaf is measured.
+          // Keep actual text, controls, generated paint and uncertain scopes.
+          const structural = !ctx.rememberInk && element instanceof HTMLElement &&
+            (largeScopes.has(element) || element === document.body || element === document.documentElement) &&
+            element.childElementCount && !element.localName.includes('-') && !element.shadowRoot &&
+            !element.assignedSlot && !element.hasAttribute('part') && element.localName !== 'slot' &&
+            computed.display !== 'list-item' && !element.matches(CONTROL) &&
+            !element.isContentEditable && !paintsInk(computed) &&
+            !Array.from(element.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+          const generated = structural && ['::before', '::after'].some(pseudo => {
+            const content = getComputedStyle(element, pseudo).content;
+            return content && content !== 'none' && content !== 'normal';
+          });
+          if (!structural || generated) found.fg = colors.mapForeground(text, 1);
+        }
       }
       // Raised buttons can paint their entire face in a generated layer
       // (PostHog's LemonButton__chrome). Their element itself is transparent,

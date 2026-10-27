@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.67
+
+- Stop repairing inherited text color on empty native dark layout containers. Their text-bearing descendants keep their own readable ink, while hover and typing avoid repeatedly invalidating the whole document.
+- Cover large Gmail-like and generic dark pages with native hover and reply input, paired dispatch and render timing, document measurement counts and style recalculation budgets. Preserve actual root text, generated labels and paint, controls, newly inserted text and artwork, with Chrome and Firefox regressions.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.66
 
 - Keep inherited text brightness stable when moving the pointer over Gmail messages and other recolored pages. Hover, focus and small content updates now measure the original ancestor colors instead of recoloring an already-mapped foreground again.

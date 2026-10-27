@@ -25,6 +25,12 @@
         checks.push({name:`native ink ${appearance}: ${property}`,ok:locality[property],detail:locality[property]?undefined:JSON.stringify(locality)});
       await browser.tabs.remove(tab.id);tab=null;
     }
+    await browser.storage.sync.set({extensionEnabled:true,appearance:'oled',siteRules:{'127.0.0.1':'global'}});
+    tab=await browser.tabs.create({url:TEST_ORIGIN+'/dark-layout.html'});await wait(2000);
+    const darkStatus=await browser.tabs.sendMessage(tab.id,{type:'oled-night-status'});
+    checks.push({name:'native dark layout: automatic crush mode',ok:darkStatus.active&&darkStatus.mode==='crush'&&darkStatus.version===browser.runtime.getManifest().version});
+    const ink=await inspect(darkLayoutInkScenario);
+    for(const [name,ok] of Object.entries(ink))checks.push({name:`native dark layout: ${name}`,ok});
   }catch(error){checks.push({name:'inherited text execution',ok:false,detail:String(error.stack||error)})}
   finally{if(tab)await browser.tabs.remove(tab.id)}
   await fetch(TEST_ORIGIN+'/result',{method:'POST',body:JSON.stringify(checks)});
