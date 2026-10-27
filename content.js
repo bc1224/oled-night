@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.69";
+  const VERSION = "0.6.70";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -86,6 +86,7 @@
   let batchPolarity = null;
   let domReady = document.readyState !== "loading";
   let loadingPaintFrame = false;
+  const parsingSurfaces = new Set();
   if (!domReady) {
     let frame = null;
     const clearFrame = () => { loadingPaintFrame = false; };
@@ -728,14 +729,17 @@
     // share that depth even before the draft grows to multiple lines.
     if (mode !== "soft" && found.bg && computed.backgroundImage === "none" && !paintsInk(computed) &&
         element !== document.documentElement && element !== document.body &&
-        (element.childElementCount || element.textContent.trim()) &&
         parseFloat(computed.width) >= 120 &&
-        (parseFloat(computed.height) >= 64 || (parseFloat(computed.height) >= 32 &&
-          element.closest('form')?.querySelector('textarea, [contenteditable="true"]'))) &&
         (parseFloat(computed.borderTopLeftRadius) >= 4 || computed.boxShadow !== "none")) {
       const bg = colors.parseColor(computed.backgroundColor);
-      if (bg?.a >= .5 && colors.chroma(bg) < .1 && colors.luminance(bg) >= .005 && colors.luminance(bg) < .025)
-        found.bg = computed.backgroundColor;
+      if (bg?.a >= .5 && colors.chroma(bg) < .1 && colors.luminance(bg) >= .005 && colors.luminance(bg) < .025) {
+        const height = parseFloat(computed.height);
+        if (document.readyState === 'loading' && height < 64) parsingSurfaces.add(element);
+        else parsingSurfaces.delete(element);
+        if ((element.childElementCount || element.textContent.trim()) &&
+            (height >= 64 || (height >= 32 && element.closest('form')?.querySelector('textarea, [contenteditable="true"]'))))
+          found.bg = computed.backgroundColor;
+      }
     }
     // A repeated native paint inside a retained card is the same surface,
     // even when the text wrapper or truncation button is small and square.
@@ -3302,6 +3306,7 @@
     refreshFrame = null;
     refreshBatchLimit = 32;
     refreshRoots.clear();
+    parsingSurfaces.clear();
     unresolvedShadowHosts.clear();
     observer?.disconnect();
     observer = null;
@@ -3576,11 +3581,11 @@
       // already began; enable() now leaves the parsed challenge alone.
       if (active && isChallengePage()) enable();
       else if (active && observer) {
-        // A container first measured while the parser was inside it can gain
-        // its final dimensions without changing its own style or attributes.
-        // Revisit completed layout once; known large scopes keep their bounded
-        // refresh cursor instead of synchronously rescanning every descendant.
-        pendingTrees.add(document.documentElement);
+        // Only short native cards measured during parsing need another layout
+        // decision. A whole-document refresh here competes with inbox input
+        // and background row updates after a large page has already loaded.
+        for (const node of parsingSurfaces) if (node.isConnected) pendingTrees.add(node);
+        parsingSurfaces.clear();
         polarityDirty = true; schedule();
         parsedShadowCursor = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_ELEMENT, {
           acceptNode: node => node.matches(PRESERVE) || isExternalOverlay(node) || isMedia(node) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
