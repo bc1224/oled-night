@@ -85,6 +85,29 @@
   let schemeSensitive = false;
   let batchPolarity = null;
   let domReady = document.readyState !== "loading";
+  let loadingPaintFrame = false;
+  if (!domReady) {
+    let frame = null;
+    const reset = new MessageChannel();
+    reset.port1.onmessage = () => { loadingPaintFrame = false; };
+    // Register before page callbacks. A loading document can still animate;
+    // keep those callbacks' repairs in their current paint, while parser tasks
+    // between frames share one scheduled style measurement.
+    const mark = () => {
+      frame = null;
+      if (document.readyState !== "loading") return;
+      loadingPaintFrame = true;
+      reset.port2.postMessage(null);
+      frame = requestAnimationFrame(mark);
+    };
+    frame = requestAnimationFrame(mark);
+    document.addEventListener("DOMContentLoaded", () => {
+      if (frame !== null) cancelAnimationFrame(frame);
+      reset.port1.close();
+      reset.port2.close();
+      loadingPaintFrame = false;
+    }, { once: true });
+  }
   let settings = DEFAULTS;
   let revision = 0;
   let applied = new WeakMap();
@@ -2346,6 +2369,11 @@
     // Mutations inside a frame callback cannot wait for another rAF: the
     // browser paints their native surface in the current frame. Batch at the
     // microtask checkpoint instead, after the site's synchronous updates.
+    // Parser-inserted scripts can cause hundreds of mutation checkpoints in
+    // one frame. Keep their work in the shared pre-paint frame callback while
+    // parsing, instead of flushing styles between each small markup fragment.
+    // Other callbacks, including animation frames before DOMContentLoaded,
+    // still need the same-frame microtask repair.
     if (beforePaint && !document.hidden) {
       if (flushScheduled && flushMicrotask) return;
       if (flushHandle !== null) {
@@ -2355,7 +2383,17 @@
       flushScheduled = true;
       flushMicrotask = true;
       const epoch = ++flushEpoch;
-      queueMicrotask(() => { if (epoch === flushEpoch) flush(); });
+      queueMicrotask(() => {
+        if (epoch !== flushEpoch) return;
+        // Parser tasks between frames can share a pre-paint callback. Changes
+        // within a loading page's animation frame still paint immediately.
+        const loadingBetweenFrames = document.readyState === "loading" && !loadingPaintFrame;
+        if (loadingBetweenFrames) {
+          flushScheduled = false;
+          flushMicrotask = false;
+          schedule();
+        } else flush();
+      });
       return;
     }
     if (flushScheduled) return;

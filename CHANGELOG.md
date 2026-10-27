@@ -2,6 +2,7 @@
 
 ## 0.6.68
 
+- Coalesce parser-driven page changes before painting instead of repeatedly flushing styles between small HTML fragments. Keep early dark rendering while avoiding repeated root color measurements during script-heavy page loads.
 - Avoid repeated whole-page measurements when page scripts send duplicate load notifications for an unchanged cross-origin stylesheet. Compare the sheet identity, loading attributes, media and disabled state before scheduling more paint work.
 - Keep genuine resource loads, stylesheet replacements, CSSOM media changes and disabling or restoring a sheet responsive. Add Chrome and Firefox regressions for the unnecessary work and for those visible text updates.
 - No new permissions; Chrome theme remains 1.0.3.
