@@ -4,7 +4,7 @@ import {resolve,join} from 'node:path';
 import {serveLab} from './server.mjs';
 import {launchChrome,wait} from './browser.mjs';
 import {navigationWorkScenario,initialSheetLoadScenario} from './navigation-work-scenario.mjs';
-import {parserWorkResult,parserWorkChecks} from './parser-work-scenario.mjs';
+import {parserWorkResult,parserWorkChecks,parserSurfaceResult} from './parser-work-scenario.mjs';
 const root=resolve(import.meta.dirname,'../..'),server=await serveLab(join(root,'tests/e2e/site'));let b;const checks=[];
 const initialOnly=process.argv.includes('--initial-sheet-only');
 try{
@@ -25,11 +25,12 @@ try{
    await page.go(server.origin+'/parser-work.html');pair.push(await page.eval(`(${parserWorkResult.toString()})()`));
   }
   checks.push(...parserWorkChecks(...pair));
+  await page.go(server.origin+'/parser-surface.html');checks.push(await page.eval(`(${parserSurfaceResult.toString()})()`));
  }
 }finally{await b?.close();await server.close()}
 const receipt=componentReceipt('Chrome',{
  candidate:initialOnly,completed:true,
- fixtures:initialOnly?['navigation-work.html']:['navigation-work.html','parser-work.html'],
+ fixtures:initialOnly?['navigation-work.html']:['navigation-work.html','parser-work.html','parser-surface.html'],
  modes:initialOnly?['recolor']:['recolor','auto'],
  states:initialOnly?['loaded','changed','restored']:['loaded','changed','restored','parsing'],
  coverage:initialOnly?['text','performance']:['text','surface','performance'],checks

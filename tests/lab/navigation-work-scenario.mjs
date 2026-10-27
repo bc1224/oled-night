@@ -2,6 +2,8 @@
 // dynamic article insertion and a real theme change; timings include paint.
 export async function initialSheetLoadScenario(){
  const checks=[],sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms)),node=[...document.querySelectorAll('style')].find(e=>!e.id.startsWith('oled-night-'));
+ const quiet=()=>new Promise(resolve=>{let timer;const observer=new MutationObserver(records=>{if(records.some(record=>record.attributeName?.startsWith('data-oled-night-measure')))arm()});const finish=ok=>{clearTimeout(timer);clearTimeout(deadline);observer.disconnect();resolve(ok)},arm=()=>{clearTimeout(timer);timer=setTimeout(()=>finish(true),250)},deadline=setTimeout(()=>finish(false),5000);observer.observe(document.documentElement,{attributes:true,subtree:true});arm()});
+ checks.push({coverage:'performance',name:'initial stylesheet measurement starts after the earlier page rendering settles',ok:await quiet()});
  let polarityReads=0;const watch=new MutationObserver(records=>{polarityReads+=records.length});watch.observe(document.documentElement,{attributes:true,attributeFilter:['data-oled-night-measure-root']});
  node.dispatchEvent(new Event('load'));await sleep(150);watch.disconnect();
  checks.push({coverage:'performance',name:'a late unchanged initial stylesheet load does not queue a page refresh',ok:polarityReads===0,detail:JSON.stringify({polarityReads})});
@@ -9,7 +11,6 @@ export async function initialSheetLoadScenario(){
  const ink=getComputedStyle(document.querySelector('.row span')).color;
  checks.push({coverage:'text',name:'a load notification after a genuine initial-sheet CSSOM edit still repaints affected ink',ok:ink===getComputedStyle(document.getElementById('theme-reference')).color,detail:ink});
  node.sheet.deleteRule(index);node.dispatchEvent(new Event('load'));await sleep(80);
- const quiet=()=>new Promise(resolve=>{let timer;const observer=new MutationObserver(records=>{if(records.some(record=>record.attributeName?.startsWith('data-oled-night-measure')))arm()});const finish=ok=>{clearTimeout(timer);clearTimeout(deadline);observer.disconnect();resolve(ok)},arm=()=>{clearTimeout(timer);timer=setTimeout(()=>finish(true),250)},deadline=setTimeout(()=>finish(false),5000);observer.observe(document.documentElement,{attributes:true,subtree:true});arm()});
  const base=document.createElement('style'),probe=document.createElement('section'),foreign=document.createElement('link');
  base.textContent='.sheet-load-ink{color:rgb(51,51,51)}';
  probe.innerHTML='<span class="sheet-load-ink">Remote stylesheet text</span><span class="sheet-load-red" style="color:rgb(220,60,40)">Changed text reference</span><span class="sheet-load-gray" style="color:rgb(51,51,51)">Disabled sheet reference</span>';

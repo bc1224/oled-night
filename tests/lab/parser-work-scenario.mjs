@@ -1,4 +1,14 @@
 // Observe parser-driven hydration through public DOM state and navigation timing.
+export async function parserSurfaceResult(){
+ const deadline=performance.now()+10000;
+ while(document.readyState!=='complete'&&performance.now()<deadline)await new Promise(r=>setTimeout(r,50));
+ await new Promise(r=>setTimeout(r,300));
+ const initial=JSON.parse(document.documentElement.getAttribute('data-parser-surface-initial')||'null');
+ const card=getComputedStyle(document.getElementById('card')),heading=getComputedStyle(document.getElementById('heading'));
+ return {coverage:'surface',name:'a dark card completed during parsing retains its matching surfaces without interaction',
+  ok:initial?.loading&&initial.active&&parseFloat(initial.height)<64&&parseFloat(card.height)>=64&&card.backgroundColor==='rgb(27, 31, 35)'&&heading.backgroundColor===card.backgroundColor,
+  detail:JSON.stringify({initial,height:card.height,card:card.backgroundColor,heading:heading.backgroundColor})};
+}
 export async function parserWorkResult(){
  const deadline=performance.now()+10000;
  while(document.readyState!=='complete'&&performance.now()<deadline)await new Promise(r=>setTimeout(r,50));

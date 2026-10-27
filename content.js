@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.68";
+  const VERSION = "0.6.69";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -3576,6 +3576,11 @@
       // already began; enable() now leaves the parsed challenge alone.
       if (active && isChallengePage()) enable();
       else if (active && observer) {
+        // A container first measured while the parser was inside it can gain
+        // its final dimensions without changing its own style or attributes.
+        // Revisit completed layout once; known large scopes keep their bounded
+        // refresh cursor instead of synchronously rescanning every descendant.
+        pendingTrees.add(document.documentElement);
         polarityDirty = true; schedule();
         parsedShadowCursor = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_ELEMENT, {
           acceptNode: node => node.matches(PRESERVE) || isExternalOverlay(node) || isMedia(node) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
