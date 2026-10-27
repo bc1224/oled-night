@@ -40,7 +40,7 @@ export async function darkLayoutScenario(browser,options,page,checks){
         pair[active?'active':'native']={pointerP95:percentile(result.pointer),typingP95:percentile(result.typing),pointerDeliveryP95:percentile(pointers),keyDeliveryP95:percentile(keys),styleSeconds:after.RecalcStyleDuration-before.RecalcStyleDuration,rootMeasurements};
         if(active){
           const ink=await page.eval(`(${darkLayoutInkScenario.toString()})()`);
-          for(const [name,ok] of Object.entries(ink))checks.push({name:`${host}: native dark layout ${name}`,ok});
+          for(const [name,ok] of Object.entries(ink))if(name!=='details')checks.push({name:`${host}: native dark layout ${name}`,ok,detail:ok?undefined:ink.details});
         }
       }
       pairs.push(pair);

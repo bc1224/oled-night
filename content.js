@@ -2934,9 +2934,15 @@
           else if(node instanceof Element) for(const sheet of node.querySelectorAll('style, link[rel~="stylesheet"]')) if(isPageSheet(sheet)) queuePageSheet(sheet);
         }
         for (const node of record.addedNodes) if (node.nodeType === Node.ELEMENT_NODE) pendingTrees.add(node);
-        if (target.isContentEditable && [...record.addedNodes, ...record.removedNodes].some(node => node.nodeType === Node.TEXT_NODE))
+        // A retired structural foreground may gain or lose direct text.
+        // Recheck its owner only, as with an editor's local text changes.
+        if (target instanceof Element &&
+            (target.isContentEditable || largeScopes.has(target) || target === document.body || target === document.documentElement) &&
+            [...record.addedNodes, ...record.removedNodes].some(node => node.nodeType === Node.TEXT_NODE))
           pendingSelf.add(target);
-      } else if (record.type === "characterData" && target.parentElement?.isContentEditable) {
+      } else if (record.type === "characterData" && target.parentElement &&
+          (target.parentElement.isContentEditable || largeScopes.has(target.parentElement) ||
+            target.parentElement === document.body || target.parentElement === document.documentElement)) {
         pendingSelf.add(target.parentElement);
       } else if (record.attributeName === SHARED_BG) {
         pendingTrees.add(target);

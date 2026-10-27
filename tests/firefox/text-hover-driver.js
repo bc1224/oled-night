@@ -30,7 +30,7 @@
     const darkStatus=await browser.tabs.sendMessage(tab.id,{type:'oled-night-status'});
     checks.push({name:'native dark layout: automatic crush mode',ok:darkStatus.active&&darkStatus.mode==='crush'&&darkStatus.version===browser.runtime.getManifest().version});
     const ink=await inspect(darkLayoutInkScenario);
-    for(const [name,ok] of Object.entries(ink))checks.push({name:`native dark layout: ${name}`,ok});
+    for(const [name,ok] of Object.entries(ink))if(name!=='details')checks.push({name:`native dark layout: ${name}`,ok,detail:ok?undefined:JSON.stringify(ink.details)});
   }catch(error){checks.push({name:'inherited text execution',ok:false,detail:String(error.stack||error)})}
   finally{if(tab)await browser.tabs.remove(tab.id)}
   await fetch(TEST_ORIGIN+'/result',{method:'POST',body:JSON.stringify(checks)});
