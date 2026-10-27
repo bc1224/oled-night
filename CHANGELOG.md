@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.68
+
+- Avoid repeated whole-page measurements when page scripts send duplicate load notifications for an unchanged cross-origin stylesheet. Compare the sheet identity, loading attributes, media and disabled state before scheduling more paint work.
+- Keep genuine resource loads, stylesheet replacements, CSSOM media changes and disabling or restoring a sheet responsive. Add Chrome and Firefox regressions for the unnecessary work and for those visible text updates.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.67
 
 - Stop repairing inherited text color on empty native dark layout containers. Their text-bearing descendants keep their own readable ink, while hover and typing avoid repeatedly invalidating the whole document.

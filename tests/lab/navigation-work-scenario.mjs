@@ -8,7 +8,37 @@ export async function initialSheetLoadScenario(){
  const index=node.sheet.insertRule('.row span{color:rgb(244,126,56)}',node.sheet.cssRules.length);node.dispatchEvent(new Event('load'));await sleep(150);
  const ink=getComputedStyle(document.querySelector('.row span')).color;
  checks.push({coverage:'text',name:'a load notification after a genuine initial-sheet CSSOM edit still repaints affected ink',ok:ink===getComputedStyle(document.getElementById('theme-reference')).color,detail:ink});
- node.sheet.deleteRule(index);node.dispatchEvent(new Event('load'));await sleep(80);return checks;
+ node.sheet.deleteRule(index);node.dispatchEvent(new Event('load'));await sleep(80);
+ const quiet=()=>new Promise(resolve=>{let timer;const observer=new MutationObserver(records=>{if(records.some(record=>record.attributeName?.startsWith('data-oled-night-measure')))arm()});const finish=ok=>{clearTimeout(timer);clearTimeout(deadline);observer.disconnect();resolve(ok)},arm=()=>{clearTimeout(timer);timer=setTimeout(()=>finish(true),250)},deadline=setTimeout(()=>finish(false),5000);observer.observe(document.documentElement,{attributes:true,subtree:true});arm()});
+ const base=document.createElement('style'),probe=document.createElement('section'),foreign=document.createElement('link');
+ base.textContent='.sheet-load-ink{color:rgb(51,51,51)}';
+ probe.innerHTML='<span class="sheet-load-ink">Remote stylesheet text</span><span class="sheet-load-red" style="color:rgb(220,60,40)">Changed text reference</span><span class="sheet-load-gray" style="color:rgb(51,51,51)">Disabled sheet reference</span>';
+ document.head.append(base);document.body.prepend(probe);foreign.rel='stylesheet';
+ const url=new URL('navigation-opaque.css',location.href);url.hostname=location.hostname==='localhost'?'127.0.0.1':'localhost';foreign.href=url.href;
+ const loaded=()=>new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(Error('Opaque stylesheet regression timed out')),5000);foreign.onload=()=>{clearTimeout(timeout);resolve()};foreign.onerror=()=>{clearTimeout(timeout);reject(Error('Opaque stylesheet regression failed to load'))}});
+ try{
+  const initial=loaded();document.head.append(foreign);await initial;const settled=await quiet();
+  let opaque=false;try{void foreign.sheet.cssRules}catch(error){opaque=error.name==='SecurityError'}
+  checks.push({coverage:'performance',name:'unchanged opaque stylesheet regression starts after rendering settles',ok:settled&&opaque,detail:JSON.stringify({settled,opaque})});
+  let measurements=0;const observer=new MutationObserver(records=>{measurements+=records.filter(record=>record.attributeName?.startsWith('data-oled-night-measure')).length});observer.observe(document.documentElement,{attributes:true,subtree:true});
+  await sleep(200);const idle=measurements;measurements=0;
+  for(let i=0;i<3;i++){foreign.dispatchEvent(new Event('load'));await sleep(100)}
+  observer.disconnect();checks.push({coverage:'performance',name:'unchanged cross-origin stylesheet notifications do not remeasure the page',ok:idle===0&&measurements===0,detail:JSON.stringify({idle,measurements})});await quiet();
+  const target=probe.querySelector('.sheet-load-ink'),ink=()=>getComputedStyle(target).color,before=ink();
+  const next=loaded();foreign.href=new URL('navigation-opaque-next.css',url).href;await next;await quiet();
+  const changed=ink(),red=getComputedStyle(probe.querySelector('.sheet-load-red')).color;
+  checks.push({coverage:'text',name:'replacing an opaque stylesheet still applies its changed text paint',ok:changed!==before&&changed===red,detail:JSON.stringify({before,changed,red})});
+  foreign.sheet.media.mediaText='not all';foreign.dispatchEvent(new Event('load'));await quiet();
+  const media=ink(),gray=getComputedStyle(probe.querySelector('.sheet-load-gray')).color;
+  checks.push({coverage:'text',name:'opaque stylesheet CSSOM media changes still repaint text',ok:media===gray&&media!==red,detail:JSON.stringify({media,gray,red})});
+  foreign.sheet.media.mediaText='all';foreign.dispatchEvent(new Event('load'));await quiet();
+  foreign.sheet.disabled=true;foreign.dispatchEvent(new Event('load'));await quiet();const disabled=ink();
+  foreign.sheet.disabled=false;foreign.dispatchEvent(new Event('load'));await quiet();const restored=ink();
+  checks.push({coverage:'text',name:'opaque stylesheet CSSOM disable and restore still repaint text',ok:disabled===gray&&restored===red,detail:JSON.stringify({disabled,restored,gray,red})});
+  const previousSheet=foreign.sheet,reloaded=loaded();foreign.href=foreign.href+'?reload=1';await reloaded;await quiet();
+  checks.push({coverage:'text',name:'an opaque stylesheet resource reload uses a fresh sheet and retains changed paint',ok:foreign.sheet!==previousSheet&&ink()===red,detail:JSON.stringify({replaced:foreign.sheet!==previousSheet,ink:ink(),red})});
+ }finally{foreign.remove();base.remove();probe.remove();await sleep(80)}
+ return checks;
 }
 
 export async function navigationWorkScenario(){

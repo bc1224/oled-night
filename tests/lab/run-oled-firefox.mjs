@@ -8,7 +8,7 @@ const server=createServer((req,res)=>{(async()=>{
  if(req.method==='POST'&&req.url==='/progress'){let body='';for await(const c of req)body+=c;console.log('Firefox OLED phase: '+body.slice(0,100));res.end('ok');return}
  if(req.method==='POST'&&req.url==='/key'){if(!keys)keys=await firefoxKeys(keyPort);await keys.arrowRight();res.end('ok');return}
  if(req.method==='POST'&&req.url==='/result'){let body='';for await(const c of req)body+=c;receive(JSON.parse(body));res.end('ok');return}
- const name=new URL(req.url,'http://localhost').pathname.slice(1);if(!['oled-components.html','navigation-work.html','navigation-opaque.css','chatgpt-streaming.html','dark-ui-icon.svg'].includes(name)){res.writeHead(404);res.end();return}
+ const name=new URL(req.url,'http://localhost').pathname.slice(1);if(!['oled-components.html','navigation-work.html','navigation-opaque.css','navigation-opaque-next.css','chatgpt-streaming.html','dark-ui-icon.svg'].includes(name)){res.writeHead(404);res.end();return}
  res.setHeader('content-type',name.endsWith('.svg')?'image/svg+xml':name.endsWith('.css')?'text/css':'text/html');res.end(readFileSync(join(root,'tests/e2e/site',name)));
  })().catch(e=>{checks.push({name:'Firefox native keyboard transport',ok:false,detail:String(e)});res.writeHead(500);res.end('error')})});
 const reservation=tcpServer();await new Promise(r=>reservation.listen(0,'127.0.0.1',r));const keyPort=reservation.address().port;await new Promise(r=>reservation.close(r));let report;

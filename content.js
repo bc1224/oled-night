@@ -2576,7 +2576,7 @@
     const copies = mediaCopies.get(event.target);
     if (copies) { queueMediaCopies(copies); schedule(); }
     if (!isPageSheet(event.target)) return;
-    queuePageSheet(event.target, true);
+    queuePageSheet(event.target, true, event.isTrusted);
     schedule();
   }
 
@@ -2834,21 +2834,41 @@
     } catch { return null; }
   }
 
-  function queuePageSheet(node, loaded = false) {
+  function opaqueSheetState(node) {
+    if (!node.isConnected || node.localName !== 'link' || !node.sheet) return null;
+    const sheet = node.sheet;
+    try { void sheet.cssRules; return null; }
+    catch (error) { if (error.name !== 'SecurityError') return null; }
+    // Opaque linked rules cannot be edited through page CSSOM. Retain sheet
+    // identity and mutable media/disabled state for duplicate notifications.
+    // Native load completion still takes the conservative path below: pending
+    // imports can finish after the parent sheet first becomes available.
+    try {
+      return {sheet, key:JSON.stringify([
+        ...['rel','href','media','type','title','crossorigin','integrity','referrerpolicy','disabled'].map(name=>node.getAttribute(name)),
+        node.disabled, sheet.disabled, sheet.media.mediaText
+      ])};
+    } catch { return null; }
+  }
+
+  function queuePageSheet(node, loaded = false, nativeLoad = false) {
     const before = sheetSnapshots.get(node), scope = node.isConnected ? node.getRootNode() : before?.scope;
+    const opaque = opaqueSheetState(node);
+    if (loaded && !nativeLoad && opaque && before?.opaque?.sheet === opaque.sheet && before.opaque.key === opaque.key) return;
     if (scope instanceof ShadowRoot) {
-      if (node.isConnected) sheetSnapshots.set(node,{selectors:null,fingerprint:null,scope}); else sheetSnapshots.delete(node);
+      if (node.isConnected) sheetSnapshots.set(node,{selectors:null,fingerprint:null,opaque,scope}); else sheetSnapshots.delete(node);
       pendingTrees.add(scope.host);
       return;
     }
     // A style element's load event follows its text mutation. Compare the
     // complete bounded CSSOM, not just selectors: declaration-only edits must
-    // invalidate paint, and unreadable/large sheets cannot claim equivalence.
+    // invalidate paint. Large readable sheets retain the conservative path;
+    // opaque linked sheets use the identity and state proof above.
     const fingerprint = pageSheetFingerprint(node);
     if (loaded && fingerprint !== null && before?.fingerprint === fingerprint) return;
     const after = node.isConnected ? pageSheetSelectors(node) : before === undefined ? null : [];
     const previous = before?.selectors;
-    if(node.isConnected) sheetSnapshots.set(node,{selectors:after,fingerprint,scope}); else sheetSnapshots.delete(node);
+    if(node.isConnected) sheetSnapshots.set(node,{selectors:after,fingerprint,opaque,scope}); else sheetSnapshots.delete(node);
     const full = () => {polarityDirty = true;pendingTrees.add(document.documentElement)};
     // Document selectors cannot pierce a shadow boundary. Matching hosts are
     // scanned with their roots; ::part/:host/::slotted remain uncertain above.
@@ -3379,7 +3399,7 @@
     schemeSensitive = ["r", "g", "b", "a"].some((channel) => pageColor[channel] !== original[channel]);
     pageColor = original;
     observer = new MutationObserver(onMutations);
-    for(const node of document.querySelectorAll('style, link[rel~="stylesheet"]')) if(isPageSheet(node)) sheetSnapshots.set(node,{selectors:pageSheetSelectors(node),fingerprint:pageSheetFingerprint(node),scope:document});
+    for(const node of document.querySelectorAll('style, link[rel~="stylesheet"]')) if(isPageSheet(node)) sheetSnapshots.set(node,{selectors:pageSheetSelectors(node),fingerprint:pageSheetFingerprint(node),opaque:opaqueSheetState(node),scope:document});
     observer.observe(root, OBSERVE);
     document.addEventListener("visibilitychange", scheduleShadowDiscovery);
     document.addEventListener("visibilitychange", scheduleRefresh);
