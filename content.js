@@ -88,8 +88,9 @@
   let loadingPaintFrame = false;
   if (!domReady) {
     let frame = null;
-    const reset = new MessageChannel();
-    reset.port1.onmessage = () => { loadingPaintFrame = false; };
+    const clearFrame = () => { loadingPaintFrame = false; };
+    const reset = typeof globalThis.scheduler?.postTask === "function" ? null : new MessageChannel();
+    if (reset) reset.port1.onmessage = clearFrame;
     // Register before page callbacks. A loading document can still animate;
     // keep those callbacks' repairs in their current paint, while parser tasks
     // between frames share one scheduled style measurement.
@@ -97,14 +98,17 @@
       frame = null;
       if (document.readyState !== "loading") return;
       loadingPaintFrame = true;
-      reset.port2.postMessage(null);
+      // A default-priority message may wait behind resumed parser work and
+      // falsely classify those tasks as part of the preceding paint.
+      if (reset) reset.port2.postMessage(null);
+      else globalThis.scheduler.postTask(clearFrame, { priority: "user-blocking" });
       frame = requestAnimationFrame(mark);
     };
     frame = requestAnimationFrame(mark);
     document.addEventListener("DOMContentLoaded", () => {
       if (frame !== null) cancelAnimationFrame(frame);
-      reset.port1.close();
-      reset.port2.close();
+      reset?.port1.close();
+      reset?.port2.close();
       loadingPaintFrame = false;
     }, { once: true });
   }
