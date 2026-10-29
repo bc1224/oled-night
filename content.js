@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.70";
+  const VERSION = "0.6.71";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -1795,6 +1795,7 @@
     let count = 0;
     const selectors = [];
     const inspect = rules => {
+      if (rules.length > 256 - count) return true;
       for (const rule of rules) {
         if (++count > 256 || rule.type === 3) return true;
         if (feature === "viewport" && (rule.type === 7 || (rule.style && Array.from(rule.style).some(property =>
@@ -1818,6 +1819,16 @@
       const sheets = root === document ? [...document.styleSheets] :
         [...root.querySelectorAll('style, link[rel~="stylesheet"]')].map(node => node.sheet);
       sheets.push(...root.adoptedStyleSheets);
+      // Count first across the complete scope. Gmail loads small module sheets
+      // before its large theme sheet; inspecting those prefixes still wastes
+      // work when the complete proof is already known to exceed the budget.
+      let topLevelCount = 0;
+      for (const sheet of sheets) {
+        if (!sheet) return true;
+        if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith("oled-night-")) continue;
+        topLevelCount += sheet.cssRules.length;
+        if (topLevelCount > 256) return true;
+      }
       for (const sheet of sheets) {
         if (!sheet) return true; // An authored sheet is still loading.
         if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith("oled-night-")) continue;
@@ -1841,13 +1852,20 @@
       return null;
     };
     const authored = [], fingerprint = [];
-    const rules = [];
+    const rules = [], sheetRules = [];
     let count = 0, length = 0, mayAnimate = false, movingPaint = false;
     try {
       for (const sheet of [...document.styleSheets, ...document.adoptedStyleSheets]) {
         if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith("oled-night-")) continue;
         if (!sheet || sheet.disabled || sheet.media?.length) return uncertain();
-        for (const rule of sheet.cssRules) {
+        const nativeRules = sheet.cssRules;
+        count += nativeRules.length;
+        if (count > 256) return uncertain();
+        sheetRules.push(nativeRules);
+      }
+      count = 0;
+      for (const nativeRules of sheetRules) {
+        for (const rule of nativeRules) {
           if (++count > 256 || rule.type !== 1 || rule.cssRules?.length) return uncertain();
           const text = rule.cssText;
           length += text.length;
@@ -2752,17 +2770,31 @@
     if (hasDescendantShadow(node) || changed.some(name => !/^[\w-]+$/.test(name))) return null;
     if (!scopes.has('classRules')) {
       const selectors = []; let count = 0, valid = true;
-      const inspect = rules => { for (const rule of rules) {
-        if (++count > 8192 || rule.type === 3) { valid = false; return; }
-        if (rule.selectorText) selectors.push(rule);
-        if (rule.cssRules) inspect(rule.cssRules);
-        if (!valid) return;
-      }};
-      try { for (const sheet of [...document.styleSheets, ...document.adoptedStyleSheets]) {
-        if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith('oled-night-')) continue;
-        if (!sheet) { valid = false; break; }
-        inspect(sheet.cssRules); if (!valid) break;
-      }} catch { valid = false; }
+      const inspect = rules => {
+        // A flat sheet larger than the remaining proof budget cannot succeed.
+        // Reject it before materializing thousands of CSSOM rule wrappers on
+        // every search-field or sticky-header class change.
+        if (rules.length > 8192 - count) { valid = false; return; }
+        for (const rule of rules) {
+          if (++count > 8192 || rule.type === 3) { valid = false; return; }
+          if (rule.selectorText) selectors.push(rule);
+          if (rule.cssRules) inspect(rule.cssRules);
+          if (!valid) return;
+        }
+      };
+      const sheetRules = [];
+      let topLevelCount = 0;
+      try {
+        for (const sheet of [...document.styleSheets, ...document.adoptedStyleSheets]) {
+          if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith('oled-night-')) continue;
+          if (!sheet) { valid = false; break; }
+          const rules = sheet.cssRules;
+          topLevelCount += rules.length;
+          if (topLevelCount > 8192) { valid = false; break; }
+          sheetRules.push(rules);
+        }
+        if (valid) for (const rules of sheetRules) { inspect(rules); if (!valid) break; }
+      } catch { valid = false; }
       scopes.set('classRules', valid ? selectors : null);
     }
     const selectors = scopes.get('classRules'); if (!selectors) return null;

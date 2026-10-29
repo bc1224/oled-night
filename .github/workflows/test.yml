@@ -47,6 +47,10 @@ jobs:
           CHROME_PATH: /usr/bin/google-chrome
       - name: Package
         run: node tools/package.mjs
+      - name: Gmail typing with large authored stylesheets
+        run: node tests/e2e/gmail-large-css.mjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
       - name: Shortcut conflicts and immediate background updates in real Chrome
         run: |
           node tests/e2e/shortcut-conflicts.mjs
