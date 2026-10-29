@@ -115,6 +115,7 @@
   }
   let settings = DEFAULTS;
   let revision = 0;
+  let tuningTimer = null;
   let applied = new WeakMap();
   // Only observed repeated containers retain paint snapshots. Ink objects are
   // shared immutable color conversions, and both maps release detached nodes.
@@ -3265,6 +3266,7 @@
   }
 
   function disable() {
+    cancelTuning();
     for (const entry of spriteDocuments.values()) { entry.controller.abort(); entry.waiting.clear(); }
     spriteDocuments.clear();
     localSpriteWaiters.clear();
@@ -3460,8 +3462,25 @@
   let scheduleTimer = null;
   const structureKey = (config) => `${resolvedAppearance(config)}|${Settings.siteMode(config, hostname())}|${config.openClosedShadows}`;
 
-  function applySettings(config) {
+  function cancelTuning() {
+    clearTimeout(tuningTimer);
+    tuningTimer = null;
+  }
+
+  function previewTuning() {
+    // A fixed window merges rapid input without postponing feedback throughout
+    // a drag. Read the latest merged settings when the window ends. Updating
+    // inherited color variables for each message forces redundant full-tree
+    // style recalculations between input tasks on large pages.
+    if (tuningTimer === null) tuningTimer = setTimeout(() => {
+      tuningTimer = null;
+      if (active) applyTuning();
+    }, 16);
+  }
+
+  function applySettings(config, preview = false) {
     revision += 1;
+    if (!preview) cancelTuning();
     const previous = settings;
     settings = Settings.normalize(config);
     clearTimeout(scheduleTimer);
@@ -3475,7 +3494,13 @@
     if (AUTH_PATH.test(location.pathname) && document.readyState === "loading") return;
     if (isCaptchaProtectedAuth()) { if (!active || observer) enable(); return; }
     // Slider moves, per-site tuning and image dimming only retune variables; no page re-scan.
-    if (active && structureKey(previous) === structureKey(settings)) { if (!Settings.prefersNativeColors(hostname())) applyTuning(); return; }
+    if (active && structureKey(previous) === structureKey(settings)) {
+      if (!Settings.prefersNativeColors(hostname())) {
+        if (preview && observer) previewTuning();
+        else applyTuning();
+      }
+      return;
+    }
     enable();
   }
 
@@ -3618,7 +3643,7 @@
       return;
     }
     if (message?.type !== "oled-night-preview") return;
-    applySettings({ ...settings, ...message.patch });
+    applySettings({ ...settings, ...message.patch }, true);
     if (isTopFrame) sendResponse({ ok: true, revision });
   });
 })();
