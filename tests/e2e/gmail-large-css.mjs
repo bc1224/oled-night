@@ -15,7 +15,7 @@ input{background:#303134;color:#e8eaed} .late{background:#202124;color:#ddd}
 ${rules}
 body.visual-mode .late{background:#fff;color:#111}
 </style></head><body><input id="search" aria-label="Search mail"><div class="late">Late rule</div><div id="history">${rows}</div>
-<script>let sequence=0;document.getElementById('search').addEventListener('input',()=>document.body.classList.toggle('unused-inbox-state',++sequence%2===0));</script></body></html>`;
+<script>let sequence=0;const search=document.getElementById('search');search.addEventListener('input',()=>document.body.classList.toggle('unused-inbox-state',++sequence%2===0));const fieldRule=[...document.styleSheets[18].cssRules].find(rule=>rule.selectorText==='input');search.addEventListener('keydown',event=>{if(event.key==='ArrowUp')fieldRule.style.backgroundColor='#fff'});</script></body></html>`;
 let browser;const results=[];
 try{
  browser=await launchChrome({onEvent:m=>{if(m.method==='Fetch.requestPaused')browser.send('Fetch.fulfillRequest',{requestId:m.params.requestId,responseCode:200,responseHeaders:[{name:'Content-Type',value:'text/html'}],body:Buffer.from(fixture).toString('base64')},m.sessionId).catch(e=>console.error(e.message))}});
@@ -40,7 +40,7 @@ try{
   const after=await metrics();
   assert.equal(await page.eval(`document.getElementById('search').value`),'abcdefghijklmnopqrstuvwxyz');
   const sorted=deliveries.toSorted((a,b)=>a-b);
-  const result={enabled,scriptMs:(after.ScriptDuration-before.ScriptDuration)*1000,styleMs:(after.RecalcStyleDuration-before.RecalcStyleDuration)*1000,deliveryP95:sorted[Math.ceil(sorted.length*.95)-1]};
+  const result={enabled,scriptMs:(after.ScriptDuration-before.ScriptDuration)*1000,styleMs:(after.RecalcStyleDuration-before.RecalcStyleDuration)*1000,stylePasses:after.RecalcStyleCount-before.RecalcStyleCount,deliveryP95:sorted[Math.ceil(sorted.length*.95)-1]};
   results.push(result);console.log(JSON.stringify(result));
   if(enabled&&process.env.OLED_GMAIL_DIAGNOSTIC){
    const {profile}=await browser.send('Profiler.stop',{},page.sessionId),counts=new Map();
@@ -48,6 +48,10 @@ try{
    console.log(JSON.stringify({diagnostic:profile.nodes.map(n=>({name:n.callFrame.functionName,line:n.callFrame.lineNumber+1,self:counts.get(n.id)||0})).sort((a,b)=>b.self-a.self).slice(0,16)}));
   }
   if(enabled){
+   await browser.send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowUp'},page.sessionId);
+   const fieldPaint=await page.eval(`new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(getComputedStyle(document.getElementById('search')).backgroundColor))))`);
+   assert.notEqual(fieldPaint,'rgb(255, 255, 255)','native keyboard CSSOM field updates must still be dark before display');
+   await browser.send('Input.dispatchKeyEvent',{type:'keyUp',key:'ArrowUp'},page.sessionId);
    await page.eval(`document.body.classList.add('visual-mode')`);await wait(700);
    const paint=await page.eval(`(()=>{const s=getComputedStyle(document.querySelector('.late'));return{background:s.backgroundColor,color:s.color}})()`);
    assert.notEqual(paint.background,'rgb(255, 255, 255)','genuine class paint beyond the large stylesheet must still be darkened');
@@ -58,5 +62,6 @@ try{
  const mean=(a,key)=>a.reduce((s,r)=>s+r[key],0)/a.length;
  assert(mean(active,'scriptMs')<=mean(native,'scriptMs')+100,'large stylesheets must not add repeated CSSOM proof work during typing');
  assert(mean(active,'deliveryP95')<=mean(native,'deliveryP95')+8,'native keyboard delivery must leave half a frame for the page to render');
+ assert(mean(active,'stylePasses')<=mean(native,'stylePasses')+208,'native text input must coalesce recoloring before paint instead of forcing repeated style flushes for each key event');
  assert.deepEqual(browser.errors,[]);
 }finally{await browser?.close()}

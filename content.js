@@ -170,6 +170,8 @@
   const interactionSelf = new Set();
   const interactionTrees = new Set();
   let interactionFrame = null;
+  let nativeTextInputTurn = false;
+  let nativeTextInputEpoch = 0;
   const interactionSurfaces = new WeakSet();
   const SETTLE_MS = 400;
   const INTERACTION_EVENTS = ["pointerover", "pointerout", "pointerdown", "pointerup", "pointercancel", "focusin", "focusout", "input", "change", "keydown", "keyup"];
@@ -2472,13 +2474,28 @@
     const editing = control?.isContentEditable &&
       (control.hasAttribute('contenteditable') || control.getAttribute('role') === 'textbox') &&
       /^(?:key|input$)/.test(event.type);
+    const textInput = event.isTrusted && /^(?:key|input$)/.test(event.type) && control &&
+      (editing || control.localName === 'textarea' || (control.localName === 'input' &&
+        ['text', 'search', 'email', 'url', 'tel', 'password'].includes(control.type)));
+    if (textInput) {
+      // Native text events run in an input task, before the next paint. Share
+      // one frame with their synchronous DOM writes instead of measuring
+      // keydown, input, keyup and a second interaction pass independently.
+      // Keep the flag through the site's mutation delivery, then clear it
+      // before unrelated tasks or animation callbacks can change paint.
+      nativeTextInputTurn = true;
+      const epoch = ++nativeTextInputEpoch;
+      queueMicrotask(() => queueMicrotask(() => {
+        if (epoch === nativeTextInputEpoch) nativeTextInputTurn = false;
+      }));
+    }
     if (control) interactionSurfaces.add(control);
     // Existing background AND ink overrides protect the current paint. Native
     // dark mode may own only a background; new native focus ink then needs the
     // immediate pass too. Fully protected leaf controls stay coalesced.
-    const currentPaint = !!control?.childElementCount || path.some(node =>
+    const currentPaint = !textInput && (!!control?.childElementCount || path.some(node =>
       node !== document.body && node !== document.documentElement &&
-      !['bg','fg'].every(key => node.getAttribute(MARK)?.split(' ').includes(key)));
+      !['bg','fg'].every(key => node.getAttribute(MARK)?.split(' ').includes(key))));
     // attachShadow() on an already-scanned host is not a DOM mutation. Discover
     // those roots from the native event path before painting the first hover.
     // A new root needs its whole component scanned once; subsequent interactions
@@ -3092,7 +3109,7 @@
       }
     }
     for (const root of changedRoots) if (shadowRoots.has(root)) ensureShadowSheet(root);
-    if (scheduleBatch && (pendingTrees.size || pendingSelf.size || polarityDirty)) schedule(true);
+    if (scheduleBatch && (pendingTrees.size || pendingSelf.size || polarityDirty)) schedule(!nativeTextInputTurn);
   }
 
   function overrideRules() {
@@ -3318,6 +3335,8 @@
     settleTrees.clear();
     if (interactionFrame !== null) cancelAnimationFrame(interactionFrame);
     interactionFrame = null;
+    nativeTextInputTurn = false;
+    nativeTextInputEpoch++;
     interactionSelf.clear();
     interactionTrees.clear();
     parsedShadowCursor = null;
