@@ -146,9 +146,29 @@ jobs:
           name: oled-night-lab-${{ matrix.browser }}
           path: dist/lab-results/
           if-no-files-found: error
+  firefox-stylesheet-proof:
+    name: Firefox opaque stylesheet work
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node tools/package.mjs
+      - uses: browser-actions/setup-firefox@v1
+      - run: node tests/lab/run-oled-firefox.mjs --initial-sheet-only
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: firefox-stylesheet-proof
+          path: dist/lab-results/oled-components-firefox.json
+          if-no-files-found: error
   lab-evidence:
     name: Verify and assemble full lab evidence
-    needs: [test, lab-matrix]
+    needs: [test, lab-matrix, firefox-stylesheet-proof]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

@@ -1828,6 +1828,10 @@
       for (const sheet of sheets) {
         if (!sheet) return true;
         if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith("oled-night-")) continue;
+        // Loading already recorded this sheet as unreadable. Repeating a
+        // SecurityError cannot strengthen a bounded proof, and is costly
+        // across the retained refresh cursor in Firefox.
+        if (sheetSnapshots.get(sheet.ownerNode)?.opaque?.sheet === sheet) return true;
         topLevelCount += sheet.cssRules.length;
         if (topLevelCount > 256) return true;
       }
@@ -1860,6 +1864,7 @@
       for (const sheet of [...document.styleSheets, ...document.adoptedStyleSheets]) {
         if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith("oled-night-")) continue;
         if (!sheet || sheet.disabled || sheet.media?.length) return uncertain();
+        if (sheetSnapshots.get(sheet.ownerNode)?.opaque?.sheet === sheet) return uncertain();
         const nativeRules = sheet.cssRules;
         count += nativeRules.length;
         if (count > 256) return uncertain();
@@ -2805,6 +2810,7 @@
         for (const sheet of [...document.styleSheets, ...document.adoptedStyleSheets]) {
           if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith('oled-night-')) continue;
           if (!sheet) { valid = false; break; }
+          if (sheetSnapshots.get(sheet.ownerNode)?.opaque?.sheet === sheet) { valid = false; break; }
           const rules = sheet.cssRules;
           topLevelCount += rules.length;
           if (topLevelCount > 8192) { valid = false; break; }

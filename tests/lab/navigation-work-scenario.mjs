@@ -18,9 +18,9 @@ export async function initialSheetLoadScenario(){
  const url=new URL('navigation-opaque.css',location.href);url.hostname=location.hostname==='localhost'?'127.0.0.1':'localhost';foreign.href=url.href;
  const loaded=()=>new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(Error('Opaque stylesheet regression timed out')),5000);foreign.onload=()=>{clearTimeout(timeout);resolve()};foreign.onerror=()=>{clearTimeout(timeout);reject(Error('Opaque stylesheet regression failed to load'))}});
  try{
-  const initial=loaded();document.head.append(foreign);await initial;const settled=await quiet();
+  const initial=loaded();document.head.append(foreign);await initial;const started=performance.now(),settled=await quiet(),settledMs=performance.now()-started;
   let opaque=false;try{void foreign.sheet.cssRules}catch(error){opaque=error.name==='SecurityError'}
-  checks.push({coverage:'performance',name:'unchanged opaque stylesheet regression starts after rendering settles',ok:settled&&opaque,detail:JSON.stringify({settled,opaque})});
+  checks.push({coverage:'performance',name:'unchanged opaque stylesheet regression starts after rendering settles',ok:settled&&opaque,detail:JSON.stringify({settled,opaque,settledMs})});
   let measurements=0;const observer=new MutationObserver(records=>{measurements+=records.filter(record=>record.attributeName?.startsWith('data-oled-night-measure')).length});observer.observe(document.documentElement,{attributes:true,subtree:true});
   await sleep(200);const idle=measurements;measurements=0;
   for(let i=0;i<3;i++){foreign.dispatchEvent(new Event('load'));await sleep(100)}
