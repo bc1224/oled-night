@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.72
+
+- Give embedded YouTube live chat and chat replay an OLED background and readable messages and names. Video players keep their own colors.
+- Includes the Gmail typing and stylesheet performance changes from the 0.6.71 candidate.
+
 ## 0.6.70
 
 - Coalesce parser-driven page changes before painting instead of repeatedly flushing styles between small HTML fragments. Keep early dark rendering while avoiding repeated root color measurements during script-heavy page loads.
