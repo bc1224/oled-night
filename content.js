@@ -291,9 +291,14 @@
   function frameIsUntouched() {
     if (isTopFrame) return false;
     try {
-      if (UNTOUCHED_FRAMES.test(location.href) || BOT_CHECK_URL.test(frameUrl(location.href))) return true;
+      if (BOT_CHECK_URL.test(frameUrl(location.href))) return true;
       // Script-built (about:blank/srcdoc) frames inside a verification widget.
       if (window.frameElement?.closest(BOT_CHECK)) return true;
+      // A collapsed chat can be zero-sized when its content script starts.
+      // Admit only the chat documents on YouTube, never a player or ad frame.
+      if (/^(?:www\.)?youtube\.com$/i.test(location.hostname) && /^\/live_chat(?:_replay)?\/?$/.test(location.pathname)
+        && colorsApi().usesNativeSafeMode(hostname())) return false;
+      if (UNTOUCHED_FRAMES.test(location.href)) return true;
       return innerWidth < 80 || innerHeight < 40;
     } catch { return true; }
   }
@@ -3301,6 +3306,13 @@
       html[data-oled-night-root][data-oled-night-youtube] ytd-app {
         --yt-spec-text-primary: var(--oled-night-youtube-primary) !important;
         --yt-spec-text-secondary: var(--oled-night-youtube-secondary) !important;
+      }
+      html[data-oled-night-root][data-oled-night-youtube] yt-live-chat-app {
+        background-color: var(--oled-night-page) !important;
+        --yt-live-chat-background-color: var(--oled-night-page) !important;
+        --yt-live-chat-header-background-color: var(--oled-night-page) !important;
+        --yt-live-chat-primary-text-color: var(--oled-night-youtube-primary) !important;
+        --yt-live-chat-secondary-text-color: var(--oled-night-youtube-secondary) !important;
       }
       /* Native ChatGPT tokens (current app shell and legacy web UI). Only its
          dark theme's base surfaces change: code, dialogs, controls, selection,

@@ -33,7 +33,9 @@ jobs:
       - name: Unit tests
         run: for t in tests/*.test.js tests/lab/*.test.js; do node "$t" || exit 1; done
       - name: End-to-end tests (real extension in headless Chrome)
-        run: node tests/e2e/run.mjs
+        run: |
+          node tests/e2e/run.mjs
+          node tests/e2e/youtube-chat.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
           OLED_TRACE_CHURN: ${{ github.event_name == 'workflow_dispatch' && inputs.trace_churn && '1' || '' }}
