@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.73
+
+- Keep Instagram-style selected radio dots readable when the site draws the marker beside a hidden native input. Preserve empty choices, colored markers, product swatches and the site's selected values.
+- Cover actual marker pixels, keyboard selection and pause restoration in Chrome and Firefox across native light/dark pages, Automatic/Full recolor and OLED/Soft Dark.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.72
 
 - Give embedded YouTube live chat and chat replay an OLED background and readable messages and names. Video players keep their own colors.

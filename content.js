@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.72";
+  const VERSION = "0.6.73";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -698,6 +698,30 @@
     return trackMode === "crush" && track && colors.luminance(track) > .18 ? "#000000" : "rgb(190 190 190)";
   }
 
+  // Instagram-style radios put the visible dot beside a transparent native
+  // input, rather than in that input's pseudo-element. Treat only a compact
+  // neutral circle in the same bounded control as state ink, not a surface.
+  function siblingRadioMarker(element, computed, ctx) {
+    if (ctx.mode === "crush" && !ctx.recolorLightRegions) return null;
+    if (element.localName !== "span" && element.localName !== "div") return null;
+    if (element.childElementCount || element.textContent.trim() || computed.backgroundImage !== "none") return null;
+    const w = parseFloat(computed.width), h = parseFloat(computed.height);
+    if (!(w >= 4 && w <= 20 && h >= 4 && h <= 20 && Math.abs(w - h) <= 1 &&
+        parseFloat(computed.borderTopLeftRadius) >= Math.min(w, h) / 2)) return null;
+    const colors = colorsApi(), paint = colors.parseColor(computed.backgroundColor);
+    if (!paint || paint.a < .5 || colors.chroma(paint) > .15 || isProductMedia(element)) return null;
+    for (let scope = element.parentElement, depth = 0; scope && depth < 3; scope = scope.parentElement, depth++) {
+      if (scope.childElementCount > 8) continue;
+      const control = Array.from(scope.children).find(child => child.matches('input[type="radio"]'));
+      if (!control) continue;
+      if (!control.checked || control.matches(':disabled, [aria-disabled="true"]')) return null;
+      const style = ctx.style(control), cw = parseFloat(style.width), ch = parseFloat(style.height);
+      if (!(parseFloat(style.opacity) <= .05 && cw <= 40 && ch <= 40 && w <= cw * .8 && h <= ch * .8)) return null;
+      return colors.mapForeground(paint, 1);
+    }
+    return null;
+  }
+
   // Read-only: decides overrides from original computed styles. No DOM writes
   // happen here, so the whole batch costs a single style recalculation.
   function decide(element, ctx) {
@@ -761,6 +785,8 @@
     }
     const thumb = switchThumb(element, computed, ctx);
     if (thumb) found.bg = thumb;
+    const radioMarker = siblingRadioMarker(element, computed, ctx);
+    if (radioMarker) found.bg = radioMarker;
     // Apple-style checkboxes hide the native input and paint its label cover.
     // That inset shadow is the control boundary, not a decorative dark shadow.
     if ((mode === "oled" || mode === "soft") && element.classList.contains("form-input__label__cover") &&
