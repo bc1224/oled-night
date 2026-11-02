@@ -5,10 +5,10 @@ export async function reportPreviewScenario() {
  const intercept=event=>{event.preventDefault();opens.push(event.detail)};
  document.addEventListener('oled-lab-submit',intercept);
  try {
-  out.push({name:'public report preview omits private text and identifiers',ok:$('privacy-result').textContent.startsWith('PASS')&&!/PRIVATE/.test($('preview').textContent)});
+  out.push({name:'private report preview omits page text and identifiers',ok:$('privacy-result').textContent.startsWith('PASS')&&!/PRIVATE/.test($('preview').textContent)});
   $('report').click();
   out.push({name:'report opens confirmation without sharing',ok:$('confirm').open&&opens.length===0});
-  out.push({name:'confirmation explains payload, public retention and review',ok:/domain/.test($('disclosure').textContent)&&/retained by GitHub/.test($('disclosure').textContent)&&/independent review/.test($('disclosure').textContent)});
+  out.push({name:'confirmation explains private payload, generic tracking and review',ok:/domain/.test($('disclosure').textContent)&&/privately to the maintainer/.test($('disclosure').textContent)&&/generic public tracking issue/.test($('disclosure').textContent)&&/independent review/.test($('disclosure').textContent)});
   $('cancel').click();await new Promise(r=>setTimeout(r,0));
   out.push({name:'cancelling sends nothing',ok:!$('confirm').open&&opens.length===0});
   $('report').click();$('send').click();$('send').click();await new Promise(r=>setTimeout(r,0));

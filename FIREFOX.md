@@ -7,7 +7,7 @@ Install [OLED Night from Mozilla Add-ons](https://addons.mozilla.org/en-US/firef
 - Automatic dark mode, full recolor, deepen blacks, invert and per-site Off controls.
 - Per-site text brightness, surface contrast and optional image dimming, plus a global pause that preserves saved rules.
 - Scheduling, settings backup and customizable global/site keyboard shortcuts. The popup shows the keys actually assigned by Firefox.
-- Optional broken-site reports with previewed diagnostics, notes and a screenshot you explicitly capture, paste, drop or select. Nothing is uploaded until Submit report. Reports create public GitHub issues without a GitHub sign-in.
+- Optional private broken-site reports with previewed diagnostics, notes and a screenshot you explicitly capture, paste, drop or select. Nothing is uploaded until Submit report. Only a generic tracking issue is public, with no GitHub sign-in needed to submit.
 - Readable dark logo lettering and protected media, native ChatGPT colors, and native-color protection on Figma.
 
 Some pages restrict extensions, and some sites need another mode or a site exception. Figma keeps its native colors even when explicitly enabled. Firefox Android is not supported.
@@ -28,7 +28,7 @@ The extension has no automatic analytics, ads, background tracking or browsing-h
 
 Firefox's optional browsing-activity and technical-data consent covers the current domain and scrubbed diagnostics in a report you choose to submit. Optional website-content consent covers a screenshot you explicitly include. Declining keeps dark mode working. Clipboard access is optional and requested only for the explicit paste action.
 
-Notes, images and submitted issues are public. Review them for private information before submitting. See the [privacy policy](store/PRIVACY.md) for service retention, screenshot hosting and local report downloads.
+Notes, diagnostics and images are private to the maintainer for up to 30 days. The public tracking issue contains no domain, details or screenshot link. Anything you manually post in public GitHub issues or comments is public. See the [privacy policy](store/PRIVACY.md) for service retention, screenshot access and local report downloads.
 
 ## Development checks
 

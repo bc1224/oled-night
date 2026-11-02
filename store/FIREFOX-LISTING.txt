@@ -9,14 +9,14 @@ OLED Night turns website backgrounds true black while keeping text readable and 
 NO AUTOMATIC ANALYTICS OR BACKGROUND TRACKING
 The extension has no ads, analytics or browsing-history log. Recoloring runs locally and does not upload page text or entered values. Settings and per-site preferences use browser storage and can sync through your browser profile; these are preferences, not a record of visits.
 
-OPTIONAL PUBLIC REPORTS
-Choose Report a broken site to preview scrubbed diagnostics and add optional notes. Use Screenshot this page, paste, drop or choose an image, review it, then choose Use screenshot. Nothing is uploaded until Submit report. Our Cloudflare-hosted service creates a public GitHub issue directly, without a GitHub sign-in.
+OPTIONAL PRIVATE REPORTS
+Choose Report a broken site to preview scrubbed diagnostics and add optional notes. Use Screenshot this page, paste, drop or choose an image, review it, then choose Use screenshot. Nothing is uploaded until Submit report. Our Cloudflare-hosted service stores the report and any screenshot privately for up to 30 days. Only the maintainer can retrieve them with GitHub authentication. No GitHub sign-in is required to submit.
 
 Firefox's optional browsing-activity consent covers the current domain in your report; technical-data consent covers diagnostics. Optional website-content consent covers a screenshot you explicitly include. Clipboard access is optional and used only for explicit paste. Declining leaves dark mode working.
 
-Automatic diagnostics exclude page text, entered values, URL paths, query strings, cookies and browser identifiers. Reports include the previewed domain, diagnostics and any notes or image you choose to share. Review notes and screenshots for private information: issues and attached images are public.
+Automatic diagnostics exclude page text, entered values, URL paths, query strings, cookies and browser identifiers. Reports include the previewed domain, diagnostics and any notes or image you choose to share privately with the maintainer. GitHub receives only a generic public tracking issue, with no domain, details, diagnostics or screenshot link. Anything you manually write or upload in public GitHub issues or comments is public.
 
-GitHub retains submitted issues. The reporting service retains request hashes, counters and issue links for up to 49 hours, with a daily salted address hash for abuse limits. It does not store raw addresses or report bodies. Attached images are hosted publicly for up to 30 days; GitHub may retain cached copies. Full local report downloads can contain text snippets and site addresses; review them before sharing.
+GitHub retains generic tracking issues. The reporting service retains request hashes, counters and issue links for up to 49 hours, with a daily salted address hash for abuse limits. It does not store raw addresses. Scrubbed report contents and optional images are stored privately for up to 30 days; retrieval requires the maintainer's verified GitHub identity. Full local report downloads can contain text snippets and site addresses; review them before sharing.
 
 Free and open source. Firefox desktop 142 or later. Some pages restrict extensions, and some sites need another mode or a site exception. Firefox Android and a Firefox browser theme are not supported.
 

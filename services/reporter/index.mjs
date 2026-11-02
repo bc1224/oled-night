@@ -1,8 +1,11 @@
 import {DurableObject} from 'cloudflare:workers';
-import {receiveReport,readScreenshot,digest,json,MAX_REPORT_BYTES} from './core.mjs';
+import {receiveReport,readReport,readScreenshot,digest,json,MAX_REPORT_BYTES} from './core.mjs';
 export class ReportGate extends DurableObject {
   async fetch(request){return this.ctx.blockConcurrencyWhile(async()=>{
-    try{return request.method==='GET'?await readScreenshot(request,this.ctx.storage):await receiveReport(request,this.env,this.ctx.storage)}catch{return json({error:'Reporting temporarily unavailable'},503)}
+    try{
+      if(request.method==='GET')return new URL(request.url).pathname.startsWith('/v1/reports/')?await readReport(request,this.ctx.storage,this.env):await readScreenshot(request,this.ctx.storage,this.env);
+      return await receiveReport(request,this.env,this.ctx.storage);
+    }catch{return json({error:'Reporting temporarily unavailable'},503)}
   })}
   async alarm(){
     let remaining=false,cursor;
@@ -17,7 +20,9 @@ export default {
   async fetch(request,env){
     const url=new URL(request.url),cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type','Cache-Control':'no-store'};
     if(url.pathname==='/health'&&request.method==='GET')return json({service:'oled-night-reporter',ready:!!env.GITHUB_TOKEN&&!!env.IP_HASH_SECRET});
-    if(url.pathname.startsWith('/v1/screenshots/')&&request.method==='GET')return env.REPORTS.get(env.REPORTS.idFromName('reports-v1')).fetch(request);
+    if((url.pathname.startsWith('/v1/screenshots/')||url.pathname.startsWith('/v1/reports/'))&&request.method==='GET'){
+      try{return await env.REPORTS.get(env.REPORTS.idFromName('reports-v1')).fetch(request)}catch{return json({error:'Reporting temporarily unavailable'},503)}
+    }
     if(url.pathname!=='/v1/issues')return json({error:'Not found'},404);
     if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
     let response;

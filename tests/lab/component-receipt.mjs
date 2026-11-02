@@ -5,11 +5,11 @@ import {runtimeDigest} from './runtime-proof.mjs';
 
 // Receipts describe the packaged runtime actually loaded by these runners.
 export function componentReceipt(engine, result) {
-  const root=resolve(import.meta.dirname,'../..'),directory=join(root,'dist',engine.toLowerCase());
+  const root=resolve(import.meta.dirname,'../..'),packageRoot=resolve(process.env.OLED_LAB_PACKAGE_ROOT||root),directory=join(packageRoot,'dist',engine.toLowerCase());
   return {
     engine, version:JSON.parse(readFileSync(join(directory,'manifest.json'))).version,
     sha:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8',windowsHide:true}).trim(),
     runtimeHash:runtimeDigest(file=>readFileSync(join(directory,file))),
-    checkedAt:new Date().toISOString(), candidate:false, ...result
+    checkedAt:new Date().toISOString(), candidate:packageRoot!==root, ...result
   };
 }

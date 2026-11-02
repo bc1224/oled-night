@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.62";
+  const VERSION = "0.6.74";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -85,6 +85,34 @@
   let schemeSensitive = false;
   let batchPolarity = null;
   let domReady = document.readyState !== "loading";
+  let loadingPaintFrame = false;
+  const parsingSurfaces = new Set();
+  if (!domReady) {
+    let frame = null;
+    const clearFrame = () => { loadingPaintFrame = false; };
+    const reset = typeof globalThis.scheduler?.postTask === "function" ? null : new MessageChannel();
+    if (reset) reset.port1.onmessage = clearFrame;
+    // Register before page callbacks. A loading document can still animate;
+    // keep those callbacks' repairs in their current paint, while parser tasks
+    // between frames share one scheduled style measurement.
+    const mark = () => {
+      frame = null;
+      if (document.readyState !== "loading") return;
+      loadingPaintFrame = true;
+      // A default-priority message may wait behind resumed parser work and
+      // falsely classify those tasks as part of the preceding paint.
+      if (reset) reset.port2.postMessage(null);
+      else globalThis.scheduler.postTask(clearFrame, { priority: "user-blocking" });
+      frame = requestAnimationFrame(mark);
+    };
+    frame = requestAnimationFrame(mark);
+    document.addEventListener("DOMContentLoaded", () => {
+      if (frame !== null) cancelAnimationFrame(frame);
+      reset?.port1.close();
+      reset?.port2.close();
+      loadingPaintFrame = false;
+    }, { once: true });
+  }
   let settings = DEFAULTS;
   let revision = 0;
   let tuningTimer = null;
@@ -143,6 +171,8 @@
   const interactionSelf = new Set();
   const interactionTrees = new Set();
   let interactionFrame = null;
+  let nativeTextInputTurn = false;
+  let nativeTextInputEpoch = 0;
   const interactionSurfaces = new WeakSet();
   const SETTLE_MS = 400;
   const INTERACTION_EVENTS = ["pointerover", "pointerout", "pointerdown", "pointerup", "pointercancel", "focusin", "focusout", "input", "change", "keydown", "keyup"];
@@ -262,9 +292,14 @@
   function frameIsUntouched() {
     if (isTopFrame) return false;
     try {
-      if (UNTOUCHED_FRAMES.test(location.href) || BOT_CHECK_URL.test(frameUrl(location.href))) return true;
+      if (BOT_CHECK_URL.test(frameUrl(location.href))) return true;
       // Script-built (about:blank/srcdoc) frames inside a verification widget.
       if (window.frameElement?.closest(BOT_CHECK)) return true;
+      // A collapsed chat can be zero-sized when its content script starts.
+      // Admit only the chat documents on YouTube, never a player or ad frame.
+      if (/^(?:www\.)?youtube\.com$/i.test(location.hostname) && /^\/live_chat(?:_replay)?\/?$/.test(location.pathname)
+        && colorsApi().usesNativeSafeMode(hostname())) return false;
+      if (UNTOUCHED_FRAMES.test(location.href)) return true;
       return innerWidth < 80 || innerHeight < 40;
     } catch { return true; }
   }
@@ -306,6 +341,11 @@
     if (node.parentElement) return node.parentElement;
     const parent = node.parentNode;
     return parent && parent.host ? parent.host : null;
+  }
+
+  function inheritanceParent(node) {
+    // Assigned content inherits a slot's ink before its light-DOM parent.
+    return node.assignedSlot || parentAcrossShadow(node);
   }
 
   function adoptShadowRoot(root) {
@@ -659,6 +699,30 @@
     return trackMode === "crush" && track && colors.luminance(track) > .18 ? "#000000" : "rgb(190 190 190)";
   }
 
+  // Instagram-style radios put the visible dot beside a transparent native
+  // input, rather than in that input's pseudo-element. Treat only a compact
+  // neutral circle in the same bounded control as state ink, not a surface.
+  function siblingRadioMarker(element, computed, ctx) {
+    if (ctx.mode === "crush" && !ctx.recolorLightRegions) return null;
+    if (element.localName !== "span" && element.localName !== "div") return null;
+    if (element.childElementCount || element.textContent.trim() || computed.backgroundImage !== "none") return null;
+    const w = parseFloat(computed.width), h = parseFloat(computed.height);
+    if (!(w >= 4 && w <= 20 && h >= 4 && h <= 20 && Math.abs(w - h) <= 1 &&
+        parseFloat(computed.borderTopLeftRadius) >= Math.min(w, h) / 2)) return null;
+    const colors = colorsApi(), paint = colors.parseColor(computed.backgroundColor);
+    if (!paint || paint.a < .5 || colors.chroma(paint) > .15 || isProductMedia(element)) return null;
+    for (let scope = element.parentElement, depth = 0; scope && depth < 3; scope = scope.parentElement, depth++) {
+      if (scope.childElementCount > 8) continue;
+      const control = Array.from(scope.children).find(child => child.matches('input[type="radio"]'));
+      if (!control) continue;
+      if (!control.checked || control.matches(':disabled, [aria-disabled="true"]')) return null;
+      const style = ctx.style(control), cw = parseFloat(style.width), ch = parseFloat(style.height);
+      if (!(parseFloat(style.opacity) <= .05 && cw <= 40 && ch <= 40 && w <= cw * .8 && h <= ch * .8)) return null;
+      return colors.mapForeground(paint, 1);
+    }
+    return null;
+  }
+
   // Read-only: decides overrides from original computed styles. No DOM writes
   // happen here, so the whole batch costs a single style recalculation.
   function decide(element, ctx) {
@@ -697,14 +761,17 @@
     // share that depth even before the draft grows to multiple lines.
     if (mode !== "soft" && found.bg && computed.backgroundImage === "none" && !paintsInk(computed) &&
         element !== document.documentElement && element !== document.body &&
-        (element.childElementCount || element.textContent.trim()) &&
         parseFloat(computed.width) >= 120 &&
-        (parseFloat(computed.height) >= 64 || (parseFloat(computed.height) >= 32 &&
-          element.closest('form')?.querySelector('textarea, [contenteditable="true"]'))) &&
         (parseFloat(computed.borderTopLeftRadius) >= 4 || computed.boxShadow !== "none")) {
       const bg = colors.parseColor(computed.backgroundColor);
-      if (bg?.a >= .5 && colors.chroma(bg) < .1 && colors.luminance(bg) >= .005 && colors.luminance(bg) < .025)
-        found.bg = computed.backgroundColor;
+      if (bg?.a >= .5 && colors.chroma(bg) < .1 && colors.luminance(bg) >= .005 && colors.luminance(bg) < .025) {
+        const height = parseFloat(computed.height);
+        if (document.readyState === 'loading' && height < 64) parsingSurfaces.add(element);
+        else parsingSurfaces.delete(element);
+        if ((element.childElementCount || element.textContent.trim()) &&
+            (height >= 64 || (height >= 32 && element.closest('form')?.querySelector('textarea, [contenteditable="true"]'))))
+          found.bg = computed.backgroundColor;
+      }
     }
     // A repeated native paint inside a retained card is the same surface,
     // even when the text wrapper or truncation button is small and square.
@@ -719,6 +786,41 @@
     }
     const thumb = switchThumb(element, computed, ctx);
     if (thumb) found.bg = thumb;
+    const radioMarker = siblingRadioMarker(element, computed, ctx);
+    if (radioMarker) found.bg = radioMarker;
+    // Apple-style checkboxes hide the native input and paint its label cover.
+    // That inset shadow is the control boundary, not a decorative dark shadow.
+    if ((mode === "oled" || mode === "soft") && element.classList.contains("form-input__label__cover") &&
+        !element.childElementCount && !element.textContent.trim() && computed.backgroundImage === "none" &&
+        parseFloat(computed.width) >= 8 && parseFloat(computed.width) <= 32 &&
+        parseFloat(computed.height) >= 8 && parseFloat(computed.height) <= 32) {
+      const control = element.closest("label")?.control;
+      if (control?.matches('input[type="checkbox"]:not(:disabled)')) {
+        found.shadow = "rgb(160 160 168) 0px 0px 0px 1px inset";
+        const fill = colors.parseColor(computed.backgroundColor);
+        // A brightened face can erase its white checkmark. Keep an authored
+        // dark accent behind that marker; the boundary stays visible outside.
+        if (control.checked && fill?.a >= .5 && colors.chroma(fill) > .15 && colors.luminance(fill) < .3)
+          found.bg = computed.backgroundColor;
+      }
+    }
+    // The read-only popularity component encodes a value with tiny filled and
+    // empty circles. Preserve that state instead of mapping both to surfaces.
+    if ((mode === "oled" || mode === "soft") && element.classList.contains("popularity-dots__dot") &&
+        !element.childElementCount && !element.textContent.trim() && computed.backgroundImage === "none" &&
+        parseFloat(computed.width) > 0 && parseFloat(computed.width) <= 12 &&
+        parseFloat(computed.height) > 0 && parseFloat(computed.height) <= 12) {
+      const owner = element.getRootNode().host || element.closest("apui-wc-popularity-dots");
+      if (owner?.localName === "apui-wc-popularity-dots" && owner.getAttribute("aria-readonly") === "true") {
+        if (element.classList.contains("popularity-dots__dot--on")) {
+          found.bg = colors.mapDataPaint(colors.parseColor(computed.backgroundColor));
+          found.shadow = "none";
+        } else {
+          found.shadow = "rgb(160 160 168) 0px 0px 0px 1px inset";
+        }
+        found.data = "1";
+      }
+    }
     // Flat list rows that repeat their canvas paint should not become little
     // raised rectangles around transparent controls (appointment time slots).
     if (mode === "oled" && found.bg && computed.backgroundImage === "none" && computed.boxShadow === "none" &&
@@ -791,8 +893,23 @@
       if (ctx.recolorLightRegions && nativeBackdrop && !nativeBackdrop.image && text?.a >= 0.95 &&
           colors.chroma(text) < 0.1 && colors.luminance(text) < 0.2) {
         const bg = colors.luminance(nativeBackdrop.color), ink = colors.luminance(text);
-        if (bg < 0.2 && (Math.max(bg, ink) + 0.05) / (Math.min(bg, ink) + 0.05) < 4.5)
-          found.fg = colors.mapForeground(text, 1);
+        if (bg < 0.2 && (Math.max(bg, ink) + 0.05) / (Math.min(bg, ink) + 0.05) < 4.5) {
+          // Empty layout ancestors do not paint text. Giving them inherited
+          // ink forces a document-wide restyle whenever a leaf is measured.
+          // Keep actual text, controls, generated paint and uncertain scopes.
+          const structural = !ctx.rememberInk && element instanceof HTMLElement &&
+            (largeScopes.has(element) || element === document.body || element === document.documentElement) &&
+            element.childElementCount && !element.localName.includes('-') && !element.shadowRoot &&
+            !element.assignedSlot && !element.hasAttribute('part') && element.localName !== 'slot' &&
+            computed.display !== 'list-item' && !element.matches(CONTROL) &&
+            !element.isContentEditable && !paintsInk(computed) &&
+            !Array.from(element.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+          const generated = structural && ['::before', '::after'].some(pseudo => {
+            const content = getComputedStyle(element, pseudo).content;
+            return content && content !== 'none' && content !== 'normal';
+          });
+          if (!structural || generated) found.fg = colors.mapForeground(text, 1);
+        }
       }
       // Raised buttons can paint their entire face in a generated layer
       // (PostHog's LemonButton__chrome). Their element itself is transparent,
@@ -1036,6 +1153,27 @@
     return paints.find(p => p.fixed && colors.luminance(p.color) < .2)?.color || null;
   }
 
+  function hasAuthoredIconInversion(svg, rect, ctx) {
+    let inverted = false;
+    for (let owner = svg, depth = 0; owner && depth < 5; owner = owner.parentElement, depth++) {
+      const style = ctx.style(owner);
+      if (owner !== svg) {
+        // Only transparent, icon-sized wrappers participate. A filtered card
+        // or page also transforms its backdrop and is a different paint seam.
+        if (owner.childElementCount !== 1 || owner.textContent.trim()) break;
+        const background = colorsApi().parseColor(style.backgroundColor);
+        if (background?.a > 0) break;
+        const bounds = owner.getBoundingClientRect();
+        if (bounds.width > rect.width + 2 || bounds.height > rect.height + 2) break;
+      }
+      const filter = style.filter;
+      if (filter === "none") continue;
+      if (!/^invert\((?:1|100%)\)$/.test(filter)) return false;
+      inverted = !inverted;
+    }
+    return inverted;
+  }
+
   // Small inline SVG icons with a hard-coded dark fill/stroke would vanish on
   // black. Larger SVGs are charts/illustrations: their near-white area fills
   // and gradient stops (App Store Connect sparklines) are darkened instead,
@@ -1066,6 +1204,16 @@
       }
     }
     const icon = (rect.width <= 64 && rect.height <= 64) || compactLogo;
+    if (icon && hasAuthoredIconInversion(svg, rect, ctx)) {
+      // App Store dark mode already inverts its privacy/accessibility wrappers.
+      // Preserve their original ink, including inherited currentColor, so our
+      // SVG inversion or foreground mapping does not undo the native repair.
+      for (const part of [svg, ...svg.querySelectorAll(ICON_PARTS)]) {
+        const style = ctx.style(part);
+        out.push([part, { fg: style.color, fill: style.fill, stroke: style.stroke }]);
+      }
+      return;
+    }
     if (icon && svg.closest('a,button,[role="button"],[role="radio"]')) {
       const fixed = fixedSpriteInk(svg, ctx);
       if (fixed) {
@@ -1132,7 +1280,15 @@
           const fg = colors.mapForeground(colors.parseColor(ctx.style(svg).color), 1);
           out.push([svg, {fg}], ...currentParts.map(part => [part, {fg}]));
         } else {
-          out.push([svg, neutral && unreadable ? {"icon-invert":"1"} : {}], ...currentParts.map(part => [part, {}]));
+          // Invert native paint, rather than an ancestor's remapped currentColor.
+          // Hold that measured ink while the whole neutral badge is inverted.
+          const hold = part => {
+            const style = ctx.style(part);
+            return {fg: style.color, fill: style.fill, stroke: style.stroke};
+          };
+          const invert = neutral && unreadable;
+          out.push([svg, invert ? {"icon-invert":"1", ...hold(svg)} : {}],
+            ...currentParts.map(part => [part, invert ? hold(part) : {}]));
         }
       }
       return;
@@ -1164,8 +1320,16 @@
         // A <use> referencing <symbol fill="none"> must stay unfilled. Its
         // inherited computed fill looks dark even though the authored symbol
         // deliberately draws only strokes.
-        if (fill && !(outline && (part === svg || part.localName === "use"))) found.fill = fill;
-        if (stroke) found.stroke = stroke;
+        // Keep currentColor as an inherited binding. Freezing it to a mapped
+        // fill on a group would hide a descendant's later authored color.
+        if (fill && !(outline && (part === svg || part.localName === "use"))) {
+          if (computed.fill === computed.color) { found.fg = fill; found.fill = "currentColor"; }
+          else found.fill = fill;
+        }
+        if (stroke) {
+          if (computed.stroke === computed.color) { found.fg = stroke; found.stroke = "currentColor"; }
+          else found.stroke = stroke;
+        }
       } else if (part.localName === "stop") {
         const stop = paleToDark(colors.parseColor(computed.stopColor));
         if (stop) found.stop = stop;
@@ -1665,6 +1829,7 @@
     let count = 0;
     const selectors = [];
     const inspect = rules => {
+      if (rules.length > 256 - count) return true;
       for (const rule of rules) {
         if (++count > 256 || rule.type === 3) return true;
         if (feature === "viewport" && (rule.type === 7 || (rule.style && Array.from(rule.style).some(property =>
@@ -1688,6 +1853,20 @@
       const sheets = root === document ? [...document.styleSheets] :
         [...root.querySelectorAll('style, link[rel~="stylesheet"]')].map(node => node.sheet);
       sheets.push(...root.adoptedStyleSheets);
+      // Count first across the complete scope. Gmail loads small module sheets
+      // before its large theme sheet; inspecting those prefixes still wastes
+      // work when the complete proof is already known to exceed the budget.
+      let topLevelCount = 0;
+      for (const sheet of sheets) {
+        if (!sheet) return true;
+        if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith("oled-night-")) continue;
+        // Loading already recorded this sheet as unreadable. Repeating a
+        // SecurityError cannot strengthen a bounded proof, and is costly
+        // across the retained refresh cursor in Firefox.
+        if (sheetSnapshots.get(sheet.ownerNode)?.opaque?.sheet === sheet) return true;
+        topLevelCount += sheet.cssRules.length;
+        if (topLevelCount > 256) return true;
+      }
       for (const sheet of sheets) {
         if (!sheet) return true; // An authored sheet is still loading.
         if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith("oled-night-")) continue;
@@ -1711,13 +1890,21 @@
       return null;
     };
     const authored = [], fingerprint = [];
-    const rules = [];
+    const rules = [], sheetRules = [];
     let count = 0, length = 0, mayAnimate = false, movingPaint = false;
     try {
       for (const sheet of [...document.styleSheets, ...document.adoptedStyleSheets]) {
         if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith("oled-night-")) continue;
         if (!sheet || sheet.disabled || sheet.media?.length) return uncertain();
-        for (const rule of sheet.cssRules) {
+        if (sheetSnapshots.get(sheet.ownerNode)?.opaque?.sheet === sheet) return uncertain();
+        const nativeRules = sheet.cssRules;
+        count += nativeRules.length;
+        if (count > 256) return uncertain();
+        sheetRules.push(nativeRules);
+      }
+      count = 0;
+      for (const nativeRules of sheetRules) {
+        for (const rule of nativeRules) {
           if (++count > 256 || rule.type !== 1 || rule.cssRules?.length) return uncertain();
           const text = rule.cssText;
           length += text.length;
@@ -1744,7 +1931,11 @@
           const background = colorsApi().parseColor(rule.style.backgroundColor);
           for (const selector of selectors) {
             const classes = selector.match(/\.[\w-]+/g) || [];
-            rules.push({selector,classes,backgroundOnly,background,priority:[
+            rules.push({selector,classes,backgroundOnly,background,
+              ink:rule.style.color,inkColor:colorsApi().parseColor(rule.style.color),
+              resetsInk:!!rule.style.getPropertyValue('all'),
+              inkPriority:[rule.style.getPropertyPriority('color') === 'important' ? 1 : 0,0,classes.length,/^[a-z]/i.test(selector) ? 1 : 0],
+              priority:[
               rule.style.getPropertyPriority('background-color') === 'important' ? 1 : 0,
               classes.length, /^[a-z]/i.test(selector) ? 1 : 0]});
           }
@@ -1786,6 +1977,33 @@
     }
     for (const parent of path) cache.set(parent, safe);
     return safe;
+  }
+
+  // Find the nearest winning absolute ink in a complete simple scope. This
+  // also covers a bold child inheriting an already-native span's ink. Stop
+  // when an outside override hides that source, or native/unknown CSS wins.
+  function hasNativeInkSource(node, ink, scope) {
+    if (!scope || scope.mayAnimate || !ink) return false;
+    for (; node; node = inheritanceParent(node)) {
+      if (node.style.getPropertyValue('all')) return false;
+      let color = null, priority = null, value = '';
+      if (node.style.color) {
+        value = node.style.color; color = colorsApi().parseColor(value);
+        priority = [node.style.getPropertyPriority('color') === 'important' ? 1 : 0,1,0,0];
+      }
+      for (const rule of scope.rules) {
+        if ((!rule.ink && !rule.resetsInk) || !node.matches(rule.selector)) continue;
+        if (rule.resetsInk) return false;
+        const higher = !priority || rule.inkPriority.some((part,index) =>
+          part > priority[index] && rule.inkPriority.slice(0,index).every((before,i) => before === priority[i]));
+        const equal = priority && rule.inkPriority.every((part,index) => part === priority[index]);
+        if (higher || equal) { priority = rule.inkPriority; color = rule.inkColor; value = rule.ink; }
+      }
+      if (color) return ['r','g','b','a'].every(key => (color[key] ?? 1) === (ink[key] ?? 1));
+      if (priority ? !/^(inherit|unset)$/i.test(value.trim()) :
+          !/^(html|body|div|section|main|article|header|footer|nav|aside|ul|ol|li|p|span|b|strong|em|i|small|h[1-6])$/.test(node.localName)) return false;
+    }
+    return false;
   }
 
   function inheritsPlainInk(node, scope, contexts) {
@@ -1870,7 +2088,44 @@
     // restyle their subtree either way, so they keep one switch per root.
     const measured = [], measuredSelf = [], measuredPseudo = [], calm = [], calmSelf = new Set();
     const retainedAncestors = new Map();
+    const inheritanceRoots = [...paintList, ...list.icons];
     const marked = [...paintList, ...list.images].filter((element) => element.isConnected && element.hasAttribute(MARK));
+    const markedSet = new Set(marked);
+    let inheritsMappedInk = false;
+    let foregroundOnly = true;
+    if (!ancestorMeasurement) {
+      // A shallow hover or mutation batch can inherit our mapped foreground
+      // from an unchanged ancestor outside the batch. Measure that authored
+      // inheritance chain too, or each pass can promote muted text to primary.
+      const ancestors = new Set();
+      for (const element of inheritanceRoots) {
+        for (let parent = inheritanceParent(element); parent && !ancestors.has(parent); parent = inheritanceParent(parent)) {
+          ancestors.add(parent);
+          if (!markedSet.has(parent) && INHERITED_KEYS.test(parent.getAttribute(MARK) || "")) {
+            inheritsMappedInk = true;
+            if ((parent.getAttribute(MARK) || "").split(" ").some(key => key !== "fg" && INHERITED_KEYS.test(key))) {
+              foregroundOnly = false;
+              break;
+            }
+          }
+        }
+        if (!foregroundOnly) break;
+      }
+    }
+    const includeAncestors = () => {
+      const ancestors = new Set(), added = [];
+      for (const element of inheritanceRoots) for (let parent = inheritanceParent(element); parent; parent = inheritanceParent(parent)) {
+        if (ancestors.has(parent)) break;
+        ancestors.add(parent);
+        const surface = originalSurface.get(parent);
+        if (surface?.retained && surface.color) retainedAncestors.set(parent, surface);
+        originalSurface.delete(parent);
+        if (parent.hasAttribute(MARK) && !markedSet.has(parent)) {
+          measuredSelf.push(parent); calmSelf.add(parent); added.push(parent);
+        }
+      }
+      return added;
+    };
     // Form fields have (almost) no subtree, so their inherited overrides are cheap to switch.
     const deep = (element) => INHERITED_KEYS.test(element.getAttribute(MARK)) && !element.matches("input, textarea, select");
     if (ancestorMeasurement || (marked.length <= MANY_MARKED && !marked.some(deep))) {
@@ -1885,17 +2140,7 @@
         // overrides on unrelated siblings. The page keeps its previous dark
         // paint between chunks; each chunk reads current, rather than cached,
         // ancestor colors and backdrops, including across shadow boundaries.
-        const ancestors = new Set();
-        for (const element of paintList) for (let parent = parentAcrossShadow(element); parent; parent = parentAcrossShadow(parent)) {
-          if (ancestors.has(parent)) break;
-          ancestors.add(parent);
-          const surface = originalSurface.get(parent);
-          if (surface?.retained && surface.color) retainedAncestors.set(parent, surface);
-          originalSurface.delete(parent);
-          if (parent.hasAttribute(MARK) && !marked.includes(parent)) {
-            measuredSelf.push(parent); calmSelf.add(parent);
-          }
-        }
+        includeAncestors();
       }
     } else {
       // A shallow ancestor reread must never turn off every descendant's
@@ -2019,6 +2264,31 @@
         return computed;
       }
     };
+    if (inheritsMappedInk) {
+      // Primary ink and independently owned native ink can stay local on a
+      // light native backdrop. Switching a page wrapper's foreground for a
+      // secondary-colored leaf would restyle every unrelated message twice.
+      for (const element of inheritanceRoots) originalSurface.delete(element);
+      const colors = colorsApi();
+      const inkScope = foregroundOnly ? paintScope || simplePaintScope() : null;
+      const stableInk = foregroundOnly && inheritanceRoots.every(element => {
+        const primary = textTiers.get(element) === 1;
+        if (!primary && (!inkScope || inkScope.mayAnimate)) return false;
+        if (ctx.generated(element)) return false;
+        const ink = colors.parseColor(ctx.style(element).color), backdrop = backdropOf(element, ctx);
+        if (!ink || backdrop.image || colors.luminance(backdrop.color) <= .5) return false;
+        return (primary && colors.chroma(ink) < .1 && colors.luminance(ink) > .5) ||
+          (plainDocumentContext(element, documentContexts) && hasNativeInkSource(element, ink, inkScope));
+      });
+      if (!stableInk) {
+        for (const node of includeAncestors()) {
+          node.setAttribute(NOANIM_SELF, "");
+          node.setAttribute(MEASURE_SELF, "");
+        }
+        styles.clear();
+        ctx.backdrop.clear();
+      }
+    }
     const decisions = paintList.map((element) => decide(element, ctx));
     const iconDecisions = [];
     for (const icon of list.icons) if (icon.isConnected) decideSvg(icon, ctx, iconDecisions);
@@ -2164,6 +2434,11 @@
     // Mutations inside a frame callback cannot wait for another rAF: the
     // browser paints their native surface in the current frame. Batch at the
     // microtask checkpoint instead, after the site's synchronous updates.
+    // Parser-inserted scripts can cause hundreds of mutation checkpoints in
+    // one frame. Keep their work in the shared pre-paint frame callback while
+    // parsing, instead of flushing styles between each small markup fragment.
+    // Other callbacks, including animation frames before DOMContentLoaded,
+    // still need the same-frame microtask repair.
     if (beforePaint && !document.hidden) {
       if (flushScheduled && flushMicrotask) return;
       if (flushHandle !== null) {
@@ -2173,7 +2448,17 @@
       flushScheduled = true;
       flushMicrotask = true;
       const epoch = ++flushEpoch;
-      queueMicrotask(() => { if (epoch === flushEpoch) flush(); });
+      queueMicrotask(() => {
+        if (epoch !== flushEpoch) return;
+        // Parser tasks between frames can share a pre-paint callback. Changes
+        // within a loading page's animation frame still paint immediately.
+        const loadingBetweenFrames = document.readyState === "loading" && !loadingPaintFrame;
+        if (loadingBetweenFrames) {
+          flushScheduled = false;
+          flushMicrotask = false;
+          schedule();
+        } else flush();
+      });
       return;
     }
     if (flushScheduled) return;
@@ -2220,15 +2505,34 @@
     // The browser owns the open popup. Its static option rules are already
     // installed; synchronous select event restyles delay native opening.
     if (nativeSelect) return;
-    const found = path.find(node => node.matches(CONTROL));
+    const found = path.find(node => node.matches(CONTROL) ||
+      (node.hasAttribute('contenteditable') && node.isContentEditable));
     const control = found && found !== document.body && found !== document.documentElement ? found : null;
+    const editing = control?.isContentEditable &&
+      (control.hasAttribute('contenteditable') || control.getAttribute('role') === 'textbox') &&
+      /^(?:key|input$)/.test(event.type);
+    const textInput = event.isTrusted && /^(?:key|input$)/.test(event.type) && control &&
+      (editing || control.localName === 'textarea' || (control.localName === 'input' &&
+        ['text', 'search', 'email', 'url', 'tel', 'password'].includes(control.type)));
+    if (textInput) {
+      // Native text events run in an input task, before the next paint. Share
+      // one frame with their synchronous DOM writes instead of measuring
+      // keydown, input, keyup and a second interaction pass independently.
+      // Keep the flag through the site's mutation delivery, then clear it
+      // before unrelated tasks or animation callbacks can change paint.
+      nativeTextInputTurn = true;
+      const epoch = ++nativeTextInputEpoch;
+      queueMicrotask(() => queueMicrotask(() => {
+        if (epoch === nativeTextInputEpoch) nativeTextInputTurn = false;
+      }));
+    }
     if (control) interactionSurfaces.add(control);
     // Existing background AND ink overrides protect the current paint. Native
     // dark mode may own only a background; new native focus ink then needs the
     // immediate pass too. Fully protected leaf controls stay coalesced.
-    const currentPaint = !!control?.childElementCount || path.some(node =>
+    const currentPaint = !textInput && (!!control?.childElementCount || path.some(node =>
       node !== document.body && node !== document.documentElement &&
-      !['bg','fg'].every(key => node.getAttribute(MARK)?.split(' ').includes(key)));
+      !['bg','fg'].every(key => node.getAttribute(MARK)?.split(' ').includes(key))));
     // attachShadow() on an already-scanned host is not a DOM mutation. Discover
     // those roots from the native event path before painting the first hover.
     // A new root needs its whole component scanned once; subsequent interactions
@@ -2249,7 +2553,19 @@
     }
     // Descendant rules of changed elements (".row:hover .label") need their subtree.
     const controlChanged = control && (!stop || path.indexOf(control) < path.indexOf(stop));
-    if (controlChanged) queueInteraction(control, true, currentPaint);
+    if (editing) {
+      // Rich replies can include thousands of quoted nodes. Keystrokes change
+      // the selection's text, not every quoted message. DOM/style mutations
+      // still repair their actual targets; broad state selectors settle once
+      // typing pauses, rather than restarting a whole-editor scan per key.
+      const selection = control.getRootNode().getSelection?.() || document.getSelection();
+      for (const endpoint of [selection?.anchorNode, selection?.focusNode]) {
+        let node = endpoint instanceof Element ? endpoint : endpoint?.parentElement;
+        for (; node && node !== control && control.contains(node); node = node.parentElement)
+          queueInteraction(node, false, currentPaint);
+      }
+      settleTrees.add(control);
+    } else if (controlChanged) queueInteraction(control, true, currentPaint);
     else {
       // Non-semantic triggers and plain text hover must not promote the
       // entire page layout to a subtree reread. Ancestor state is checked
@@ -2260,6 +2576,12 @@
         else queueInteraction(path[0], true, currentPaint);
       }
       if (control) settleTrees.add(control);
+    }
+    // A hidden native checkbox can paint its state in an associated sibling
+    // label. That label is outside the input's event path and subtree.
+    if ((event.type === "input" || event.type === "change") &&
+        control?.matches('input[type="checkbox"]')) {
+      for (const label of control.labels || []) queueInteraction(label, true, currentPaint);
     }
     const group = path.find(node => node.matches(STATE_GROUP));
     if (group && (!stop || path.indexOf(group) < path.indexOf(stop))) queueInteraction(group, true, currentPaint);
@@ -2372,7 +2694,7 @@
     const copies = mediaCopies.get(event.target);
     if (copies) { queueMediaCopies(copies); schedule(); }
     if (!isPageSheet(event.target)) return;
-    queuePageSheet(event.target, true);
+    queuePageSheet(event.target, true, event.isTrusted);
     schedule();
   }
 
@@ -2502,17 +2824,32 @@
     if (hasDescendantShadow(node) || changed.some(name => !/^[\w-]+$/.test(name))) return null;
     if (!scopes.has('classRules')) {
       const selectors = []; let count = 0, valid = true;
-      const inspect = rules => { for (const rule of rules) {
-        if (++count > 8192 || rule.type === 3) { valid = false; return; }
-        if (rule.selectorText) selectors.push(rule);
-        if (rule.cssRules) inspect(rule.cssRules);
-        if (!valid) return;
-      }};
-      try { for (const sheet of [...document.styleSheets, ...document.adoptedStyleSheets]) {
-        if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith('oled-night-')) continue;
-        if (!sheet) { valid = false; break; }
-        inspect(sheet.cssRules); if (!valid) break;
-      }} catch { valid = false; }
+      const inspect = rules => {
+        // A flat sheet larger than the remaining proof budget cannot succeed.
+        // Reject it before materializing thousands of CSSOM rule wrappers on
+        // every search-field or sticky-header class change.
+        if (rules.length > 8192 - count) { valid = false; return; }
+        for (const rule of rules) {
+          if (++count > 8192 || rule.type === 3) { valid = false; return; }
+          if (rule.selectorText) selectors.push(rule);
+          if (rule.cssRules) inspect(rule.cssRules);
+          if (!valid) return;
+        }
+      };
+      const sheetRules = [];
+      let topLevelCount = 0;
+      try {
+        for (const sheet of [...document.styleSheets, ...document.adoptedStyleSheets]) {
+          if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith('oled-night-')) continue;
+          if (!sheet) { valid = false; break; }
+          if (sheetSnapshots.get(sheet.ownerNode)?.opaque?.sheet === sheet) { valid = false; break; }
+          const rules = sheet.cssRules;
+          topLevelCount += rules.length;
+          if (topLevelCount > 8192) { valid = false; break; }
+          sheetRules.push(rules);
+        }
+        if (valid) for (const rules of sheetRules) { inspect(rules); if (!valid) break; }
+      } catch { valid = false; }
       scopes.set('classRules', valid ? selectors : null);
     }
     const selectors = scopes.get('classRules'); if (!selectors) return null;
@@ -2630,21 +2967,41 @@
     } catch { return null; }
   }
 
-  function queuePageSheet(node, loaded = false) {
+  function opaqueSheetState(node) {
+    if (!node.isConnected || node.localName !== 'link' || !node.sheet) return null;
+    const sheet = node.sheet;
+    try { void sheet.cssRules; return null; }
+    catch (error) { if (error.name !== 'SecurityError') return null; }
+    // Opaque linked rules cannot be edited through page CSSOM. Retain sheet
+    // identity and mutable media/disabled state for duplicate notifications.
+    // Native load completion still takes the conservative path below: pending
+    // imports can finish after the parent sheet first becomes available.
+    try {
+      return {sheet, key:JSON.stringify([
+        ...['rel','href','media','type','title','crossorigin','integrity','referrerpolicy','disabled'].map(name=>node.getAttribute(name)),
+        node.disabled, sheet.disabled, sheet.media.mediaText
+      ])};
+    } catch { return null; }
+  }
+
+  function queuePageSheet(node, loaded = false, nativeLoad = false) {
     const before = sheetSnapshots.get(node), scope = node.isConnected ? node.getRootNode() : before?.scope;
+    const opaque = opaqueSheetState(node);
+    if (loaded && !nativeLoad && opaque && before?.opaque?.sheet === opaque.sheet && before.opaque.key === opaque.key) return;
     if (scope instanceof ShadowRoot) {
-      if (node.isConnected) sheetSnapshots.set(node,{selectors:null,fingerprint:null,scope}); else sheetSnapshots.delete(node);
+      if (node.isConnected) sheetSnapshots.set(node,{selectors:null,fingerprint:null,opaque,scope}); else sheetSnapshots.delete(node);
       pendingTrees.add(scope.host);
       return;
     }
     // A style element's load event follows its text mutation. Compare the
     // complete bounded CSSOM, not just selectors: declaration-only edits must
-    // invalidate paint, and unreadable/large sheets cannot claim equivalence.
+    // invalidate paint. Large readable sheets retain the conservative path;
+    // opaque linked sheets use the identity and state proof above.
     const fingerprint = pageSheetFingerprint(node);
     if (loaded && fingerprint !== null && before?.fingerprint === fingerprint) return;
     const after = node.isConnected ? pageSheetSelectors(node) : before === undefined ? null : [];
     const previous = before?.selectors;
-    if(node.isConnected) sheetSnapshots.set(node,{selectors:after,fingerprint,scope}); else sheetSnapshots.delete(node);
+    if(node.isConnected) sheetSnapshots.set(node,{selectors:after,fingerprint,opaque,scope}); else sheetSnapshots.delete(node);
     const full = () => {polarityDirty = true;pendingTrees.add(document.documentElement)};
     // Document selectors cannot pierce a shadow boundary. Matching hosts are
     // scanned with their roots; ::part/:host/::slotted remain uncertain above.
@@ -2730,6 +3087,16 @@
           else if(node instanceof Element) for(const sheet of node.querySelectorAll('style, link[rel~="stylesheet"]')) if(isPageSheet(sheet)) queuePageSheet(sheet);
         }
         for (const node of record.addedNodes) if (node.nodeType === Node.ELEMENT_NODE) pendingTrees.add(node);
+        // A retired structural foreground may gain or lose direct text.
+        // Recheck its owner only, as with an editor's local text changes.
+        if (target instanceof Element &&
+            (target.isContentEditable || largeScopes.has(target) || target === document.body || target === document.documentElement) &&
+            [...record.addedNodes, ...record.removedNodes].some(node => node.nodeType === Node.TEXT_NODE))
+          pendingSelf.add(target);
+      } else if (record.type === "characterData" && target.parentElement &&
+          (target.parentElement.isContentEditable || largeScopes.has(target.parentElement) ||
+            target.parentElement === document.body || target.parentElement === document.documentElement)) {
+        pendingSelf.add(target.parentElement);
       } else if (record.attributeName === SHARED_BG) {
         pendingTrees.add(target);
       } else if (record.attributeName === "class" || STATE_ATTRIBUTES.includes(record.attributeName)) {
@@ -2780,7 +3147,7 @@
       }
     }
     for (const root of changedRoots) if (shadowRoots.has(root)) ensureShadowSheet(root);
-    if (scheduleBatch && (pendingTrees.size || pendingSelf.size || polarityDirty)) schedule(true);
+    if (scheduleBatch && (pendingTrees.size || pendingSelf.size || polarityDirty)) schedule(!nativeTextInputTurn);
   }
 
   function overrideRules() {
@@ -2862,6 +3229,40 @@
     document.getElementById("oled-night-early")?.remove();
   }
 
+  function styleAmazonSearch(root) {
+    root.setAttribute("data-oled-night-amazon-search", "");
+    const amazon = 'html[data-oled-night-amazon-search]:is(*, #oled-night-profile-priority)';
+    const style = document.getElementById("oled-night-sheet");
+    style.appendChild(document.createTextNode(`
+      ${amazon} {
+        --oln-amazon-ink: hsl(0 0% var(--oln-light, 88%));
+        --oln-amazon-muted: hsl(0 0% max(40%, calc(var(--oln-light, 88%) - 16%)));
+        --oln-amazon-panel: color-mix(in srgb, var(--oled-night-page) calc(var(--oln-strength, .72) * 100%), #414247);
+      }
+      ${amazon} body, ${amazon} :is(#search, #a-page, .s-result-item, .puis-card-container, .s-card-container, .s-desktop-content, .s-navigation-indent-1, .a-box, .a-box-inner, .a-cardui, .a-section.a-text-center, .a-popover-inner, .a-popover-wrapper, .s-desktop-toolbar) {
+        background-color: var(--oled-night-page) !important; color: var(--oln-amazon-ink) !important;
+      }
+      ${amazon} :is(#search h1, #search h2, #search h3, .a-color-base, .a-price, .a-list-item, .a-dropdown-prompt, .a-expander-prompt, .a-expander-header) { color: var(--oln-amazon-ink) !important; }
+      ${amazon} :is(.a-color-secondary, .a-color-tertiary, .a-price.a-text-price, .a-size-small.a-color-base) { color: var(--oln-amazon-muted) !important; }
+      ${amazon} :is(#search, .a-popover-inner, #sac-autocomplete-results-container) a:not(.a-button-text) { color: #8fc5ff !important; }
+      ${amazon} :is(#search, .a-popover-inner) a:not(.a-button-text):hover { color: #c5e1ff !important; }
+      ${amazon} :is(input:not([type]), input[type=text], input[type=search], select, option, .a-button-dropdown, .a-dropdown-container .a-button-inner, .a-expander-header, .a-popover-header, .s-pagination-item, .s-suggestion-container, .s-suggestion, .nav-flyout, .nav-flyout-content, .autocomplete-results-container, #nav-search-bar-form .nav-fill) {
+        background-color: var(--oln-amazon-panel) !important; color: var(--oln-amazon-ink) !important;
+      }
+      ${amazon} :is(.s-suggestion:hover, .a-dropdown-link:hover, .s-pagination-item:hover, .a-expander-header:hover) { background-color: #303137 !important; }
+      ${amazon} :is(.s-background-color-platinum, .puis-status-badge-container, .a-button-base, .a-button-base .a-button-inner,
+          .nav-assistant, .shortcut-help-container, .nav-search-field, .nav-search-scope, .nav-search-facade, .hmenu, .hmenu-item, .s-carousel-button) {
+        color: var(--oln-amazon-ink) !important; background-color: var(--oln-amazon-panel) !important;
+      }
+      ${amazon} :is(.a-button-base .a-button-text, .nav-search-label, .nav-signin-tooltip-footer, .nav-flyout .nav-text, .nav-flyout .nav-title) { color: var(--oln-amazon-ink) !important; }
+      ${amazon} :is(.nav-flyout a.nav-a, .nav-assistant-link) { color: #8fc5ff !important; }
+      ${amazon} :is(.nav-assistant-heading, .shortcut-help-text) { color: var(--oln-amazon-ink) !important; }
+      ${amazon} :is(.s-image, .s-image-square-aspect img, .s-product-image-container img) { mix-blend-mode: normal !important; }
+      ${amazon} :is(.a-button-primary, .a-button-primary .a-button-text, .a-button-primary .a-button-inner, .a-button-primary .a-icon, #nav-search-submit-text) { color: #0f1111 !important; }
+      ${amazon} :is(.a-box, .puis-card-border, .s-pagination-item, .a-divider-normal) { border-color: #424449 !important; }
+    `));
+  }
+
   function installSheet() {
     if (document.getElementById("oled-night-sheet")) return;
     const root = `html[data-oled-night-root]:is(*, #oled-night-profile-priority):not([${MEASURE}])`;
@@ -2895,6 +3296,11 @@
          its controls, attribution, and unrelated canvases keep normal paint. */
       ${root}[data-oled-night-site="google-analytics"]:is([data-oled-night-mode="oled"], [data-oled-night-mode="soft"]) ga-geo-chart-simple canvas:not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) {
         filter: invert(1) hue-rotate(180deg) !important;
+      }
+      /* Docs draws the page and its text into one bitmap. Change display paint
+         only; document/export pixels remain native. Deepen keeps native colors. */
+      ${root}[data-oled-night-site="google-docs"]:is([data-oled-night-mode="oled"], [data-oled-night-mode="soft"]) canvas.kix-canvas-tile-content:not([data-oled-night-preserve-colors], [data-oled-night-preserve-colors] *):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) {
+        filter: invert(1) hue-rotate(180deg) brightness(var(--oln-light, 88%)) !important;
       }
       /* Apple's auth widget paints autofill with an inset shadow and explicit
          text-fill, independently of color. Cover UA autofill/preview paint in
@@ -2962,6 +3368,13 @@
         --yt-spec-text-primary: var(--oled-night-youtube-primary) !important;
         --yt-spec-text-secondary: var(--oled-night-youtube-secondary) !important;
       }
+      html[data-oled-night-root][data-oled-night-youtube] yt-live-chat-app {
+        background-color: var(--oled-night-page) !important;
+        --yt-live-chat-background-color: var(--oled-night-page) !important;
+        --yt-live-chat-header-background-color: var(--oled-night-page) !important;
+        --yt-live-chat-primary-text-color: var(--oled-night-youtube-primary) !important;
+        --yt-live-chat-secondary-text-color: var(--oled-night-youtube-secondary) !important;
+      }
       /* Native ChatGPT tokens (current app shell and legacy web UI). Only its
          dark theme's base surfaces change: code, dialogs, controls, selection,
          photographic media and inherited native ink retain their own palette. */
@@ -3002,6 +3415,8 @@
     settleTrees.clear();
     if (interactionFrame !== null) cancelAnimationFrame(interactionFrame);
     interactionFrame = null;
+    nativeTextInputTurn = false;
+    nativeTextInputEpoch++;
     interactionSelf.clear();
     interactionTrees.clear();
     parsedShadowCursor = null;
@@ -3022,6 +3437,7 @@
     refreshFrame = null;
     refreshBatchLimit = 32;
     refreshRoots.clear();
+    parsingSurfaces.clear();
     unresolvedShadowHosts.clear();
     observer?.disconnect();
     observer = null;
@@ -3052,6 +3468,7 @@
     removeEarly();
     const root = document.documentElement;
     for (const name of ["data-oled-night-root", "data-oled-night-youtube", "data-oled-night-chatgpt", "data-oled-night-page", "data-oled-night-transparent-frame", "data-oled-night-dim", "data-oled-night-invert", "data-oled-night-site", "data-oled-night-mode"]) root.removeAttribute(name);
+    root.removeAttribute("data-oled-night-amazon-search");
     for (const name of ["--oled-night-page", "--oled-night-youtube-primary", "--oled-night-youtube-secondary", "--oln-light", "--oln-strength"]) root.style.removeProperty(name);
     document.getElementById("oled-night-sheet")?.remove();
     logoChecked = new WeakSet();
@@ -3079,15 +3496,22 @@
   // Brightness/contrast live in two root custom properties that every mapped
   // color references (custom properties also inherit into shadow trees).
   function applyTuning() {
-    const tuning = Settings.tuningFor(settings, hostname());
+    const host = hostname(), tuning = Settings.tuningFor(settings, host);
     const root = document.documentElement.style;
     const brightness = clamp(tuning.brightness, 40, 100);
     root.setProperty("--oln-light", `${brightness}%`);
     root.setProperty("--oln-strength", String(clamp(tuning.contrast, 0, 100) / 100));
     if (tuning.dimImages) document.documentElement.setAttribute("data-oled-night-dim", "");
     else document.documentElement.removeAttribute("data-oled-night-dim");
-    root.setProperty("--oled-night-youtube-primary", `hsl(0 0% ${brightness}%)`);
-    root.setProperty("--oled-night-youtube-secondary", `hsl(0 0% ${Math.max(40, brightness - 18)}%)`);
+    // Only YouTube consumes this inherited palette. Other pages should not
+    // carry unused values through every descendant during brightness changes.
+    if (colorsApi().usesNativeSafeMode(host)) {
+      root.setProperty("--oled-night-youtube-primary", `hsl(0 0% ${brightness}%)`);
+      root.setProperty("--oled-night-youtube-secondary", `hsl(0 0% ${Math.max(40, brightness - 18)}%)`);
+    } else {
+      root.removeProperty("--oled-night-youtube-primary");
+      root.removeProperty("--oled-night-youtube-secondary");
+    }
   }
 
   function enable() {
@@ -3139,6 +3563,14 @@
     root.setAttribute('data-oled-night-mode', mode);
     if (mode === "none") root.setAttribute("data-oled-night-page", "none");
     root.style.setProperty("--oled-night-page", mode === "soft" ? "#101014" : "#000");
+    // Search pages hydrate thousands of repeated result, filter and ad nodes.
+    // Style their shared retail components through the cascade, including cards
+    // inserted after load. Explicit site treatments retain their usual engine.
+    if (isTopFrame && /^(www\.)?amazon\.com$/i.test(location.hostname) && /^\/s\/?$/.test(location.pathname) &&
+        (site === "global" || site === "on") && (mode === "oled" || mode === "soft")) {
+      styleAmazonSearch(root);
+      return;
+    }
     // YouTube watch pages hydrate incrementally. Apply its native color palette
     // through CSS only; never traverse or mutate its custom elements/player.
     if (colorsApi().usesNativeSafeMode(hostname())) {
@@ -3154,7 +3586,7 @@
     schemeSensitive = ["r", "g", "b", "a"].some((channel) => pageColor[channel] !== original[channel]);
     pageColor = original;
     observer = new MutationObserver(onMutations);
-    for(const node of document.querySelectorAll('style, link[rel~="stylesheet"]')) if(isPageSheet(node)) sheetSnapshots.set(node,{selectors:pageSheetSelectors(node),fingerprint:pageSheetFingerprint(node),scope:document});
+    for(const node of document.querySelectorAll('style, link[rel~="stylesheet"]')) if(isPageSheet(node)) sheetSnapshots.set(node,{selectors:pageSheetSelectors(node),fingerprint:pageSheetFingerprint(node),opaque:opaqueSheetState(node),scope:document});
     observer.observe(root, OBSERVE);
     document.addEventListener("visibilitychange", scheduleShadowDiscovery);
     document.addEventListener("visibilitychange", scheduleRefresh);
@@ -3312,6 +3744,11 @@
       // already began; enable() now leaves the parsed challenge alone.
       if (active && isChallengePage()) enable();
       else if (active && observer) {
+        // Only short native cards measured during parsing need another layout
+        // decision. A whole-document refresh here competes with inbox input
+        // and background row updates after a large page has already loaded.
+        for (const node of parsingSurfaces) if (node.isConnected) pendingTrees.add(node);
+        parsingSurfaces.clear();
         polarityDirty = true; schedule();
         parsedShadowCursor = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_ELEMENT, {
           acceptNode: node => node.matches(PRESERVE) || isExternalOverlay(node) || isMedia(node) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT

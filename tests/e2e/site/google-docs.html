@@ -1,0 +1,11 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Synthetic Docs canvas</title>
+<style>body{margin:24px;background:#fff;color:#202124;font:16px Arial}.kix-page-paginated{width:640px;margin:20px 0}canvas{display:block}button{background:#fff;color:#202124}</style></head><body>
+<button id="toolbar">Document toolbar</button>
+<div class="kix-page-paginated"><canvas id="document" class="kix-canvas-tile-content" width="640" height="260"></canvas></div>
+<canvas id="unrelated" width="80" height="40"></canvas>
+<div data-oled-night-preserve-colors><canvas id="preserved" class="kix-canvas-tile-content" width="80" height="40"></canvas></div>
+<script>
+function drawDocument(canvas){const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#000';ctx.font='32px Arial';ctx.fillText('Readable document text',32,68);ctx.fillRect(32,92,40,12);ctx.fillStyle='#1a73e8';ctx.fillRect(110,92,40,12)}
+drawDocument(document.getElementById('document'));
+for(const id of ['unrelated','preserved']){const c=document.getElementById(id),ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height)}
+</script></body></html>

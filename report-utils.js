@@ -19,14 +19,10 @@
       lowContrastGraphics: (Array.isArray(raw.lowContrastGraphics) ? raw.lowContrastGraphics : []).slice(0,12).map(row => ({ratio:number(row?.ratio,21)}))
     };
   }
-  function issueUrl(report) {
-    const clean = scrub(report);
-    const url = new URL('https://github.com/bc1224/oled-night/issues/new');
-    url.searchParams.set('title', 'Broken site: ' + (clean.host || 'site omitted'));
-    url.searchParams.set('labels','oled-report');
-    url.searchParams.set('template','broken-site.md');
-    url.searchParams.set('body', 'What broke? Describe the affected controls and how to reproduce it. Please remove personal information before submitting.\n\nPublic diagnostics (no page text, field values, URL paths or screenshots):\n' + '```json\n' + JSON.stringify(clean,null,2) + '\n```');
-    return url.href;
+  function issueUrl() {
+    // Retained for callers of the old draft helper. Never put report contents
+    // into a GitHub draft or URL. The popup is the private intake.
+    return 'https://bc1224.github.io/oled-night/#report-a-problem';
   }
   async function openDraft(report, {requestConsent,openTab}) {
     // Invoke the consent request directly in the user gesture. Denial or a
@@ -36,8 +32,8 @@
     return true;
   }
   function createDraftSession(report, {requestConsent,openTab}) {
-    // Capture only the previewed public payload. Cancellation during the
-    // native consent prompt must not open a tab, and a double click sends once.
+    // Cancellation during native consent must not open a tab. Legacy callers
+    // receive private-intake instructions without putting diagnostics in a URL.
     const clean = scrub(report);
     let cancelled = false, busy = false, opened = false;
     return {

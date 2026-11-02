@@ -1,5 +1,8 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
+  - name: Report a broken site privately (recommended)
+    url: https://bc1224.github.io/oled-night/#report-a-problem
+    about: Use the extension popup. Details and optional screenshots stay private to the maintainer.
   - name: Ideas and questions
     url: https://github.com/bc1224/oled-night/discussions
     about: Feature ideas and general questions

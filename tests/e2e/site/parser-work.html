@@ -1,0 +1,227 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Parser hydration performance</title>
+<style>body{background:#fff;color:#222;font:14px Arial}.card{background:#fafafa;border:1px solid #ddd;padding:4px}button{background:#ffd814}</style>
+<script>
+let rootMeasurements=0;
+const rootWatch=new MutationObserver(records=>{rootMeasurements+=records.length});
+rootWatch.observe(document.documentElement,{attributes:true,attributeFilter:['data-oled-night-measure-root']});
+document.addEventListener('DOMContentLoaded',()=>{
+ rootMeasurements+=rootWatch.takeRecords().length;rootWatch.disconnect();
+ document.documentElement.setAttribute('data-parser-measurements',String(rootMeasurements));
+},{once:true});
+document.write('<link rel="stylesheet" href="http://localhost:'+location.port+'/navigation-opaque.css">');
+</script></head><body><header>Shop</header>
+<script>
+// A loading page can still paint animation-frame updates while a parser script waits.
+setTimeout(()=>requestAnimationFrame(async()=>{
+ const panel=document.createElement('div');panel.style.cssText='background:#fff;color:#222';panel.textContent='Frame update';document.body.append(panel);
+ for(let i=0;i<6;i++)await Promise.resolve();
+ document.documentElement.setAttribute('data-parser-frame-paint',JSON.stringify({loading:document.readyState==='loading',active:document.documentElement.hasAttribute('data-oled-night-root'),background:getComputedStyle(panel).backgroundColor,ink:getComputedStyle(panel).color}));
+}),200);
+</script>
+<script src="/slow.js"></script>
+<script>
+document.documentElement.setAttribute('data-parser-initial-active',String(document.documentElement.hasAttribute('data-oled-night-root')));
+</script>
+<!-- Keep literal parser scripts: constructing these nodes with one script does not reproduce the checkpoints. -->
+<article class="card"><h2>Product 0</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-0")</script>
+<article class="card"><h2>Product 1</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-1")</script>
+<article class="card"><h2>Product 2</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-2")</script>
+<article class="card"><h2>Product 3</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-3")</script>
+<article class="card"><h2>Product 4</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-4")</script>
+<article class="card"><h2>Product 5</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-5")</script>
+<article class="card"><h2>Product 6</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-6")</script>
+<article class="card"><h2>Product 7</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-7")</script>
+<article class="card"><h2>Product 8</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-8")</script>
+<article class="card"><h2>Product 9</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-9")</script>
+<article class="card"><h2>Product 10</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-10")</script>
+<article class="card"><h2>Product 11</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-11")</script>
+<article class="card"><h2>Product 12</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-12")</script>
+<article class="card"><h2>Product 13</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-13")</script>
+<article class="card"><h2>Product 14</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-14")</script>
+<article class="card"><h2>Product 15</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-15")</script>
+<article class="card"><h2>Product 16</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-16")</script>
+<article class="card"><h2>Product 17</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-17")</script>
+<article class="card"><h2>Product 18</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-18")</script>
+<article class="card"><h2>Product 19</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-19")</script>
+<article class="card"><h2>Product 20</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-20")</script>
+<article class="card"><h2>Product 21</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-21")</script>
+<article class="card"><h2>Product 22</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-22")</script>
+<article class="card"><h2>Product 23</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-23")</script>
+<article class="card"><h2>Product 24</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-24")</script>
+<article class="card"><h2>Product 25</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-25")</script>
+<article class="card"><h2>Product 26</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-26")</script>
+<article class="card"><h2>Product 27</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-27")</script>
+<article class="card"><h2>Product 28</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-28")</script>
+<article class="card"><h2>Product 29</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-29")</script>
+<article class="card"><h2>Product 30</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-30")</script>
+<article class="card"><h2>Product 31</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-31")</script>
+<article class="card"><h2>Product 32</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-32")</script>
+<article class="card"><h2>Product 33</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-33")</script>
+<article class="card"><h2>Product 34</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-34")</script>
+<article class="card"><h2>Product 35</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-35")</script>
+<article class="card"><h2>Product 36</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-36")</script>
+<article class="card"><h2>Product 37</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-37")</script>
+<article class="card"><h2>Product 38</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-38")</script>
+<article class="card"><h2>Product 39</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-39")</script>
+<article class="card"><h2>Product 40</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-40")</script>
+<article class="card"><h2>Product 41</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-41")</script>
+<article class="card"><h2>Product 42</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-42")</script>
+<article class="card"><h2>Product 43</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-43")</script>
+<article class="card"><h2>Product 44</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-44")</script>
+<article class="card"><h2>Product 45</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-45")</script>
+<article class="card"><h2>Product 46</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-46")</script>
+<article class="card"><h2>Product 47</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-47")</script>
+<article class="card"><h2>Product 48</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-48")</script>
+<article class="card"><h2>Product 49</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-49")</script>
+<article class="card"><h2>Product 50</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-50")</script>
+<article class="card"><h2>Product 51</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-51")</script>
+<article class="card"><h2>Product 52</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-52")</script>
+<article class="card"><h2>Product 53</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-53")</script>
+<article class="card"><h2>Product 54</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-54")</script>
+<article class="card"><h2>Product 55</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-55")</script>
+<article class="card"><h2>Product 56</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-56")</script>
+<article class="card"><h2>Product 57</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-57")</script>
+<article class="card"><h2>Product 58</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-58")</script>
+<article class="card"><h2>Product 59</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-59")</script>
+<article class="card"><h2>Product 60</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-60")</script>
+<article class="card"><h2>Product 61</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-61")</script>
+<article class="card"><h2>Product 62</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-62")</script>
+<article class="card"><h2>Product 63</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-63")</script>
+<article class="card"><h2>Product 64</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-64")</script>
+<article class="card"><h2>Product 65</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-65")</script>
+<article class="card"><h2>Product 66</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-66")</script>
+<article class="card"><h2>Product 67</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-67")</script>
+<article class="card"><h2>Product 68</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-68")</script>
+<article class="card"><h2>Product 69</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-69")</script>
+<article class="card"><h2>Product 70</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-70")</script>
+<article class="card"><h2>Product 71</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-71")</script>
+<article class="card"><h2>Product 72</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-72")</script>
+<article class="card"><h2>Product 73</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-73")</script>
+<article class="card"><h2>Product 74</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-74")</script>
+<article class="card"><h2>Product 75</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-75")</script>
+<article class="card"><h2>Product 76</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-76")</script>
+<article class="card"><h2>Product 77</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-77")</script>
+<article class="card"><h2>Product 78</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-78")</script>
+<article class="card"><h2>Product 79</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-79")</script>
+<article class="card"><h2>Product 80</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-80")</script>
+<article class="card"><h2>Product 81</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-81")</script>
+<article class="card"><h2>Product 82</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-82")</script>
+<article class="card"><h2>Product 83</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-83")</script>
+<article class="card"><h2>Product 84</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-84")</script>
+<article class="card"><h2>Product 85</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-85")</script>
+<article class="card"><h2>Product 86</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-86")</script>
+<article class="card"><h2>Product 87</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-87")</script>
+<article class="card"><h2>Product 88</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-88")</script>
+<article class="card"><h2>Product 89</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-89")</script>
+<article class="card"><h2>Product 90</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-90")</script>
+<article class="card"><h2>Product 91</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-91")</script>
+<article class="card"><h2>Product 92</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-92")</script>
+<article class="card"><h2>Product 93</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-93")</script>
+<article class="card"><h2>Product 94</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-94")</script>
+<article class="card"><h2>Product 95</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-95")</script>
+<article class="card"><h2>Product 96</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-96")</script>
+<article class="card"><h2>Product 97</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-97")</script>
+<article class="card"><h2>Product 98</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-98")</script>
+<article class="card"><h2>Product 99</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-99")</script>
+<article class="card"><h2>Product 100</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-100")</script>
+<article class="card"><h2>Product 101</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-101")</script>
+<article class="card"><h2>Product 102</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-102")</script>
+<article class="card"><h2>Product 103</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-103")</script>
+<article class="card"><h2>Product 104</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-104")</script>
+<article class="card"><h2>Product 105</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-105")</script>
+<article class="card"><h2>Product 106</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-106")</script>
+<article class="card"><h2>Product 107</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-107")</script>
+<article class="card"><h2>Product 108</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-108")</script>
+<article class="card"><h2>Product 109</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-109")</script>
+<article class="card"><h2>Product 110</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-110")</script>
+<article class="card"><h2>Product 111</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-111")</script>
+<article class="card"><h2>Product 112</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-112")</script>
+<article class="card"><h2>Product 113</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-113")</script>
+<article class="card"><h2>Product 114</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-114")</script>
+<article class="card"><h2>Product 115</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-115")</script>
+<article class="card"><h2>Product 116</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-116")</script>
+<article class="card"><h2>Product 117</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-117")</script>
+<article class="card"><h2>Product 118</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-118")</script>
+<article class="card"><h2>Product 119</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-119")</script>
+<article class="card"><h2>Product 120</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-120")</script>
+<article class="card"><h2>Product 121</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-121")</script>
+<article class="card"><h2>Product 122</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-122")</script>
+<article class="card"><h2>Product 123</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-123")</script>
+<article class="card"><h2>Product 124</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-124")</script>
+<article class="card"><h2>Product 125</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-125")</script>
+<article class="card"><h2>Product 126</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-126")</script>
+<article class="card"><h2>Product 127</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-127")</script>
+<article class="card"><h2>Product 128</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-128")</script>
+<article class="card"><h2>Product 129</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-129")</script>
+<article class="card"><h2>Product 130</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-130")</script>
+<article class="card"><h2>Product 131</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-131")</script>
+<article class="card"><h2>Product 132</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-132")</script>
+<article class="card"><h2>Product 133</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-133")</script>
+<article class="card"><h2>Product 134</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-134")</script>
+<article class="card"><h2>Product 135</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-135")</script>
+<article class="card"><h2>Product 136</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-136")</script>
+<article class="card"><h2>Product 137</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-137")</script>
+<article class="card"><h2>Product 138</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-138")</script>
+<article class="card"><h2>Product 139</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-139")</script>
+<article class="card"><h2>Product 140</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-140")</script>
+<article class="card"><h2>Product 141</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-141")</script>
+<article class="card"><h2>Product 142</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-142")</script>
+<article class="card"><h2>Product 143</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-143")</script>
+<article class="card"><h2>Product 144</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-144")</script>
+<article class="card"><h2>Product 145</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-145")</script>
+<article class="card"><h2>Product 146</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-146")</script>
+<article class="card"><h2>Product 147</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-147")</script>
+<article class="card"><h2>Product 148</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-148")</script>
+<article class="card"><h2>Product 149</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-149")</script>
+<article class="card"><h2>Product 150</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-150")</script>
+<article class="card"><h2>Product 151</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-151")</script>
+<article class="card"><h2>Product 152</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-152")</script>
+<article class="card"><h2>Product 153</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-153")</script>
+<article class="card"><h2>Product 154</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-154")</script>
+<article class="card"><h2>Product 155</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-155")</script>
+<article class="card"><h2>Product 156</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-156")</script>
+<article class="card"><h2>Product 157</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-157")</script>
+<article class="card"><h2>Product 158</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-158")</script>
+<article class="card"><h2>Product 159</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-159")</script>
+<article class="card"><h2>Product 160</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-160")</script>
+<article class="card"><h2>Product 161</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-161")</script>
+<article class="card"><h2>Product 162</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-162")</script>
+<article class="card"><h2>Product 163</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-163")</script>
+<article class="card"><h2>Product 164</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-164")</script>
+<article class="card"><h2>Product 165</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-165")</script>
+<article class="card"><h2>Product 166</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-166")</script>
+<article class="card"><h2>Product 167</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-167")</script>
+<article class="card"><h2>Product 168</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-168")</script>
+<article class="card"><h2>Product 169</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-169")</script>
+<article class="card"><h2>Product 170</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-170")</script>
+<article class="card"><h2>Product 171</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-171")</script>
+<article class="card"><h2>Product 172</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-172")</script>
+<article class="card"><h2>Product 173</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-173")</script>
+<article class="card"><h2>Product 174</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-174")</script>
+<article class="card"><h2>Product 175</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-175")</script>
+<article class="card"><h2>Product 176</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-176")</script>
+<article class="card"><h2>Product 177</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-177")</script>
+<article class="card"><h2>Product 178</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-178")</script>
+<article class="card"><h2>Product 179</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-179")</script>
+<article class="card"><h2>Product 180</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-180")</script>
+<article class="card"><h2>Product 181</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-181")</script>
+<article class="card"><h2>Product 182</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-182")</script>
+<article class="card"><h2>Product 183</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-183")</script>
+<article class="card"><h2>Product 184</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-184")</script>
+<article class="card"><h2>Product 185</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-185")</script>
+<article class="card"><h2>Product 186</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-186")</script>
+<article class="card"><h2>Product 187</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-187")</script>
+<article class="card"><h2>Product 188</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-188")</script>
+<article class="card"><h2>Product 189</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-189")</script>
+<article class="card"><h2>Product 190</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-190")</script>
+<article class="card"><h2>Product 191</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-191")</script>
+<article class="card"><h2>Product 192</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-192")</script>
+<article class="card"><h2>Product 193</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-193")</script>
+<article class="card"><h2>Product 194</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-194")</script>
+<article class="card"><h2>Product 195</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-195")</script>
+<article class="card"><h2>Product 196</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-196")</script>
+<article class="card"><h2>Product 197</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-197")</script>
+<article class="card"><h2>Product 198</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-198")</script>
+<article class="card"><h2>Product 199</h2><p>Information</p><div><span>$19.99</span><button>Details</button></div></article><script>document.body.classList.add("parser-199")</script>
+</body></html>

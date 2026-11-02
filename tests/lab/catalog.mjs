@@ -1,5 +1,5 @@
 const groups = {
-  'Interactions': ['compact-switches','oled-components','navigation-work','dropdowns','dark-dropdowns','state-surfaces','shadow-hover','cold-shadow','interaction-layout','media-navigation','frame-mutation','paint-updates','large-updates'],
+  'Interactions': ['compact-switches','oled-components','navigation-work','dropdowns','dark-dropdowns','state-surfaces','shadow-hover','cold-shadow','interaction-layout','media-navigation','frame-mutation','paint-updates','large-updates','text-hover'],
   'Text & surfaces': ['light','dark','explicit-light','ink','surfaces','scope-light','scope-dark','scope-scheme','svg-outline'],
   'Media & data': ['indicators','chart','canvas','shop','ad-overlays','wide-wordmarks'],
   'App reproductions': ['youtube','gmail','email-newsletter','native-banner','booking-form','checkout','chatgpt-controls','chatgpt-streaming','google-sheets-colors','reddit-res','shadow-stability','apple-auth','apple-recovery','dmv-hero-text'],
@@ -21,6 +21,7 @@ const descriptions = {
   'report-preview':'Public issue preview omits private text, field values, selectors, frame origins and URL paths; nothing sends before a click',
   'cold-shadow':'Roots attached after their hosts were scanned: resting nested controls become readable without hover or focus',
   'email-newsletter':'Gmail-style dark reader: authored HTML headings, paragraphs, nested light panels and preserved artwork',
+  'text-hover':'Inherited paragraph, control, shadow and vector ink stays stable across pointer crossings, focus and small updates',
   'native-banner':'Robinhood-style native dark application with a light onboarding banner and tour controls',
   'booking-form':'SynXis-style filled fields, placeholders, focus outlines, colored hotel logo and back icon',
   'frame-mutation':'Navigation replaced or focused inside an animation callback: dark surfaces and readable native-dark focus ink before another frame',

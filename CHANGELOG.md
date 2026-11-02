@@ -1,5 +1,56 @@
 # Changelog
 
+## 0.6.74
+
+- Speed up Amazon.com search in automatic mode by styling repeated results, filters and controls with a shared stylesheet. Newly loaded cards get dark colors without a per-element scan.
+
+## 0.6.73
+
+- Keep Instagram-style selected radio dots readable when the site draws the marker beside a hidden native input. Preserve empty choices, colored markers, product swatches and the site's selected values.
+- Cover actual marker pixels, keyboard selection and pause restoration in Chrome and Firefox across native light/dark pages, Automatic/Full recolor and OLED/Soft Dark.
+- No new permissions; Chrome theme remains 1.0.3.
+
+## 0.6.72
+
+- Give embedded YouTube live chat and chat replay an OLED background and readable messages and names. Video players keep their own colors.
+- Includes the Gmail typing and stylesheet performance changes from the 0.6.71 candidate.
+
+## 0.6.70
+
+- Coalesce parser-driven page changes before painting instead of repeatedly flushing styles between small HTML fragments. Keep early dark rendering while avoiding repeated root color measurements during script-heavy page loads.
+- Recheck only unfinished native dark cards when parsing completes, preserving their raised surfaces without starting another whole-page inbox refresh. Keep same-frame repairs during loading animations.
+- Avoid repeated whole-page measurements when page scripts send duplicate load notifications for an unchanged cross-origin stylesheet. Compare the sheet identity, loading attributes, media and disabled state before scheduling more paint work.
+- Keep genuine resource loads, stylesheet replacements, CSSOM media changes and disabling or restoring a sheet responsive. Add Chrome and Firefox regressions for the unnecessary work and for those visible text updates.
+- No new permissions; Chrome theme remains 1.0.3.
+
+## 0.6.67
+
+- Stop repairing inherited text color on empty native dark layout containers. Their text-bearing descendants keep their own readable ink, while hover and typing avoid repeatedly invalidating the whole document.
+- Cover large Gmail-like and generic dark pages with native hover and reply input, paired dispatch and render timing, document measurement counts and style recalculation budgets. Preserve actual root text, generated labels and paint, controls, newly inserted text and artwork, with Chrome and Firefox regressions.
+- No new permissions; Chrome theme remains 1.0.3.
+
+## 0.6.66
+
+- Keep inherited text brightness stable when moving the pointer over Gmail messages and other recolored pages. Hover, focus and small content updates now measure the original ancestor colors instead of recoloring an already-mapped foreground again.
+- Keep rich reply typing local to the edited text instead of repeatedly scanning quoted messages. Recheck broader editor selectors after typing pauses, keep embedded controls responsive to keyboard color changes, and preserve dynamically colored currentColor artwork.
+- Add native-pointer Gmail and generic-page regressions in OLED and Soft Dark, plus Firefox coverage for inherited text, shadow and assigned content, vector ink, dynamic updates, artwork preservation and restoration. Keep genuine authored hover colors responsive, including at reduced brightness.
+- Keep native secondary text and background-only inbox updates local to their rows. Regression checks reject unnecessary ancestor measurements while preserving inherited colors and CSS priority.
+- No new permissions; Chrome theme remains 1.0.3.
+
+## 0.6.65
+
+- Make Google Docs document canvases dark with readable light text in Automatic and Full recolor, including newly inserted page canvases and Soft Dark appearance.
+- Keep the display treatment scoped to document canvases. Preserve saved/exported pixels, unrelated canvases, explicit preserved colors and Deepen mode; avoid double inversion in Invert mode.
+- Add Chrome and Firefox rendered-pixel regressions and document the displayed-artwork color tradeoff. No new permissions; Chrome theme remains 1.0.3.
+
+## 0.6.64
+
+- Keep App Store privacy and accessibility icons readable when the page already inverts their SVG wrappers for dark mode.
+- Preserve authored icon colors through that inversion in Automatic and Recolor modes, including inherited currentColor and two tone badges. Cover rendered pixels, live filter changes and disabling the extension in Chrome and Firefox.
+- Keep Apple Ads checkbox edges and selected checkmarks readable, and distinguish filled and empty popularity dots through live updates. Preserve native behavior and restore authored paints when disabled.
+- Store optional report details and screenshots privately for up to 30 days, including reports sent by older clients. Publish only a generic GitHub tracking issue and require verified maintainer authentication for all report and image reads, including old screenshot URLs.
+- Clarify private submission and public comments in the popup, website and store privacy copy. Add explicit local maintainer retrieval and legacy preservation tools; keep real reports out of source and releases.
+
 ## 0.6.62
 
 - Keep Google Analytics chart axes and legend labels readable in OLED and Soft Dark appearances, and darken its country map without changing other canvases or chart-series colors.

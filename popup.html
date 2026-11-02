@@ -43,7 +43,7 @@
   <dialog id="reportPreview" aria-labelledby="reportTitle" aria-describedby="reportDisclosure">
     <div class="report-header"><h2 id="reportTitle">Report a broken site</h2><p id="reportHost"></p></div>
     <div class="report-body">
-    <p id="reportDisclosure">Public GitHub report. Leave out private information.</p>
+    <p id="reportDisclosure">Details and any screenshot are private to the maintainer for up to 30 days. Only a generic tracking issue is public.</p>
     <label for="reportDescription">What went wrong? <span class="report-optional">(optional)</span></label>
     <textarea id="reportDescription" maxlength="2000" rows="3" autofocus placeholder="What looks wrong?"></textarea>
     <section id="reportScreenshotDrop" class="screenshot-drop" tabindex="0" aria-label="Optional screenshot: drop an image or press Control V to paste" aria-describedby="reportScreenshotHelp">
@@ -51,19 +51,19 @@
       <button id="reportScreenshotCapture" type="button">Screenshot this page</button>
       <p id="reportScreenshotHelp">Capture, review, then include it in your report.</p>
       <details class="screenshot-alternatives"><summary>Paste or upload an image</summary><div class="screenshot-tools"><button id="reportScreenshotPaste" type="button">Paste image</button><label class="screenshot-file">Choose image<input id="reportScreenshotFile" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Choose screenshot image"></label></div><p>Or drop an image here / press Ctrl+V (⌘V on Mac).</p></details>
-      <button id="reportScreenshotReview" type="button" aria-label="Review attached screenshot" hidden><img id="reportScreenshotImage" alt="Attached screenshot — click to review" hidden></button>
+      <button id="reportScreenshotReview" type="button" aria-label="Review attached screenshot" hidden><img id="reportScreenshotImage" alt="Attached screenshot, click to review" hidden></button>
       <button id="reportScreenshotRemove" type="button" class="text-button" hidden>Remove image</button>
       <p id="reportScreenshotStatus" role="status"></p>
     </section>
-    <details class="report-details"><summary>Privacy &amp; technical details</summary><p>Only this domain, settings, diagnostics, your notes and any attached image are shared through our reporting service and retained by GitHub as public issues. Page text, form values and URL paths are excluded. Screenshots are never captured automatically. No browsing-history log is collected.</p><p>Review your image before submitting. Images are hosted for up to 30 days; GitHub may cache them. Reports are checked daily; fixes require tests and review and are not guaranteed. <a href="https://github.com/bc1224/oled-night/blob/main/store/PRIVACY.md" target="_blank" rel="noopener noreferrer">Privacy details</a></p><pre id="reportDiagnostics"></pre><p class="control-help">A full local report can include page text and identifiers. It is never uploaded by this button.</p><button id="reportDownload" type="button" class="text-button">Save full report locally</button></details>
+    <details class="report-details"><summary>Privacy &amp; technical details</summary><p>This domain, settings, diagnostics, your notes and any attached image are stored privately by our reporting service for up to 30 days. Only the maintainer can retrieve them with GitHub authentication. The public GitHub issue contains a generic title and tracking ID, with no domain, notes, diagnostics or image link. Automatic diagnostics exclude page text, form values and URL paths. Screenshots are never captured automatically. No browsing-history log is collected.</p><p>Review your image before submitting it to the maintainer. Anything you manually post in a public GitHub issue or comment is public. Reports are checked daily; fixes require tests and review and are not guaranteed. <a href="https://github.com/bc1224/oled-night/blob/main/store/PRIVACY.md" target="_blank" rel="noopener noreferrer">Privacy details</a></p><pre id="reportDiagnostics"></pre><p class="control-help">A full local report can include page text and identifiers. It is never uploaded by this button.</p><button id="reportDownload" type="button" class="text-button">Save full report locally</button></details>
       <p id="reportFirefoxConsent" hidden>Firefox asks permission before sharing. Declining does not change dark mode.</p>
       <p id="reportConsentStatus" role="status"></p>
     </div>
     <div class="report-actions"><button id="reportCancel" type="button">Cancel</button><button id="reportSubmit" type="button" class="primary-button">Submit report</button></div>
   </dialog>
-  <dialog id="reportImagePreview" aria-labelledby="reportImageTitle"><div class="report-header"><h2 id="reportImageTitle">Review screenshot</h2><p>Check for private information. Shared only when you submit.</p></div><div class="report-body"><img id="reportReviewImage" alt="Screenshot to include in your public report"></div><div class="report-actions"><button id="reportImageClose" type="button" class="primary-button">Use screenshot</button></div></dialog>
-  <dialog id="reportSuccess" aria-labelledby="reportSuccessTitle"><h2 id="reportSuccessTitle">Successfully submitted</h2><p>Thanks for helping improve OLED Night.</p>
-    <a id="reportIssueLink" href="https://github.com/bc1224/oled-night/issues" target="_blank" rel="noopener noreferrer" hidden>View submitted issue</a>
+  <dialog id="reportImagePreview" aria-labelledby="reportImageTitle"><div class="report-header"><h2 id="reportImageTitle">Review screenshot</h2><p>Shared privately with the maintainer only when you submit. Check the image before including it.</p></div><div class="report-body"><img id="reportReviewImage" alt="Screenshot to include in your private report"></div><div class="report-actions"><button id="reportImageClose" type="button" class="primary-button">Use screenshot</button></div></dialog>
+  <dialog id="reportSuccess" aria-labelledby="reportSuccessTitle"><h2 id="reportSuccessTitle">Successfully submitted</h2><p>Your details and any screenshot are private to the maintainer. The public issue contains only a tracking reference. Anything you add to its comments is public.</p>
+    <a id="reportIssueLink" href="https://github.com/bc1224/oled-night/issues" target="_blank" rel="noopener noreferrer" hidden>View public tracking issue</a>
     <button id="reportSuccessClose" type="button" class="primary-button" autofocus>Done</button>
   </dialog>
   <script src="settings.js"></script>

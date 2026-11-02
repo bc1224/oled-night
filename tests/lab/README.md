@@ -2,13 +2,17 @@
 
 Public gallery: https://bc1224.github.io/oled-night/lab/
 
-48 synthetic cases cover the component matrix and previous site failures. The current gallery is built from the same committed fixtures used by the browser regressions. It contains no copied accounts or private report uploads.
+Synthetic cases cover the component matrix and previous site failures. The current gallery is built from the same committed fixtures used by the browser regressions. It contains no copied accounts or private report uploads.
 
 ## Every reported bug becomes a regression
 
 For each reported rendering failure, reconstruct the relevant markup and states using synthetic text and artwork. Add that fixture to this public gallery and run its behavioral assertions against the packaged extension in Chrome and Firefox. Prove the assertion fails on the affected old runtime before fixing it. Include Automatic mode on native dark pages, the triggering hover/focus or dynamic update, media preservation and disable restoration where relevant. A gallery example without executable assertions is not complete regression coverage. Keep private reports, mail and broker account content out of fixtures and release assets.
 
 The email-newsletter and native-banner cases reproduce dark newsletter text and light tour text on a white onboarding banner. Both are included in the required component checks in Automatic and Recolor modes; explicit Deepen keeps native light content. The fixtures model the reported symptoms, not authenticated Gmail or Robinhood sessions.
+
+The text-hover case reproduces inherited foreground brightness changing under pointer movement. `node tests/e2e/text-hover.mjs` loads the real Chrome extension with intercepted synthetic Gmail and generic origins, then uses native pointer input in OLED and Soft Dark. It checks text, controls, shadow content and vector ink, focus, small mutations, inserted text, real authored hover changes, dynamic currentColor artwork and disable restoration. A native rich-reply typing comparison uses three counterbalanced enabled/disabled pairs per origin, with 1,500 quoted and 1,500 surrounding synthetic messages. It requires preserved input, no repeated quote/history measurement during typing, input-to-frame p95 within 33 ms of disabled, and no active long task reaching the existing 150 ms stall budget. No live mailbox is accessed. `node tests/firefox/run.mjs --text-hover` runs the shared event/update scenario in a real Firefox extension, separately from its unchanged historical workload and timeout.
+
+The ink-locality fixture uses 1,000 sender/subject rows, including bold text inside secondary-colored spans. Both browsers reject page-ancestor measurement for local padding or explicit color changes, while checking that important inherited colors still win the cascade. The original 2,500-row churn test retains every paired trial, its seeded workload and its existing throughput/stall limits; it also rejects ancestor rereads during those local updates. The optional workflow input `trace_churn` profiles the first cold trial and always exits unsuccessfully so a diagnostic run cannot authorize release.
 
 The booking-form case checks primary filled-value ink, distinct readable placeholders, focus, masked icons, named colored logos, disabled fields, ordinary-image preservation and native restoration. It contains only fake guest information.
 

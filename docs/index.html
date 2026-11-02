@@ -200,7 +200,7 @@
           <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></div><h3>Fast, and no white flash</h3><p>Pages go black before they draw. Updates are batched, so busy apps like Gmail and ChatGPT stay smooth.</p></div>
           <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.4 3 14.6 0 18M12 3c-3 3.4-3 14.6 0 18"/></svg></div><h3>Per-site control</h3><p>A mode for each site, plus that site's own brightness, contrast and image dimming.</p></div>
           <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg></div><h3>Schedule &amp; shortcuts</h3><p>Press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> to turn OLED Night on or off everywhere, or <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> for the current site. Keep your saved settings and optional night schedule.</p></div>
-          <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg></div><h3>Private by design</h3><p>The extension has no analytics, ads or background tracking. Settings sync through your browser profile; optional public reports are sent only when you submit one.</p></div>
+          <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg></div><h3>Private by design</h3><p>The extension has no analytics, ads or background tracking. Settings sync through your browser profile; optional report details and screenshots are private to the maintainer.</p></div>
         </div>
       </div>
     </section>
@@ -228,7 +228,7 @@
             <p>The extension darkens websites, but no extension can touch Chrome's own window. The companion <b style="color:var(--text)">OLED Night theme</b> makes the tab bar, toolbar, address bar and new-tab page black to match. <a href="https://chromewebstore.google.com/detail/oled-night-chrome-theme/pkdklfocgpcnijiggfddneadmhacbpmf">Install the theme from the Chrome Web Store</a>, or <a href="https://github.com/bc1224/oled-night/releases/latest/download/oled-night-theme.zip">download the theme ZIP</a> and install it the same way, with <b>Load unpacked</b>.</p>
             <p style="margin-top:14px"><b style="color:var(--text)">Getting updates:</b> Chrome Web Store installs update automatically. For manual installs, close Chrome, rename the old install folder as a backup, then unzip the update into an empty folder at the original path. Reopen Chrome and reload OLED Night in <code>chrome://extensions</code>. On GitHub, use <b>Watch → Custom → Releases</b> for release emails.</p>
             <p style="margin-top:14px"><b style="color:var(--text)">From source:</b> run <code>npm run package</code> and load <code>dist/chrome</code>. Packaging rebuilds clean install folders.</p>
-            <p style="margin-top:14px"><b style="color:var(--text)">An <code>_metadata</code> error?</b> For a manual install, use the clean-folder update steps above. For a store install, try switching OLED Night off and on, then clear the old error. If it returns, <a href="https://github.com/bc1224/oled-night/issues">report your Chrome version and install method</a>. Don't delete files in Chrome's profile.</p>
+            <p style="margin-top:14px"><b style="color:var(--text)">An <code>_metadata</code> error?</b> For a manual install, use the clean-folder update steps above. For a store install, try switching OLED Night off and on, then clear the old error. If it returns, <a href="#report-a-problem">report your Chrome version and install method privately</a>. Don't delete files in Chrome's profile.</p>
           </div>
         </div>
       </div>
@@ -247,7 +247,7 @@
               <li><b>Appearance</b>OLED Black (pure black), Soft Dark (near-black), or Auto (follows your system's dark mode).</li>
               <li><b>Brightness &amp; Contrast</b>Brightness sets how light text is. Contrast sets how far panels stand out from the black page. The top sliders change only the current site. All sites contains the defaults; site choices take priority.</li>
               <li><b>Dim images on this site</b>Takes glare off bright photos and illustrations.</li>
-              <li><b>Report a broken site</b>Add optional notes and choose <b>Screenshot this page</b>, or paste, drop or select an image. Review it with <b>Use screenshot</b>, then choose <b>Submit report</b>. Nothing is uploaded before submission; the issue and any attached image are public. No GitHub account is required.</li>
+              <li><b>Report a broken site</b>Add optional notes and choose <b>Screenshot this page</b>, or paste, drop or select an image. Review it with <b>Use screenshot</b>, then choose <b>Submit report</b>. Nothing is uploaded before submission. Details and any image are private to the maintainer for up to 30 days; only a generic tracking issue is public. No GitHub account is required.</li>
             </ul>
           </div>
           <img class="shot" src="assets/popup.png" width="1280" height="800" alt="The OLED Night popup: main switch, site mode menu, appearance options, brightness and contrast sliders, and per-site options.">
@@ -275,7 +275,7 @@
       <div class="wrap">
         <div class="kicker">FAQ</div>
         <h2>Questions</h2>
-        <details><summary>A site still looks wrong. What should I try?</summary><p>Open the popup on that site and try <b>Deepen blacks only</b> if the site already has its own dark design, <b>Invert</b> if it draws its content on a canvas (spreadsheets, design tools), or <b>Off</b>. If it's still broken, click <b>Report a broken site</b> to review scrubbed diagnostics and submit a public GitHub issue directly. Keep private information out of your description.</p></details>
+        <details><summary>A site still looks wrong. What should I try?</summary><p>Open the popup on that site and try <b>Deepen blacks only</b> if the site already has its own dark design, <b>Invert</b> if it draws its content on a canvas (spreadsheets, design tools), or <b>Off</b>. If it's still broken, click <b>Report a broken site</b> to review scrubbed diagnostics and submit details privately to the maintainer. Only a generic public tracking issue is created.</p></details>
         <details><summary>How is this different from Dark Reader?</summary><p>Dark Reader is great and does a lot. OLED Night is narrower on purpose: it aims for pure black backgrounds while keeping text readable and images, charts and product photos intact, and it's tested against the specific ways dark modes break sites. That includes unreadable text, white fades and glows, blank chart fills, black product photos, web components and chat widgets. If Dark Reader already looks perfect on your sites, keep it. If you want deeper blacks, or it breaks something you use, try this.</p></details>
         <details><summary>How is this different from Chrome's built-in "Auto Dark Mode"?</summary><p>Chrome's flag runs one filter over the whole page. It produces grey instead of black, can't be tuned per site, and often mangles images and charts. OLED Night decides each element's color separately: backgrounds, text, borders, icons, gradients and shadows each get their own treatment, and images are left alone.</p></details>
         <details><summary>Why don't images get darker?</summary><p>That's on purpose: photos and artwork should look the way they were made. If a bright image is too much on a black page, turn on <b>Dim images on this site</b>, or set it as the default in Settings.</p></details>
@@ -292,7 +292,7 @@
           <div class="big">🔒</div>
           <div>
             <h3>Your browsing stays yours.</h3>
-            <p>The OLED Night extension does not record or save your browsing history. It recolors sites locally, with no analytics, ads or background tracking. This project website has no analytics scripts. The separate <a href="https://archlinelabs.com/privacy/">Archline Labs company website</a> uses consent-based website analytics. Your settings, including per-site preferences, stay in browser storage and can sync through your browser profile. Firefox's optional browsing-activity permission only lets you share the current site's domain in a bug report after previewing it. Reports also include scrubbed technical diagnostics. GitHub retains submitted public issues. Our Cloudflare-hosted reporting service temporarily retains request hashes and issue links for deduplication. Notes and diagnostic bodies are not stored by the service; a screenshot you explicitly capture, paste, drop or select is hosted publicly for up to 30 days. Nothing is captured automatically or submitted before confirmation. <a href="https://github.com/bc1224/oled-night/blob/main/store/PRIVACY.md">Read the privacy policy</a>.</p>
+            <p>The OLED Night extension does not record or save your browsing history. It recolors sites locally, with no analytics, ads or background tracking. This project website has no analytics scripts. The separate <a href="https://archlinelabs.com/privacy/">Archline Labs company website</a> uses consent-based website analytics. Your settings, including per-site preferences, stay in browser storage and can sync through your browser profile. Firefox's optional browsing-activity permission only lets you share the current site's domain in a bug report after previewing it. Reports also include scrubbed technical diagnostics. Our Cloudflare-hosted service stores these details, notes and any explicitly attached screenshot privately for up to 30 days, with retrieval restricted to the maintainer's verified GitHub identity. GitHub receives only a generic title and tracking ID, with no domain, details, diagnostics or image link. Abuse and deduplication records expire within 49 hours. Anything you manually post in public GitHub issues or comments is public. Nothing is captured automatically or submitted before confirmation. <a href="https://github.com/bc1224/oled-night/blob/main/store/PRIVACY.md">Read the privacy policy</a>.</p>
           </div>
         </div>
       </div>
@@ -305,12 +305,12 @@
           <h2>Built in the open. Help make it better.</h2>
           <p>The code is licensed under GPL-3.0, so it stays open: anyone who shares or sells a modified copy has to publish its full source too. There's no build step. An automated suite loads the real extension into a headless browser and checks dozens of real-world cases on every change, from charts and chat widgets to frames and slow-loading pages.</p>
           <div class="cta" style="justify-content:flex-start;margin-top:24px">
-            <a class="btn" href="https://github.com/bc1224/oled-night/issues">Report an issue</a>
+            <a class="btn" href="#report-a-problem">Report privately</a>
             <a class="btn" href="https://github.com/bc1224/oled-night/blob/main/CONTRIBUTING.md">Contributing guide</a>
           </div>
         </div>
         <ul class="pains">
-          <li class="fix">Found a broken site? Preview scrubbed diagnostics in the popup and submit a public GitHub issue directly. Issues are public; keep private details and sensitive screenshots out.</li>
+          <li class="fix" id="report-a-problem">Found a broken site? Open OLED Night on that page, choose <b>Report a broken site</b>, review your diagnostics and any optional screenshot, then choose <b>Submit report</b>. Details are private to the maintainer for up to 30 days. Only a generic tracking issue is public. Anything you manually add to GitHub issues or comments is public.</li>
           <li class="fix">Fixing a site? Add a small page that reproduces it to the test suite.</li>
           <li class="fix">Star the repo if OLED Night saves your eyes, and watch releases to hear about updates.</li>
         </ul>

@@ -248,7 +248,7 @@
       $("reportScreenshotImage").hidden = false;
       $("reportScreenshotReview").hidden = false;
       $("reportScreenshotRemove").hidden = false;
-      $("reportScreenshotStatus").textContent = "Click the image to review. Shared only on Submit.";
+      $("reportScreenshotStatus").textContent = "Click the image to review. Sent privately only on Submit.";
       return true;
     } catch (error) {
       if (session === reportSession && generation === screenshotGeneration) $("reportScreenshotStatus").textContent = error.message || "Could not read this image. Try another screenshot.";
