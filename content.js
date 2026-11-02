@@ -1719,11 +1719,17 @@
             else refreshRoots.delete(root);
             break;
           }
-          if (next.value.isConnected) { appendRefresh(batch, next.value); count++; }
+          const node = next.value;
+          if (!node.isConnected) continue;
+          // Keep traversal bounded even when the follow-up pass skips paint.
+          count++;
+          if (state.fresh?.has(node)) continue;
+          appendRefresh(batch, node);
+          if (state.again) state.fresh.add(node);
         }
         if (count >= refreshBatchLimit) break;
       }
-      if (count) {
+      if (batch.length || batch.icons.size || batch.images.size) {
         const started = performance.now();
         processBatch(batch, [], batch, true);
         // Retained paint can wait for idle time. Adapt below the existing
@@ -1744,12 +1750,15 @@
       if (owner === root || owner.contains(root)) {
         // Finish the current traversal before revisiting already-read nodes.
         // Frequent sticky-header classes must not starve the end of the page.
+        // The unread tail will already see this change. Remember its nodes
+        // weakly so the follow-up pass only repaints what can still be stale.
+        state.fresh = new WeakSet();
         state.again = true; scheduleRefresh(); return true;
       }
       if (root.contains(owner)) refreshRoots.delete(owner);
     }
     if (refreshRoots.size >= MAX_PENDING_OBSERVED_PAINT) return false;
-    refreshRoots.set(root, { cursor: refreshElements(root), again: false });
+    refreshRoots.set(root, { cursor: refreshElements(root), again: false, fresh: null });
     scheduleRefresh();
     return true;
   }

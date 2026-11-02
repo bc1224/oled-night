@@ -36,6 +36,26 @@ export async function initialSheetLoadScenario(){
   foreign.sheet.disabled=true;foreign.dispatchEvent(new Event('load'));await quiet();const disabled=ink();
   foreign.sheet.disabled=false;foreign.dispatchEvent(new Event('load'));await quiet();const restored=ink();
   checks.push({coverage:'text',name:'opaque stylesheet CSSOM disable and restore still repaint text',ok:disabled===gray&&restored===red,detail:JSON.stringify({disabled,restored,gray,red})});
+  // Change the sheet after the first idle chunks have painted but before
+  // they reach the last row. Earlier text needs a revisit, the last row does not.
+  const measured = {attributes:true, attributeFilter:['data-oled-night-measure-self'], attributeOldValue:true};
+  let changedMidScan = false, tailReads = 0;
+  const midScan = new MutationObserver(() => {
+    midScan.disconnect();
+    changedMidScan = ink() === gray;
+    foreign.sheet.disabled = false;
+    foreign.dispatchEvent(new Event('load'));
+  });
+  const tail = new MutationObserver(records => { tailReads += records.filter(r => r.oldValue === null).length; });
+  midScan.observe(document.querySelector('#article .row:nth-child(40) > span'), measured);
+  tail.observe(document.querySelector('#article .row:last-child > span'), measured);
+  try {
+    foreign.sheet.disabled = true;
+    foreign.dispatchEvent(new Event('load'));
+    const settled = await quiet();
+    checks.push({coverage:'performance',name:'overlapping stylesheet changes repair earlier text and measure the unread tail once',
+      ok:settled && changedMidScan && ink() === red && tailReads === 1,detail:JSON.stringify({settled,changedMidScan,tailReads,ink:ink()})});
+  } finally { midScan.disconnect(); tail.disconnect(); }
   const previousSheet=foreign.sheet,reloaded=loaded();foreign.href=foreign.href+'?reload=1';await reloaded;await quiet();
   checks.push({coverage:'text',name:'an opaque stylesheet resource reload uses a fresh sheet and retains changed paint',ok:foreign.sheet!==previousSheet&&ink()===red,detail:JSON.stringify({replaced:foreign.sheet!==previousSheet,ink:ink(),red})});
  }finally{foreign.remove();base.remove();probe.remove();await sleep(80)}
