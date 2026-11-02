@@ -36,6 +36,7 @@ jobs:
         run: |
           node tests/e2e/run.mjs
           node tests/e2e/youtube-chat.mjs
+          node tests/e2e/amazon-search.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
           OLED_TRACE_CHURN: ${{ github.event_name == 'workflow_dispatch' && inputs.trace_churn && '1' || '' }}

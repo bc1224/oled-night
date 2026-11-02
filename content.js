@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.73";
+  const VERSION = "0.6.74";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -3228,6 +3228,40 @@
     document.getElementById("oled-night-early")?.remove();
   }
 
+  function styleAmazonSearch(root) {
+    root.setAttribute("data-oled-night-amazon-search", "");
+    const amazon = 'html[data-oled-night-amazon-search]:is(*, #oled-night-profile-priority)';
+    const style = document.getElementById("oled-night-sheet");
+    style.appendChild(document.createTextNode(`
+      ${amazon} {
+        --oln-amazon-ink: hsl(0 0% var(--oln-light, 88%));
+        --oln-amazon-muted: hsl(0 0% max(40%, calc(var(--oln-light, 88%) - 16%)));
+        --oln-amazon-panel: color-mix(in srgb, var(--oled-night-page) calc(var(--oln-strength, .72) * 100%), #414247);
+      }
+      ${amazon} body, ${amazon} :is(#search, #a-page, .s-result-item, .puis-card-container, .s-card-container, .s-desktop-content, .s-navigation-indent-1, .a-box, .a-box-inner, .a-cardui, .a-section.a-text-center, .a-popover-inner, .a-popover-wrapper, .s-desktop-toolbar) {
+        background-color: var(--oled-night-page) !important; color: var(--oln-amazon-ink) !important;
+      }
+      ${amazon} :is(#search h1, #search h2, #search h3, .a-color-base, .a-price, .a-list-item, .a-dropdown-prompt, .a-expander-prompt, .a-expander-header) { color: var(--oln-amazon-ink) !important; }
+      ${amazon} :is(.a-color-secondary, .a-color-tertiary, .a-price.a-text-price, .a-size-small.a-color-base) { color: var(--oln-amazon-muted) !important; }
+      ${amazon} :is(#search, .a-popover-inner, #sac-autocomplete-results-container) a:not(.a-button-text) { color: #8fc5ff !important; }
+      ${amazon} :is(#search, .a-popover-inner) a:not(.a-button-text):hover { color: #c5e1ff !important; }
+      ${amazon} :is(input:not([type]), input[type=text], input[type=search], select, option, .a-button-dropdown, .a-dropdown-container .a-button-inner, .a-expander-header, .a-popover-header, .s-pagination-item, .s-suggestion-container, .s-suggestion, .nav-flyout, .nav-flyout-content, .autocomplete-results-container, #nav-search-bar-form .nav-fill) {
+        background-color: var(--oln-amazon-panel) !important; color: var(--oln-amazon-ink) !important;
+      }
+      ${amazon} :is(.s-suggestion:hover, .a-dropdown-link:hover, .s-pagination-item:hover, .a-expander-header:hover) { background-color: #303137 !important; }
+      ${amazon} :is(.s-background-color-platinum, .puis-status-badge-container, .a-button-base, .a-button-base .a-button-inner,
+          .nav-assistant, .shortcut-help-container, .nav-search-field, .nav-search-scope, .nav-search-facade, .hmenu, .hmenu-item, .s-carousel-button) {
+        color: var(--oln-amazon-ink) !important; background-color: var(--oln-amazon-panel) !important;
+      }
+      ${amazon} :is(.a-button-base .a-button-text, .nav-search-label, .nav-signin-tooltip-footer, .nav-flyout .nav-text, .nav-flyout .nav-title) { color: var(--oln-amazon-ink) !important; }
+      ${amazon} :is(.nav-flyout a.nav-a, .nav-assistant-link) { color: #8fc5ff !important; }
+      ${amazon} :is(.nav-assistant-heading, .shortcut-help-text) { color: var(--oln-amazon-ink) !important; }
+      ${amazon} :is(.s-image, .s-image-square-aspect img, .s-product-image-container img) { mix-blend-mode: normal !important; }
+      ${amazon} :is(.a-button-primary, .a-button-primary .a-button-text, .a-button-primary .a-button-inner, .a-button-primary .a-icon, #nav-search-submit-text) { color: #0f1111 !important; }
+      ${amazon} :is(.a-box, .puis-card-border, .s-pagination-item, .a-divider-normal) { border-color: #424449 !important; }
+    `));
+  }
+
   function installSheet() {
     if (document.getElementById("oled-night-sheet")) return;
     const root = `html[data-oled-night-root]:is(*, #oled-night-profile-priority):not([${MEASURE}])`;
@@ -3432,6 +3466,7 @@
     removeEarly();
     const root = document.documentElement;
     for (const name of ["data-oled-night-root", "data-oled-night-youtube", "data-oled-night-chatgpt", "data-oled-night-page", "data-oled-night-transparent-frame", "data-oled-night-dim", "data-oled-night-invert", "data-oled-night-site", "data-oled-night-mode"]) root.removeAttribute(name);
+    root.removeAttribute("data-oled-night-amazon-search");
     for (const name of ["--oled-night-page", "--oled-night-youtube-primary", "--oled-night-youtube-secondary", "--oln-light", "--oln-strength"]) root.style.removeProperty(name);
     document.getElementById("oled-night-sheet")?.remove();
     logoChecked = new WeakSet();
@@ -3526,6 +3561,14 @@
     root.setAttribute('data-oled-night-mode', mode);
     if (mode === "none") root.setAttribute("data-oled-night-page", "none");
     root.style.setProperty("--oled-night-page", mode === "soft" ? "#101014" : "#000");
+    // Search pages hydrate thousands of repeated result, filter and ad nodes.
+    // Style their shared retail components through the cascade, including cards
+    // inserted after load. Explicit site treatments retain their usual engine.
+    if (isTopFrame && /^(www\.)?amazon\.com$/i.test(location.hostname) && /^\/s\/?$/.test(location.pathname) &&
+        (site === "global" || site === "on") && (mode === "oled" || mode === "soft")) {
+      styleAmazonSearch(root);
+      return;
+    }
     // YouTube watch pages hydrate incrementally. Apply its native color palette
     // through CSS only; never traverse or mutate its custom elements/player.
     if (colorsApi().usesNativeSafeMode(hostname())) {

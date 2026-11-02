@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.74
+
+- Speed up Amazon.com search in automatic mode by styling repeated results, filters and controls with a shared stylesheet. Newly loaded cards get dark colors without a per-element scan.
+
 ## 0.6.73
 
 - Keep Instagram-style selected radio dots readable when the site draws the marker beside a hidden native input. Preserve empty choices, colored markers, product swatches and the site's selected values.
