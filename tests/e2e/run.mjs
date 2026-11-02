@@ -15,6 +15,7 @@ import { colorPaletteScenario, colorPaletteRestored } from './color-palette-scen
 import { chromeTestArgs } from '../lab/chrome-launch.mjs';
 import { rowPerformanceDiagnostic, startColdChurnDiagnostic, finishColdChurnDiagnostic } from './row-performance-diagnostic.mjs';
 import { youtubeMusicScenario } from './youtube-music-scenario.mjs';
+import { previewTuningScenario } from './preview-tuning-scenario.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // EXT_PATH lets the suite run against an unzipped release instead of the source tree.
@@ -739,6 +740,7 @@ try {
   check('slider changes do not rescan the document',await page.eval("window.tuningWatch.disconnect();window.tuningPasses===0"));
   check("slider step is cheap", slider < 120, `${slider} ms per step`);
   if (!churn.ok || slider >= 120 || process.env.OLED_PROFILE_ROWS) await rowPerformanceDiagnostic({send,page,extension:ext,url:site('127.0.0.1','rows.html'),workload:churnWorkload,root:EXT});
+  await previewTuningScenario({page,ext,url:site('127.0.0.1','rows.html'),check,sleep});
 
   await resetSettings();
   await page.go(site("127.0.0.1", "light.html"));

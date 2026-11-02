@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.75
+
+- Make rapid brightness and contrast slider previews smoother on large recolored pages. Slider changes within 16 milliseconds share one color update, and the final saved setting applies immediately.
+- When stylesheets change during a page refresh, skip repainting elements that already picked up the latest change.
+
 ## 0.6.74
 
 - Speed up Amazon.com search in automatic mode by styling repeated results, filters and controls with a shared stylesheet. Newly loaded cards get dark colors without a per-element scan.

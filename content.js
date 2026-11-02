@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.74";
+  const VERSION = "0.6.75";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -115,6 +115,7 @@
   }
   let settings = DEFAULTS;
   let revision = 0;
+  let tuningTimer = null;
   let applied = new WeakMap();
   // Only observed repeated containers retain paint snapshots. Ink objects are
   // shared immutable color conversions, and both maps release detached nodes.
@@ -1718,11 +1719,17 @@
             else refreshRoots.delete(root);
             break;
           }
-          if (next.value.isConnected) { appendRefresh(batch, next.value); count++; }
+          const node = next.value;
+          if (!node.isConnected) continue;
+          // Keep traversal bounded even when the follow-up pass skips paint.
+          count++;
+          if (state.fresh?.has(node)) continue;
+          appendRefresh(batch, node);
+          if (state.again) state.fresh.add(node);
         }
         if (count >= refreshBatchLimit) break;
       }
-      if (count) {
+      if (batch.length || batch.icons.size || batch.images.size) {
         const started = performance.now();
         processBatch(batch, [], batch, true);
         // Retained paint can wait for idle time. Adapt below the existing
@@ -1743,12 +1750,15 @@
       if (owner === root || owner.contains(root)) {
         // Finish the current traversal before revisiting already-read nodes.
         // Frequent sticky-header classes must not starve the end of the page.
+        // The unread tail will already see this change. Remember its nodes
+        // weakly so the follow-up pass only repaints what can still be stale.
+        state.fresh = new WeakSet();
         state.again = true; scheduleRefresh(); return true;
       }
       if (root.contains(owner)) refreshRoots.delete(owner);
     }
     if (refreshRoots.size >= MAX_PENDING_OBSERVED_PAINT) return false;
-    refreshRoots.set(root, { cursor: refreshElements(root), again: false });
+    refreshRoots.set(root, { cursor: refreshElements(root), again: false, fresh: null });
     scheduleRefresh();
     return true;
   }
@@ -3392,6 +3402,7 @@
   }
 
   function disable() {
+    cancelTuning();
     for (const entry of spriteDocuments.values()) { entry.controller.abort(); entry.waiting.clear(); }
     spriteDocuments.clear();
     localSpriteWaiters.clear();
@@ -3598,8 +3609,25 @@
   let scheduleTimer = null;
   const structureKey = (config) => `${resolvedAppearance(config)}|${Settings.siteMode(config, hostname())}|${config.openClosedShadows}`;
 
-  function applySettings(config) {
+  function cancelTuning() {
+    clearTimeout(tuningTimer);
+    tuningTimer = null;
+  }
+
+  function previewTuning() {
+    // A fixed window merges rapid input without postponing feedback throughout
+    // a drag. Read the latest merged settings when the window ends. Updating
+    // inherited color variables for each message forces redundant full-tree
+    // style recalculations between input tasks on large pages.
+    if (tuningTimer === null) tuningTimer = setTimeout(() => {
+      tuningTimer = null;
+      if (active) applyTuning();
+    }, 16);
+  }
+
+  function applySettings(config, preview = false) {
     revision += 1;
+    if (!preview) cancelTuning();
     const previous = settings;
     settings = Settings.normalize(config);
     clearTimeout(scheduleTimer);
@@ -3613,7 +3641,13 @@
     if (AUTH_PATH.test(location.pathname) && document.readyState === "loading") return;
     if (isCaptchaProtectedAuth()) { if (!active || observer) enable(); return; }
     // Slider moves, per-site tuning and image dimming only retune variables; no page re-scan.
-    if (active && structureKey(previous) === structureKey(settings)) { if (!Settings.prefersNativeColors(hostname())) applyTuning(); return; }
+    if (active && structureKey(previous) === structureKey(settings)) {
+      if (!Settings.prefersNativeColors(hostname())) {
+        if (preview && observer) previewTuning();
+        else applyTuning();
+      }
+      return;
+    }
     enable();
   }
 
@@ -3756,7 +3790,7 @@
       return;
     }
     if (message?.type !== "oled-night-preview") return;
-    applySettings({ ...settings, ...message.patch });
+    applySettings({ ...settings, ...message.patch }, true);
     if (isTopFrame) sendResponse({ ok: true, revision });
   });
 })();
