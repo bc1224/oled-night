@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.75";
+  const VERSION = "0.6.76";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -300,7 +300,9 @@
       if (/^(?:www\.)?youtube\.com$/i.test(location.hostname) && /^\/live_chat(?:_replay)?\/?$/.test(location.pathname)
         && colorsApi().usesNativeSafeMode(hostname())) return false;
       if (UNTOUCHED_FRAMES.test(location.href)) return true;
-      return innerWidth < 80 || innerHeight < 40;
+      // Consent and sign-in frames are often created collapsed and sized
+      // later (BBC's privacy dialog). Wait for real size instead of skipping.
+      return innerWidth < 80 || innerHeight < 40 ? "tiny" : false;
     } catch { return true; }
   }
 
@@ -755,6 +757,15 @@
         element.closest(ctx.recolorLightRegions ? LIGHT_UI : DROPDOWN));
     const mode = lightIsland ? "oled" : localMode;
     mapSurface(computed, "", mode, found);
+    // A compact logo/avatar tile paints its artwork as a background image over
+    // a light plate (Stack Overflow collectives). Its ink is authored for that
+    // plate; a black plate hides dark logos. Keep the plate with its image.
+    if (found.bg && !element.childElementCount && !element.textContent.trim() &&
+        /^url\([^)]*\)$/.test(computed.backgroundImage) && computed.backgroundRepeat.startsWith("no-repeat")) {
+      const w = parseFloat(computed.width), h = parseFloat(computed.height);
+      const plate = colors.parseColor(computed.backgroundColor);
+      if (w >= 12 && w <= 64 && h >= 12 && h <= 64 && plate?.a >= .5 && colors.luminance(plate) > .6) delete found.bg;
+    }
     // Native dark dashboards distinguish raised cards with subtle shades.
     // Keep that authored depth; crushing both the page and its cards to black
     // removes their boundaries. A text composer's short shell and footer
@@ -1188,7 +1199,8 @@
     const rect = svg.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     // Icons in an image creative share its authored light/dark ink.
-    if (backdropOf(svg, ctx).image) return;
+    const svgBackdrop = backdropOf(svg, ctx);
+    if (svgBackdrop.image) return;
     const colors = colorsApi();
     // Compact wordmarks can be much wider than a square icon (including
     // animated SVG logos). Keep the same neutral-ink mapping for explicitly
@@ -1298,7 +1310,10 @@
     const href = use?.getAttribute("href") || use?.getAttribute("xlink:href") || "";
     const referenced = href.startsWith("#") ? document.getElementById(href.slice(1)) : null;
     const outline = svg.getAttribute("fill") === "none" || referenced?.getAttribute("fill") === "none";
-    const paleToDark = (color) => (color && color.a >= 0.08 && colors.luminance(color) > 0.6 && colors.chroma(color) < 0.25
+    // Pale artwork paint is a surface only on a light backdrop. On an authored
+    // dark card (weather and media widgets) white paint is the ink itself.
+    const darkBackdrop = !!svgBackdrop.color && svgBackdrop.color.a >= .5 && colors.luminance(svgBackdrop.color) < .2;
+    const paleToDark = (color) => (!darkBackdrop && color && color.a >= 0.08 && colors.luminance(color) > 0.6 && colors.chroma(color) < 0.25
       ? colors.mapBackground(color, mode) : null);
     for (const part of [svg, ...svg.querySelectorAll(icon ? ICON_PARTS : CHART_PARTS)]) {
       const computed = getComputedStyle(part);
@@ -1701,7 +1716,7 @@
 
   function scheduleRefresh() {
     if (!observer || document.hidden || refreshFrame !== null || !refreshRoots.size) return;
-    const run = timestamp => {
+    const run = (timestamp, deadline) => {
       refreshFrame = null;
       if (!observer || document.hidden) return;
       onMutations(observer.takeRecords());
@@ -1710,9 +1725,14 @@
       if (document.timeline && lastPaintFrame === timestamp) { scheduleRefresh(); return; }
       const batch = []; batch.icons = new Set(); batch.images = new Set();
       let count = 0;
+      // Idle time is the budget. Each batch pays a fixed forced style recalc on
+      // large documents, so tiny batches multiplied the total work: Wikipedia
+      // spent about 8 s in 565 batches of 8 to 17 nodes after load.
+      const budget = deadline && !deadline.didTimeout ? Math.max(6, Math.min(16, deadline.timeRemaining() - 2)) : 6;
+      const limit = Math.max(24, Math.min(256, Math.round(refreshBatchLimit * budget / 6)));
       for (const [root, state] of refreshRoots) {
         if (!root.isConnected) { refreshRoots.delete(root); continue; }
-        while (count < refreshBatchLimit) {
+        while (count < limit) {
           const next = state.cursor.next();
           if (next.done) {
             if (state.again) { state.cursor = refreshElements(root); state.again = false; }
@@ -1727,7 +1747,7 @@
           appendRefresh(batch, node);
           if (state.again) state.fresh.add(node);
         }
-        if (count >= refreshBatchLimit) break;
+        if (count >= limit) break;
       }
       if (batch.length || batch.icons.size || batch.images.size) {
         const started = performance.now();
@@ -1742,7 +1762,7 @@
       scheduleRefresh();
     };
     refreshIdle = typeof requestIdleCallback === 'function';
-    refreshFrame = refreshIdle ? requestIdleCallback(() => run(document.timeline?.currentTime), {timeout:100}) : requestAnimationFrame(run);
+    refreshFrame = refreshIdle ? requestIdleCallback(deadline => run(document.timeline?.currentTime, deadline), {timeout:100}) : requestAnimationFrame(run);
   }
 
   function queueRefresh(root) {
@@ -2050,7 +2070,7 @@
     if (simpleBackgrounds && candidates.size) {
       scope.dynamicToken = `c${scope.epoch}`;
       const rows = oldRows || document.createElement('style'); rows.id = 'oled-night-row-paint';
-      const on = `:is([${MARK}], #oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}])`;
+      const on = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}])`;
       rows.textContent = scope.rules.filter(rule => rule.background).map(rule =>
         `${rule.selector}[${SHARED_BG}="${scope.dynamicToken}"][${MARK}~="bg"]${on}${rule.priority[0] ? ':is(*, #oled-night-important-bg-priority)' : ''}{background-color:${colors.mapBackground(rule.background, mode)} !important}`).join('\n');
       if (!oldRows) (document.head || document.documentElement).append(rows);
@@ -2060,7 +2080,7 @@
       const paint = colors.mapBackground(background, mode);
       if (sharedBackgrounds.has(paint) || sharedBackgrounds.size >= 128) continue;
       const token = String(sharedBackgrounds.size);
-      const on = `:is([${MARK}], #oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}])`;
+      const on = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}])`;
       try {
         // Shared immutable declarations let the browser reuse matched paint.
         // Prime outside animation updates; never create rules in the fast path.
@@ -2554,10 +2574,23 @@
       if (discovered) queueInteraction(node.host, true, currentPaint);
     }
     const stop = firstUnchanged(event, path, control);
+    // Pointer crossings: elements whose authored state rules are known and
+    // cannot repaint them need no recheck. Their DOM/class changes still
+    // arrive through the observer.
+    const rules = /^pointer(?:over|out)$/.test(event.type) && shadowRoots.size <= 64 ? stateRules() : null;
+    const analyzed = new Set();
     let rest = false;
     for (const node of path) {
       if (node === document.body || node === document.documentElement) break;
       if (node === stop) rest = true;
+      const state = statePaint(node, rules);
+      if (state) {
+        analyzed.add(node);
+        if (rest) continue;
+        if (state.self || state.tree) queueInteraction(node, state.tree, currentPaint);
+        for (const target of state.targets) queueInteraction(target, true, currentPaint);
+        continue;
+      }
       if (rest) settleSelf.add(node); else queueInteraction(node, false, currentPaint);
     }
     // Descendant rules of changed elements (".row:hover .label") need their subtree.
@@ -2574,17 +2607,22 @@
           queueInteraction(node, false, currentPaint);
       }
       settleTrees.add(control);
-    } else if (controlChanged) queueInteraction(control, true, currentPaint);
+    } else if (controlChanged && !analyzed.has(control)) queueInteraction(control, true, currentPaint);
+    else if (controlChanged) { /* analyzed above */ }
     else {
       // Non-semantic triggers and plain text hover must not promote the
       // entire page layout to a subtree reread. Ancestor state is checked
       // shallowly above; actual DOM/class changes still queue their subtree.
-      if (path[0] && path[0] !== stop && path[0] !== document.body && path[0] !== document.documentElement) {
+      if (path[0] && path[0] !== stop && path[0] !== document.body && path[0] !== document.documentElement && !analyzed.has(path[0])) {
         const roots = largeScopes.has(path[0]) ? interactionPaintRoots(path[0]) : null;
         if (roots) {for (const root of roots) queueInteraction(root, true, currentPaint)}
+        // An unanalyzable large layout still gets its own state rechecked.
+        // Re-reading its entire subtree for each pointer crossing made
+        // scrolling and hovering long articles stall for seconds.
+        else if (largeScopes.has(path[0])) queueInteraction(path[0], false, currentPaint);
         else queueInteraction(path[0], true, currentPaint);
       }
-      if (control) settleTrees.add(control);
+      if (control && !analyzed.has(control)) settleTrees.add(control);
     }
     // A hidden native checkbox can paint its state in an associated sibling
     // label. That label is outside the input's event path and subtree.
@@ -2634,9 +2672,19 @@
           for (let i=0;i<parts.length;i++) {
             if (!/:(?:hover|focus(?:-visible|-within)?|active)\b/.test(parts[i])) continue;
             if (/[>+~]/.test(parts[i])) throw Error('Combined state selector');
-            const prefix = parts.slice(0,i+1).join(' ').replace(/:not\(:(?:hover|focus(?:-visible|-within)?|active)\)/g,'').replace(/:(?:hover|focus(?:-visible|-within)?|active)\b/g,'');
+            // A bare state selector (":focus-visible", ":hover > x") leaves an
+            // empty compound, which matches any element.
+            const prefix = parts.slice(0,i+1).join(' ').replace(/:not\(:(?:hover|focus(?:-visible|-within)?|active)\)/g,'').replace(/:(?:hover|focus(?:-visible|-within)?|active)\b/g,'').replace(/(^|\s)(?=\s|$)/g,'$1*');
             if (!node.matches(prefix)) continue;
-            if (i === parts.length-1) throw Error('Inherited state paint');
+            if (i === parts.length-1) {
+              // The node's own state rule. The element itself is rechecked on
+              // the event path; only inherited paint reaches its descendants.
+              const style = rule.style;
+              if (!style || style.color || style.caretColor || style.fill || style.stroke ||
+                  style.getPropertyValue('-webkit-text-fill-color') || [...style].some(name => name.startsWith('--')) ||
+                  /\b(?:all|inherit)\b/.test(style.cssText)) throw Error('Inherited state paint');
+              continue;
+            }
             const tail=parts.slice(i+1).join(' ').replace(/::?(?:before|after)\b/g,'');
             if (/^[>+~]/.test(tail)) throw Error('Relative state selector');
             for (const target of node.querySelectorAll(tail)) {
@@ -2654,6 +2702,146 @@
       }
       return [...roots];
     } catch {return null;}
+  }
+
+  // Compiled authored state rules (:hover/:focus/:active) per stylesheet.
+  // Pointer crossings over plain text then skip elements no state rule can
+  // repaint. Each skipped recheck re-read the inherited ink chain, which
+  // restyled every element of a long article (about 140 ms per move).
+  const stateRuleCache = new WeakMap();
+  const STATE_PSEUDO = /(?<!\\):(?:hover|focus(?:-visible|-within)?|active)\b/;
+  const STATE_PAINT = /color|background|border|fill|stroke|shadow|outline|filter|opacity|image|mask|^all$/;
+  const STATE_INK = /^(?:color|caret-color|fill|stroke|-webkit-text-fill-color|all)$/;
+  function splitCompounds(selector) {
+    const compounds = [], combinators = [];
+    let depth = 0, current = '', pending = null, escaped = false;
+    for (const char of selector.trim()) {
+      if (escaped) { current += char; escaped = false; continue; }
+      if (char === '\\') { current += char; escaped = true; continue; }
+      if (char === '(' || char === '[') depth++;
+      else if (char === ')' || char === ']') depth--;
+      if (!depth && /[\s>+~]/.test(char)) {
+        if (current) { compounds.push(current); combinators.push(pending ?? ' '); current = ''; pending = null; }
+        if (char !== ' ' && !/\s/.test(char)) pending = char;
+        continue;
+      }
+      current += char;
+    }
+    if (current) { compounds.push(current); combinators.push(pending ?? ' '); }
+    combinators[0] = '';
+    return {compounds, combinators};
+  }
+  // A required id, class or tag of the state compound, so a pointer move
+  // tests only rules that can match. Escapes and functional pseudo-classes
+  // stay universal rather than risk a wrong bucket.
+  function stateKey(compound) {
+    if (compound.includes('\\')) return '*';
+    let flat = compound.replace(/\[[^\]]*\]/g, '');
+    for (let previous = ''; previous !== flat;) { previous = flat; flat = flat.replace(/\([^()]*\)/g, ''); }
+    const id = flat.match(/#([\w-]+)/), cls = flat.match(/\.([\w-]+)/), tag = flat.match(/^([a-zA-Z][\w-]*)/);
+    return id ? `#${id[1]}` : cls ? `.${cls[1]}` : tag ? tag[1].toLowerCase() : '*';
+  }
+  function compileStateRules(rules, entries) {
+    for (const rule of rules) {
+      if (rule.type === 3) throw Error('Unknown imported state rules');
+      if (rule.selectorText && rule.cssRules?.length) throw Error('Nested state rules');
+      if (rule.selectorText && STATE_PSEUDO.test(rule.selectorText)) {
+        const style = rule.style, names = style ? [...style] : [];
+        const paint = !style || /\b(?:inherit|all)\b/.test(style.cssText) ||
+          names.some(name => name.startsWith('--') || (!name.startsWith('text-decoration') && STATE_PAINT.test(name)));
+        const ink = !style || /\b(?:inherit|all)\b/.test(style.cssText) ||
+          // Inherited ink, or a backdrop that descendants' ink is read against.
+          names.some(name => name.startsWith('--') || STATE_INK.test(name) || /^(?:background|filter|backdrop-filter|opacity|mix-blend-mode)/.test(name));
+        for (const selector of rule.selectorText.split(/,(?![^()]*\))/)) {
+          if (!STATE_PSEUDO.test(selector)) continue;
+          if (/:has\(|::part|::slotted|&/.test(selector)) throw Error('Unknown state subject');
+          const {compounds, combinators} = splitCompounds(selector);
+          for (let i = 0; i < compounds.length; i++) {
+            if (!STATE_PSEUDO.test(compounds[i])) continue;
+            const prefix = compounds.slice(0, i + 1).map((part, index) => {
+              const bare = part.replace(/(?<!\\):not\(:(?:hover|focus(?:-visible|-within)?|active)\)/g, '')
+                .replace(/(?<!\\):(?:hover|focus(?:-visible|-within)?|active)\b/g, '').replace(/(?<!\\)::?(?:before|after|marker|placeholder)\b/g, '');
+              return `${index ? combinators[index] : ''} ${bare || '*'}`;
+            }).join('').trim();
+            const key = stateKey(compounds[i]);
+            if (i === compounds.length - 1) { if (paint) entries.push({prefix, key, ink}); continue; }
+            if (/[+~]/.test(combinators[i + 1])) { entries.push({prefix, key, sibling: true}); continue; }
+            const tail = compounds.slice(i + 1).map((part, index) => `${combinators[i + 1 + index]} ${part}`).join('')
+              .replace(/(?<!\\)::?(?:before|after|marker|placeholder)\b/g, '').trim();
+            if (/[+~]/.test(tail)) { entries.push({prefix, key, sibling: true}); continue; }
+            if (paint) entries.push({prefix, key, tail});
+          }
+        }
+      }
+      if (rule.cssRules) compileStateRules(rule.cssRules, entries);
+    }
+  }
+  let stateRuleSet = null;
+  function stateRules() {
+    // Unknown sheets (cross-origin, @import, nesting, :has) are cached as
+    // unknown too, so a page that cannot be analyzed pays one scan per change.
+    const sheets = [];
+    for (const sheet of [...document.styleSheets, ...document.adoptedStyleSheets]) {
+      if (sheet === shadowSheet || sheet.ownerNode?.id?.startsWith('oled-night-')) continue;
+      let rules = null;
+      try { rules = sheet.cssRules; } catch {}
+      sheets.push([sheet, rules, rules?.length]);
+    }
+    if (stateRuleSet && stateRuleSet.sheets.length === sheets.length &&
+        sheets.every(([sheet, rules, length], index) => {
+          const [oldSheet, oldRules, oldLength] = stateRuleSet.sheets[index];
+          return sheet === oldSheet && rules === oldRules && length === oldLength;
+        })) return stateRuleSet.entries;
+    let entries = [];
+    for (const [sheet, rules, length] of sheets) {
+      let cached = stateRuleCache.get(sheet);
+      if (!cached || cached.rules !== rules || cached.length !== length) {
+        let own = [];
+        try { if (!rules) throw Error('Unreadable sheet'); compileStateRules(rules, own); } catch { own = null; }
+        cached = {rules, length, entries: own};
+        stateRuleCache.set(sheet, cached);
+      }
+      if (!cached.entries) { entries = null; break; }
+      entries.push(...cached.entries);
+    }
+    let index = null;
+    if (entries) {
+      index = new Map();
+      for (const entry of entries) {
+        if (!index.has(entry.key)) index.set(entry.key, []);
+        index.get(entry.key).push(entry);
+      }
+    }
+    stateRuleSet = {sheets, entries: index};
+    return index;
+  }
+  // What a state change on this element can repaint: null when unknown.
+  function statePaint(node, entries) {
+    if (!entries || node.getRootNode() !== document || node.shadowRoot || node.localName.includes('-') ||
+        /^(?:button|input|textarea|select|option|summary|details)$/.test(node.localName) ||
+        node.isContentEditable || hasDescendantShadow(node)) return null;
+    const found = {self: false, tree: false, targets: new Set()};
+    const keys = ['*', node.localName.toLowerCase()];
+    if (node.id) keys.push(`#${node.id}`);
+    for (const name of node.classList) keys.push(`.${name}`);
+    const candidates = keys.flatMap(key => entries.get(key) || []);
+    // An unindexed broad sheet stays on the conservative path.
+    if (candidates.length > 512) return null;
+    try {
+      for (const entry of candidates) {
+        if (!node.matches(entry.prefix)) continue;
+        if (entry.sibling) return null;
+        if (entry.tail) {
+          for (const target of node.querySelectorAll(`:scope ${entry.tail}`)) {
+            found.targets.add(target);
+            if (found.targets.size > 64) return null;
+          }
+        // Own state paint: ink inherits and a new backdrop changes the
+        // readable ink of every descendant, so both recheck the subtree.
+        } else { found.self = true; if (entry.ink) found.tree = true; }
+      }
+    } catch { return null; }
+    return found;
   }
 
   function queueInteraction(node, tree = false, recheck = false) {
@@ -3162,9 +3350,12 @@
   function overrideRules() {
     // Use ID-level specificity without requiring an ID on page elements.
     // Multi-class + tag !important selection rules must not beat our colors.
+    // Consent widgets chain up to three IDs with !important (OneTrust's
+    // "#banner #group button#handler"), so every priority token repeats four
+    // IDs. Color, profile and logo tokens rise together to keep their order.
     // The outer marker still scopes every override; measurement still opts out.
-    const on = `:is([${MARK}], #oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}])`;
-    const onPseudo = `:is([${MARK}], #oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_PSEUDO}])`;
+    const on = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}])`;
+    const onPseudo = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_PSEUDO}])`;
     return `
       /* Each paint variable belongs to its marked element (and its pseudos).
          Inheriting thousands of unused values makes updates invalidate and
@@ -3202,7 +3393,7 @@
       img[${MARK}~="faded-icon"]${on} { opacity: 0.65 !important; filter: drop-shadow(0 0 1px #888) !important; }
       [${MARK}~="asset-icon"]${on} { filter: drop-shadow(0 0 0.75px #ddd) drop-shadow(0 0 0.75px #ddd) !important; }
       [${MARK}~="icon-invert"]${on} { filter: invert(1) !important; }
-      img[${LOGO_INK}]:is(*, #oled-night-logo-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) { filter: url("#oled-night-logo-ink") !important; }
+      img[${LOGO_INK}]:is(*, #oled-night-logo-priority#oled-night-logo-priority#oled-night-logo-priority#oled-night-logo-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) { filter: url("#oled-night-logo-ink") !important; }
       [${NOANIM}], [${NOANIM}] *, [${NOANIM}]::before, [${NOANIM}]::after, [${NOANIM}] *::before, [${NOANIM}] *::after { transition: none !important; }
       [${NOANIM_SELF}], [${NOANIM_SELF}]::before, [${NOANIM_SELF}]::after { transition: none !important; }
       [${NOANIM}][${MOTION}], [${NOANIM}] [${MOTION}], [${NOANIM_SELF}][${MOTION}] { transition: var(--oln-motion) !important; }
@@ -3240,7 +3431,7 @@
 
   function styleAmazonSearch(root) {
     root.setAttribute("data-oled-night-amazon-search", "");
-    const amazon = 'html[data-oled-night-amazon-search]:is(*, #oled-night-profile-priority)';
+    const amazon = 'html[data-oled-night-amazon-search]:is(*, #oled-night-profile-priority#oled-night-profile-priority#oled-night-profile-priority#oled-night-profile-priority)';
     const style = document.getElementById("oled-night-sheet");
     style.appendChild(document.createTextNode(`
       ${amazon} {
@@ -3274,7 +3465,7 @@
 
   function installSheet() {
     if (document.getElementById("oled-night-sheet")) return;
-    const root = `html[data-oled-night-root]:is(*, #oled-night-profile-priority):not([${MEASURE}])`;
+    const root = `html[data-oled-night-root]:is(*, #oled-night-profile-priority#oled-night-profile-priority#oled-night-profile-priority#oled-night-profile-priority):not([${MEASURE}])`;
     const surface = `${root}:not([${MEASURE_ROOT}])`;
     const sheet = document.createElement("style");
     sheet.id = "oled-night-sheet";
@@ -3731,7 +3922,21 @@
   }
 
 
-  if (frameIsUntouched()) return;
+  const untouched = frameIsUntouched();
+  if (untouched === true) return;
+  if (untouched === "tiny") {
+    const grow = () => {
+      if (innerWidth < 80 || innerHeight < 40) return;
+      removeEventListener("resize", grow);
+      domReady = document.readyState !== "loading";
+      boot();
+    };
+    addEventListener("resize", grow);
+    return;
+  }
+  boot();
+
+  function boot() {
   installEarly();
   // Start as soon as <body> exists rather than after the whole document has
   // loaded, so heavy pages don't show their own white panels first. The page's
@@ -3793,4 +3998,5 @@
     applySettings({ ...settings, ...message.patch }, true);
     if (isTopFrame) sendResponse({ ok: true, revision });
   });
+  }
 })();

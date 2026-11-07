@@ -1,0 +1,11 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Dark card artwork</title><style>
+body{background:#fff;color:#222;font:16px sans-serif;margin:0;padding:24px}
+.card{display:flex;gap:16px;align-items:center;padding:20px;margin:0 0 16px;border-radius:12px}
+.night{background:#1c2b4f;color:#fff;--moon:#fff;--star:#f4f4f4}
+.day{background:#f3f4f6;color:#222}
+.wx{width:96px;height:96px;flex:none}
+</style></head><body>
+<h1>Weather-style artwork on authored cards</h1>
+<section class="card night"><svg id="moon" class="wx" viewBox="0 0 96 96" role="img" aria-label="Clear night"><path id="moonPath" fill="var(--moon)" d="M60 12a36 36 0 1 0 24 62A30 30 0 0 1 60 12z"/><circle id="star" cx="24" cy="22" r="4" fill="var(--star)"/></svg><div><strong>Tonight</strong><p>Clear, low 48</p></div></section>
+<section class="card day"><svg id="cloud" class="wx" viewBox="0 0 96 96" role="img" aria-label="Cloud panel"><rect id="cloudPanel" width="96" height="96" rx="12" fill="#ffffff"/><path d="M24 64h48a14 14 0 0 0-6-27 20 20 0 0 0-38 6 11 11 0 0 0-4 21z" fill="#5b6b82"/></svg><div><strong>Tomorrow</strong><p>Cloudy, high 61</p></div></section>
+</body></html>

@@ -1,0 +1,9 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Growing consent frame</title><style>
+body{background:#fff;color:#222;font:16px sans-serif;margin:0;padding:24px}
+#consent{position:fixed;left:50%;top:80px;transform:translateX(-50%);border:0;width:0;height:0}
+</style></head><body>
+<h1>Consent frame created collapsed</h1>
+<p>Third-party privacy dialogs often insert their frame at zero size and resize it after loading.</p>
+<iframe id="consent" src="growing-frame-dialog.html" title="Privacy dialog"></iframe>
+<script>setTimeout(()=>{const f=document.getElementById('consent');f.style.width='520px';f.style.height='260px'},800)</script>
+</body></html>

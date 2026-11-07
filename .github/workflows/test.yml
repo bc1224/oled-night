@@ -48,6 +48,10 @@ jobs:
         run: node tests/e2e/text-hover.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
+      - name: Bounded pointer refresh on large article layouts
+        run: node tests/e2e/large-layout-hover.mjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
       - name: Package
         run: node tools/package.mjs
       - name: Gmail typing with large authored stylesheets

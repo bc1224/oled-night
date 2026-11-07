@@ -46,7 +46,7 @@ export async function largeUpdatesScenario(){
  lateWatch.observe(rows[0],{subtree:true,attributes:true});rows[0].classList.add('hl');await sleep(80);lateWatch.disconnect();
  check('CSSOM edits invalidate selection snapshots before repaint',lateReads>0&&window.OLEDLabAudit.contrast(getComputedStyle(rows[0].querySelector('.c')).color,getComputedStyle(rows[0]).backgroundColor)>=4.5,String(lateReads));
  authored.deleteRule(late);rows[0].classList.remove('hl');await sleep(80);
- const inherited=document.createElement('style');inherited.textContent='.row.ink .c{color:#555}';document.head.append(inherited);await sleep(80);
+ const inherited=document.createElement('style');inherited.textContent='.row.ink .c{color:#555} .row.ink:has(.c:hover) .c{color:#444}';document.head.append(inherited);await sleep(80);
  rows[0].classList.add('ink');await sleep(80);
  check('uncertain descendant scopes retire mapped row rules',!document.getElementById('oled-night-row-paint'));
  check('descendant selection rules retain measured readable text',window.OLEDLabAudit.contrast(getComputedStyle(rows[0].querySelector('.c')).color,getComputedStyle(rows[0]).backgroundColor)>=4.5);

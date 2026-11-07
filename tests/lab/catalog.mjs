@@ -1,8 +1,8 @@
 const groups = {
   'Interactions': ['compact-switches','oled-components','navigation-work','dropdowns','dark-dropdowns','state-surfaces','shadow-hover','cold-shadow','interaction-layout','media-navigation','frame-mutation','paint-updates','large-updates','text-hover'],
   'Text & surfaces': ['light','dark','explicit-light','ink','surfaces','scope-light','scope-dark','scope-scheme','svg-outline'],
-  'Media & data': ['indicators','chart','canvas','shop','ad-overlays','wide-wordmarks'],
-  'App reproductions': ['youtube','gmail','email-newsletter','native-banner','booking-form','checkout','chatgpt-controls','chatgpt-streaming','google-sheets-colors','reddit-res','shadow-stability','apple-auth','apple-recovery','dmv-hero-text'],
+  'Media & data': ['indicators','chart','canvas','shop','ad-overlays','wide-wordmarks','dark-card-artwork','logo-tiles'],
+  'App reproductions': ['youtube','gmail','email-newsletter','native-banner','booking-form','checkout','chatgpt-controls','chatgpt-streaming','google-sheets-colors','reddit-res','shadow-stability','apple-auth','apple-recovery','dmv-hero-text','consent-banner','growing-frame'],
   'Isolation & loading': ['components','protected','challenge','challenge-inline','frame','transparent-frame','slow','efficiency','report-fields','report-preview','generated-style']
 };
 const descriptions = {
@@ -10,6 +10,10 @@ const descriptions = {
   'chatgpt-streaming':'Native ChatGPT theme-token reproduction. Gallery shows three messages with the loaded browser mode; separate Chrome/Firefox CI selects the real native site adapter and verifies 180 messages, streaming, focus, scrolling, light/dark switching and disable restoration. Synthetic data; not a reproduction of a specific signed-in renderer crash',
   'oled-components':'Dark transparent product swatches, true logo/icon positives, IN/CM custom radio marker pixels, native keyboard selection and disable restoration; paired neighboring cards/dialogs/selected surfaces and continuous full-width header bands in Chrome and Firefox',
   'navigation-work':'2,500 article rows, hidden mega-menus with SVG icons and product swatches, unreadable third-party CSS, sticky-header classes, redundant state writes, inserted text and real theme changes; existing 150 ms stall budget in both engines',
+  'dark-card-artwork':'Weather-style 96px artwork: white moon and star fills (via CSS custom properties) on an authored dark-blue card must stay light ink; a white panel inside light-card artwork still darkens. Chrome and Firefox assertions. Synthetic artwork based on a Weather.com current-conditions card',
+  'consent-banner':'OneTrust-style consent banner: page rules chain three IDs with !important text colors (#banner #group button#id). Darkened banner text and both buttons must stay readable in Chrome and Firefox. Synthetic markup based on the Stack Overflow cookie banner',
+  'logo-tiles':'Compact 32px logo tiles painted as a no-repeat background image over a white plate keep that plate so dark logo ink stays visible; a plain white swatch still darkens. Chrome and Firefox assertions. Synthetic artwork based on Stack Overflow collective avatars',
+  'growing-frame':'Privacy dialog frame inserted at zero size and resized 800 ms later: its white dialog must be themed once the frame has real dimensions. Chrome and Firefox assertions. Synthetic markup based on the BBC Sourcepoint consent dialog',
   'wide-wordmarks':'Synthetic compact navigation graphics: wide wordmarks and thin hamburger/close strokes at rest, focus, expanded and disabled states; late paths, colored logos, larger artwork and adjacent opacity motion preserved',
   'google-sheets-colors':'Synthetic Google-style fill-color palette: exact grayscale, saturated and pastel swatches, custom colors, dynamic updates and selection while the surrounding menu stays dark. Chrome and Firefox extension regressions; not a live document capture',
   'apple-recovery':'Issue #4: Apple-style account recovery with an editable captcha-input, readable floating label, protected provider widget and unchanged verification artwork',
