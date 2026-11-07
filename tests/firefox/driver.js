@@ -104,6 +104,33 @@
       document.getElementById('nested').focus();await new Promise(r=>setTimeout(r,160));
       return [...document.getElementById('row').children].every(e=>{const s=getComputedStyle(e);return parseFloat(s.backgroundColor.match(/[\d.]+/)[0])<40&&parseFloat(s.color.match(/[\d.]+/)[0])>180});
     }));
+    await open('dark-card-artwork.html');
+    check('white artwork on a dark card stays light; light-card panel darkens', await inspect(() => {
+      const lum = value => {const c=value.match(/[\d.]+/g).slice(0,3).map(x=>{const v=+x/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return c[0]*.2126+c[1]*.7152+c[2]*.0722};
+      const fill = id => getComputedStyle(document.getElementById(id)).fill;
+      return lum(fill('moonPath')) > .6 && lum(fill('star')) > .6 && lum(fill('cloudPanel')) < .05;
+    }));
+    await open('consent-banner.html');
+    check('consent button text beats chained-ID important colors', await inspect(() => {
+      const lum = value => {const c=value.match(/[\d.]+/g).slice(0,3).map(x=>{const v=+x/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return c[0]*.2126+c[1]*.7152+c[2]*.0722};
+      const css = id => getComputedStyle(document.getElementById(id));
+      const ratio = (a,b) => {const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+      const banner = css('cb-banner').backgroundColor;
+      return ratio(css('cb-settings').color, banner) >= 4.5 && ratio(css('cb-text').color, banner) >= 4.5;
+    }));
+    await open('logo-tiles.html');
+    check('compact background-image logo keeps its light plate', await inspect(() => {
+      const lum = value => {const c=value.match(/[\d.]+/g).slice(0,3).map(x=>{const v=+x/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return c[0]*.2126+c[1]*.7152+c[2]*.0722};
+      const bg = id => getComputedStyle(document.getElementById(id)).backgroundColor;
+      return lum(bg('logoTile')) > .6 && lum(bg('plainTile')) < .05;
+    }));
+    await open('growing-frame.html');await wait(1200);
+    check('collapsed consent frame is themed after it grows', await inspect(() => {
+      const lum = value => {const c=value.match(/[\d.]+/g).slice(0,3).map(x=>{const v=+x/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return c[0]*.2126+c[1]*.7152+c[2]*.0722};
+      const d = document.getElementById('consent').contentDocument;
+      const bg = lum(getComputedStyle(d.getElementById('dialog')).backgroundColor), fg = lum(getComputedStyle(d.getElementById('body')).color);
+      return bg < .05 && (fg + .05) / (bg + .05) >= 4.5;
+    }));
     await open('indicators.html');
     check('ratings, generic bars, generated progress and vertical data remain visible', await inspect(() => {
       const lum = value => {const c=value.match(/[\d.]+/g).slice(0,3).map(x=>{const v=+x/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return c[0]*.2126+c[1]*.7152+c[2]*.0722};

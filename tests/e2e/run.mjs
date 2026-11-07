@@ -531,6 +531,31 @@ try {
   const outlineIcon = await page.eval("(() => { const svg = document.getElementById('outlineIcon'), use = document.getElementById('outlineUse'), style = getComputedStyle(svg); return { bg: style.backgroundColor, ink: style.color, svgMark: svg.getAttribute('data-oled-night') || '', useMark: use.getAttribute('data-oled-night') || '' }; })()");
   check("outline SVG keeps a dark tile and visible currentColor stroke", lum(outlineIcon.bg) < .05 && lum(outlineIcon.ink) > .5 && !outlineIcon.svgMark.includes('fill') && !outlineIcon.useMark.includes('fill'), JSON.stringify(outlineIcon));
 
+  // Weather.com regression: white artwork on an authored dark card is ink,
+  // not a pale surface. A white panel on a light card still darkens.
+  await page.go(site("127.0.0.1", "dark-card-artwork.html"), 900);
+  const artwork = await page.eval("(() => { const f = id => getComputedStyle(document.getElementById(id)).fill; return { moon: f('moonPath'), star: f('star'), panel: f('cloudPanel') }; })()");
+  check("white artwork on a dark card stays light", lum(artwork.moon) > .6 && lum(artwork.star) > .6, JSON.stringify(artwork));
+  check("white artwork panel on a light card still darkens", lum(artwork.panel) < .05, JSON.stringify(artwork));
+
+  // Stack Overflow/OneTrust regression: chained-ID !important page colors
+  // must not keep dark button text on the darkened consent banner.
+  await page.go(site("127.0.0.1", "consent-banner.html"), 900);
+  const consent = await page.eval("(() => { const c = id => getComputedStyle(document.getElementById(id)); return { settings: c('cb-settings').color, text: c('cb-text').color, banner: c('cb-banner').backgroundColor }; })()");
+  check("consent button text beats chained-ID important colors", contrast(consent.settings, consent.banner) >= 4.5 && contrast(consent.text, consent.banner) >= 4.5, JSON.stringify(consent));
+
+  // Stack Overflow collectives: a compact background-image logo keeps the
+  // light plate its dark ink was drawn for; a plain light swatch still darkens.
+  await page.go(site("127.0.0.1", "logo-tiles.html"), 900);
+  const tiles = await page.eval("(() => { const c = id => getComputedStyle(document.getElementById(id)).backgroundColor; return { logo: c('logoTile'), plain: c('plainTile') }; })()");
+  check("compact background-image logo keeps its light plate", lum(tiles.logo) > .6 && lum(tiles.plain) < .05, JSON.stringify(tiles));
+
+  // BBC/Sourcepoint regression: a consent frame created at zero size and
+  // resized later is still themed once it has real dimensions.
+  await page.go(site("127.0.0.1", "growing-frame.html"), 3000);
+  const grown = await page.eval("(() => { const d = document.getElementById('consent').contentDocument; const c = id => getComputedStyle(d.getElementById(id)); return { bg: c('dialog').backgroundColor, fg: c('body').color }; })()");
+  check("collapsed consent frame is themed after it grows", lum(grown.bg) < .05 && contrast(grown.fg, grown.bg) >= 4.5, JSON.stringify(grown));
+
   // A white card over a pale page must remain distinguishable after both are
   // darkened. Keep authored outlines and gradient depth, and let a transparent
   // canvas iframe show the host's colored surface instead of a black rectangle.

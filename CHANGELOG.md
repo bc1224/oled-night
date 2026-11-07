@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.76
+
+- Reduce lag when moving the pointer over large articles (Wikipedia, Stack Overflow). Hover now re-reads only elements that a page's hover rules can actually repaint, instead of refreshing the whole layout. Pointer-related long tasks dropped from about 1.5 s to 0.7 s on a Wikipedia article and from 4.3 s to 0.1 s on Stack Overflow.
+- Let background refresh after page load use idle time more efficiently, so long pages settle faster with fewer small tasks.
+- Keep white artwork on dark cards visible, such as the weather moon icon on Weather.com. Pale artwork on light cards is still darkened.
+- Keep consent-banner buttons readable when a site uses very specific `!important` colors, such as Stack Overflow's "Customize settings".
+- Keep small logo tiles visible, such as Stack Overflow collective logos, by preserving the light plate behind the logo image.
+- Theme consent dialogs whose frame starts collapsed and grows later, such as BBC's privacy dialog.
+- Add five lab regressions: dark card artwork, consent banner, logo tiles, growing frame and large layout hover. Each is checked in Chrome and Firefox except large layout hover, which is Chrome only.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.75
 
 - Make rapid brightness and contrast slider previews smoother on large recolored pages. Slider changes within 16 milliseconds share one color update, and the final saved setting applies immediately.
