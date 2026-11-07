@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.77
+
+- Make YouTube Music true black. Its header, side guide, player page and player bar used YouTube Music's own `#030303` and `#212121` color tokens, which OLED Night did not reach. Menus and dialogs stay slightly raised so they remain distinct.
+- Apply the Amazon tuning to every Amazon country storefront (amazon.ca, amazon.co.uk, amazon.de and others), including the fast search results path that previously ran only on amazon.com.
+- In OLED mode, Amazon home cards and lower sections are now true black with a thin outline instead of dark grey.
+- Reports: add an optional problem type. When chosen, the public GitHub tracking issue is titled with the site domain and that type (for example "music.youtube.com: Background not black") and lists the extension version and mode. Notes, other diagnostics and screenshots stay private. Reports without a type, and all reports from older versions, keep the generic title.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.76
 
 - Reduce lag when moving the pointer over large articles (Wikipedia, Stack Overflow). Hover now re-reads only elements that a page's hover rules can actually repaint, instead of refreshing the whole layout. Pointer-related long tasks dropped from about 1.5 s to 0.7 s on a Wikipedia article and from 4.3 s to 0.1 s on Stack Overflow.

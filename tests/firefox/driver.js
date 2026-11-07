@@ -22,6 +22,10 @@
         getComputedStyle(document.querySelector('ytmusic-app-layout > #content')).backgroundColor==='rgb(0, 0, 0)'&&
         getComputedStyle(overlay).backgroundColor==='rgba(0, 0, 0, 0)'&&img.complete&&img.naturalWidth===480&&getComputedStyle(img).filter==='none';
     }));
+    check('YouTube Music token surfaces are OLED black and menus stay raised',await inspect(()=>{
+      const bg=s=>getComputedStyle(document.querySelector(s)).backgroundColor;
+      return ['#nav-bar-background','#guide-wrapper','ytmusic-player-page','ytmusic-player-bar'].every(s=>bg(s)==='rgb(0, 0, 0)')&&bg('ytmusic-menu-popup-renderer')==='rgb(33, 33, 33)';
+    }));
     check('YouTube Music delayed thumbnail overlays remain transparent',await inspect(()=>{
       const item=document.querySelector('ytmusic-two-row-item-renderer').cloneNode(true);
       item.querySelector('#artwork').removeAttribute('id');document.getElementById('items').append(item);

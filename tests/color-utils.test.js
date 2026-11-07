@@ -36,6 +36,8 @@ console.log('Color cache preserves correctness after eviction and mutable inputs
 
 assert.equal(colors.siteProfile('www.amazon.com'), 'amazon');
 assert.equal(colors.siteProfile('amazon.com.evil.example'), '');
+for (const host of ['www.amazon.ca', 'www.amazon.co.uk', 'www.amazon.de', 'www.amazon.co.jp', 'www.amazon.com.au']) assert.equal(colors.siteProfile(host), 'amazon', host);
+for (const host of ['amazon.ca.evil.example', 'notamazon.ca', 'www.amazon.example']) assert.equal(colors.siteProfile(host), '', host);
 assert.equal(colors.siteProfile('analytics.google.com'), 'google-analytics');
 assert.equal(colors.siteProfile('ANALYTICS.GOOGLE.COM'), 'google-analytics');
 assert.equal(colors.siteProfile('analytics.google.com.evil.example'), '');

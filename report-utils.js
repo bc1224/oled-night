@@ -73,18 +73,29 @@
       return scrubScreenshot({type:match[1],data:match[2]});
     } finally { bitmap.close(); }
   }
+  // A chosen problem type is published with the site domain as the public
+  // issue title. Fixed labels only: free-text notes always stay private.
+  const PROBLEMS = Object.freeze({
+    background: 'Background not black',
+    text: 'Text hard to read',
+    media: 'Images or icons look wrong',
+    controls: 'Buttons or controls hard to see',
+    layout: 'Layout broken',
+    slow: 'Slow or laggy',
+    other: 'Other problem'
+  });
   function createSubmissionSession(report, {requestConsent,submit}) {
     const clean = scrub(report), requestId = crypto.randomUUID();
     let cancelled = false, busy = false, sent = false, payload;
     return {
       cancel() { cancelled = true; },
-      async send(description = '', screenshot = null) {
+      async send(description = '', screenshot = null, problem = '') {
         if (cancelled || busy || sent) return false;
         busy = true;
         try {
           if (requestConsent && !await requestConsent()) return false;
           if (cancelled) return false;
-          payload ||= {requestId,report:clean,description:String(description).trim().slice(0,2000),...(screenshot ? {screenshot:scrubScreenshot(screenshot)} : {})};
+          payload ||= {requestId,report:clean,description:String(description).trim().slice(0,2000),...(Object.hasOwn(PROBLEMS, problem) ? {problem} : {}),...(screenshot ? {screenshot:scrubScreenshot(screenshot)} : {})};
           const receipt = await submit(payload);
           if (!/^https:\/\/github\.com\/bc1224\/oled-night\/issues\/[1-9]\d*$/.test(receipt?.url || '')) throw Error('Invalid issue receipt');
           sent = true;
@@ -103,5 +114,5 @@
     if (!response.ok) throw Error('Could not submit the issue. Retry or save the report locally.');
     return response.json();
   }
-  scope.OledNightReport = {scrub,issueUrl,openDraft,createDraftSession,createSubmissionSession,submitIssue,scrubScreenshot,prepareScreenshot};
+  scope.OledNightReport = {scrub,issueUrl,openDraft,createDraftSession,createSubmissionSession,submitIssue,scrubScreenshot,prepareScreenshot,PROBLEMS};
 })(globalThis);

@@ -347,9 +347,10 @@
     $("reportSubmit").disabled = true;
     $("reportSubmit").textContent = "Submitting…";
     $("reportDescription").disabled = true;
+    $("reportProblem").disabled = true;
     lockAttachment(true);
     try {
-      const shared = await session.send($("reportDescription").value, screenshot);
+      const shared = await session.send($("reportDescription").value, screenshot, $("reportProblem").value);
       if (session !== reportSession) return;
       if (shared) {
         $("reportIssueLink").href = shared.url;
@@ -359,7 +360,7 @@
         $("reportPreview").close();
         $("reportSuccess").showModal();
       }
-      else { $("reportDescription").disabled = false; lockAttachment(false); $("reportConsentStatus").textContent = "Sharing declined. OLED Night still works; you can save a report locally."; }
+      else { $("reportDescription").disabled = false; $("reportProblem").disabled = false; lockAttachment(false); $("reportConsentStatus").textContent = "Sharing declined. OLED Night still works; you can save a report locally."; }
     } catch (error) {
       if (session === reportSession) $("reportConsentStatus").textContent = error.message || "Could not submit the issue. You can retry or save a report locally.";
     } finally { if (session === reportSession && !screenshotBusy) { $("reportSubmit").disabled = false; $("reportSubmit").textContent = "Submit report"; } }
@@ -397,6 +398,8 @@
     $("reportIssueLink").hidden = true;
     $("reportDescription").value = "";
     $("reportDescription").disabled = false;
+    $("reportProblem").value = "";
+    $("reportProblem").disabled = false;
     $("reportHost").textContent = OledNightReport.scrub(report).host || host;
     for (const detail of $("reportPreview").querySelectorAll("details")) detail.open = false;
     clearScreenshot(); lockAttachment(false);

@@ -16,6 +16,10 @@ export async function youtubeMusicScenario({page, ext, site, send, setSettings, 
   })()`);
   let s=await state();
   check('YouTube Music: page canvas remains OLED black',s.active&&s.canvas==='rgb(0, 0, 0)',JSON.stringify(s));
+  const surfaces=()=>page.eval(`(()=>Object.fromEntries(['#nav-bar-background','#guide-wrapper','ytmusic-player-page','ytmusic-player-bar','ytmusic-menu-popup-renderer'].map(s=>[s,getComputedStyle(document.querySelector(s)).backgroundColor])))()`);
+  let tones=await surfaces();
+  check('YouTube Music: token-painted header, guide, player page and player bar are OLED black, menus stay raised',
+    ['#nav-bar-background','#guide-wrapper','ytmusic-player-page','ytmusic-player-bar'].every(k=>tones[k]==='rgb(0, 0, 0)')&&tones['ytmusic-menu-popup-renderer']==='rgb(33, 33, 33)',JSON.stringify(tones));
   check('YouTube Music: loaded artwork is not covered by an opaque content overlay',s.imageLoaded&&s.imageFilter==='none'&&s.transparentOverlays,JSON.stringify(s));
   const point=await page.eval(`(()=>{const r=document.getElementById('artwork').getBoundingClientRect();return {x:r.x+10,y:r.y+10};})()`);
   await send('Input.dispatchMouseEvent',{type:'mouseMoved',...point},page.sessionId);
@@ -27,5 +31,7 @@ export async function youtubeMusicScenario({page, ext, site, send, setSettings, 
   await setSettings({extensionEnabled:false});await sleep(250);
   s=await state();
   check('YouTube Music: pause restores the native canvas and preserves artwork',!s.active&&s.canvas==='rgb(19, 19, 19)'&&s.transparentOverlays&&s.imageLoaded&&s.imageFilter==='none',JSON.stringify(s));
+  tones=await surfaces();
+  check('YouTube Music: pause restores native token surfaces',tones['ytmusic-player-bar']==='rgb(33, 33, 33)'&&tones['#nav-bar-background']==='rgb(3, 3, 3)',JSON.stringify(tones));
   await resetSettings();
 }

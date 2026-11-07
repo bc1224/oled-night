@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.76";
+  const VERSION = "0.6.77";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -3529,6 +3529,15 @@
       ${root}[data-oled-night-site="amazon"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) .copilot-compare-on-image-button.cp-comparison-button-animated-collapsed {
         filter: brightness(0.72) !important;
       }
+      /* Amazon's home cards and lower deck are white tiles over a pale page, so
+         generic OLED mapping turns most of the page raised grey. Match the
+         search fast path instead: true black cards with a visible outline. */
+      html[data-oled-night-root][data-oled-night-site="amazon"][data-oled-night-mode="oled"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]):is(*, #oled-night-profile-priority#oled-night-profile-priority#oled-night-profile-priority#oled-night-profile-priority) :is(.a-cardui, #gwm-Deck-btf, #gw-layout, .gw-card-layout) {
+        background-color: var(--oled-night-page) !important;
+      }
+      html[data-oled-night-root][data-oled-night-site="amazon"][data-oled-night-mode="oled"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]):is(*, #oled-night-profile-priority#oled-night-profile-priority#oled-night-profile-priority#oled-night-profile-priority) .a-cardui {
+        outline: 1px solid #2c2d33 !important; outline-offset: -1px !important;
+      }
       /* RES adds a light toolbar even on native-dark Reddit. Do not recolor
          unrelated white content or invert images elsewhere on the page. */
       ${root}[data-oled-night-site="reddit"]:not([data-oled-night-page="none"]):not([data-oled-night-invert]) .res-floater-belowNavbar {
@@ -3574,6 +3583,18 @@
         --yt-live-chat-header-background-color: var(--oled-night-page) !important;
         --yt-live-chat-primary-text-color: var(--oled-night-youtube-primary) !important;
         --yt-live-chat-secondary-text-color: var(--oled-night-youtube-secondary) !important;
+      }
+      /* YouTube Music paints its canvas, guide, header, player page and player
+         bar from its own --ytmusic-* tokens (#030303 and #212121), which the
+         --yt-* palette never reaches. Raised menus and dialogs keep #212121. */
+      html[data-oled-night-root][data-oled-night-youtube] {
+        --ytmusic-background: var(--oled-night-page) !important;
+        --ytmusic-nav-bar: var(--oled-night-page) !important;
+        --ytmusic-detail-header: var(--oled-night-page) !important;
+        --ytmusic-player-page-background: var(--oled-night-page) !important;
+        --ytmusic-player-bar-background: var(--oled-night-page) !important;
+        --ytmusic-general-background-c: var(--oled-night-page) !important;
+        --ytmusic-color-black4: var(--oled-night-page) !important;
       }
       /* Native ChatGPT tokens (current app shell and legacy web UI). Only its
          dark theme's base surfaces change: code, dialogs, controls, selection,
@@ -3766,7 +3787,7 @@
     // Search pages hydrate thousands of repeated result, filter and ad nodes.
     // Style their shared retail components through the cascade, including cards
     // inserted after load. Explicit site treatments retain their usual engine.
-    if (isTopFrame && /^(www\.)?amazon\.com$/i.test(location.hostname) && /^\/s\/?$/.test(location.pathname) &&
+    if (isTopFrame && /^(?:www\.)?amazon\./i.test(location.hostname) && colorsApi().isAmazonStore(location.hostname) && /^\/s\/?$/.test(location.pathname) &&
         (site === "global" || site === "on") && (mode === "oled" || mode === "soft")) {
       styleAmazonSearch(root);
       return;
