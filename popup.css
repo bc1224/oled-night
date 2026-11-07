@@ -92,6 +92,8 @@ input[type="range"]:focus-visible, summary:focus-visible, button:focus-visible {
 #resetSite { display: block; }
 
 dialog textarea { box-sizing:border-box; width:100%; padding:12px; margin:8px 0 0; background:#111116; color:#eee; border:1px solid #54545e; border-radius:8px; font:13px/1.5 system-ui; resize:vertical; min-height:76px; }
+dialog select#reportProblem { box-sizing:border-box; width:100%; padding:8px 10px; margin:8px 0 12px; background:#111116; color:#eee; border:1px solid #54545e; border-radius:8px; font:13px/1.4 system-ui; }
+dialog select#reportProblem:focus-visible { outline:2px solid #b8aaff; outline-offset:2px; }
 dialog label, dialog a { font-size:12px; }
 dialog a { color:#b8aaff; }
 dialog textarea:focus-visible { outline:2px solid #b8aaff; outline-offset:2px; }

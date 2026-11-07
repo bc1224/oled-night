@@ -19,7 +19,7 @@ try {
   await tab.size(360,600);
   await tab.go(`chrome-extension://${id}/popup.html`);
   await tab.eval("document.getElementById('report').click()");await wait(80);
-  assert.equal(await tab.eval("document.getElementById('reportDisclosure').textContent.includes('private to the maintainer')&&document.getElementById('reportDisclosure').textContent.includes('generic tracking issue')"),true,'private intake disclosure is visible before submission');
+  assert.equal(await tab.eval("document.getElementById('reportDisclosure').textContent.includes('private to the maintainer')&&document.getElementById('reportDisclosure').textContent.includes('public GitHub issue is titled with this site')&&document.getElementById('reportProblem').value===''"),true,'private intake and public title disclosure is visible before submission, with no problem type preselected');
   writeFileSync(join(out,'paused-report.png'),await tab.screenshot());
   assert.ok(await tab.eval('document.body.getBoundingClientRect().height>=580'),'opening a report expands a paused toolbar popup to a usable height');
   assert.equal(await tab.eval('document.activeElement.id'),'reportDescription','report opens ready for native keyboard paste');

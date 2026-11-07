@@ -30,7 +30,7 @@ Upload `dist/oled-night-<version>.zip` (build it with `node tools/package.mjs`).
 > • Use Screenshot this page, paste, drop or choose an image. Review it and choose Use screenshot. Nothing is uploaded until you choose Submit report.
 > • The reporting service stores your domain, previewed diagnostics, notes and any screenshot privately for up to 30 days. Only the maintainer can retrieve them with GitHub authentication. No GitHub account is required to submit.
 > • Automatic diagnostics exclude page text, entered values, URL paths, query strings, cookies and browser identifiers. Notes and screenshots can contain private information, so review them before submitting.
-> • GitHub receives only a generic public tracking issue, with no domain, details, diagnostics or image link. Anything you manually add in GitHub issues or comments is public. Cloudflare retains scrubbed reports and images privately for up to 30 days, and abuse/deduplication records for up to 49 hours. Raw network addresses are not stored by the service.
+> • GitHub receives a public tracking issue. It shows the domain and a fixed problem type only if you pick one, and never your notes, other diagnostics or an image link. Anything you manually add in GitHub issues or comments is public. Cloudflare retains scrubbed reports and images privately for up to 30 days, and abuse/deduplication records for up to 49 hours. Raw network addresses are not stored by the service.
 > • Full diagnostic reports can be saved locally and reviewed before you share them yourself.
 >
 > WHAT IT DOES
@@ -73,7 +73,7 @@ Regenerate the images with `node tools/store-assets.mjs`.
 
 **Remote code:** No, the extension does not use remote code. All code ships in the package.
 
-**Data usage:** Disclose Web history for the domain in optional bug reports and Website content for optional notes and screenshots. Explain that recoloring and full diagnostic downloads are local, while optional reports share the previewed domain, technical diagnostics and any notes or image privately with the maintainer for up to 30 days. Only a generic tracking issue is public. Confirm all three certifications (no selling, no unrelated use, no creditworthiness use). Keep dashboard disclosures consistent with the privacy policy; the upload API does not update these fields.
+**Data usage:** Disclose Web history for the domain in optional bug reports and Website content for optional notes and screenshots. Explain that recoloring and full diagnostic downloads are local, while optional reports share the previewed domain, technical diagnostics and any notes or image privately with the maintainer for up to 30 days. The public tracking issue shows the domain and a fixed problem type only if the reporter picks one. Confirm all three certifications (no selling, no unrelated use, no creditworthiness use). Keep dashboard disclosures consistent with the privacy policy; the upload API does not update these fields.
 
 **Privacy policy URL:** Host `store/PRIVACY.md` somewhere public (for example a GitHub repo or gist, or your own site) and paste the link.
 

@@ -303,17 +303,22 @@
     return /^(?:www\.)?chatgpt\.com$|^chat\.openai\.com$/i.test(String(hostname || ""));
   }
 
+  // Amazon storefronts share one page system across country domains.
+  function isAmazonStore(hostname) {
+    return /(^|\.)amazon\.(?:com|ca|co\.uk|de|fr|it|es|nl|se|pl|com\.be|com\.au|com\.mx|com\.br|co\.jp|in|sg|ae|sa|eg|com\.tr)$/i.test(String(hostname || ""));
+  }
+
   // Sites with a small hand-tuned profile on top of the generic recoloring.
   function siteProfile(hostname) {
     const host = String(hostname || "").toLowerCase();
     if (host === "mail.google.com") return "gmail";
     if (host === "analytics.google.com") return "google-analytics";
     if (host === "docs.google.com") return "google-docs";
-    if (/(^|\.)amazon\.com$/.test(host)) return "amazon";
+    if (isAmazonStore(host)) return "amazon";
     if (/^(idmsa|appleid|appstoreconnect)\.apple\.com$/.test(host)) return "apple-auth";
     if (/(^|\.)reddit\.com$/.test(host)) return "reddit";
     return "";
   }
 
-  scope.OledNightColors = { siteProfile, parseColor, luminance, chroma, textTier, mapIconPaint, mapDataPaint, mapBackground, mapForeground, mapBorder, mapGradient, mapShadow, gradientBackdrop, isProtectedMediaTag, usesNativeSafeMode, usesNativeChatTheme };
+  scope.OledNightColors = { siteProfile, isAmazonStore, parseColor, luminance, chroma, textTier, mapIconPaint, mapDataPaint, mapBackground, mapForeground, mapBorder, mapGradient, mapShadow, gradientBackdrop, isProtectedMediaTag, usesNativeSafeMode, usesNativeChatTheme };
 })(globalThis);

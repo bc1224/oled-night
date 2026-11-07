@@ -51,7 +51,11 @@ export async function receiveReport(request,env,storage){
   const report=globalThis.OledNightReport.scrub(raw.report);
   if(!report.host)return json({error:'A public site domain is required'},400);
   let screenshot;try{screenshot=globalThis.OledNightReport.scrubScreenshot(raw.screenshot)}catch{return json({error:'Invalid screenshot'},400)}
-  const description=raw.description.trim().replace(/@/g,'@\u200b'),hash=await digest(JSON.stringify({report,description,screenshot}));
+  if(raw.problem!==undefined&&(typeof raw.problem!=='string'||!Object.hasOwn(globalThis.OledNightReport.PROBLEMS,raw.problem)))return json({error:'Invalid report'},400);
+  // Only clients that disclose it send a problem type. Old clients promised a
+  // generic tracker, so their issues never gain a domain or summary.
+  const problem=raw.problem&&/^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$/.test(report.host)?raw.problem:null;
+  const description=raw.description.trim().replace(/@/g,'@\u200b'),hash=await digest(JSON.stringify({report,description,screenshot,problem}));
   const key='report:'+raw.requestId,prior=await storage.get(key);
   if(prior){if(prior.hash!==hash||!prior.url)return json({error:'This report may already have been submitted. Check GitHub before starting another.'},409);return json({url:prior.url})}
   const day=new Date().toISOString().slice(0,10),expiresAt=Date.now()+2*86400000;
@@ -68,11 +72,18 @@ export async function receiveReport(request,env,storage){
   const privateReport={schema:'oled-private-report-v1',id,requestId:raw.requestId,report,description,screenshotId:imageId||null,createdAt,expiresAt:createdAt+PRIVATE_RETENTION_MS};
   if(screenshot)await storage.put('screenshot:'+imageId,{type:screenshot.type,bytes:Uint8Array.from(atob(screenshot.data),c=>c.charCodeAt(0)),expiresAt:privateReport.expiresAt});
   await storage.put('private:'+id,privateReport);
-  const body='A private report was submitted from OLED Night. Details and any screenshot are available only to the maintainer for up to 30 days.\n\nReport ID: '+id+'\n\nThis public issue contains only a tracking reference. Do not post private details or images in comments.';
+  const label=problem&&globalThis.OledNightReport.PROBLEMS[problem];
+  const version=/^\d{1,3}(?:\.\d{1,4}){1,3}$/.test(report.version||'')?report.version:'unknown';
+  const mode=/^[a-z-]{1,16}$/.test(report.mode||'')?report.mode:'unknown';
+  const title=label?(report.host+': '+label).slice(0,200):'Private OLED Night report';
+  const body=label
+    ?'A report was submitted from OLED Night.\n\n- Site: '+report.host+'\n- Problem: '+label+'\n- Extension version: '+version+'\n- Mode: '+mode+'\n\nThe reporter\'s notes, diagnostics and any screenshot are available only to the maintainer for up to 30 days.\n\nReport ID: '+id+'\n\nDo not post private details or images in comments.'
+    :'A private report was submitted from OLED Night. Details and any screenshot are available only to the maintainer for up to 30 days.\n\nReport ID: '+id+'\n\nThis public issue contains only a tracking reference. Do not post private details or images in comments.';
+  privateReport.problem=problem;
   let response;
   try{response=await (env.fetch||fetch)('https://api.github.com/repos/bc1224/oled-night/issues',{
     method:'POST',headers:{Authorization:'Bearer '+env.GITHUB_TOKEN,'Content-Type':'application/json',Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'OLED-Night-Reporter'},
-    body:JSON.stringify({title:'Private OLED Night report',body,labels:['oled-report']}),signal:AbortSignal.timeout(12000),redirect:'manual'
+    body:JSON.stringify({title,body,labels:['oled-report']}),signal:AbortSignal.timeout(12000),redirect:'manual'
   })}catch{return json({error:'GitHub response was unavailable. This report will not be sent twice.'},502)}
   if(!response.ok){
     // A definitive rejection is safe to retry; ambiguous server errors are not.

@@ -7,7 +7,7 @@ Install [OLED Night from Mozilla Add-ons](https://addons.mozilla.org/en-US/firef
 - Automatic dark mode, full recolor, deepen blacks, invert and per-site Off controls.
 - Per-site text brightness, surface contrast and optional image dimming, plus a global pause that preserves saved rules.
 - Scheduling, settings backup and customizable global/site keyboard shortcuts. The popup shows the keys actually assigned by Firefox.
-- Optional private broken-site reports with previewed diagnostics, notes and a screenshot you explicitly capture, paste, drop or select. Nothing is uploaded until Submit report. Only a generic tracking issue is public, with no GitHub sign-in needed to submit.
+- Optional private broken-site reports with previewed diagnostics, notes and a screenshot you explicitly capture, paste, drop or select. Nothing is uploaded until Submit report. The public tracking issue shows the site domain and problem type only if you pick one. No GitHub sign-in is needed to submit.
 - Readable dark logo lettering and protected media, native ChatGPT colors, and native-color protection on Figma.
 
 Some pages restrict extensions, and some sites need another mode or a site exception. Figma keeps its native colors even when explicitly enabled. Firefox Android is not supported.
