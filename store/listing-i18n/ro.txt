@@ -1,36 +1,13 @@
-OLED Night este un mod întunecat cu negru adevărat pentru orice site. Paginile devin complet negre în loc de gri închis, astfel încât ecranele OLED și AMOLED își pot opri pixelii. Textul rămâne clar, iar fotografiile și videoclipurile își păstrează culorile originale.
+OLED Night este un mod întunecat cu negru adevărat pentru orice site. Fundalurile devin complet negre (#000000) în loc de gri închis, astfel încât ecranele OLED își pot opri pixelii. Textul rămâne clar, iar fotografiile, videoclipurile și logo-urile își păstrează culorile reale.
 
-DE CE OLED NIGHT
-• Negru adevărat, nu gri: fundalurile paginilor devin complet negre, cu carduri și panouri ușor evidențiate, ca structura paginii să rămână ușor de urmărit.
-• Imaginile rămân neatinse: fotografiile, videoclipurile, ilustrațiile, logourile și culorile de brand sunt protejate, nu inversate.
-• Text lizibil: textul principal, secundar și estompat este reglat pentru contrast pe negru, inclusiv literele închise din logouri, fără strălucire.
-• Pentru site-uri moderne: culori CSS moderne, componente web, cadre încorporate și pagini care se schimbă la derulare. Widgeturile de verificare rămân neatinse.
+• Alege un mod pentru fiecare site: Automatic, Full recolor, Deepen blacks only, Invert sau Off.
+• Reglează luminozitatea textului, contrastul și atenuarea imaginilor pentru fiecare site.
+• Programează modul întunecat sau comută-l cu Alt+Shift+E (peste tot) și Alt+Shift+D (acest site).
+• Funcționează pe site-uri moderne, inclusiv aplicații web, cadre încorporate și pagini care se schimbă la derulare.
 
-CONTROL PENTRU FIECARE SITE
-• Alegeți un mod pentru fiecare site: Automatic, Full recolor, Deepen blacks only, Invert (pentru aplicații canvas compatibile) sau Off.
-• Luminozitatea textului, contrastul suprafețelor și estomparea opțională a imaginilor, pentru fiecare site. „All sites” păstrează valorile implicite; setările salvate pentru un site au prioritate.
-• Program pentru modul întunecat, plus export și import al setărilor.
-• Scurtături: Alt+Shift+E pornește sau oprește OLED Night peste tot; Alt+Shift+D comută site-ul curent. Alternative: Ctrl+Shift+9 și Ctrl+Shift+8 (Command în loc de Ctrl pe macOS). Le puteți schimba din browser; fereastra extensiei arată tastele atribuite.
-• Adaptat site-urilor: Figma își păstrează culorile originale de design, iar ChatGPT își păstrează paleta pe suprafețe negre OLED, pentru afișarea fluentă a răspunsurilor.
+Privat din construcție: totul rulează pe dispozitivul tău. Fără analize, reclame sau cont, iar istoricul de navigare nu este înregistrat. Dacă un site arată greșit, „Report a broken site” trimite doar ce verifici și aprobi.
 
-PRIVAT DIN CONSTRUCȚIE
-• Recolorarea rulează integral pe dispozitivul dvs. Fără analize, telemetrie în fundal, reclame sau cont.
-• OLED Night nu înregistrează și nu salvează istoricul de navigare. Setările și preferințele pentru site-uri rămân în stocarea browserului și se pot sincroniza prin profilul dvs. de browser. Dezvoltatorul nu le poate vedea.
+Tema separată OLED Night pentru Chrome întunecă fereastra Chrome; este opțională. Deocamdată interfața este în engleză.
 
-RAPOARTE DE ERORI OPȚIONALE ȘI PRIVATE
-• Dacă un site arată greșit, alegeți „Report a broken site”. Vedeți în prealabil datele tehnice curățate și puteți adăuga note sau o captură de ecran. Nimic nu se trimite până nu alegeți „Submit report”.
-• Rapoartele sunt păstrate privat până la 30 de zile și doar dezvoltatorul le poate citi. Nu aveți nevoie de cont GitHub pentru a trimite.
-• Diagnosticarea automată exclude textul paginii, valorile introduse, căile URL, parametrii de interogare, cookie-urile și identificatorii browserului. Notele și capturile de ecran pot conține informații private, așa că verificați-le înainte de trimitere.
-• Un tichet public de urmărire pe GitHub arată doar un titlu generic sau, dacă alegeți un tip de problemă, domeniul site-ului, tipul problemei, versiunea extensiei și modul de culoare. Notele, restul diagnosticării și capturile de ecran nu sunt publicate niciodată.
-• Puteți salva și local un raport de diagnosticare complet, pe care să îl trimiteți singur.
-
-DE CE CERE ACCES LA SITE-URI
-Accesul la site-uri îi permite lui OLED Night să citească stilurile paginilor și să le recoloreze local. „storage” salvează setările; „activeTab” identifică site-ul curent pentru fereastra extensiei și scurtături; „scripting” verifică dacă fila poate fi accesată. Accesul la clipboard este opțional și folosit doar când lipiți o captură de ecran într-un raport.
-
-Unele pagini restricționează extensiile, iar câteva site-uri pot funcționa mai bine în alt mod sau cu OLED Night oprit. Tema separată OLED Night pentru Chrome întunecă fereastra Chrome; este opțională.
-
-Interfața extensiei este deocamdată în engleză; numele, descrierea, scurtăturile și pagina de bun venit sunt traduse.
-
-Gratuit și open source, sub licența GPL-3.0.
-Cod sursă și asistență: https://github.com/bc1224/oled-night
+Gratuit și open source: https://github.com/bc1224/oled-night
 Politica de confidențialitate: https://github.com/bc1224/oled-night/blob/main/store/PRIVACY.md

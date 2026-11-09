@@ -18,45 +18,26 @@ Upload `dist/oled-night-<version>.zip` (build it with `node tools/package.mjs`).
 
 **Description:**
 
-> OLED Night is a true-black dark mode for every website. Pages turn pure black instead of dark gray, so OLED and AMOLED screens can switch pixels off, while text stays crisp and photos and video keep their original colors.
+Keep it short; full permission and report details live in the Privacy tab and `store/PRIVACY.md`.
+
+> OLED Night is a true-black dark mode for every website. Backgrounds turn pure black (#000000) instead of dark gray, so OLED screens can switch pixels off, while text stays crisp and photos, video and logos keep their real colors.
 >
-> WHY OLED NIGHT
-> • True black, not gray: page backgrounds go pure black, with subtly raised cards and panels so layouts stay easy to follow.
-> • Images stay intact: photos, video, artwork, logos and brand accents are protected instead of inverted.
-> • Readable text: primary, secondary and muted text are tuned for contrast on black, including dark logo lettering without a glow.
-> • Built for modern sites: handles modern CSS colors, web components, embedded frames and pages that change as you scroll. Verification widgets are left untouched.
+> • Pick a mode per site: Automatic, Full recolor, Deepen blacks only, Invert or Off.
+> • Adjust text brightness, contrast and image dimming for each site.
+> • Schedule dark mode, or toggle it with Alt+Shift+E (everywhere) and Alt+Shift+D (this site).
+> • Works on modern sites, including web apps, embedded frames and pages that update as you scroll.
 >
-> CONTROL EVERY SITE
-> • Choose a mode per site: Automatic, Full recolor, Deepen blacks only, Invert (for compatible canvas apps) or Off.
-> • Per-site text brightness, surface contrast and optional image dimming. All sites holds your defaults; saved site choices take priority.
-> • Schedule dark mode, and export or import your settings.
-> • Shortcuts: Alt+Shift+E pauses or resumes OLED Night everywhere; Alt+Shift+D toggles the current site. Alternates are Ctrl+Shift+9 and Ctrl+Shift+8 (Command instead of Ctrl on macOS). Customize them in your browser; the popup shows the assigned keys.
-> • Site-aware: Figma keeps its native design colors, and ChatGPT keeps its native palette on OLED black surfaces for smooth streaming.
+> Private by design: everything runs on your device. No analytics, ads or account, and no browsing history is recorded. If a site looks wrong, Report a broken site sends only what you review and approve.
 >
-> PRIVATE BY DESIGN
-> • Recoloring runs entirely on your device. No analytics, background telemetry, ads or account.
-> • OLED Night does not record or save your browsing history. Settings and per-site preferences stay in your browser's storage and can sync through your browser profile. The developer cannot see them.
+> The optional OLED Night Chrome theme darkens Chrome's own window too.
 >
-> OPTIONAL PRIVATE BUG REPORTS
-> • If a site looks wrong, choose Report a broken site. You preview scrubbed technical diagnostics and can add notes or a screenshot. Nothing is sent until you choose Submit report.
-> • Reports are stored privately for up to 30 days, and only the maintainer can read them. No GitHub account is needed to submit.
-> • Automatic diagnostics exclude page text, entered values, URL paths, query strings, cookies and browser identifiers. Notes and screenshots can contain private information, so review them before submitting.
-> • A public GitHub tracking issue shows only a generic title, or the site domain, problem type, extension version and color mode if you pick a problem type. Your notes, other diagnostics and screenshots are never published.
-> • You can also save a full diagnostic report locally and share it yourself.
->
-> WHY IT ASKS FOR WEBSITE ACCESS
-> Website access lets OLED Night read page styles and recolor pages locally. Storage saves settings; activeTab identifies the current site for the popup and shortcuts; scripting checks whether the tab can be reached. Clipboard access is optional and used only when you paste a screenshot into a report.
->
-> Some pages restrict extensions, and a few sites may work better in another mode or with OLED Night off. The separate OLED Night Chrome theme darkens Chrome's own window; it is optional.
->
-> Free and open source under GPL-3.0.
-> Source and support: https://github.com/bc1224/oled-night
+> Free and open source: https://github.com/bc1224/oled-night
 > Privacy policy: https://github.com/bc1224/oled-night/blob/main/store/PRIVACY.md
 
 **Graphic assets:**
 - Store icon: `store/images/store-icon-128.png` (128x128, artwork padded to 96x96)
 - Screenshots (1280x800), upload in this order:
-  1. `store/images/screenshot-1-before-after.png` (article page, before and after)
+  1. `store/images/screenshot-1-before-after.png` (inbox, before and after)
   2. `store/images/screenshot-2-popup.png` (popup)
   3. `store/images/screenshot-3-dashboard.png` (analytics dashboard, before and after; source page `store/demo-dashboard.html`)
   4. `store/images/screenshot-4-welcome.png` (welcome page)
