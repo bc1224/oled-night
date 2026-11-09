@@ -342,6 +342,11 @@ try {
   const suggestionInk = await css("suggestionText", "color"), suggestionHint = await css("suggestionHint", "color"), searchInk = await css("mailSearchInput", "color");
   check("gmail: primary and secondary suggestions are readable", lum(suggestionInk) > 0.5 && lum(suggestionHint) > 0.3 && lum(searchInk) > 0.25, `${suggestionInk} / ${suggestionHint} / ${searchInk}`);
 
+  const ratio = (a, b) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
+  const noticeBg = await css("mailNotice", "backgroundColor");
+  const noticeInk = [await css("mailNotice", "color"), await css("mailNoticeShow", "color"), await css("mailNoticeIgnore", "color")];
+  check("gmail: tinted notice bar text and links stay readable", noticeInk.every(ink => ratio(ink, noticeBg) >= 4.5), `${noticeBg}: ${noticeInk.join(" / ")}`);
+
   // Site CSS reproduced from Apple's auth widget and RES on dark Reddit.
   check("gmail: trimmed-content ellipsis visible", (await css("ellipsis", "filter")).includes("invert(1)") && (await css("ellipsis", "opacity")) === "0.85");
   check("gmail: native-dark shell leaves cross-origin logo uninverted", !(await css("mailLogo", "filter")).includes("invert"), await css("mailLogo", "filter"));

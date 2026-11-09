@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.82
+
+- Gmail (dark theme): the yellow "New message" bar's Show and Ignore links are readable again. They were turned light gray while the bar kept its yellow. Links and buttons now get light text only when they sit on a light surface they paint themselves, and text that has lost contrast on a tinted light surface is darkened instead.
+- Google Calendar and other Google apps: barely blue fields and editors (such as the event editor's location, guests and description boxes) are now a near-neutral dark gray instead of blocks of navy. Clearly tinted surfaces keep their hue as before.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.81
 
 - Zillow (and other Next.js sites): the search map no longer breaks with "Uh oh, something broke". OLED Night was tagging invisible page metadata (`<script>`, `<style>`, `<link>`, `<meta>` and similar tags) with its paint attributes. Next.js compares those head tags against the server copy, saw a difference, and inserted them again, so scripts such as Google Maps ran twice. Non-rendered tags are now left untouched.
