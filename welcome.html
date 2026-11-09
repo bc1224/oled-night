@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Welcome to OLED Night</title>
+  <link rel="stylesheet" href="welcome.css">
+</head>
+<body>
+  <main class="welcome">
+    <header>
+      <img src="assets/icon-128.png" width="64" height="64" alt="">
+      <h1 data-i18n="welcomeTitle">OLED Night is on</h1>
+      <p class="lead" data-i18n="welcomeLead">Every site you open is now true black. Text stays readable and photos keep their colors.</p>
+    </header>
+    <section aria-labelledby="pinTitle">
+      <h2 id="pinTitle" data-i18n="welcomePinTitle">Pin it to your toolbar</h2>
+      <p data-i18n="welcomePinBody">Click the puzzle-piece icon next to the address bar, then the pin beside OLED Night. Its popup controls the current site.</p>
+    </section>
+    <section aria-labelledby="modesTitle">
+      <h2 id="modesTitle" data-i18n="welcomeModesTitle">Choose a mode for any site</h2>
+      <dl class="modes">
+        <div><dt data-i18n="modeAuto">Automatic</dt><dd data-i18n="modeAutoBody">Recolors light sites. On sites that are already dark, it only deepens their grays.</dd></div>
+        <div><dt data-i18n="modeRecolor">Full recolor</dt><dd data-i18n="modeRecolorBody">Always recolors, even when a site already looks dark.</dd></div>
+        <div><dt data-i18n="modeDeepen">Deepen blacks only</dt><dd data-i18n="modeDeepenBody">Only pushes the darkest grays to true black.</dd></div>
+        <div><dt data-i18n="modeInvert">Invert</dt><dd data-i18n="modeInvertBody">For canvas apps such as spreadsheets: flips the page, then flips images back.</dd></div>
+      </dl>
+    </section>
+    <section aria-labelledby="shortcutsTitle">
+      <h2 id="shortcutsTitle" data-i18n="welcomeShortcutsTitle">Keyboard shortcuts</h2>
+      <ul class="shortcuts">
+        <li><kbd id="extensionShortcut">Alt+Shift+E</kbd> <span data-i18n="shortcutEverywhere">On or off everywhere</span></li>
+        <li><kbd id="siteShortcut">Alt+Shift+D</kbd> <span data-i18n="shortcutSite">On or off for the current site</span></li>
+      </ul>
+    </section>
+    <div class="actions">
+      <button id="openSettings" type="button" class="primary" data-i18n="welcomeSettings">Open settings</button>
+      <a id="theme" href="https://chromewebstore.google.com/detail/oled-night-chrome-theme/pkdklfocgpcnijiggfddneadmhacbpmf" target="_blank" rel="noopener" data-i18n="welcomeTheme">Get the black Chrome theme</a>
+    </div>
+    <p class="report" data-i18n="welcomeReport">Something look wrong on a site? Open the popup and choose Report a broken site.</p>
+  </main>
+  <script src="welcome.js"></script>
+</body>
+</html>

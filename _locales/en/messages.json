@@ -1,0 +1,80 @@
+{
+  "extName": {
+    "message": "OLED Night"
+  },
+  "extDescription": {
+    "message": "True-black (#000000) dark mode for OLED screens. Readable text, untouched images, per-site controls. Free and open source."
+  },
+  "cmdToggleExtension": {
+    "message": "Turn OLED Night on or off everywhere"
+  },
+  "cmdToggleSite": {
+    "message": "Turn OLED Night on or off for the current site"
+  },
+  "cmdToggleExtensionBackup": {
+    "message": "Turn OLED Night on or off everywhere (alternate shortcut)"
+  },
+  "cmdToggleSiteBackup": {
+    "message": "Turn OLED Night on or off for the current site (alternate shortcut)"
+  },
+  "welcomeTitle": {
+    "message": "OLED Night is on"
+  },
+  "welcomeLead": {
+    "message": "Every site you open is now true black. Text stays readable and photos keep their colors."
+  },
+  "welcomePinTitle": {
+    "message": "Pin it to your toolbar"
+  },
+  "welcomePinBody": {
+    "message": "Click the puzzle-piece icon next to the address bar, then the pin beside OLED Night. Its popup controls the current site."
+  },
+  "welcomeModesTitle": {
+    "message": "Choose a mode for any site"
+  },
+  "modeAuto": {
+    "message": "Automatic"
+  },
+  "modeAutoBody": {
+    "message": "Recolors light sites. On sites that are already dark, it only deepens their grays."
+  },
+  "modeRecolor": {
+    "message": "Full recolor"
+  },
+  "modeRecolorBody": {
+    "message": "Always recolors, even when a site already looks dark."
+  },
+  "modeDeepen": {
+    "message": "Deepen blacks only"
+  },
+  "modeDeepenBody": {
+    "message": "Only pushes the darkest grays to true black."
+  },
+  "modeInvert": {
+    "message": "Invert"
+  },
+  "modeInvertBody": {
+    "message": "For canvas apps such as spreadsheets: flips the page, then flips images back."
+  },
+  "welcomeShortcutsTitle": {
+    "message": "Keyboard shortcuts"
+  },
+  "shortcutEverywhere": {
+    "message": "On or off everywhere"
+  },
+  "shortcutSite": {
+    "message": "On or off for the current site"
+  },
+  "shortcutUnset": {
+    "message": "Not set"
+  },
+  "welcomeSettings": {
+    "message": "Open settings"
+  },
+  "welcomeTheme": {
+    "message": "Get the black Chrome theme"
+  },
+  "welcomeReport": {
+    "message": "Something look wrong on a site? Open the popup and choose Report a broken site."
+  }
+}

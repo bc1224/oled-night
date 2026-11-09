@@ -8,7 +8,7 @@ const source = resolve(__dirname, '..');
 const fixture = mkdtempSync(join(tmpdir(), 'oled-night-packaging-'));
 try {
   for (const name of readdirSync(source)) {
-    if (/\.(js|html|css)$/.test(name) || ['INSTALL.md', 'LICENSE', 'assets', 'theme'].includes(name)) {
+    if (/\.(js|html|css)$/.test(name) || ['INSTALL.md', 'LICENSE', 'assets', 'theme', '_locales'].includes(name)) {
       cpSync(join(source, name), join(fixture, name), { recursive: true });
     }
   }

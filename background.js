@@ -52,5 +52,23 @@ async function removeOpenShadowsScript() {
   } catch {}
 }
 
-chrome.runtime.onInstalled.addListener(removeOpenShadowsScript);
+// First install opens a short welcome page. Unpacked development copies skip it so
+// test browsers and local reloads don't gain an extra tab. installedAt (local only,
+// never synced or sent) lets the popup wait before its one optional rating link;
+// existing users start counting from their first update to this version.
+async function handleInstalled(details) {
+  removeOpenShadowsScript();
+  try {
+    const { installedAt } = await chrome.storage.local.get("installedAt");
+    if (!installedAt) await chrome.storage.local.set({ installedAt: Date.now() });
+  } catch {}
+  if (details?.reason !== "install") return;
+  try {
+    const self = await chrome.management.getSelf();
+    if (self.installType === "development") return;
+  } catch {}
+  try { await chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") }); } catch {}
+}
+
+chrome.runtime.onInstalled.addListener(handleInstalled);
 chrome.runtime.onStartup.addListener(removeOpenShadowsScript);

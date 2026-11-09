@@ -1,0 +1,36 @@
+OLED Night ist ein Dunkelmodus mit echtem Schwarz für jede Website. Seiten werden reinschwarz statt dunkelgrau, sodass OLED- und AMOLED-Bildschirme Pixel abschalten können. Text bleibt scharf, und Fotos und Videos behalten ihre Originalfarben.
+
+WARUM OLED NIGHT
+• Echtes Schwarz statt Grau: Seitenhintergründe werden reinschwarz, Karten und Bereiche leicht abgehoben, damit Layouts übersichtlich bleiben.
+• Bilder bleiben unverändert: Fotos, Videos, Grafiken, Logos und Markenfarben werden geschützt statt invertiert.
+• Gut lesbarer Text: Haupt-, Neben- und gedämpfter Text sind für Kontrast auf Schwarz abgestimmt, auch dunkle Logo-Schrift ohne Leuchtrand.
+• Für moderne Websites: moderne CSS-Farben, Web Components, eingebettete Frames und Seiten, die sich beim Scrollen ändern. Verifizierungs-Widgets bleiben unberührt.
+
+JEDE WEBSITE STEUERN
+• Modus pro Website: Automatic, Full recolor, Deepen blacks only, Invert (für kompatible Canvas-Apps) oder Off.
+• Textintensität, Flächenkontrast und optionales Abdunkeln von Bildern pro Website. „All sites“ enthält Ihre Standardwerte; gespeicherte Website-Einstellungen haben Vorrang.
+• Zeitplan für den Dunkelmodus sowie Export und Import Ihrer Einstellungen.
+• Tastenkürzel: Alt+Umschalt+E schaltet OLED Night überall ein oder aus, Alt+Umschalt+D die aktuelle Website. Alternativ Strg+Umschalt+9 und Strg+Umschalt+8 (unter macOS Befehlstaste statt Strg). Sie können sie im Browser anpassen; das Popup zeigt die zugewiesenen Tasten.
+• Website-bewusst: Figma behält seine originalen Designfarben, und ChatGPT behält seine eigene Palette auf OLED-schwarzen Flächen für flüssiges Streaming.
+
+PRIVAT VON GRUND AUF
+• Das Umfärben läuft vollständig auf Ihrem Gerät. Keine Analysen, keine Telemetrie im Hintergrund, keine Werbung, kein Konto.
+• OLED Night zeichnet Ihren Browserverlauf nicht auf und speichert ihn nicht. Einstellungen und Website-Präferenzen bleiben im Speicher Ihres Browsers und können über Ihr Browserprofil synchronisiert werden. Der Entwickler kann sie nicht sehen.
+
+OPTIONALE PRIVATE FEHLERBERICHTE
+• Sieht eine Website falsch aus, wählen Sie „Report a broken site“. Sie sehen bereinigte technische Diagnosedaten vorab und können Notizen oder einen Screenshot hinzufügen. Nichts wird gesendet, bevor Sie „Submit report“ wählen.
+• Berichte werden bis zu 30 Tage privat gespeichert, und nur der Entwickler kann sie lesen. Zum Senden ist kein GitHub-Konto nötig.
+• Automatische Diagnosedaten enthalten keinen Seitentext, keine Eingaben, URL-Pfade, Abfrageparameter, Cookies oder Browserkennungen. Notizen und Screenshots können private Informationen enthalten; prüfen Sie sie vor dem Senden.
+• Ein öffentliches GitHub-Tracking-Issue zeigt nur einen allgemeinen Titel, oder die Domain, den Problemtyp, die Erweiterungsversion und den Farbmodus, wenn Sie einen Problemtyp wählen. Ihre Notizen, weitere Diagnosedaten und Screenshots werden nie veröffentlicht.
+• Sie können auch einen vollständigen Diagnosebericht lokal speichern und selbst weitergeben.
+
+WARUM WEBSITE-ZUGRIFF NÖTIG IST
+Mit dem Website-Zugriff liest OLED Night die Seitenstile und färbt Seiten lokal um. „storage“ speichert Einstellungen; „activeTab“ erkennt die aktuelle Website für Popup und Tastenkürzel; „scripting“ prüft, ob der Tab erreichbar ist. Der Zugriff auf die Zwischenablage ist optional und wird nur genutzt, wenn Sie einen Screenshot in einen Bericht einfügen.
+
+Manche Seiten schränken Erweiterungen ein, und einige Websites funktionieren in einem anderen Modus oder mit ausgeschaltetem OLED Night besser. Das separate OLED Night Chrome-Design färbt das Chrome-Fenster selbst dunkel; es ist optional.
+
+Die Bedienoberfläche der Erweiterung ist derzeit auf Englisch; Name, Beschreibung, Tastenkürzel und die Willkommensseite sind übersetzt.
+
+Kostenlos und Open Source unter GPL-3.0.
+Quellcode und Support: https://github.com/bc1224/oled-night
+Datenschutzerklärung: https://github.com/bc1224/oled-night/blob/main/store/PRIVACY.md

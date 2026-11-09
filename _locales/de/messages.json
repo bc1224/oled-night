@@ -1,0 +1,80 @@
+{
+  "extName": {
+    "message": "OLED Night"
+  },
+  "extDescription": {
+    "message": "Echter Schwarz-Dunkelmodus (#000000) für OLED-Bildschirme. Lesbarer Text, unveränderte Bilder, Einstellungen pro Website. Kostenlos."
+  },
+  "cmdToggleExtension": {
+    "message": "OLED Night überall ein- oder ausschalten"
+  },
+  "cmdToggleSite": {
+    "message": "OLED Night für die aktuelle Website ein- oder ausschalten"
+  },
+  "cmdToggleExtensionBackup": {
+    "message": "OLED Night überall ein- oder ausschalten (alternatives Tastenkürzel)"
+  },
+  "cmdToggleSiteBackup": {
+    "message": "OLED Night für die aktuelle Website ein- oder ausschalten (alternatives Tastenkürzel)"
+  },
+  "welcomeTitle": {
+    "message": "OLED Night ist aktiv"
+  },
+  "welcomeLead": {
+    "message": "Jede Website, die du öffnest, ist jetzt echt schwarz. Text bleibt gut lesbar und Fotos behalten ihre Farben."
+  },
+  "welcomePinTitle": {
+    "message": "An die Symbolleiste anheften"
+  },
+  "welcomePinBody": {
+    "message": "Klicke auf das Puzzleteil-Symbol neben der Adressleiste und dann auf die Stecknadel neben OLED Night. Im Pop-up steuerst du die aktuelle Website."
+  },
+  "welcomeModesTitle": {
+    "message": "Wähle für jede Website einen Modus"
+  },
+  "modeAuto": {
+    "message": "Automatisch"
+  },
+  "modeAutoBody": {
+    "message": "Färbt helle Websites um. Bei bereits dunklen Websites werden nur die Grautöne vertieft."
+  },
+  "modeRecolor": {
+    "message": "Vollständig umfärben"
+  },
+  "modeRecolorBody": {
+    "message": "Färbt immer um, auch wenn eine Website schon dunkel aussieht."
+  },
+  "modeDeepen": {
+    "message": "Nur Schwarz vertiefen"
+  },
+  "modeDeepenBody": {
+    "message": "Macht nur die dunkelsten Grautöne zu echtem Schwarz."
+  },
+  "modeInvert": {
+    "message": "Invertieren"
+  },
+  "modeInvertBody": {
+    "message": "Für Canvas-Apps wie Tabellen: kehrt die Seite um und Bilder wieder zurück."
+  },
+  "welcomeShortcutsTitle": {
+    "message": "Tastenkürzel"
+  },
+  "shortcutEverywhere": {
+    "message": "Überall ein oder aus"
+  },
+  "shortcutSite": {
+    "message": "Für die aktuelle Website ein oder aus"
+  },
+  "shortcutUnset": {
+    "message": "Nicht festgelegt"
+  },
+  "welcomeSettings": {
+    "message": "Einstellungen öffnen"
+  },
+  "welcomeTheme": {
+    "message": "Schwarzes Chrome-Design holen"
+  },
+  "welcomeReport": {
+    "message": "Sieht eine Website falsch aus? Öffne das Pop-up und wähle Report a broken site."
+  }
+}

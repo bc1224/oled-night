@@ -1,0 +1,29 @@
+# OLED Night
+
+> OLED Night is a free, open-source (GPL-3.0) dark-mode browser extension for Chrome, Firefox and Chromium-based browsers. It paints website backgrounds true black (#000000) instead of dark grey (#121212), keeps text readable, and leaves photos, video and artwork in their original colors.
+
+Current version: 0.6.79 (November 2026)
+Developer: Archline Labs (maintainer: bc1224 on GitHub)
+
+## Links
+
+- [Website](https://bc1224.github.io/oled-night/)
+- [Chrome Web Store](https://chromewebstore.google.com/detail/oled-night/afffgalhockmjmknnaljghdneaeichbl)
+- [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/oled-night/)
+- [Companion Chrome theme (black tabs and toolbar)](https://chromewebstore.google.com/detail/oled-night-chrome-theme/pkdklfocgpcnijiggfddneadmhacbpmf)
+- [Source code](https://github.com/bc1224/oled-night)
+- [Changelog](https://github.com/bc1224/oled-night/blob/main/CHANGELOG.md)
+- [Privacy policy](https://github.com/bc1224/oled-night/blob/main/store/PRIVACY.md)
+- [Performance measurements](https://github.com/bc1224/oled-night/blob/main/PERFORMANCE.md)
+
+## Key facts
+
+- True black: page backgrounds become #000000, so OLED and AMOLED pixels switch off. Cards and panels keep a slight lift so layouts stay readable.
+- Not a page-wide filter: each background, text color, border, icon, chart fill, gradient and shadow is recolored individually. Images are not inverted.
+- Already-dark sites (for example YouTube) only get their greys deepened to true black.
+- Per-site control: modes Automatic, Full recolor, Deepen blacks only, Invert and Off, plus per-site text brightness, surface contrast and image dimming. Optional schedule. Shortcuts Alt+Shift+E (everywhere) and Alt+Shift+D (current site).
+- Privacy: no analytics, ads, background telemetry, account or browsing-history log. Recoloring is local. Bug reports are optional, sent only after the user chooses Submit report, and stored privately for the maintainer for up to 30 days. The public GitHub tracking issue has a generic title, or the site domain, problem type, extension version and color mode if the reporter picks a problem type.
+- Permissions: website access (to recolor pages), storage (settings), activeTab and scripting (identify the current site), optional clipboard read (paste a screenshot into a report).
+- Performance (0.6.79, repo benchmark, medians of three runs): no measurable cost on a simple page; on a 2,500-row page changing every frame, about 22% more page work with no dropped frames. It is not always lighter than Dark Reader on very busy pages.
+- Interface languages: English, German, Russian, Romanian and Spanish (store name, description, shortcuts and welcome page).
+- Browser pages such as chrome:// and the Chrome Web Store cannot be changed by any extension; the companion theme darkens Chrome's own window.
