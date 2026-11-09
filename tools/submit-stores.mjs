@@ -76,11 +76,21 @@ function amoToken() {
   return `${first}.${createHmac("sha256", process.env.AMO_API_SECRET).update(first).digest("base64url")}`;
 }
 
+// AMO throttles bursts of listing edits with HTTP 429. Wait (Retry-After when given) and resend.
+export async function retryThrottled(send, wait = delay, attempts = 6) {
+  for (let attempt = 1; ; attempt++) {
+    const response = await send();
+    if (response.status !== 429 || attempt >= attempts) return response;
+    const after = Number(response.headers?.get?.('retry-after'));
+    await wait(Math.min(Number.isFinite(after) && after > 0 ? after * 1000 : 15000 * attempt, 120000));
+  }
+}
+
 async function amoRequest(path, options = {}) {
-  const response = await fetch(`${AMO_BASE}${path}`, {
+  const response = await retryThrottled(() => fetch(`${AMO_BASE}${path}`, {
     ...options,
     headers: { Authorization: `JWT ${amoToken()}`, ...options.headers }
-  });
+  }));
   return json(response, `AMO ${path}`);
 }
 

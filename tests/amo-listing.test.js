@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const {readFileSync} = require('node:fs');
 const {join} = require('node:path');
 (async () => {
-  const {updateAmoListing, syncAmoPreviews, firefoxListingTranslation, amoListingAssets, AMO_LOCALES} =
+  const {updateAmoListing, syncAmoPreviews, firefoxListingTranslation, amoListingAssets, AMO_LOCALES, retryThrottled} =
     await import('../tools/submit-stores.mjs');
   const root = join(__dirname, '..');
 
@@ -65,5 +65,15 @@ const {join} = require('node:path');
   log.length = 0;
   assert.equal(await syncAmoPreviews(previewRequest, shots), 'unchanged');
   assert.ok(log.every(l => l.startsWith('GET')), 'matching previews cause no writes');
+  // HTTP 429 is retried with Retry-After (seconds) or a growing fallback, and gives up after the limit.
+  const waits = [];
+  const responses = [{status: 429, headers: new Headers({'retry-after': '7'})}, {status: 429, headers: new Headers()}, {status: 200}];
+  const ok = await retryThrottled(async () => responses.shift(), async ms => waits.push(ms));
+  assert.equal(ok.status, 200);
+  assert.deepEqual(waits, [7000, 30000]);
+  let sends = 0;
+  const throttled = await retryThrottled(async () => (sends++, {status: 429, headers: new Headers()}), async () => {}, 3);
+  assert.equal(throttled.status, 429);
+  assert.equal(sends, 3);
   console.log('AMO listing: Firefox translations, all-locale summary/description readback and ordered preview sync verified.');
 })().catch(error => { console.error(error); process.exitCode = 1; });
