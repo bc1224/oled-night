@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.78
+
+- ChatGPT: spreadsheet and CSV file previews are now dark. ChatGPT draws that grid on a canvas and kept it white even in its dark theme; OLED Night now inverts only that grid while ChatGPT is dark, keeping selection colors. Previews ChatGPT already shows dark, and the light theme, are unchanged.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.77
 
 - Make YouTube Music true black. Its header, side guide, player page and player bar used YouTube Music's own `#030303` and `#212121` color tokens, which OLED Night did not reach. Menus and dialogs stay slightly raised so they remain distinct.
