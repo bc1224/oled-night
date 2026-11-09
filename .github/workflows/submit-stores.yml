@@ -70,6 +70,7 @@ jobs:
           AMO_API_KEY: ${{ secrets.AMO_API_KEY }}
           AMO_API_SECRET: ${{ secrets.AMO_API_SECRET }}
           AMO_TARGET: ${{ inputs.store == 'amo-listing' && '--amo-listing' || '--amo' }}
+          OLED_LISTING_ROOT: ${{ github.workspace }}/.store-uploader
         run: |
           if [[ -n "$AMO_API_KEY" && -n "$AMO_API_SECRET" ]]; then
             node tools/submit-stores.mjs "$AMO_TARGET"
