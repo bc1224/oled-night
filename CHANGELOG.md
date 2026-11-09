@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.81
+
+- Zillow (and other Next.js sites): the search map no longer breaks with "Uh oh, something broke". OLED Night was tagging invisible page metadata (`<script>`, `<style>`, `<link>`, `<meta>` and similar tags) with its paint attributes. Next.js compares those head tags against the server copy, saw a difference, and inserted them again, so scripts such as Google Maps ran twice. Non-rendered tags are now left untouched.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.80
 
 - ChatGPT: Word (.docx) and PDF file previews are now dark. Both rendered as white pages even in ChatGPT's dark theme; OLED Night now inverts only those pages while ChatGPT is dark, and flips images inside Word documents back to their real colors. PDF pages are drawn as a single image, so photos inside PDFs also appear inverted. Text, Markdown, code and JSON previews were already dark; Excel previews are covered by the 0.6.78 spreadsheet fix.

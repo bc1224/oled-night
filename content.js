@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.80";
+  const VERSION = "0.6.81";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -12,6 +12,9 @@
   const ICON_PARTS = "path, circle, rect, ellipse, polygon, polyline, line, text, use, g";
   const CHART_PARTS = `${ICON_PARTS}, stop`;
   const MARK = "data-oled-night";
+  // Document metadata never paints. Marking it also breaks frameworks that
+  // compare head tags by isEqualNode (Next.js re-inserts, so scripts run twice).
+  const NON_RENDERED = "head, script, style, link, meta, noscript, template, title, base";
   const SHARED_BG = "data-oled-night-bg";
   const MEASURE = "data-oled-night-measure";
   // Set while we swap overrides in and out, so site CSS transitions on colors
@@ -1482,6 +1485,7 @@
   }
 
   function write(element, found, same = unchanged(element, found)) {
+    if (element.matches(NON_RENDERED)) return;
     classSnapshots.set(element, element.getAttribute('class'));
     inlineStyles.set(element, inlineSignature(element));
     element.removeAttribute(SHARED_BG);
@@ -1575,7 +1579,7 @@
     const guard = root.querySelector(BOT_CHECK) ? PRESERVE : COLOR_CONTROL;
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
       acceptNode: (node) => {
-        if (node.matches(guard) || isExternalOverlay(node)) return NodeFilter.FILTER_REJECT;
+        if (node.matches(guard) || node.matches(NON_RENDERED) || isExternalOverlay(node)) return NodeFilter.FILTER_REJECT;
         if (deferHiddenBranch(node, list)) return NodeFilter.FILTER_REJECT;
         if (!isMedia(node)) return NodeFilter.FILTER_ACCEPT;
         if (node.localName === "svg") icons.add(node);
@@ -1594,7 +1598,7 @@
   }
 
   function collect(root, list, seen) {
-    if (!(root instanceof Element) || !root.isConnected || seen.has(root) || preservesColor(root)) return;
+    if (!(root instanceof Element) || !root.isConnected || seen.has(root) || preservesColor(root) || root.closest(NON_RENDERED)) return;
     if (deferHiddenBranch(root, list)) return;
     if (root.localName === "svg") { list.icons.add(root); return; }
     // Charts often draw in stages, adding shapes to an SVG that's already on the
@@ -1686,7 +1690,7 @@
 
   function* refreshElements(root) {
     if (root instanceof Element) {
-      if (root.matches(PRESERVE) || isExternalOverlay(root)) return;
+      if (root.matches(PRESERVE) || root.matches(NON_RENDERED) || isExternalOverlay(root)) return;
       if ((deferredPaint.has(root) || largeScopes.has(root)) && getComputedStyle(root).display === 'none') {
         if (observePaint(root, true)) deferredPaint.add(root);
         return;
