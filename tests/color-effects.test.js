@@ -80,3 +80,6 @@ console.log("site profiles: 2 assertions passed");
 for (const host of ["idmsa.apple.com", "appleid.apple.com", "appstoreconnect.apple.com"]) assert.equal(colors.siteProfile(host), "apple-auth");
 for (const host of ["reddit.com", "www.reddit.com", "old.reddit.com"]) assert.equal(colors.siteProfile(host), "reddit");
 for (const host of ["notreddit.com", "reddit.com.example.org", "idmsa.apple.com.example.org"]) assert.equal(colors.siteProfile(host), "");
+// Google Calendar's barely blue fields stay near-neutral instead of navy.
+assert.match(colors.mapBackground(colors.parseColor("rgb(240, 244, 249)"), "oled"), /^hsl\(\d+ 15% calc\(6%/);
+assert.match(colors.mapBackground(colors.parseColor("rgb(233, 238, 246)"), "oled"), /^hsl\(\d+ 21% calc\(6%/);

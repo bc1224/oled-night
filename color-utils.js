@@ -165,9 +165,12 @@
       const base = gradientStop ? Math.round(7 + 30 * hsl.l) : 16;
       return withAlpha(`hsl(${Math.round(hsl.h)} ${Math.round(Math.min(hsl.s, 0.82) * 100)}% calc(${base}% + 10% * ${STRENGTH}))`, color.a);
     }
-    // Pale tints (info/alert/selected rows) keep a hint of their hue.
+    // Pale tints (info/alert/selected rows) keep a hint of their hue, scaled
+    // by how tinted they are. Barely blue fields (Google Calendar's #f0f4f9)
+    // become a near-neutral dark grey, not a block of navy.
     if (c > 0.03 && lum > 0.3) {
-      return withAlpha(`hsl(${Math.round(hsl.h)} 35% calc(6% + 5% * ${STRENGTH}))`, color.a);
+      const saturation = Math.min(35, Math.round(c * 420));
+      return withAlpha(`hsl(${Math.round(hsl.h)} ${saturation}% calc(6% + 5% * ${STRENGTH}))`, color.a);
     }
     if (mode === "soft") {
       if (lum > 0.82) return withAlpha("rgb(16 16 20)", color.a);

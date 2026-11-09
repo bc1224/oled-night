@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.81";
+  const VERSION = "0.6.82";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -601,6 +601,17 @@
     });
   }
 
+  // True when element or an ancestor up to and including scope paints an
+  // opaque surface, so the backdrop belongs to that UI rather than a wrapper.
+  function paintsSurfaceWithin(element, scope, ctx) {
+    for (let node = element; node; node = parentAcrossShadow(node)) {
+      const surface = originalSurface.has(node) ? originalSurface.get(node) : surfaceInfo(ctx.style(node));
+      if (surface?.color || surface?.image) return true;
+      if (node === scope) return false;
+    }
+    return false;
+  }
+
   function modeForElement(element, ctx) {
     // Gmail's shell is natively dark, but its message reader and search UI
     // still paint light surfaces. Recolor each whole region, including text.
@@ -755,9 +766,13 @@
     // Automatic mode pairs plain light islands with their ink, including
     // unlabelled banners and email tables. Restrict colored native surfaces
     // to the existing UI scope; status colors and artwork keep their meaning.
+    // A colored light surface counts only when the UI scope paints it itself.
+    // A link inside a tinted notice bar (Gmail's yellow message bar) must not
+    // take light ink while the bar around it keeps its native light hue.
+    const uiScope = nativeBackdrop && element.closest(ctx.recolorLightRegions ? LIGHT_UI : DROPDOWN);
     const lightIsland = nativeBackdrop && !nativeBackdrop.image && colors.luminance(nativeBackdrop.color) > 0.5 &&
       ((colors.chroma(nativeBackdrop.color) < 0.1 && (element.childElementCount || element.textContent.trim() || element.shadowRoot?.childElementCount)) ||
-        element.closest(ctx.recolorLightRegions ? LIGHT_UI : DROPDOWN));
+        (uiScope && paintsSurfaceWithin(element, uiScope, ctx)));
     const mode = lightIsland ? "oled" : localMode;
     mapSurface(computed, "", mode, found);
     // A compact logo/avatar tile paints its artwork as a background image over
@@ -923,6 +938,17 @@
             return content && content !== 'none' && content !== 'normal';
           });
           if (!structural || generated) found.fg = colors.mapForeground(text, 1);
+        }
+      }
+      // A native dark theme can keep a tinted light notice while lightening
+      // its links. Darken only ink that has lost contrast on that surface;
+      // readable authored text and the notice's own hue stay as they are.
+      if (ctx.recolorLightRegions && nativeBackdrop && !nativeBackdrop.image && !found.fg && text?.a >= 0.5 &&
+          colors.luminance(nativeBackdrop.color) > 0.5) {
+        const bg = colors.luminance(nativeBackdrop.color), ink = colors.luminance(text);
+        if ((Math.max(bg, ink) + 0.05) / (Math.min(bg, ink) + 0.05) < 3) {
+          const hsl = colors.chroma(text) > 0.15 ? text : null;
+          found.fg = hsl ? `color-mix(in srgb, rgb(${text.r} ${text.g} ${text.b}) 45%, black)` : "rgb(32 33 36)";
         }
       }
       // Raised buttons can paint their entire face in a generated layer
