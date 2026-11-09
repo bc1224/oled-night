@@ -3,7 +3,7 @@
     "message": "OLED Night"
   },
   "extDescription": {
-    "message": "True-black dark mode for every site. Keeps images intact, readable text, per-site controls."
+    "message": "True-black (#000000) dark mode for OLED screens. Readable text, untouched images, per-site controls. Free and open source."
   },
   "cmdToggleExtension": {
     "message": "Turn OLED Night on or off everywhere"

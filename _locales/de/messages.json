@@ -3,7 +3,7 @@
     "message": "OLED Night"
   },
   "extDescription": {
-    "message": "Echter Schwarz-Dunkelmodus für jede Website. Bilder bleiben unverändert, Text gut lesbar, Einstellungen pro Website."
+    "message": "Echter Schwarz-Dunkelmodus (#000000) für OLED-Bildschirme. Lesbarer Text, unveränderte Bilder, Einstellungen pro Website. Kostenlos."
   },
   "cmdToggleExtension": {
     "message": "OLED Night überall ein- oder ausschalten"

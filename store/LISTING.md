@@ -10,11 +10,11 @@ Upload `dist/oled-night-<version>.zip` (build it with `node tools/package.mjs`).
 **Name:** OLED Night
 
 **Summary** (132 characters max). The store shows the manifest `description` here. It is localized through `_locales/<lang>/messages.json` (`extDescription`), so a new summary goes live with the next package. English:
-> True-black dark mode for every site. Keeps images intact, readable text, per-site controls.
+> True-black (#000000) dark mode for OLED screens. Readable text, untouched images, per-site controls. Free and open source.
 
 **Category:** Accessibility (alternative: Productivity)
 
-**Language:** English
+**Language:** English. Add German, Russian, Romanian and Spanish in the dashboard's language menu and paste the matching description from `store/listing-i18n/<lang>.txt` (de, ru, ro, es). The localized summary comes from the package automatically. These translations were written without a native-speaker review; have one skim them before publishing.
 
 **Description:**
 
@@ -55,7 +55,12 @@ Upload `dist/oled-night-<version>.zip` (build it with `node tools/package.mjs`).
 
 **Graphic assets:**
 - Store icon: `store/images/store-icon-128.png` (128x128, artwork padded to 96x96)
-- Screenshots (1280x800): `store/images/screenshot-1-before-after.png`, `store/images/screenshot-2-popup.png`
+- Screenshots (1280x800), upload in this order:
+  1. `store/images/screenshot-1-before-after.png` (article page, before and after)
+  2. `store/images/screenshot-2-popup.png` (popup)
+  3. `store/images/screenshot-3-dashboard.png` (analytics dashboard, before and after; source page `store/demo-dashboard.html`)
+  4. `store/images/screenshot-4-welcome.png` (welcome page)
+  5. `store/images/screenshot-5-settings.png` (per-site rules in Settings)
 - Small promo tile (440x280): `store/images/promo-small.png`
 - Marquee promo tile (1400x560): `store/images/promo-marquee.png`
 - GitHub social preview (1280x640, not a store asset): `store/images/social-preview.png`. Upload it in GitHub repository Settings > Social preview.

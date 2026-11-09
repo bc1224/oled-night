@@ -3,7 +3,7 @@
     "message": "OLED Night"
   },
   "extDescription": {
-    "message": "Mod întunecat cu negru adevărat pentru orice site. Imagini intacte, text lizibil, setări pentru fiecare site."
+    "message": "Mod întunecat cu negru adevărat (#000000) pentru ecrane OLED. Text lizibil, imagini neatinse, setări pentru fiecare site. Gratuit."
   },
   "cmdToggleExtension": {
     "message": "Pornește sau oprește OLED Night peste tot"

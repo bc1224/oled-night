@@ -2,6 +2,9 @@
 // extension in a throwaway headless Chrome:
 //   screenshot-1-before-after.png  1280x800
 //   screenshot-2-popup.png         1280x800
+//   screenshot-3-dashboard.png     1280x800 (charts and product photo, before and after)
+//   screenshot-4-welcome.png       1280x800 (first-install welcome page)
+//   screenshot-5-settings.png      1280x800 (Settings and per-site choices)
 //   promo-small.png                440x280
 //   promo-marquee.png              1400x560
 //   social-preview.png             1280x640 (GitHub social preview, website og:image)
@@ -20,7 +23,7 @@ const CHROME = process.env.CHROME_PATH || ["C:/Program Files/Google/Chrome/Appli
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const pngData = (file) => `data:image/png;base64,${readFileSync(file).toString("base64")}`;
 
-const pages = new Map([["/demo.html", readFileSync(join(root, "store", "demo.html"))]]);
+const pages = new Map([["/demo.html", readFileSync(join(root, "store", "demo.html"))], ["/dashboard.html", readFileSync(join(root, "store", "demo-dashboard.html"))]]);
 const server = http.createServer((req, res) => {
   const body = pages.get(req.url.split("?")[0]);
   if (!body) { res.writeHead(404); res.end(); return; }
@@ -77,6 +80,23 @@ try {
   await set({ siteRules: {} });
   await page.go(`${base}/demo.html`);
   await page.shot(join(tmpdir(), "oled-after.png"));
+  await set({ siteRules: { "127.0.0.1": "off" } });
+  await page.go(`${base}/dashboard.html`);
+  await page.shot(join(tmpdir(), "oled-dash-before.png"));
+  await set({ siteRules: {} });
+  await page.go(`${base}/dashboard.html`);
+  await page.shot(join(tmpdir(), "oled-dash-after.png"));
+
+  // Real extension pages at store size.
+  const pagesTab = await tab(1280, 800);
+  await pagesTab.go(`chrome-extension://${extId}/welcome.html`, 1200);
+  await pagesTab.shot(join(outDir, "screenshot-4-welcome.png"));
+  await set({ siteRules: { "mail.example.com": "on", "docs.example.com": "deepen", "sheets.example.com": "invert", "news.example.com": "recolor", "bank.example.com": "off" } });
+  await pagesTab.go(`chrome-extension://${extId}/options.html`, 1200);
+  await pagesTab.eval(`(() => { const d = document.getElementById("sitesPanel"); d.open = true; window.scrollTo(0, d.getBoundingClientRect().top + scrollY - 260); return true; })()`);
+  await sleep(300);
+  await pagesTab.shot(join(outDir, "screenshot-5-settings.png"));
+  await set({ siteRules: {} });
 
   // Popup, rendered at its real size. Opened as a background tab so the demo
   // page stays the active tab the popup reads its site and status from.
@@ -92,14 +112,18 @@ try {
   const canvas = await tab(1280, 800);
   await canvas.go("about:blank", 200);
   const font = "font-family: 'Segoe UI', system-ui, sans-serif;";
-  const before = pngData(join(tmpdir(), "oled-before.png")), after = pngData(join(tmpdir(), "oled-after.png"));
-  await canvas.html(`<body style="margin:0;width:1280px;height:800px;background:#000;${font};color:#f5f5f7;overflow:hidden">
+  const splitShot = async (beforeFile, afterFile, out) => {
+    const before = pngData(join(tmpdir(), beforeFile)), after = pngData(join(tmpdir(), afterFile));
+    await canvas.html(`<body style="margin:0;width:1280px;height:800px;background:#000;${font};color:#f5f5f7;overflow:hidden">
     <div style="position:absolute;inset:0;background:url(${before}) 0 0/1280px 800px"></div>
     <div style="position:absolute;inset:0;clip-path:polygon(52% 0,100% 0,100% 100%,40% 100%);background:url(${after}) 0 0/1280px 800px"></div>
     <div style="position:absolute;top:0;bottom:0;left:40%;width:3px;background:#9b8cff;transform-origin:top left;transform:skewX(-8.5deg) translateX(118px)"></div>
     <div style="position:absolute;left:28px;bottom:28px;padding:10px 16px;border-radius:10px;background:rgba(255,255,255,.92);color:#111;font-weight:600">Before</div>
     <div style="position:absolute;right:28px;bottom:28px;padding:10px 16px;border-radius:10px;background:#9b8cff;color:#000;font-weight:700">OLED Night</div></body>`);
-  await canvas.shot(join(outDir, "screenshot-1-before-after.png"));
+    await canvas.shot(join(outDir, out));
+  };
+  await splitShot("oled-before.png", "oled-after.png", "screenshot-1-before-after.png");
+  await splitShot("oled-dash-before.png", "oled-dash-after.png", "screenshot-3-dashboard.png");
 
   await canvas.html(`<body style="margin:0;width:1280px;height:800px;background:#000;${font};color:#f5f5f7;display:flex;align-items:center;gap:80px;padding:0 110px;box-sizing:border-box">
     <div style="flex:1"><div style="font-size:52px;font-weight:700;letter-spacing:-.03em;line-height:1.05">True black.<br>Readable text.<br>Images untouched.</div>
@@ -119,11 +143,11 @@ try {
   const icon = pngData(join(root, "assets", "icon-128.png"));
   const marquee = await tab(1400, 560);
   await marquee.go("about:blank", 200);
-  await marquee.html(`<body style="margin:0;width:1400px;height:560px;background:#000;${font};color:#f5f5f7;display:flex;align-items:center;gap:56px;padding:0 0 0 80px;box-sizing:border-box;overflow:hidden">
-    <div style="flex:0 0 470px"><div style="display:flex;align-items:center;gap:18px"><img src="${icon}" style="width:76px;height:76px"><div style="font-size:50px;font-weight:700;letter-spacing:-.03em">OLED Night</div></div>
-      <div style="margin-top:26px;font-size:30px;font-weight:600;line-height:1.25">True-black dark mode<br>for every site</div>
-      <div style="margin-top:18px;font-size:19px;line-height:1.55;color:#a4a4ad">Readable text. Images untouched.<br>Per-site control. Free and open source.</div></div>
-    <img src="${split}" alt="OLED Night before and after" style="width:780px;height:488px;border-radius:14px 0 0 14px;box-shadow:0 0 0 1px #26262e,0 30px 90px rgba(155,140,255,.2)"></body>`);
+  const afterArt = pngData(join(tmpdir(), "oled-dash-after.png"));
+  await marquee.html(`<body style="margin:0;width:1400px;height:560px;background:#000;${font};color:#f5f5f7;display:flex;align-items:center;gap:64px;padding:0 0 0 88px;box-sizing:border-box;overflow:hidden">
+    <div style="flex:0 0 470px"><div style="display:flex;align-items:center;gap:20px"><img src="${icon}" style="width:88px;height:88px"><div style="font-size:58px;font-weight:700;letter-spacing:-.03em">OLED Night</div></div>
+      <div style="margin-top:30px;font-size:38px;font-weight:600;line-height:1.2">True-black dark mode<br>for every site</div></div>
+    <img src="${afterArt}" alt="OLED Night on a dashboard" style="width:800px;height:500px;border-radius:16px 0 0 16px;box-shadow:0 0 0 1px #2a2a34,0 30px 90px rgba(155,140,255,.25)"></body>`);
   await marquee.shot(join(outDir, "promo-marquee.png"));
 
   const social = await tab(1280, 640);

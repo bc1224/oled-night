@@ -3,7 +3,7 @@
     "message": "OLED Night"
   },
   "extDescription": {
-    "message": "Modo oscuro con negro puro para cualquier web. Imágenes intactas, texto legible y ajustes por sitio."
+    "message": "Modo oscuro de negro puro (#000000) para pantallas OLED. Texto legible, imágenes intactas y ajustes por sitio. Gratis y abierto."
   },
   "cmdToggleExtension": {
     "message": "Activar o desactivar OLED Night en todas partes"

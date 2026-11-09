@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Sales overview - Demo Analytics</title>
+<style>
+  body { margin: 0; background: #f4f6f9; color: #1d2433; font: 14px/1.45 "Segoe UI", system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 24px; height: 60px; padding: 0 28px; background: #fff; border-bottom: 1px solid #e2e6ee; }
+  .logo { font-weight: 700; font-size: 19px; color: #6c47ff; }
+  header nav { display: flex; gap: 20px; color: #5b6475; }
+  header nav b { color: #1d2433; border-bottom: 2px solid #6c47ff; padding-bottom: 18px; margin-bottom: -20px; }
+  main { padding: 22px 28px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .card { background: #fff; border: 1px solid #e2e6ee; border-radius: 14px; padding: 16px 18px; }
+  .kpi small { color: #5b6475; }
+  .kpi div { font-size: 26px; font-weight: 700; margin-top: 4px; }
+  .up { color: #0f8a4b; font-size: 13px; font-weight: 600; }
+  .down { color: #c4314b; font-size: 13px; font-weight: 600; }
+  .wide { grid-column: span 3; }
+  h3 { margin: 0 0 12px; font-size: 15px; }
+  .bars { display: flex; align-items: flex-end; gap: 14px; height: 210px; padding: 0 6px; border-bottom: 1px solid #e2e6ee; }
+  .bars span { flex: 1; border-radius: 6px 6px 0 0; background: linear-gradient(#8f74ff, #6c47ff); }
+  .bars span.alt { background: linear-gradient(#5ccfe6, #2aa5c8); }
+  .months { display: flex; gap: 14px; padding: 6px 6px 0; color: #5b6475; font-size: 12px; }
+  .months span { flex: 1; text-align: center; }
+  .product img { width: 100%; height: 150px; object-fit: cover; border-radius: 10px; display: block; margin-bottom: 10px; }
+  .product p { margin: 0; color: #5b6475; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { text-align: left; padding: 9px 6px; border-bottom: 1px solid #edf0f5; }
+  th { color: #5b6475; font-weight: 600; font-size: 12px; }
+  .pill { padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; background: #e7f6ee; color: #0f8a4b; }
+  .pill.wait { background: #fff4dc; color: #8a5a00; }
+  .full { grid-column: span 4; }
+</style></head>
+<body>
+  <header><span class="logo">Demo Analytics</span><nav><b>Overview</b><span>Orders</span><span>Customers</span><span>Reports</span></nav></header>
+  <main>
+    <div class="card kpi"><small>Revenue</small><div>$48,210</div><span class="up">+12.4% this month</span></div>
+    <div class="card kpi"><small>Orders</small><div>1,284</div><span class="up">+8.1%</span></div>
+    <div class="card kpi"><small>Returning customers</small><div>63%</div><span class="up">+3.0%</span></div>
+    <div class="card kpi"><small>Refunds</small><div>14</div><span class="down">+2 since last week</span></div>
+    <div class="card wide"><h3>Monthly revenue</h3>
+      <div class="bars"><span style="height:42%"></span><span class="alt" style="height:55%"></span><span style="height:48%"></span><span class="alt" style="height:66%"></span><span style="height:61%"></span><span class="alt" style="height:74%"></span><span style="height:70%"></span><span class="alt" style="height:83%"></span><span style="height:79%"></span><span class="alt" style="height:92%"></span></div>
+      <div class="months"><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span></div>
+    </div>
+    <div class="card product"><h3>Top product</h3>
+      <img alt="Orange headphones on a teal background" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 150'%3E%3Crect width='300' height='150' fill='%2321b5a8'/%3E%3Ccircle cx='150' cy='88' r='70' fill='none' stroke='%23ff8a3d' stroke-width='14'/%3E%3Crect x='70' y='80' width='34' height='56' rx='14' fill='%23ff6b2c'/%3E%3Crect x='196' y='80' width='34' height='56' rx='14' fill='%23ff6b2c'/%3E%3C/svg%3E">
+      <p>Studio headphones, 412 sold</p></div>
+    <div class="card full"><h3>Recent orders</h3>
+      <table><tr><th>Order</th><th>Customer</th><th>Item</th><th>Total</th><th>Status</th></tr>
+        <tr><td>#10482</td><td>Maya Chen</td><td>Studio headphones</td><td>$129.00</td><td><span class="pill">Shipped</span></td></tr>
+        <tr><td>#10481</td><td>Sam Ortiz</td><td>Desk lamp</td><td>$54.00</td><td><span class="pill wait">Packing</span></td></tr>
+        <tr><td>#10480</td><td>Priya Nair</td><td>Travel mug</td><td>$22.50</td><td><span class="pill">Shipped</span></td></tr>
+      </table></div>
+  </main>
+</body></html>
