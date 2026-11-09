@@ -45,11 +45,14 @@ chrome.stdio[4].on("data", (chunk) => {
 });
 const send = (method, params = {}, sessionId) => new Promise((r) => { const id = ++nextId; pending.set(id, r); chrome.stdio[3].write(JSON.stringify({ id, method, params, sessionId }) + "\0"); });
 
-async function tab(width, height, background = false) {
+// zoom > 1 renders a smaller CSS viewport at a higher pixel ratio: the same
+// 1280x800 output, but content is larger and easier to read in the store.
+const ZOOM = 1.6;
+async function tab(width, height, background = false, zoom = 1) {
   const { result: { targetId } } = await send("Target.createTarget", { url: "about:blank", background });
   const { result: { sessionId } } = await send("Target.attachToTarget", { targetId, flatten: true });
   await send("Page.enable", {}, sessionId);
-  await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false }, sessionId);
+  await send("Emulation.setDeviceMetricsOverride", { width: Math.round(width / zoom), height: Math.round(height / zoom), deviceScaleFactor: zoom, mobile: false }, sessionId);
   return {
     go: async (url, wait = 1500) => { await send("Page.navigate", { url }, sessionId); await sleep(wait); },
     html: async (markup, wait = 600) => {
@@ -73,13 +76,15 @@ try {
   const set = (patch) => ext.eval(`chrome.storage.sync.set(${JSON.stringify(patch)}).then(() => true)`);
 
   // Same page with the extension off and on.
-  const page = await tab(1280, 800);
+  // The mail demo has three columns, so it gets a milder zoom than the dashboard.
+  const mail = await tab(1280, 800, false, 1.25);
   await set({ siteRules: { "127.0.0.1": "off" } });
-  await page.go(`${base}/demo.html`);
-  await page.shot(join(tmpdir(), "oled-before.png"));
+  await mail.go(`${base}/demo.html`);
+  await mail.shot(join(tmpdir(), "oled-before.png"));
   await set({ siteRules: {} });
-  await page.go(`${base}/demo.html`);
-  await page.shot(join(tmpdir(), "oled-after.png"));
+  await mail.go(`${base}/demo.html`);
+  await mail.shot(join(tmpdir(), "oled-after.png"));
+  const page = await tab(1280, 800, false, ZOOM);
   await set({ siteRules: { "127.0.0.1": "off" } });
   await page.go(`${base}/dashboard.html`);
   await page.shot(join(tmpdir(), "oled-dash-before.png"));
@@ -88,19 +93,19 @@ try {
   await page.shot(join(tmpdir(), "oled-dash-after.png"));
 
   // Real extension pages at store size.
-  const pagesTab = await tab(1280, 800);
+  const pagesTab = await tab(1280, 800, false, ZOOM);
   await pagesTab.go(`chrome-extension://${extId}/welcome.html`, 1200);
   await pagesTab.shot(join(outDir, "screenshot-4-welcome.png"));
   await set({ siteRules: { "mail.example.com": "on", "docs.example.com": "deepen", "sheets.example.com": "invert", "news.example.com": "recolor", "bank.example.com": "off" } });
   await pagesTab.go(`chrome-extension://${extId}/options.html`, 1200);
-  await pagesTab.eval(`(() => { const d = document.getElementById("sitesPanel"); d.open = true; window.scrollTo(0, d.getBoundingClientRect().top + scrollY - 260); return true; })()`);
+  await pagesTab.eval(`(() => { const d = document.getElementById("sitesPanel"); d.open = true; window.scrollTo(0, d.getBoundingClientRect().top + scrollY - 24); return true; })()`);
   await sleep(300);
   await pagesTab.shot(join(outDir, "screenshot-5-settings.png"));
   await set({ siteRules: {} });
 
   // Popup, rendered at its real size. Opened as a background tab so the demo
   // page stays the active tab the popup reads its site and status from.
-  const popup = await tab(360, 600, true);
+  const popup = await tab(360 * 2, 600 * 2, true, 2);
   await popup.go(`chrome-extension://${extId}/popup.html`, 800);
   // Chrome caps extension popups at 600px tall; fail loudly if it no longer fits.
   const popupHeight = await popup.eval("Math.ceil(document.body.getBoundingClientRect().height)");
@@ -125,10 +130,12 @@ try {
   await splitShot("oled-before.png", "oled-after.png", "screenshot-1-before-after.png");
   await splitShot("oled-dash-before.png", "oled-dash-after.png", "screenshot-3-dashboard.png");
 
-  await canvas.html(`<body style="margin:0;width:1280px;height:800px;background:#000;${font};color:#f5f5f7;display:flex;align-items:center;gap:80px;padding:0 110px;box-sizing:border-box">
-    <div style="flex:1"><div style="font-size:52px;font-weight:700;letter-spacing:-.03em;line-height:1.05">True black.<br>Readable text.<br>Images untouched.</div>
-      <p style="margin-top:28px;font-size:21px;line-height:1.5;color:#a4a4ad">Per-site modes, per-site brightness and contrast, image dimming, a schedule, and a shortcut to toggle any site.</p></div>
-    <img src="${pngData(join(tmpdir(), "oled-popup.png"))}" style="width:360px;border-radius:14px;box-shadow:0 0 0 1px #26262e,0 30px 80px rgba(155,140,255,.18)"></body>`);
+  // The popup fills most of the height so its controls are readable at store size.
+  const popupScale = Math.min(1.9, 720 / popupHeight);
+  await canvas.html(`<body style="margin:0;width:1280px;height:800px;background:#000;${font};color:#f5f5f7;display:flex;align-items:center;gap:56px;padding:0 64px 0 80px;box-sizing:border-box">
+    <div style="flex:1"><div style="font-size:46px;font-weight:700;letter-spacing:-.03em;line-height:1.08">True black.<br>Readable text.<br>Images untouched.</div>
+      <p style="margin-top:24px;font-size:20px;line-height:1.5;color:#a4a4ad">Per-site modes, brightness and contrast, image dimming, a schedule, and shortcuts.</p></div>
+    <img src="${pngData(join(tmpdir(), "oled-popup.png"))}" style="width:${Math.round(360 * popupScale)}px;border-radius:${Math.round(14 * popupScale)}px;box-shadow:0 0 0 1px #26262e,0 30px 80px rgba(155,140,255,.18)"></body>`);
   await canvas.shot(join(outDir, "screenshot-2-popup.png"));
 
   const promo = await tab(440, 280);

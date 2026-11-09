@@ -19,7 +19,8 @@ const {join} = require('node:path');
   // Listing assets come from the repository: English text, privacy, summaries, five screenshots.
   const assets = amoListingAssets(root);
   assert.doesNotMatch(assets.description, /Chrome/);
-  assert.match(assets.description, /WHY OLED NIGHT/);
+  assert.match(assets.description, /Private by design/);
+  assert.ok(assets.description.split(/s+/).length < 200, "Firefox description stays short");
   assert.equal(assets.summary['en-US'], JSON.parse(readFileSync(join(root, '_locales', 'en', 'messages.json'), 'utf8')).extDescription.message);
   assert.deepEqual(Object.keys(assets.summary).sort(), ['de', 'en-US', 'es-ES', 'ro', 'ru']);
   assert.deepEqual(Object.keys(assets.translations).sort(), ['de', 'es-ES', 'ro', 'ru']);

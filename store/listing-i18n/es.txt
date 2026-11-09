@@ -1,36 +1,13 @@
-OLED Night es un modo oscuro de negro puro para cualquier sitio web. Las páginas pasan a negro absoluto en lugar de gris oscuro, para que las pantallas OLED y AMOLED puedan apagar sus píxeles. El texto sigue siendo nítido y las fotos y los vídeos conservan sus colores originales.
+OLED Night es un modo oscuro de negro puro para cualquier sitio web. Los fondos pasan a negro absoluto (#000000) en lugar de gris oscuro, para que las pantallas OLED puedan apagar sus píxeles. El texto sigue nítido y las fotos, los vídeos y los logotipos conservan sus colores reales.
 
-POR QUÉ OLED NIGHT
-• Negro de verdad, no gris: los fondos de página pasan a negro puro, con tarjetas y paneles ligeramente destacados para que el diseño siga siendo fácil de seguir.
-• Imágenes intactas: fotos, vídeos, ilustraciones, logotipos y colores de marca se protegen en lugar de invertirse.
-• Texto legible: el texto principal, secundario y atenuado está ajustado para dar contraste sobre negro, incluidas las letras oscuras de los logotipos, sin halos.
-• Para sitios modernos: colores CSS modernos, componentes web, marcos incrustados y páginas que cambian al desplazarse. Los widgets de verificación no se tocan.
+• Elige un modo por sitio: Automatic, Full recolor, Deepen blacks only, Invert u Off.
+• Ajusta el brillo del texto, el contraste y la atenuación de imágenes en cada sitio.
+• Programa el modo oscuro, o actívalo con Alt+Mayús+E (en todas partes) y Alt+Mayús+D (este sitio).
+• Funciona en sitios modernos, incluidas aplicaciones web, marcos incrustados y páginas que cambian al desplazarte.
 
-CONTROL DE CADA SITIO
-• Elige un modo por sitio: Automatic, Full recolor, Deepen blacks only, Invert (para aplicaciones canvas compatibles) u Off.
-• Brillo del texto, contraste de superficies y atenuación opcional de imágenes por sitio. «All sites» guarda tus valores predeterminados; los ajustes guardados de un sitio tienen prioridad.
-• Programa el modo oscuro, y exporta o importa tus ajustes.
-• Atajos: Alt+Mayús+E activa o desactiva OLED Night en todas partes; Alt+Mayús+D cambia el sitio actual. Alternativas: Ctrl+Mayús+9 y Ctrl+Mayús+8 (Comando en lugar de Ctrl en macOS). Puedes cambiarlos en tu navegador; la ventana emergente muestra las teclas asignadas.
-• Atento a cada sitio: Figma conserva sus colores de diseño originales y ChatGPT mantiene su propia paleta sobre superficies negras OLED para que las respuestas fluyan sin tirones.
+Privado por diseño: todo se ejecuta en tu dispositivo. Sin analíticas, anuncios ni cuenta, y no se registra tu historial de navegación. Si un sitio se ve mal, «Report a broken site» solo envía lo que revisas y apruebas.
 
-PRIVADO POR DISEÑO
-• El recoloreado se hace por completo en tu dispositivo. Sin analítica, telemetría en segundo plano, anuncios ni cuenta.
-• OLED Night no registra ni guarda tu historial de navegación. Los ajustes y preferencias por sitio se quedan en el almacenamiento de tu navegador y pueden sincronizarse con tu perfil del navegador. El desarrollador no puede verlos.
+El tema independiente OLED Night para Chrome oscurece la propia ventana de Chrome; es opcional. Por ahora la interfaz está en inglés.
 
-INFORMES DE ERRORES OPCIONALES Y PRIVADOS
-• Si un sitio se ve mal, elige «Report a broken site». Ves antes los datos técnicos depurados y puedes añadir notas o una captura de pantalla. No se envía nada hasta que eliges «Submit report».
-• Los informes se guardan de forma privada hasta 30 días y solo el desarrollador puede leerlos. No necesitas una cuenta de GitHub para enviarlos.
-• El diagnóstico automático excluye el texto de la página, los valores introducidos, las rutas de URL, los parámetros de consulta, las cookies y los identificadores del navegador. Las notas y capturas pueden contener información privada; revísalas antes de enviarlas.
-• Una incidencia pública de seguimiento en GitHub muestra solo un título genérico o, si eliges un tipo de problema, el dominio del sitio, ese tipo, la versión de la extensión y el modo de color. Tus notas, el resto del diagnóstico y las capturas nunca se publican.
-• También puedes guardar un informe de diagnóstico completo en tu equipo y compartirlo tú mismo.
-
-POR QUÉ PIDE ACCESO A LOS SITIOS WEB
-El acceso a los sitios permite a OLED Night leer los estilos de la página y recolorearla en tu equipo. «storage» guarda los ajustes; «activeTab» identifica el sitio actual para la ventana emergente y los atajos; «scripting» comprueba si se puede acceder a la pestaña. El acceso al portapapeles es opcional y solo se usa cuando pegas una captura en un informe.
-
-Algunas páginas restringen las extensiones, y algunos sitios pueden funcionar mejor en otro modo o con OLED Night desactivado. El tema independiente OLED Night para Chrome oscurece la propia ventana de Chrome; es opcional.
-
-La interfaz de la extensión está por ahora en inglés; el nombre, la descripción, los atajos y la página de bienvenida están traducidos.
-
-Gratis y de código abierto bajo GPL-3.0.
-Código fuente y soporte: https://github.com/bc1224/oled-night
+Gratis y de código abierto: https://github.com/bc1224/oled-night
 Política de privacidad: https://github.com/bc1224/oled-night/blob/main/store/PRIVACY.md

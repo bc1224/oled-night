@@ -122,12 +122,13 @@ export function firefoxListingTranslation(text, lang) {
   return text.replace(chrome, firefox).trim();
 }
 
+// AMO previews are matched by caption, so a changed image needs a changed caption to be re-uploaded.
 const AMO_SCREENSHOTS = [
-  ['screenshot-1-before-after.png', 'An article page before and after OLED Night'],
-  ['screenshot-2-popup.png', 'The popup: modes, brightness and contrast for the current site'],
-  ['screenshot-3-dashboard.png', 'An analytics dashboard before and after OLED Night'],
-  ['screenshot-4-welcome.png', 'The welcome page shown after install'],
-  ['screenshot-5-settings.png', 'Per-site rules in Settings']
+  ['screenshot-1-before-after.png', 'An inbox before and after OLED Night'],
+  ['screenshot-2-popup.png', 'The popup: turn OLED Night on or off everywhere or for this site'],
+  ['screenshot-3-dashboard.png', 'A dashboard before and after: charts and photos keep their colors'],
+  ['screenshot-4-welcome.png', 'The welcome page: pin OLED Night and pick a mode'],
+  ['screenshot-5-settings.png', 'Per-site modes in Settings']
 ];
 
 export function amoListingAssets(base) {
