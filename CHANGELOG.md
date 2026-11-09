@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.80
+
+- ChatGPT: Word (.docx) and PDF file previews are now dark. Both rendered as white pages even in ChatGPT's dark theme; OLED Night now inverts only those pages while ChatGPT is dark, and flips images inside Word documents back to their real colors. PDF pages are drawn as a single image, so photos inside PDFs also appear inverted. Text, Markdown, code and JSON previews were already dark; Excel previews are covered by the 0.6.78 spreadsheet fix.
+- Includes the unreleased 0.6.79 changes below.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.79
 
 - Welcome page on first install (store installs only): how to pin OLED Night, what each mode does, and your current shortcuts, with links to Settings and the companion Chrome theme.
