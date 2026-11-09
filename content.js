@@ -3609,6 +3609,13 @@
       html[data-oled-night-chatgpt]:is([data-theme="dark"], .dark) body {
         background-color: var(--oled-night-page, #000) !important;
       }
+      /* ChatGPT's file preview draws spreadsheet cells on a canvas and keeps a
+         light grid even in the dark theme, marking it data-popcorn-dark-mode="false".
+         Canvas pixels cannot be recolored, so invert only that grid (hue-rotate
+         keeps the selection blue). Its own dark mode and the light theme stay native. */
+      html[data-oled-night-chatgpt]:is([data-theme="dark"], .dark) [data-testid="popcorn-viewport-host"][data-popcorn-dark-mode="false"] {
+        filter: invert(1) hue-rotate(180deg) !important;
+      }
     `;
     (document.head || document.documentElement).appendChild(sheet);
   }
