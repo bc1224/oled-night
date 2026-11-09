@@ -124,7 +124,7 @@ export function firefoxListingTranslation(text, lang) {
 
 // AMO previews are matched by caption, so a changed image needs a changed caption to be re-uploaded.
 const AMO_SCREENSHOTS = [
-  ['screenshot-1-before-after.png', 'An inbox before and after OLED Night'],
+  ['screenshot-1-before-after.png', 'An article before and after: the page goes true black, the photo keeps its colors'],
   ['screenshot-2-popup.png', 'The popup: turn OLED Night on or off everywhere or for this site'],
   ['screenshot-3-dashboard.png', 'A dashboard before and after: charts and photos keep their colors'],
   ['screenshot-4-welcome.png', 'The welcome page: pin OLED Night and pick a mode'],

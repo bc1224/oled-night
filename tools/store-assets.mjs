@@ -1,6 +1,6 @@
 // Renders the Chrome Web Store images into store/images/ using the real
 // extension in a throwaway headless Chrome:
-//   screenshot-1-before-after.png  1280x800
+//   screenshot-1-before-after.png  1280x800 (article page, mostly true black, before and after)
 //   screenshot-2-popup.png         1280x800
 //   screenshot-3-dashboard.png     1280x800 (charts and product photo, before and after)
 //   screenshot-4-welcome.png       1280x800 (first-install welcome page)
@@ -23,7 +23,7 @@ const CHROME = process.env.CHROME_PATH || ["C:/Program Files/Google/Chrome/Appli
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const pngData = (file) => `data:image/png;base64,${readFileSync(file).toString("base64")}`;
 
-const pages = new Map([["/demo.html", readFileSync(join(root, "store", "demo.html"))], ["/dashboard.html", readFileSync(join(root, "store", "demo-dashboard.html"))]]);
+const pages = new Map([["/demo.html", readFileSync(join(root, "store", "demo.html"))], ["/dashboard.html", readFileSync(join(root, "store", "demo-dashboard.html"))], ["/article.html", readFileSync(join(root, "store", "demo-article.html"))]]);
 const server = http.createServer((req, res) => {
   const body = pages.get(req.url.split("?")[0]);
   if (!body) { res.writeHead(404); res.end(); return; }
@@ -76,14 +76,15 @@ try {
   const set = (patch) => ext.eval(`chrome.storage.sync.set(${JSON.stringify(patch)}).then(() => true)`);
 
   // Same page with the extension off and on.
-  // The mail demo has three columns, so it gets a milder zoom than the dashboard.
-  const mail = await tab(1280, 800, false, 1.25);
+  // The article leads: it is mostly page background, so it shows true black best.
+  // Two columns, so it gets a milder zoom than the dashboard.
+  const article = await tab(1280, 800, false, 1.25);
   await set({ siteRules: { "127.0.0.1": "off" } });
-  await mail.go(`${base}/demo.html`);
-  await mail.shot(join(tmpdir(), "oled-before.png"));
+  await article.go(`${base}/article.html`);
+  await article.shot(join(tmpdir(), "oled-before.png"));
   await set({ siteRules: {} });
-  await mail.go(`${base}/demo.html`);
-  await mail.shot(join(tmpdir(), "oled-after.png"));
+  await article.go(`${base}/article.html`);
+  await article.shot(join(tmpdir(), "oled-after.png"));
   const page = await tab(1280, 800, false, ZOOM);
   await set({ siteRules: { "127.0.0.1": "off" } });
   await page.go(`${base}/dashboard.html`);
@@ -150,11 +151,11 @@ try {
   const icon = pngData(join(root, "assets", "icon-128.png"));
   const marquee = await tab(1400, 560);
   await marquee.go("about:blank", 200);
-  const afterArt = pngData(join(tmpdir(), "oled-dash-after.png"));
+  const afterArt = pngData(join(tmpdir(), "oled-after.png"));
   await marquee.html(`<body style="margin:0;width:1400px;height:560px;background:#000;${font};color:#f5f5f7;display:flex;align-items:center;gap:64px;padding:0 0 0 88px;box-sizing:border-box;overflow:hidden">
     <div style="flex:0 0 470px"><div style="display:flex;align-items:center;gap:20px"><img src="${icon}" style="width:88px;height:88px"><div style="font-size:58px;font-weight:700;letter-spacing:-.03em">OLED Night</div></div>
       <div style="margin-top:30px;font-size:38px;font-weight:600;line-height:1.2">True-black dark mode<br>for every site</div></div>
-    <img src="${afterArt}" alt="OLED Night on a dashboard" style="width:800px;height:500px;border-radius:16px 0 0 16px;box-shadow:0 0 0 1px #2a2a34,0 30px 90px rgba(155,140,255,.25)"></body>`);
+    <img src="${afterArt}" alt="OLED Night on an article" style="width:800px;height:500px;border-radius:16px 0 0 16px;box-shadow:0 0 0 1px #2a2a34,0 30px 90px rgba(155,140,255,.25)"></body>`);
   await marquee.shot(join(outDir, "promo-marquee.png"));
 
   const social = await tab(1280, 640);

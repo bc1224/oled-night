@@ -37,7 +37,7 @@ Keep it short; full permission and report details live in the Privacy tab and `s
 **Graphic assets:**
 - Store icon: `store/images/store-icon-128.png` (128x128, artwork padded to 96x96)
 - Screenshots (1280x800), upload in this order:
-  1. `store/images/screenshot-1-before-after.png` (inbox, before and after)
+  1. `store/images/screenshot-1-before-after.png` (article page, mostly true black, before and after; source page `store/demo-article.html`)
   2. `store/images/screenshot-2-popup.png` (popup)
   3. `store/images/screenshot-3-dashboard.png` (analytics dashboard, before and after; source page `store/demo-dashboard.html`)
   4. `store/images/screenshot-4-welcome.png` (welcome page)
