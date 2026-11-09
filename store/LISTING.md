@@ -44,6 +44,7 @@ Keep it short; full permission and report details live in the Privacy tab and `s
   5. `store/images/screenshot-5-settings.png` (per-site rules in Settings)
 - Small promo tile (440x280): `store/images/promo-small.png`
 - Marquee promo tile (1400x560): `store/images/promo-marquee.png`
+- Promo video (YouTube URL field): https://www.youtube.com/watch?v=iMobB-1YSUc (28 s motion promo, built in a Remotion project kept outside this repo; its 4K scene stills come from `OLED_VIDEO_ASSETS=1 node tools/store-video.mjs`)
 - GitHub social preview (1280x640, not a store asset): `store/images/social-preview.png`. Upload it in GitHub repository Settings > Social preview.
 
 Regenerate the images with `node tools/store-assets.mjs`.

@@ -19,7 +19,9 @@ const WIKI_URL = `https://${WIKI_HOST}/wiki/Aurora`;
 const CHROME = process.env.CHROME_PATH || ["C:/Program Files/Google/Chrome/Application/chrome.exe", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/usr/bin/google-chrome"].find(existsSync);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const pngData = (file) => `data:image/png;base64,${readFileSync(file).toString("base64")}`;
-const W = 1920, H = 1080, ZOOM = 1.5;
+// OLED_VIDEO_ASSETS=<dir> writes the raw 4K scene captures there (for the motion-graphics cut) and stops.
+const ASSETS = process.env.OLED_VIDEO_ASSETS;
+const W = ASSETS ? 3840 : 1920, H = ASSETS ? 2160 : 1080, ZOOM = ASSETS ? 3 : 1.5, POPUP_ZOOM = ASSETS ? 4 : 2;
 
 const pages = new Map([["/dashboard.html", readFileSync(join(root, "store", "demo-dashboard.html"))]]);
 const server = http.createServer((req, res) => {
@@ -104,13 +106,20 @@ try {
 
   // Popup for the Wikipedia tab, at 2x.
   await send("Target.activateTarget", { targetId: wiki.targetId });
-  const popup = await tab(720, 1200, { background: true, zoom: 2 });
+  const popup = await tab(360 * POPUP_ZOOM, 600 * POPUP_ZOOM, { background: true, zoom: POPUP_ZOOM });
   await popup.go(`chrome-extension://${extId}/popup.html`, 1200);
   const popupHost = await popup.eval(`document.getElementById("hostname").textContent`);
   if (!popupHost.includes("wikipedia")) throw new Error(`popup shows "${popupHost}", expected the Wikipedia tab`);
   const popupHeight = await popup.eval("Math.ceil(document.body.getBoundingClientRect().height)");
   shots.popup = join(work, "popup.png");
   await popup.shot(shots.popup, { x: 0, y: 0, width: 360, height: popupHeight });
+  if (ASSETS) {
+    mkdirSync(ASSETS, { recursive: true });
+    for (const [name, file] of Object.entries(shots)) writeFileSync(join(ASSETS, `${name}.png`), readFileSync(file));
+    writeFileSync(join(ASSETS, "assets.json"), JSON.stringify({ width: W, height: H, cssZoom: ZOOM, popup: { cssWidth: 360, cssHeight: popupHeight, zoom: POPUP_ZOOM } }, null, 2));
+    console.log(`Wrote scene captures to ${ASSETS}`);
+    process.exit(0);
+  }
 
   // Compose captioned 1920x1080 stills with the extension off for the canvas.
   await set({ siteRules: { "127.0.0.1": "off", "localhost": "off" } });
