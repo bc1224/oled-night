@@ -91,15 +91,90 @@ export function storeText(text) {
     .replace(/\s+/g, ' ').trim();
 }
 
-export async function updateAmoListing(request, description, privacy) {
+// Repository listing language -> AMO locale code.
+export const AMO_LOCALES = { de: 'de', es: 'es-ES', ro: 'ro', ru: 'ru' };
+
+// The shared store translations end with a Chrome theme sentence; Firefox gets its requirements instead.
+const FIREFOX_THEME_SWAP = {
+  de: ['Das separate OLED Night Chrome-Design färbt das Chrome-Fenster selbst dunkel; es ist optional.',
+    'OLED Night benötigt Firefox für Desktop ab Version 142; Firefox für Android wird nicht unterstützt.'],
+  es: ['El tema independiente OLED Night para Chrome oscurece la propia ventana de Chrome; es opcional.',
+    'OLED Night requiere Firefox para escritorio 142 o posterior; Firefox para Android no es compatible.'],
+  ro: ['Tema separată OLED Night pentru Chrome întunecă fereastra Chrome; este opțională.',
+    'OLED Night necesită Firefox pentru desktop 142 sau o versiune ulterioară; Firefox pentru Android nu este acceptat.'],
+  ru: ['Отдельная тема OLED Night для Chrome затемняет само окно Chrome; она необязательна.',
+    'Для OLED Night нужен Firefox для компьютера версии 142 или новее; Firefox для Android не поддерживается.']
+};
+
+export function firefoxListingTranslation(text, lang) {
+  const [chrome, firefox] = FIREFOX_THEME_SWAP[lang] || [];
+  if (!chrome || !text.includes(chrome)) throw new Error(`Chrome theme sentence not found in the ${lang} listing; update FIREFOX_THEME_SWAP.`);
+  return text.replace(chrome, firefox).trim();
+}
+
+const AMO_SCREENSHOTS = [
+  ['screenshot-1-before-after.png', 'An article page before and after OLED Night'],
+  ['screenshot-2-popup.png', 'The popup: modes, brightness and contrast for the current site'],
+  ['screenshot-3-dashboard.png', 'An analytics dashboard before and after OLED Night'],
+  ['screenshot-4-welcome.png', 'The welcome page shown after install'],
+  ['screenshot-5-settings.png', 'Per-site rules in Settings']
+];
+
+export function amoListingAssets(base) {
+  const read = path => readFileSync(join(base, ...path), 'utf8');
+  const summary = { 'en-US': JSON.parse(read(['_locales', 'en', 'messages.json'])).extDescription.message };
+  const translations = {};
+  for (const [lang, locale] of Object.entries(AMO_LOCALES)) {
+    summary[locale] = JSON.parse(read(['_locales', lang, 'messages.json'])).extDescription.message;
+    translations[locale] = firefoxListingTranslation(read(['store', 'listing-i18n', `${lang}.txt`]), lang);
+  }
+  return {
+    description: read(['store', 'FIREFOX-LISTING.txt']).trim(),
+    privacy: amoPrivacyText(read(['store', 'PRIVACY.md'])),
+    summary, translations,
+    screenshots: AMO_SCREENSHOTS.map(([file, caption]) => {
+      const path = join(base, 'store', 'images', file);
+      return { path, caption, read: () => readFileSync(path) };
+    })
+  };
+}
+
+export async function updateAmoListing(request, description, privacy, { summary, translations } = {}) {
   if (!description.trim() || !privacy.trim()) throw new Error('Empty AMO listing or privacy policy.');
   const path = `/addons/addon/${AMO_ADDON}/`;
-  for (const [endpoint, field, value] of [[path, 'description', description], [`${path}eula_policy/`, 'privacy_policy', privacy]]) {
-    await request(endpoint, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({[field]:{'en-US':value}})});
+  const listing = { description: { 'en-US': description, ...translations } };
+  if (summary) listing.summary = summary;
+  for (const [endpoint, fields] of [[path, listing], [`${path}eula_policy/`, { privacy_policy: { 'en-US': privacy } }]]) {
+    await request(endpoint, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(fields)});
     const saved = await request(endpoint);
-    if (typeof saved[field]?.['en-US'] !== 'string' || storeText(saved[field]['en-US']) !== storeText(value))
-      throw new Error(`AMO ${field} readback did not match the requested copy.`);
+    for (const [field, values] of Object.entries(fields)) for (const [locale, value] of Object.entries(values)) {
+      const label = locale === 'en-US' ? field : `${field} (${locale})`;
+      if (typeof saved[field]?.[locale] !== 'string' || storeText(saved[field][locale]) !== storeText(value))
+        throw new Error(`AMO ${label} readback did not match the requested copy.`);
+    }
   }
+}
+
+// Replace AMO screenshots with the repository set, in order. New previews upload before old ones are removed.
+export async function syncAmoPreviews(request, shots) {
+  const path = `/addons/addon/${AMO_ADDON}/`;
+  const captions = list => list.map(p => p.caption?.['en-US'] ?? null);
+  const want = shots.map(s => s.caption);
+  const current = (await request(path)).previews || [];
+  if (JSON.stringify(captions(current)) === JSON.stringify(want)) return 'unchanged';
+  for (const [position, shot] of shots.entries()) {
+    const form = new FormData();
+    form.append('image', new Blob([shot.read()], { type: 'image/png' }), shot.path.split(/[\\/]/).pop());
+    form.append('position', String(position));
+    const preview = await request(`${path}previews/`, { method: 'POST', body: form });
+    if (!preview?.id) throw new Error('AMO did not confirm a screenshot upload.');
+    await request(`${path}previews/${preview.id}/`, { method: 'PATCH', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ caption: { 'en-US': shot.caption }, position }) });
+  }
+  for (const old of current) await request(`${path}previews/${old.id}/`, { method: 'DELETE' });
+  const saved = (await request(path)).previews || [];
+  if (JSON.stringify(captions(saved)) !== JSON.stringify(want)) throw new Error('AMO screenshot readback did not match the requested set.');
+  return 'updated';
 }
 
 export function amoPrivacyText(markdown) {
@@ -109,10 +184,11 @@ export function amoPrivacyText(markdown) {
 
 async function submitAmoListing() {
   requireEnv('AMO_API_KEY', 'AMO_API_SECRET');
-  const description = readFileSync(join(root, 'store', 'FIREFOX-LISTING.txt'), 'utf8').trim();
-  const privacy = amoPrivacyText(readFileSync(join(root, 'store', 'PRIVACY.md'), 'utf8'));
-  await updateAmoListing(amoRequest, description, privacy);
-  console.log('AMO English listing and privacy policy: saved and read back successfully. No browsing-history log; optional current-domain reports only.');
+  // Listing copy and images may come from main (OLED_LISTING_ROOT) so listing-only fixes need no new package.
+  const assets = amoListingAssets(process.env.OLED_LISTING_ROOT || root);
+  await updateAmoListing(amoRequest, assets.description, assets.privacy, assets);
+  console.log(`AMO listing and privacy policy: saved and read back successfully (${Object.keys(assets.summary).join(', ')}). No browsing-history log; optional current-domain reports only.`);
+  console.log(`AMO screenshots: ${await syncAmoPreviews(amoRequest, assets.screenshots)} (${assets.screenshots.length}).`);
 }
 
 async function submitAmo() {
