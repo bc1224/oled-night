@@ -90,7 +90,7 @@ async function amoRequest(path, options = {}) {
   const response = await retryThrottled(() => fetch(`${AMO_BASE}${path}`, {
     ...options,
     headers: { Authorization: `JWT ${amoToken()}`, ...options.headers }
-  }));
+  }), async ms => { console.log(`AMO throttled (HTTP 429); waiting ${Math.round(ms / 1000)}s.`); await delay(ms); });
   return json(response, `AMO ${path}`);
 }
 
@@ -165,25 +165,42 @@ export async function updateAmoListing(request, description, privacy, { summary,
   }
 }
 
-// Replace AMO screenshots with the repository set, in order. New previews upload before old ones are removed.
+// Make AMO screenshots match the repository set, in order. Resumable: previews that already carry a
+// wanted caption are kept, only missing ones upload, and leftovers are deleted after uploads finish.
 export async function syncAmoPreviews(request, shots) {
   const path = `/addons/addon/${AMO_ADDON}/`;
-  const captions = list => list.map(p => p.caption?.['en-US'] ?? null);
-  const want = shots.map(s => s.caption);
-  const current = (await request(path)).previews || [];
-  if (JSON.stringify(captions(current)) === JSON.stringify(want)) return 'unchanged';
+  const caption = preview => preview.caption?.['en-US'] ?? null;
+  const ordered = list => [...list].sort((a, b) => a.position - b.position);
+  const current = ordered((await request(path)).previews || []);
+  const kept = new Set();
+  let changed = false;
   for (const [position, shot] of shots.entries()) {
+    const existing = current.find(p => !kept.has(p.id) && caption(p) === shot.caption);
+    if (existing) {
+      kept.add(existing.id);
+      if (existing.position !== position) {
+        changed = true;
+        await request(`${path}previews/${existing.id}/`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ position }) });
+      }
+      continue;
+    }
+    changed = true;
     const form = new FormData();
     form.append('image', new Blob([shot.read()], { type: 'image/png' }), shot.path.split(/[\\/]/).pop());
     form.append('position', String(position));
     const preview = await request(`${path}previews/`, { method: 'POST', body: form });
     if (!preview?.id) throw new Error('AMO did not confirm a screenshot upload.');
+    kept.add(preview.id);
     await request(`${path}previews/${preview.id}/`, { method: 'PATCH', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ caption: { 'en-US': shot.caption }, position }) });
   }
-  for (const old of current) await request(`${path}previews/${old.id}/`, { method: 'DELETE' });
-  const saved = (await request(path)).previews || [];
-  if (JSON.stringify(captions(saved)) !== JSON.stringify(want)) throw new Error('AMO screenshot readback did not match the requested set.');
+  for (const old of current) if (!kept.has(old.id)) {
+    changed = true;
+    await request(`${path}previews/${old.id}/`, { method: 'DELETE' });
+  }
+  if (!changed) return 'unchanged';
+  const saved = ordered((await request(path)).previews || []).map(caption);
+  if (JSON.stringify(saved) !== JSON.stringify(shots.map(s => s.caption))) throw new Error('AMO screenshot readback did not match the requested set.');
   return 'updated';
 }
 
