@@ -65,6 +65,17 @@ const {join} = require('node:path');
   log.length = 0;
   assert.equal(await syncAmoPreviews(previewRequest, shots), 'unchanged');
   assert.ok(log.every(l => l.startsWith('GET')), 'matching previews cause no writes');
+  // Resuming after a throttled run: a captioned upload is kept, an uncaptioned leftover and old previews go,
+  // and only the missing four upload.
+  previews = [{id: 1, position: 0, caption: null}, {id: 7, position: 0, caption: null},
+    {id: 8, position: 0, caption: {'en-US': shots[0].caption}}, {id: 2, position: 1, caption: null}];
+  log.length = 0;
+  assert.equal(await syncAmoPreviews(previewRequest, shots), 'updated');
+  assert.equal(log.filter(l => l.startsWith('POST')).length, 4);
+  assert.deepEqual(log.filter(l => l.startsWith('DELETE')).map(l => l.match(/(\d+)\/$/)[1]).sort(), ['1', '2', '7']);
+  assert.ok(previews.some(p => p.id === 8));
+  assert.deepEqual([...previews].sort((a, b) => a.position - b.position).map(p => p.caption['en-US']), shots.map(s => s.caption));
+
   // HTTP 429 is retried with Retry-After (seconds) or a growing fallback, and gives up after the limit.
   const waits = [];
   const responses = [{status: 429, headers: new Headers({'retry-after': '7'})}, {status: 429, headers: new Headers()}, {status: 200}];
