@@ -103,3 +103,19 @@ Live figures come from the maintainer's everyday Chrome profile. Its other exten
 The user-supplied Amazon diagnostic report from 0.6.16 counted 9,827 styled elements. It has no CPU or latency measurements, so it cannot quantify Amazon's slowdown. A fresh isolated Chrome comparison on the 2,500-row fixture did show material extension work during repeated class changes: median browser CPU over roughly three seconds was 757 ms without OLED Night versus 1,893 ms with 0.6.17; renderer task time was 372 versus 1,251 ms. A second 0.6.17 run measured 1,527 ms browser CPU and 1,009 ms renderer task time, showing run-to-run variation. Worst timer gaps were 18–19 ms in these runs, so this test demonstrates extra CPU use, not a specific visible hitch or Amazon dropdown delay.
 
 An optional `BENCH_PROFILE=1` run captures `dist/benchmark-rows.cpuprofile` for the first OLED Night row sample. V8's self-time samples primarily identified `process`, `surfaceInfo` and `decide`, alongside browser style work. The extension re-reads original computed styles when changing classes can affect colors. A bounded cache for plain surface results was tested against 0.6.17 but its repeated comparison did not confirm a speedup, so it was removed. The 0.6.18 `<picture>` fix addresses invisible product images; it is not claimed as a general performance fix.
+
+## 0.6.79: plain Chrome vs OLED Night (November 8, 2026)
+
+`node tests/e2e/benchmark.mjs` with `BENCH_VARIANT=base`, then `oled`, default `classes` workload, Chrome 156.0.8078.80 headless, Windows 11, AMD Ryzen 9 9950X3D, run sequentially while other desktop work was running. Medians of three samples:
+
+| Fixture | Metric | Plain | OLED Night 0.6.79 |
+|---|---|---:|---:|
+| light.html | load event | 26 ms | 33 ms |
+| light.html | renderer task time, ~3 s work | 20 ms | 19 ms |
+| rows.html (2,500 rows) | renderer task time, ~3 s work | 494 ms | 603 ms |
+| rows.html | browser CPU, ~3 s work | 1,099 ms | 1,111 ms |
+| rows.html | timer ticks / worst gap | 181 / 18 ms | 179 / 18 ms |
+| rows.html | renderer JS heap | 0.88 MiB | 6.77 MiB |
+| rows.html | load event | 35 ms | 747 ms (samples 780, 747, 42) |
+
+Browser CPU was noisy in this run (light.html plain samples 49, 1,017 and 42 ms), so renderer task time is the steadier comparison. Dark Reader was not rerun. The README "Performance" section quotes this table.

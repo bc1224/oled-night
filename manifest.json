@@ -1,14 +1,17 @@
 {
+  "default_locale": "en",
   "manifest_version": 3,
-  "name": "OLED Night",
-  "version": "0.6.77",
-  "description": "True-black dark mode for every site. Keeps images intact, readable text, per-site controls.",
+  "name": "__MSG_extName__",
+  "version": "0.6.79",
+  "description": "__MSG_extDescription__",
   "permissions": [
     "storage",
     "activeTab",
     "scripting"
   ],
-  "optional_permissions": ["clipboardRead"],
+  "optional_permissions": [
+    "clipboardRead"
+  ],
   "host_permissions": [
     "<all_urls>"
   ],
@@ -37,21 +40,25 @@
       "suggested_key": {
         "default": "Alt+Shift+E"
       },
-      "description": "Turn OLED Night on or off everywhere"
+      "description": "__MSG_cmdToggleExtension__"
     },
     "toggle-site": {
       "suggested_key": {
         "default": "Alt+Shift+D"
       },
-      "description": "Turn OLED Night on or off for the current site"
+      "description": "__MSG_cmdToggleSite__"
     },
     "toggle-extension-backup": {
-      "suggested_key": { "default": "Ctrl+Shift+9" },
-      "description": "Turn OLED Night on or off everywhere (alternate shortcut)"
+      "suggested_key": {
+        "default": "Ctrl+Shift+9"
+      },
+      "description": "__MSG_cmdToggleExtensionBackup__"
     },
     "toggle-site-backup": {
-      "suggested_key": { "default": "Ctrl+Shift+8" },
-      "description": "Turn OLED Night on or off for the current site (alternate shortcut)"
+      "suggested_key": {
+        "default": "Ctrl+Shift+8"
+      },
+      "description": "__MSG_cmdToggleSiteBackup__"
     }
   },
   "content_scripts": [

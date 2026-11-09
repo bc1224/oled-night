@@ -1,0 +1,80 @@
+{
+  "extName": {
+    "message": "OLED Night"
+  },
+  "extDescription": {
+    "message": "Mod întunecat cu negru adevărat pentru orice site. Imagini intacte, text lizibil, setări pentru fiecare site."
+  },
+  "cmdToggleExtension": {
+    "message": "Pornește sau oprește OLED Night peste tot"
+  },
+  "cmdToggleSite": {
+    "message": "Pornește sau oprește OLED Night pentru site-ul curent"
+  },
+  "cmdToggleExtensionBackup": {
+    "message": "Pornește sau oprește OLED Night peste tot (comandă rapidă alternativă)"
+  },
+  "cmdToggleSiteBackup": {
+    "message": "Pornește sau oprește OLED Night pentru site-ul curent (comandă rapidă alternativă)"
+  },
+  "welcomeTitle": {
+    "message": "OLED Night este pornit"
+  },
+  "welcomeLead": {
+    "message": "Fiecare site pe care îl deschizi este acum negru adevărat. Textul rămâne lizibil, iar fotografiile își păstrează culorile."
+  },
+  "welcomePinTitle": {
+    "message": "Fixează-l în bara de instrumente"
+  },
+  "welcomePinBody": {
+    "message": "Dă clic pe pictograma în formă de piesă de puzzle de lângă bara de adrese, apoi pe pioneza de lângă OLED Night. Fereastra lui controlează site-ul curent."
+  },
+  "welcomeModesTitle": {
+    "message": "Alege un mod pentru orice site"
+  },
+  "modeAuto": {
+    "message": "Automat"
+  },
+  "modeAutoBody": {
+    "message": "Recolorează site-urile luminoase. Pe site-urile deja întunecate doar adâncește nuanțele de gri."
+  },
+  "modeRecolor": {
+    "message": "Recolorare completă"
+  },
+  "modeRecolorBody": {
+    "message": "Recolorează mereu, chiar dacă site-ul pare deja întunecat."
+  },
+  "modeDeepen": {
+    "message": "Doar negru mai profund"
+  },
+  "modeDeepenBody": {
+    "message": "Transformă în negru adevărat doar cele mai închise nuanțe de gri."
+  },
+  "modeInvert": {
+    "message": "Inversare"
+  },
+  "modeInvertBody": {
+    "message": "Pentru aplicații canvas, cum ar fi foile de calcul: inversează pagina, apoi readuce imaginile la normal."
+  },
+  "welcomeShortcutsTitle": {
+    "message": "Comenzi rapide de la tastatură"
+  },
+  "shortcutEverywhere": {
+    "message": "Pornit sau oprit peste tot"
+  },
+  "shortcutSite": {
+    "message": "Pornit sau oprit pe site-ul curent"
+  },
+  "shortcutUnset": {
+    "message": "Nesetată"
+  },
+  "welcomeSettings": {
+    "message": "Deschide setările"
+  },
+  "welcomeTheme": {
+    "message": "Obține tema neagră pentru Chrome"
+  },
+  "welcomeReport": {
+    "message": "Un site arată greșit? Deschide fereastra extensiei și alege Report a broken site."
+  }
+}

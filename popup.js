@@ -157,8 +157,33 @@
     setTimeout(() => URL.revokeObjectURL(link.href), 5000);
   }
 
+  // One optional rating link: only after a week of use and a few popup opens,
+  // never again once followed or dismissed. Nothing is offered in exchange.
+  const RATE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+  const RATE_AFTER_OPENS = 5;
+  const RATE_URL = isFirefox
+    ? "https://addons.mozilla.org/firefox/addon/oled-night/reviews/"
+    : "https://chromewebstore.google.com/detail/oled-night/afffgalhockmjmknnaljghdneaeichbl/reviews";
+  async function initRatePrompt() {
+    if (!chrome?.storage?.local) return;
+    try {
+      const now = Date.now();
+      const state = await chrome.storage.local.get({ installedAt: 0, popupOpens: 0, rateDone: false });
+      const installedAt = state.installedAt || now;
+      const popupOpens = state.popupOpens + 1;
+      await chrome.storage.local.set({ installedAt, popupOpens });
+      if (state.rateDone || popupOpens < RATE_AFTER_OPENS || now - installedAt < RATE_AFTER_MS) return;
+      const done = () => { chrome.storage.local.set({ rateDone: true }); $("ratePrompt").hidden = true; };
+      $("rateLink").href = RATE_URL;
+      $("rateLink").addEventListener("click", done);
+      $("rateDismiss").addEventListener("click", done);
+      $("ratePrompt").hidden = false;
+    } catch {}
+  }
+
   async function init() {
     try { $("version").textContent = `v${chrome.runtime.getManifest().version}`; } catch {}
+    initRatePrompt();
     // The companion theme exists for Chrome only.
     $("theme").hidden = isFirefox;
     if (!hasChrome() || !chrome?.tabs) {

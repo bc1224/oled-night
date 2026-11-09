@@ -12,9 +12,13 @@ const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));
 const dist = join(root, "dist");
 if (existsSync(dist) && lstatSync(dist).isSymbolicLink()) throw new Error("dist must not be a symlink");
 
+// Translated manifest and welcome-page strings.
+const LOCALES = readdirSync(join(root, "_locales")).sort().map((locale) => `_locales/${locale}/messages.json`);
+
 // Runtime files only: manifest, scripts, pages, styles and the toolbar icons.
 const RUNTIME = ["manifest.json", "settings.js", "color-utils.js", "youtube-theme.js", "content.js", "background.js",
-  "popup.html", "popup.css", "popup.js", "report-utils.js", "options.html", "options.css", "options.js",
+  "popup.html", "popup.css", "popup.js", "report-utils.js", "options.html", "options.css", "options.js", "welcome.html", "welcome.css", "welcome.js",
+  ...LOCALES,
   "assets/icon-16.png", "assets/icon-32.png", "assets/icon-48.png", "assets/icon-128.png", "INSTALL.md", "LICENSE"];
 
 // Every file the manifest and pages reference must be in the list above.
@@ -22,7 +26,7 @@ const referenced = new Set([
   manifest.background.service_worker, ...manifest.content_scripts.flatMap((c) => c.js), manifest.action.default_popup, manifest.options_page,
   ...Object.values(manifest.icons)
 ]);
-for (const page of ["popup.html", "options.html"]) {
+for (const page of ["popup.html", "options.html", "welcome.html"]) {
   for (const [, ref] of readFileSync(join(root, page), "utf8").matchAll(/(?:src|href)="([^":]+)"/g)) referenced.add(ref);
 }
 const missing = [...referenced].filter((file) => !RUNTIME.includes(file));

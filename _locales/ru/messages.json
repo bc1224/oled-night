@@ -1,0 +1,80 @@
+{
+  "extName": {
+    "message": "OLED Night"
+  },
+  "extDescription": {
+    "message": "Тёмная тема с настоящим чёрным для любого сайта. Изображения без искажений, читаемый текст, настройки для каждого сайта."
+  },
+  "cmdToggleExtension": {
+    "message": "Включить или выключить OLED Night на всех сайтах"
+  },
+  "cmdToggleSite": {
+    "message": "Включить или выключить OLED Night на текущем сайте"
+  },
+  "cmdToggleExtensionBackup": {
+    "message": "Включить или выключить OLED Night на всех сайтах (запасное сочетание клавиш)"
+  },
+  "cmdToggleSiteBackup": {
+    "message": "Включить или выключить OLED Night на текущем сайте (запасное сочетание клавиш)"
+  },
+  "welcomeTitle": {
+    "message": "OLED Night включён"
+  },
+  "welcomeLead": {
+    "message": "Теперь каждый открытый сайт настоящего чёрного цвета. Текст остаётся читаемым, а фотографии сохраняют свои цвета."
+  },
+  "welcomePinTitle": {
+    "message": "Закрепите на панели инструментов"
+  },
+  "welcomePinBody": {
+    "message": "Нажмите значок пазла рядом с адресной строкой, затем булавку рядом с OLED Night. Во всплывающем окне настраивается текущий сайт."
+  },
+  "welcomeModesTitle": {
+    "message": "Выберите режим для любого сайта"
+  },
+  "modeAuto": {
+    "message": "Автоматически"
+  },
+  "modeAutoBody": {
+    "message": "Перекрашивает светлые сайты. На уже тёмных сайтах только углубляет серые тона."
+  },
+  "modeRecolor": {
+    "message": "Полная перекраска"
+  },
+  "modeRecolorBody": {
+    "message": "Всегда перекрашивает, даже если сайт уже выглядит тёмным."
+  },
+  "modeDeepen": {
+    "message": "Только углубить чёрный"
+  },
+  "modeDeepenBody": {
+    "message": "Делает настоящим чёрным только самые тёмные серые тона."
+  },
+  "modeInvert": {
+    "message": "Инверсия"
+  },
+  "modeInvertBody": {
+    "message": "Для canvas-приложений, например таблиц: инвертирует страницу и возвращает изображениям исходный вид."
+  },
+  "welcomeShortcutsTitle": {
+    "message": "Сочетания клавиш"
+  },
+  "shortcutEverywhere": {
+    "message": "Вкл. или выкл. на всех сайтах"
+  },
+  "shortcutSite": {
+    "message": "Вкл. или выкл. на текущем сайте"
+  },
+  "shortcutUnset": {
+    "message": "Не задано"
+  },
+  "welcomeSettings": {
+    "message": "Открыть настройки"
+  },
+  "welcomeTheme": {
+    "message": "Установить чёрную тему Chrome"
+  },
+  "welcomeReport": {
+    "message": "Сайт выглядит неправильно? Откройте всплывающее окно и выберите Report a broken site."
+  }
+}

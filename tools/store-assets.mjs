@@ -3,6 +3,8 @@
 //   screenshot-1-before-after.png  1280x800
 //   screenshot-2-popup.png         1280x800
 //   promo-small.png                440x280
+//   promo-marquee.png              1400x560
+//   social-preview.png             1280x640 (GitHub social preview, website og:image)
 //   node tools/store-assets.mjs
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -111,6 +113,25 @@ try {
     <img src="${pngData(join(root, "assets", "icon-128.png"))}" style="width:96px;height:96px">
     <div><div style="font-size:34px;font-weight:700;letter-spacing:-.03em">OLED Night</div><div style="margin-top:8px;font-size:16px;color:#a4a4ad;line-height:1.4">True-black dark mode<br>for every site</div></div></body>`);
   await promo.shot(join(outDir, "promo-small.png"));
+
+  // Large art: the Chrome Web Store marquee tile and the GitHub/website social preview.
+  const split = pngData(join(outDir, "screenshot-1-before-after.png"));
+  const icon = pngData(join(root, "assets", "icon-128.png"));
+  const marquee = await tab(1400, 560);
+  await marquee.go("about:blank", 200);
+  await marquee.html(`<body style="margin:0;width:1400px;height:560px;background:#000;${font};color:#f5f5f7;display:flex;align-items:center;gap:56px;padding:0 0 0 80px;box-sizing:border-box;overflow:hidden">
+    <div style="flex:0 0 470px"><div style="display:flex;align-items:center;gap:18px"><img src="${icon}" style="width:76px;height:76px"><div style="font-size:50px;font-weight:700;letter-spacing:-.03em">OLED Night</div></div>
+      <div style="margin-top:26px;font-size:30px;font-weight:600;line-height:1.25">True-black dark mode<br>for every site</div>
+      <div style="margin-top:18px;font-size:19px;line-height:1.55;color:#a4a4ad">Readable text. Images untouched.<br>Per-site control. Free and open source.</div></div>
+    <img src="${split}" alt="OLED Night before and after" style="width:780px;height:488px;border-radius:14px 0 0 14px;box-shadow:0 0 0 1px #26262e,0 30px 90px rgba(155,140,255,.2)"></body>`);
+  await marquee.shot(join(outDir, "promo-marquee.png"));
+
+  const social = await tab(1280, 640);
+  await social.go("about:blank", 200);
+  await social.html(`<body style="margin:0;width:1280px;height:640px;background:#000;${font};color:#f5f5f7;overflow:hidden;position:relative">
+    <div style="position:absolute;left:64px;top:56px;display:flex;align-items:center;gap:18px"><img src="${icon}" style="width:72px;height:72px"><div><div style="font-size:46px;font-weight:700;letter-spacing:-.03em;line-height:1">OLED Night</div><div style="margin-top:8px;font-size:21px;color:#a4a4ad">True-black (#000000) dark mode for Chrome and Firefox</div></div></div>
+    <img src="${split}" alt="OLED Night before and after" style="position:absolute;left:64px;right:64px;top:196px;width:1152px;height:720px;border-radius:14px;box-shadow:0 0 0 1px #26262e,0 30px 90px rgba(155,140,255,.2)"></body>`);
+  await social.shot(join(outDir, "social-preview.png"));
   console.log(`Wrote store images to ${outDir}`);
 } finally {
   chrome.kill();

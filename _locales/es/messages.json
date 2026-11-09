@@ -1,0 +1,80 @@
+{
+  "extName": {
+    "message": "OLED Night"
+  },
+  "extDescription": {
+    "message": "Modo oscuro con negro puro para cualquier web. Imágenes intactas, texto legible y ajustes por sitio."
+  },
+  "cmdToggleExtension": {
+    "message": "Activar o desactivar OLED Night en todas partes"
+  },
+  "cmdToggleSite": {
+    "message": "Activar o desactivar OLED Night en el sitio actual"
+  },
+  "cmdToggleExtensionBackup": {
+    "message": "Activar o desactivar OLED Night en todas partes (atajo alternativo)"
+  },
+  "cmdToggleSiteBackup": {
+    "message": "Activar o desactivar OLED Night en el sitio actual (atajo alternativo)"
+  },
+  "welcomeTitle": {
+    "message": "OLED Night está activado"
+  },
+  "welcomeLead": {
+    "message": "Cada sitio que abras ahora es negro puro. El texto sigue siendo legible y las fotos conservan sus colores."
+  },
+  "welcomePinTitle": {
+    "message": "Fíjalo en la barra de herramientas"
+  },
+  "welcomePinBody": {
+    "message": "Haz clic en el icono de pieza de puzle junto a la barra de direcciones y luego en la chincheta junto a OLED Night. Su ventana emergente controla el sitio actual."
+  },
+  "welcomeModesTitle": {
+    "message": "Elige un modo para cada sitio"
+  },
+  "modeAuto": {
+    "message": "Automático"
+  },
+  "modeAutoBody": {
+    "message": "Recolorea los sitios claros. En los que ya son oscuros, solo intensifica sus grises."
+  },
+  "modeRecolor": {
+    "message": "Recolorear todo"
+  },
+  "modeRecolorBody": {
+    "message": "Siempre recolorea, aunque el sitio ya parezca oscuro."
+  },
+  "modeDeepen": {
+    "message": "Solo intensificar negros"
+  },
+  "modeDeepenBody": {
+    "message": "Solo convierte los grises más oscuros en negro puro."
+  },
+  "modeInvert": {
+    "message": "Invertir"
+  },
+  "modeInvertBody": {
+    "message": "Para apps de canvas, como hojas de cálculo: invierte la página y devuelve las imágenes a su estado original."
+  },
+  "welcomeShortcutsTitle": {
+    "message": "Atajos de teclado"
+  },
+  "shortcutEverywhere": {
+    "message": "Activar o desactivar en todas partes"
+  },
+  "shortcutSite": {
+    "message": "Activar o desactivar en el sitio actual"
+  },
+  "shortcutUnset": {
+    "message": "Sin asignar"
+  },
+  "welcomeSettings": {
+    "message": "Abrir ajustes"
+  },
+  "welcomeTheme": {
+    "message": "Obtener el tema negro de Chrome"
+  },
+  "welcomeReport": {
+    "message": "¿Un sitio se ve mal? Abre la ventana emergente y elige Report a broken site."
+  }
+}

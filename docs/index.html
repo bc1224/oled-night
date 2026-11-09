@@ -3,11 +3,42 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OLED Night</title>
-  <meta name="description" content="OLED Night is a free, open-source dark-mode extension for Chrome and Firefox. True-black pages, readable text, per-site controls and no background tracking.">
-  <meta property="og:title" content="OLED Night: true-black dark mode for Chrome and Firefox">
-  <meta property="og:description" content="Free and open source. True-black pages, readable text, protected images and per-site controls. No automatic analytics in the extension.">
-  <meta property="og:image" content="https://bc1224.github.io/oled-night/assets/before-after.png">
+  <title>OLED Night: true-black dark mode for Chrome and Firefox</title>
+  <meta name="description" content="OLED Night is a free, open-source dark-mode extension for Chrome and Firefox. True-black (#000000) pages for OLED screens, readable text, untouched images, per-site controls and no background tracking.">
+  <link rel="canonical" href="https://bc1224.github.io/oled-night/">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://bc1224.github.io/oled-night/">
+  <meta property="og:site_name" content="OLED Night">
+  <meta property="og:title" content="OLED Night">
+  <meta property="og:description" content="Free, open-source dark mode for Chrome and Firefox that paints websites true black (#000000) for OLED screens, keeps text readable and leaves images untouched.">
+  <meta property="og:image" content="https://bc1224.github.io/oled-night/assets/social-preview.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="640">
+  <meta property="og:image:alt" content="OLED Night: true-black dark mode for Chrome and Firefox, shown on a before and after email inbox">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="OLED Night">
+  <meta name="twitter:description" content="Free, open-source dark mode for Chrome and Firefox that paints websites true black (#000000) for OLED screens, keeps text readable and leaves images untouched.">
+  <meta name="twitter:image" content="https://bc1224.github.io/oled-night/assets/social-preview.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "OLED Night",
+    "description": "Free, open-source dark mode for Chrome and Firefox that paints websites true black (#000000) for OLED screens, keeps text readable and leaves images untouched.",
+    "applicationCategory": "BrowserApplication",
+    "operatingSystem": "Chrome, Firefox",
+    "softwareVersion": "0.6.79",
+    "url": "https://bc1224.github.io/oled-night/",
+    "image": "https://bc1224.github.io/oled-night/assets/social-preview.png",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+    "sameAs": [
+      "https://chromewebstore.google.com/detail/oled-night/afffgalhockmjmknnaljghdneaeichbl",
+      "https://addons.mozilla.org/en-US/firefox/addon/oled-night/",
+      "https://github.com/bc1224/oled-night"
+    ]
+  }
+  </script>
   <meta name="theme-color" content="#000000">
   <link rel="icon" href="assets/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -70,8 +101,8 @@
     .story { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: start; }
     .story p { color: #c9c9d1; margin: 0 0 16px; }
     .pains { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
-    .pains li { display: flex; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: #c9c9d1; font-size: 15px; }
-    .pains li::before { content: "✕"; color: #ff7a7a; font-weight: 700; }
+    .pains li { position: relative; padding: 14px 16px 14px 42px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: #c9c9d1; font-size: 15px; }
+    .pains li::before { content: "✕"; position: absolute; left: 16px; top: 14px; color: #ff7a7a; font-weight: 700; }
     .pains li.fix::before { content: "✓"; color: #6fe3a1; }
 
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -127,16 +158,21 @@
       th:nth-child(3), td:nth-child(3) { display: none; }
       td:first-child { white-space: normal; }
     }
+    table.data td:first-child { white-space: normal; }
+    table.data th:nth-child(n+2), table.data td:nth-child(n+2) { display: table-cell; }
+    table.nums td:nth-child(n+2) { white-space: nowrap; }
+    @media (max-width: 560px) { table.data th, table.data td { padding: 10px 8px; font-size: 14px; } table.nums td:nth-child(n+2) { white-space: normal; } }
     @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
   </style>
 </head>
 <body>
   <nav class="top" aria-label="Main">
     <div class="wrap">
-      <a class="brand" href="#"><img src="assets/icon.png" alt="">OLED Night</a>
+      <a class="brand" href="#"><img src="assets/icon.png" alt="OLED Night logo">OLED Night</a>
       <ul>
         <li><a href="#why">Why</a></li>
         <li><a href="#features">Features</a></li>
+        <li><a href="#details">Details</a></li>
         <li><a href="#install">Install</a></li>
         <li><a href="#use">How to use</a></li>
         <li><a href="#faq">FAQ</a></li>
@@ -160,7 +196,8 @@
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.1c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.6 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.7 1.7.3 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5Z"/></svg>View source on GitHub</a>
       </div>
       <p class="small">Free forever · No account · No background tracking · <a href="#install">Install in 1 minute</a></p>
-      <img class="shot" src="assets/before-after.png" width="1280" height="800" alt="The same email inbox before and after OLED Night: the left half is bright white, the right half is true black with readable text and the photo unchanged.">
+      <p class="small">Latest version: 0.6.79, November 2026 · <a href="https://github.com/bc1224/oled-night/blob/main/CHANGELOG.md">What's new</a></p>
+      <img class="shot" src="assets/before-after.png" width="1280" height="800" alt="OLED Night before and after on the same email inbox: the left half is bright white, the right half is true black with readable text and the photo unchanged.">
     </div>
   </header>
 
@@ -201,6 +238,64 @@
           <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.4 3 14.6 0 18M12 3c-3 3.4-3 14.6 0 18"/></svg></div><h3>Per-site control</h3><p>A mode for each site, plus that site's own brightness, contrast and image dimming.</p></div>
           <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg></div><h3>Schedule &amp; shortcuts</h3><p>Press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> to turn OLED Night on or off everywhere, or <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> for the current site. Keep your saved settings and optional night schedule.</p></div>
           <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg></div><h3>Private by design</h3><p>The extension has no analytics, ads or background tracking. Settings sync through your browser profile; optional report details and screenshots are private to the maintainer.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="details">
+      <div class="wrap">
+        <div class="kicker">How it compares</div>
+        <h2>Not a filter. A recolor, element by element.</h2>
+        <p class="intro">Most dark modes paint pages dark grey (around <code>#121212</code>) or run one inverting filter over the whole page. OLED Night paints page backgrounds true black, <code>#000000</code>, and chooses each element's color separately.</p>
+        <div class="grid">
+          <div class="card"><h3>Per-element recoloring</h3><p>Backgrounds, text, borders, icons, chart fills, gradients and shadows each get their own dark color, so layouts keep their structure and text keeps its emphasis.</p></div>
+          <div class="card"><h3>Images preserved</h3><p>Photos, video, artwork and brand colors are left alone instead of being double-inverted. Image dimming is optional.</p></div>
+          <div class="card"><h3>Dark sites respected</h3><p>On a site that is already dark, OLED Night only deepens its greys to true black. Pages go black before they first draw, so there is no white flash.</p></div>
+        </div>
+
+        <h3 id="performance" style="margin-top:64px">Performance, measured</h3>
+        <p class="small">The repo's own benchmark in headless Chrome 156 on Windows 11, plain Chrome versus OLED Night 0.6.79, three runs each, medians. <a href="https://github.com/bc1224/oled-night/blob/main/PERFORMANCE.md">Full method and history</a>.</p>
+        <table class="data nums">
+          <thead><tr><th>Test page</th><th>Plain Chrome</th><th>With OLED Night</th></tr></thead>
+          <tbody>
+            <tr><td>Simple light page: page load</td><td>26 ms</td><td>33 ms</td></tr>
+            <tr><td>Simple light page: page work over 3 s</td><td>20 ms</td><td>19 ms</td></tr>
+            <tr><td>2,500-row inbox-style page, 20 rows changing every frame: page work over 3 s</td><td>494 ms</td><td>603 ms (about 22% more)</td></tr>
+            <tr><td>Same page: frames in 3 s / worst frame gap</td><td>181 / 18 ms</td><td>179 / 18 ms</td></tr>
+          </tbody>
+        </table>
+        <p class="small" style="margin-top:18px">On ordinary pages the cost is within run-to-run noise. On very large, constantly changing pages it does real extra work, and the first recolor of a very large page can delay its load event (about 0.75 s for 2,500 rows in two of three runs). It is not always lighter than other dark modes: an earlier test on the same page measured more CPU than Dark Reader. Reported slowdowns get measured and fixed; 0.6.13 cut typing lag on Discord from 48 to 72 ms per key press to 0.4 ms.</p>
+
+        <h3 style="margin-top:64px">Tested and working on</h3>
+        <p class="small">Every reported breakage gets a regression fixture that runs the real extension in headless Chrome before each release. Fixtures are modeled on Gmail, Google Docs, Sheets and Analytics, YouTube and YouTube Music, ChatGPT, Amazon, CVS, booking and checkout forms, Apple account pages, the California DMV, Instagram and Reddit (including Reddit Enhancement Suite), plus web components, frames, consent banners, charts and canvas apps. These are local reproductions, not live logins.</p>
+        <table class="data">
+          <thead><tr><th>Known issue</th><th>What to do</th></tr></thead>
+          <tbody>
+            <tr><td>A canvas app (spreadsheet grid, drawing tool) stays light</td><td>Set that site's mode to <b>Invert</b></td></tr>
+            <tr><td>Google Docs canvas artwork shows dark display colors</td><td>Use <b>Deepen blacks only</b> or <b>Off</b> while checking original colors (documents and exports are unchanged)</td></tr>
+            <tr><td>A site you want exactly as designed</td><td>Set that site to <b>Off</b> (<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>)</td></tr>
+            <tr><td>Browser pages (<code>chrome://</code>, the Chrome Web Store, Firefox add-on pages)</td><td>Browsers block extensions there; the companion Chrome theme darkens Chrome's own window</td></tr>
+            <tr><td>Captcha and verification widgets</td><td>Intentionally left unchanged so verification keeps working</td></tr>
+          </tbody>
+        </table>
+
+        <div class="two" style="margin-top:64px">
+          <div class="card">
+            <h3>Permissions, plainly</h3>
+            <p><b style="color:var(--text)">Website access (all sites):</b> needed to read each page's colors and recolor it on your device.</p>
+            <p style="margin-top:10px"><b style="color:var(--text)">Storage:</b> saves your settings and per-site choices in browser storage, which can sync through your browser profile.</p>
+            <p style="margin-top:10px"><b style="color:var(--text)">activeTab and scripting:</b> let the popup and shortcuts identify the current site and check whether a tab can be reached.</p>
+            <p style="margin-top:10px"><b style="color:var(--text)">Clipboard (optional):</b> asked only when you paste a screenshot into a report.</p>
+            <p style="margin-top:10px">No analytics, no ads, no background telemetry, no account and no browsing-history log.</p>
+          </div>
+          <div class="card">
+            <h3>Recommended settings for OLED monitors</h3>
+            <p><b style="color:var(--text)">Mode:</b> Automatic. Light sites are recolored; already-dark sites only get deeper blacks.</p>
+            <p style="margin-top:10px"><b style="color:var(--text)">Text brightness:</b> 80 to 90% (default 88). Fully white text on true black can look harsh in a dark room.</p>
+            <p style="margin-top:10px"><b style="color:var(--text)">Image dimming:</b> off, unless you browse image-heavy sites late at night.</p>
+            <p style="margin-top:10px"><b style="color:var(--text)">Burn-in care:</b> let your monitor's pixel refresh run and auto-hide the taskbar. Unlit black pixels do not age.</p>
+            <p style="margin-top:10px"><b style="color:var(--text)">Browser window:</b> add the <a href="https://chromewebstore.google.com/detail/oled-night-chrome-theme/pkdklfocgpcnijiggfddneadmhacbpmf">OLED Night Chrome theme</a> so tabs and toolbar are black too.</p>
+          </div>
         </div>
       </div>
     </section>
@@ -247,7 +342,7 @@
               <li><b>Appearance</b>OLED Black (pure black), Soft Dark (near-black), or Auto (follows your system's dark mode).</li>
               <li><b>Brightness &amp; Contrast</b>Brightness sets how light text is. Contrast sets how far panels stand out from the black page. The top sliders change only the current site. All sites contains the defaults; site choices take priority.</li>
               <li><b>Dim images on this site</b>Takes glare off bright photos and illustrations.</li>
-              <li><b>Report a broken site</b>Add optional notes and choose <b>Screenshot this page</b>, or paste, drop or select an image. Review it with <b>Use screenshot</b>, then choose <b>Submit report</b>. Nothing is uploaded before submission. Notes and any image are private to the maintainer for up to 30 days. If you pick an optional problem type, the public tracking issue shows the site domain and that type. No GitHub account is required.</li>
+              <li><b>Report a broken site</b>Add optional notes and choose <b>Screenshot this page</b>, or paste, drop or select an image. Review it with <b>Use screenshot</b>, then choose <b>Submit report</b>. Nothing is uploaded before submission. Notes and any image are private to the maintainer for up to 30 days. If you pick an optional problem type, the public tracking issue shows the site domain, that type, the extension version and color mode; otherwise it has a generic title. No GitHub account is required.</li>
             </ul>
           </div>
           <img class="shot" src="assets/popup.png" width="1280" height="800" alt="The OLED Night popup: main switch, site mode menu, appearance options, brightness and contrast sliders, and per-site options.">
@@ -275,11 +370,11 @@
       <div class="wrap">
         <div class="kicker">FAQ</div>
         <h2>Questions</h2>
-        <details><summary>A site still looks wrong. What should I try?</summary><p>Open the popup on that site and try <b>Deepen blacks only</b> if the site already has its own dark design, <b>Invert</b> if it draws its content on a canvas (spreadsheets, design tools), or <b>Off</b>. If it's still broken, click <b>Report a broken site</b> to review scrubbed diagnostics and submit details privately to the maintainer. The public tracking issue shows only the site domain and problem type, and only if you pick one.</p></details>
+        <details><summary>A site still looks wrong. What should I try?</summary><p>Open the popup on that site and try <b>Deepen blacks only</b> if the site already has its own dark design, <b>Invert</b> if it draws its content on a canvas (spreadsheets, design tools), or <b>Off</b>. If it's still broken, click <b>Report a broken site</b> to review scrubbed diagnostics and submit details privately to the maintainer. The public tracking issue has a generic title unless you pick a problem type; then it shows the site domain, that type, the extension version and color mode.</p></details>
         <details><summary>How is this different from Dark Reader?</summary><p>Dark Reader is great and does a lot. OLED Night is narrower on purpose: it aims for pure black backgrounds while keeping text readable and images, charts and product photos intact, and it's tested against the specific ways dark modes break sites. That includes unreadable text, white fades and glows, blank chart fills, black product photos, web components and chat widgets. If Dark Reader already looks perfect on your sites, keep it. If you want deeper blacks, or it breaks something you use, try this.</p></details>
         <details><summary>How is this different from Chrome's built-in "Auto Dark Mode"?</summary><p>Chrome's flag runs one filter over the whole page. It produces grey instead of black, can't be tuned per site, and often mangles images and charts. OLED Night decides each element's color separately: backgrounds, text, borders, icons, gradients and shadows each get their own treatment, and images are left alone.</p></details>
         <details><summary>Why don't images get darker?</summary><p>That's on purpose: photos and artwork should look the way they were made. If a bright image is too much on a black page, turn on <b>Dim images on this site</b>, or set it as the default in Settings.</p></details>
-        <details><summary>Will it slow my browser down?</summary><p>It's built to stay out of the way. Each update reads all the colors it needs in one pass and writes the changes in a second, and bursts of page activity are grouped together. A test holds it to smooth frame times on a page changing constantly. Moving the sliders only changes two values, so the page never has to be re-scanned.</p></details>
+        <details><summary>Will it slow my browser down?</summary><p>On ordinary pages the difference is within measurement noise. On very large pages that change constantly it does real extra work: in our 2,500-row benchmark it added about 22% page work with no dropped frames. Each update reads colors in one pass and writes in a second, and bursts of page activity are grouped together. Moving the sliders only changes two values, so the page is never re-scanned. <a href="#performance">See the numbers</a>.</p></details>
         <details><summary>Why does Chrome warn me about "developer mode" extensions?</summary><p>Chrome shows that notice for any extension you install yourself from a folder instead of from Google's store. It's normal, and you can dismiss it. The code is all public here, so you can see exactly what it does.</p></details>
         <details><summary>Does it work on YouTube, Gmail and other big sites?</summary><p>Yes. YouTube has its own dark theme, so OLED Night only deepens it to true black without touching its layout. Gmail gets a small tweak so unread emails stand out. Chrome's own pages (<code>chrome://</code> pages and the Web Store) can't be changed by any extension.</p></details>
         <details><summary>Can I use it on my phone?</summary><p>Chrome on Android and iOS doesn't support extensions. On Android, some Chromium browsers that do support extensions, such as Kiwi or Lemur, may work, but they aren't tested.</p></details>
@@ -310,7 +405,7 @@
           </div>
         </div>
         <ul class="pains">
-          <li class="fix" id="report-a-problem">Found a broken site? Open OLED Night on that page, choose <b>Report a broken site</b>, review your diagnostics and any optional screenshot, then choose <b>Submit report</b>. Notes and screenshots are private to the maintainer for up to 30 days. The public tracking issue shows the site domain and problem type only if you pick one. Anything you manually add to GitHub issues or comments is public.</li>
+          <li class="fix" id="report-a-problem">Found a broken site? Open OLED Night on that page, choose <b>Report a broken site</b>, review your diagnostics and any optional screenshot, then choose <b>Submit report</b>. Notes and screenshots are private to the maintainer for up to 30 days. The public tracking issue has a generic title unless you pick a problem type; then it shows the site domain, that type, the extension version and color mode. Anything you manually add to GitHub issues or comments is public.</li>
           <li class="fix">Fixing a site? Add a small page that reproduces it to the test suite.</li>
           <li class="fix">Star the repo if OLED Night saves your eyes, and watch releases to hear about updates.</li>
         </ul>

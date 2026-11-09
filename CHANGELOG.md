@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.79
+
+- Welcome page on first install (store installs only): how to pin OLED Night, what each mode does, and your current shortcuts, with links to Settings and the companion Chrome theme.
+- Store name, description, shortcut names and the welcome page are now translated into German, Russian, Romanian and Spanish.
+- A small, dismissible "Leave a rating" link appears in the popup only after a week of use and five popup opens, and never again once clicked or dismissed. It links to the Chrome Web Store or Firefox Add-ons reviews page.
+- Popup: visible keyboard focus outlines on links, menus and checkboxes.
+- New 1400x560 store marquee tile and 1280x640 social preview image; website gains Open Graph and Twitter card tags, structured data, measured performance numbers, a tested-sites list, plain-language permissions and recommended OLED settings.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.77
 
 - Make YouTube Music true black. Its header, side guide, player page and player bar used YouTube Music's own `#030303` and `#212121` color tokens, which OLED Night did not reach. Menus and dialogs stay slightly raised so they remain distinct.
