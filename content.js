@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.79";
+  const VERSION = "0.6.80";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -3614,6 +3614,12 @@
          Canvas pixels cannot be recolored, so invert only that grid (hue-rotate
          keeps the selection blue). Its own dark mode and the light theme stay native. */
       html[data-oled-night-chatgpt]:is([data-theme="dark"], .dark) [data-testid="popcorn-viewport-host"][data-popcorn-dark-mode="false"] {
+        filter: invert(1) hue-rotate(180deg) !important;
+      }
+      /* DOCX and PDF file previews render as white paper pages (PDF pages on
+         canvas) in the dark theme too. Invert the page; flip DOCX images back. */
+      html[data-oled-night-chatgpt]:is([data-theme="dark"], .dark) :is(.codex-docx-preview, [data-artifact-pdf-page="true"]),
+      html[data-oled-night-chatgpt]:is([data-theme="dark"], .dark) .codex-docx-preview :is(img, picture, video, canvas, object, embed) {
         filter: invert(1) hue-rotate(180deg) !important;
       }
     `;
