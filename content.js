@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.83";
+  const VERSION = "0.6.84";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -144,6 +144,9 @@
   let originalSurface = new WeakMap();
   const slottedMarked = new Set();
   let mediaCopies = new WeakMap();
+  let canvasPaint = new WeakMap();
+  let canvasVisits = new WeakMap();
+  let canvasWatch = null;
   let mediaCopyMeasurements = new WeakSet();
   let textTiers = new WeakMap();
   let logoChecked = new WeakSet();
@@ -479,14 +482,16 @@
       candidates = [];
       // Responsive creative wrappers can be several levels deep. Bound this
       // local walk so an overlay beside a large application tree stays cheap.
+      // Breadth first: a card's backdrop layer is shallow, and must not be
+      // starved by a deep product mock-up that happens to come before it.
       const pending = [sibling];
       for (let visited = 0; pending.length && visited < 48; visited++) {
-        const node = pending.pop();
-        if (node.matches("img, video")) candidates.push(node);
+        const node = pending.shift();
+        if (node.matches("img, video, canvas")) candidates.push(node);
         // Responsive <picture> sources are metadata, not separate branches.
         // They must not push its actual image past the wrapper fanout bound.
         else if (node.localName === "picture") pending.push(...Array.from(node.children).filter(child => child.localName === "img"));
-        else if (node.childElementCount <= 4) pending.push(...Array.from(node.children).reverse());
+        else if (node.childElementCount <= 4) pending.push(...node.children);
       }
       ctx.media.set(sibling, candidates);
     }
@@ -512,10 +517,53 @@
       // images stay authored creatives: nothing says they are see-through.
       if (media.localName === "img" && /^https?:[^?#]*\.svg(?:[?#]|$)/i.test(media.currentSrc || media.src || "")) return false;
       if (ctx.style(media).visibility !== "visible") return false;
+      // A canvas may be an opaque painted backdrop (Stripe's card artwork) or
+      // see-through particles over the page. Only its pixels can tell, and a
+      // WebGL buffer is readable only during a frame, so the answer arrives
+      // later and repairs the copies that depend on it.
+      if (media.localName === "canvas" && !canvasOpaque(media)) return false;
       for (let node = media; node && node !== sibling.parentElement; node = node.parentElement)
         if (parseFloat(ctx.style(node).opacity) < 0.1) return false;
       return true;
     });
+  }
+
+  // Lazy artwork draws only while it is on screen, so an unanswered canvas
+  // is sampled again, for a few frames, each time it scrolls into view.
+  function canvasOpaque(canvas) {
+    if (canvasPaint.has(canvas)) return canvasPaint.get(canvas);
+    canvasPaint.set(canvas, false);
+    if (!canvasWatch) canvasWatch = new IntersectionObserver(entries => {
+      for (const entry of entries) if (entry.isIntersecting) probeCanvas(entry.target, 30);
+    });
+    canvasWatch.observe(canvas);
+    return false;
+  }
+
+  function probeCanvas(canvas, frames) {
+    const visits = (canvasVisits.get(canvas) || 0) + 1;
+    canvasVisits.set(canvas, visits);
+    if (visits > 4) { canvasWatch?.unobserve(canvas); return; }
+    const probe = () => {
+      if (!active || !canvas.isConnected || canvasPaint.get(canvas)) return;
+      let alpha = 0;
+      try {
+        const copy = document.createElement("canvas");
+        copy.width = copy.height = 4;
+        const context = copy.getContext("2d", { willReadFrequently: true });
+        context.drawImage(canvas, 0, 0, 4, 4);
+        const data = context.getImageData(0, 0, 4, 4).data;
+        for (let i = 3; i < data.length; i += 4) alpha += data[i];
+        alpha /= 16 * 255;
+      } catch { canvasWatch?.unobserve(canvas); return; } // Tainted or zero-sized: stays unknown.
+      if (alpha >= 0.6) {
+        canvasPaint.set(canvas, true);
+        canvasWatch?.unobserve(canvas);
+        const copies = mediaCopies.get(canvas);
+        if (copies) { queueMediaCopies(copies); schedule(); }
+      } else if (--frames > 0) requestAnimationFrame(probe);
+    };
+    requestAnimationFrame(probe);
   }
 
   function backdropOf(element, ctx) {
@@ -545,10 +593,14 @@
       // Full-bleed media in either adjacent sibling can paint behind a text
       // overlay (retail cards and hero sections). It is still real imagery
       // even though no ancestor has a CSS background-image.
-      for (const sibling of [node.previousElementSibling, node.nextElementSibling]) {
+      // A small layered card stacks its copy, border and artwork as separate
+      // children, so the artwork need not be the adjacent one.
+      const layers = node.parentElement?.childElementCount <= 4 ? node.parentElement.children : [node.previousElementSibling, node.nextElementSibling];
+      for (const sibling of layers) {
+        if (sibling === node) continue;
         // Most text siblings contain no media. Avoid style/layout reads for
         // them on every streaming update.
-        if (!sibling || (!sibling.matches("img, video") && !sibling.childElementCount)) continue;
+        if (!sibling || (!sibling.matches("img, video, canvas") && !sibling.childElementCount)) continue;
         const directMedia = sibling?.matches("img, picture, video") || sibling?.firstElementChild?.matches("img, picture, video");
         if (!sibling || (node.parentElement?.childElementCount > 4 && !directMedia) ||
             !(directMedia || ctx.style(node).position === "absolute" || ctx.style(sibling).position === "absolute")) continue;
@@ -3788,6 +3840,9 @@
     simpleScopeIdentity = 0;
     originalSurface = new WeakMap();
     mediaCopies = new WeakMap();
+    canvasPaint = new WeakMap();
+    canvasVisits = new WeakMap();
+    canvasWatch?.disconnect(); canvasWatch = null;
     mediaCopyMeasurements = new WeakSet();
     textTiers = new WeakMap();
     removeEarly();
