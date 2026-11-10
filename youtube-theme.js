@@ -4,6 +4,12 @@
   const ROOT = "html[data-oled-night-root][data-oled-night-youtube]";
   const DARK_ROOT = /^(?:html|:root)?\[dark(?:=(?:"true"|'true'|true))?\]$/;
   const TOKEN = /^--(?:t[\da-f]+$|yt-|ytd-)/;
+  // Standalone Polymer apps (phone verification, account flows) render inputs
+  // with the iron/paper neutral defaults set on html, not ytd-app tokens.
+  // Components that define their own values still win by inheritance.
+  const POLYMER_INK = "--primary-text-color:var(--oled-night-youtube-primary) !important;"
+    + "--secondary-text-color:var(--oled-night-youtube-secondary) !important;"
+    + "--disabled-text-color:var(--oled-night-youtube-secondary) !important;";
   // Attributed text and Lottie icons receive literal paint from YouTube's
   // renderer instead of theme tokens. CSS handles hydration without observing
   // or rewriting the body. Match neutral ink only, not links or authored hues.
@@ -57,7 +63,7 @@ ${icon}{fill:var(--oled-night-youtube-primary) !important;}`;
     doc.head.appendChild(sheet);
     const refresh = () => {
       timer = null;
-      const text = `${ROOT}{${palette(doc.styleSheets, value => CSS.supports("color", value))}}\n${literalPaint()}`;
+      const text = `${ROOT}{${POLYMER_INK}${palette(doc.styleSheets, value => CSS.supports("color", value))}}\n${literalPaint()}`;
       if (sheet.textContent !== text) sheet.textContent = text;
     };
     const schedule = () => { if (timer === null) timer = setTimeout(refresh, 50); };
