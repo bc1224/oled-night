@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.84
+
+- Stripe (and other layered cards): card titles no longer turn pale over a white card. A title keeps its original dark ink when the card artwork behind it is a photo in another layer of the card, or a canvas that is actually painted. See-through particle canvases are still treated as empty.
+- Includes the unreleased 0.6.83 changes below.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.83
 
 A readability pass from an audit of about 140 popular sites, comparing every piece of text with and without OLED Night.

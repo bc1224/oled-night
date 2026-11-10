@@ -714,6 +714,10 @@ try {
   check("media: a hidden fallback image does not pin dark heading ink", lum(await css("hiddenFallbackTitle", "color")) > 0.3, await css("hiddenFallbackTitle", "color"));
   check("media: transparent vector art does not pin dark heading ink", lum(await css("vectorArtTitle", "color")) > 0.3, await css("vectorArtTitle", "color"));
   check("media: a visible photo still keeps the heading's original ink", await css("photoTitle", "color") === "rgb(6, 27, 49)", await css("photoTitle", "color"));
+  await page.go(site("127.0.0.1", "layered-card-media.html"), 1800);
+  check("layered card: a photo in a non-adjacent layer keeps the title's original ink", await css("photoCardTitle", "color") === "rgb(6, 27, 49)", await css("photoCardTitle", "color"));
+  check("layered card: an opaque painted canvas keeps the title's original ink", await css("paintedCanvasTitle", "color") === "rgb(6, 27, 49)", await css("paintedCanvasTitle", "color"));
+  check("layered card: a see-through canvas does not pin dark title ink", lum(await css("clearCanvasTitle", "color")) > 0.3, await css("clearCanvasTitle", "color"));
   await page.go(site("127.0.0.1", "component-names.html"));
   const [tileBg, tileInk, actionInk] = [await page.eval("getComputedStyle(document.querySelector('.tile')).backgroundColor"), await css("tileTitle", "color"), await shadowCss("tileAction", "inner", "color")];
   check("components: a text tile named like media is themed", lum(tileBg) < 0.05 && lum(tileInk) > 0.5, `${tileInk} on ${tileBg}`);

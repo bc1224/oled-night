@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Layered cards with artwork backdrops</title>
+<style>
+  body { margin: 0; padding: 24px; font: 16px/1.4 system-ui, sans-serif; background: #fff; color: #061b31; display: flex; gap: 24px; }
+  /* A card stacks an action, its title, a border and the artwork as layers. */
+  .card { position: relative; width: 340px; height: 300px; border: 0; padding: 0; background: none; text-align: left; font: inherit; }
+  .entry { position: absolute; top: 12px; right: 12px; width: 24px; height: 24px; z-index: 3; }
+  .text { position: absolute; top: 20px; left: 20px; right: 60px; z-index: 3; }
+  .text h3 { margin: 0; font-size: 24px; color: #061b31; }
+  .border { position: absolute; inset: -1px; z-index: 1; background: #d8dee4; }
+  .inner { position: absolute; inset: 0; z-index: 2; background: #fff; overflow: hidden; }
+  .content, .graphic, .backdrop { position: absolute; inset: 0; }
+  .graphic { z-index: 1; padding: 90px 20px 0; }
+  .graphic p { margin: 0 0 4px; font-size: 12px; }
+  .backdrop img, .backdrop canvas { display: block; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+  <button class="card">
+    <div class="entry"></div>
+    <div class="text"><h3 id="photoCardTitle">Title over a card photo</h3></div>
+    <div class="border"></div>
+    <div class="inner"><div class="content">
+      <div class="graphic"><div><div><div><p>Synthetic mock row one</p><p>Synthetic mock row two</p><p>Synthetic mock row three</p></div></div></div></div>
+      <div class="backdrop"><div><picture><img alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8+uPnfwAJ0wPdWKq5KgAAAABJRU5ErkJggg=="></picture></div></div>
+    </div></div>
+  </button>
+  <button class="card">
+    <div class="entry"></div>
+    <div class="text"><h3 id="paintedCanvasTitle">Title over a painted canvas</h3></div>
+    <div class="border"></div>
+    <div class="inner"><div class="content"><div class="backdrop"><canvas id="paintedCanvas" width="340" height="300"></canvas></div></div></div>
+  </button>
+  <button class="card">
+    <div class="entry"></div>
+    <div class="text"><h3 id="clearCanvasTitle">Title over see-through particles</h3></div>
+    <div class="border"></div>
+    <div class="inner"><div class="content"><div class="backdrop"><canvas id="clearCanvas" width="340" height="300"></canvas></div></div></div>
+  </button>
+<script>
+  const painted = document.getElementById("paintedCanvas").getContext("2d");
+  painted.fillStyle = "#f4f6f8"; painted.fillRect(0, 0, 340, 300);
+  const clear = document.getElementById("clearCanvas").getContext("2d");
+  clear.fillStyle = "#635bff"; clear.fillRect(40, 200, 3, 3); clear.fillRect(200, 240, 3, 3);
+</script>
+</body>
+</html>
