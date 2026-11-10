@@ -9,12 +9,16 @@ const assert = require('node:assert/strict');
     if (options) { const data = JSON.parse(options.body); saved.set(path, data); return data; }
     return saved.get(path);
   };
-  await updateAmoListing(request, description, privacy);
-  assert.equal(calls.length, 4);
-  assert.deepEqual(calls.filter(c=>c.method).map(c=>c.method), ['PATCH', 'PATCH']);
-  assert.deepEqual(Object.keys(JSON.parse(calls[0].body)), ['description']);
-  assert.deepEqual(Object.keys(JSON.parse(calls[2].body)), ['privacy_policy']);
-  assert.equal(JSON.parse(calls[2].body).privacy_policy['en-US'], privacy);
+  assert.equal(await updateAmoListing(request, description, privacy), 'updated');
+  // Each endpoint is read, written only because it differs, then read back.
+  assert.deepEqual(calls.map(c=>c.method || 'GET'), ['GET', 'PATCH', 'GET', 'GET', 'PATCH', 'GET']);
+  assert.deepEqual(Object.keys(JSON.parse(calls[1].body)), ['description']);
+  assert.deepEqual(Object.keys(JSON.parse(calls[4].body)), ['privacy_policy']);
+  assert.equal(JSON.parse(calls[4].body).privacy_policy['en-US'], privacy);
+  // Copy that is already live costs no write.
+  calls.length = 0;
+  assert.equal(await updateAmoListing(request, description, privacy), 'unchanged');
+  assert.deepEqual(calls.map(c=>c.method || 'GET'), ['GET', 'GET']);
   assert.equal(storeText('A &amp; B <a href="anything">https://example.org</a>'), 'A & B https://example.org');
   await assert.rejects(updateAmoListing(async()=>({description:{'en-US':'old wording'}}), description, privacy), /readback/);
   await assert.rejects(updateAmoListing(async()=>({}), description, privacy), /readback/);

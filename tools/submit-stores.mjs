@@ -3,7 +3,7 @@
 //   node tools/submit-stores.mjs --status
 //   node tools/submit-stores.mjs --amo | --chrome | --both
 import { createHmac, randomUUID, randomBytes, createCipheriv, publicEncrypt } from "node:crypto";
-import { readFileSync, statSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, statSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
@@ -76,22 +76,51 @@ function amoToken() {
   return `${first}.${createHmac("sha256", process.env.AMO_API_SECRET).update(first).digest("base64url")}`;
 }
 
-// AMO throttles bursts of listing edits with HTTP 429. Wait (Retry-After when given) and resend.
-export async function retryThrottled(send, wait = delay, attempts = 6) {
-  for (let attempt = 1; ; attempt++) {
-    const response = await send();
-    if (response.status !== 429 || attempt >= attempts) return response;
-    const after = Number(response.headers?.get?.('retry-after'));
-    await wait(Math.min(Number.isFinite(after) && after > 0 ? after * 1000 : 15000 * attempt, 120000));
+const utcMinute = ms => `${new Date(Math.ceil(ms / 60000) * 60000).toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+const span = ms => { const m = Math.ceil(ms / 60000); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`; };
+
+// Mozilla limits writes per account to 3/minute, 10/hour and 24/day, shared by version creation,
+// listing edits and screenshots (addons-server api/throttling.py). A refused write still counts
+// against the limits that did not refuse it, so resending before Retry-After has passed extends the block.
+export class AmoThrottled extends Error {
+  constructor(label, retryAt, waitMs) {
+    super(`${label}: Mozilla's write limit is used up. It accepts the next write at ${utcMinute(retryAt)} (in ${span(waitMs)}). `
+      + 'Do not rerun before then: every earlier attempt counts against the limits (3/minute, 10/hour, 24/day across version, listing and screenshot edits).');
+    this.name = 'AmoThrottled';
+    this.retryAt = retryAt;
   }
 }
 
-async function amoRequest(path, options = {}) {
-  const response = await retryThrottled(() => fetch(`${AMO_BASE}${path}`, {
-    ...options,
-    headers: { Authorization: `JWT ${amoToken()}`, ...options.headers }
-  }), async ms => { console.log(`AMO throttled (HTTP 429); waiting ${Math.round(ms / 1000)}s.`); await delay(ms); });
-  return json(response, `AMO ${path}`);
+// One request function per run. budgetMs is the total time the run may spend waiting out refusals.
+export function createAmoRequest({ fetchImpl = fetch, wait = delay, now = Date.now, budgetMs = 0, token = amoToken, log = console.log } = {}) {
+  let allowance = budgetMs, lastWrite = null;
+  return async function request(path, options = {}) {
+    const write = (options.method || 'GET') !== 'GET';
+    for (;;) {
+      // Three writes a minute is the tightest limit; 21 s apart never trips it.
+      if (write && lastWrite !== null && now() - lastWrite < 21000) await wait(21000 - (now() - lastWrite));
+      if (write) lastWrite = now();
+      const response = await fetchImpl(`${AMO_BASE}${path}`, {
+        ...options,
+        headers: { Authorization: `JWT ${token()}`, ...options.headers }
+      });
+      if (response.status !== 429) return json(response, `AMO ${path}`);
+      const seconds = Number(response.headers?.get?.('retry-after'));
+      const waitMs = (Number.isFinite(seconds) && seconds > 0 ? seconds : 60) * 1000;
+      if (waitMs > allowance) throw new AmoThrottled(`AMO ${path}`, now() + waitMs, waitMs);
+      allowance -= waitMs;
+      log(`AMO write limit reached; waiting ${span(waitMs)} until ${utcMinute(now() + waitMs)}, as Mozilla instructs, before one resend.`);
+      await wait(waitMs + 2000);
+    }
+  };
+}
+
+let amoRun;
+// The run's single AMO client. AMO_MAX_WAIT_MINUTES caps the time spent waiting out refusals (default 15).
+function amoRequest(path, options) {
+  const minutes = Number(process.env.AMO_MAX_WAIT_MINUTES ?? 15);
+  amoRun ||= createAmoRequest({ budgetMs: (Number.isFinite(minutes) && minutes > 0 ? Math.min(minutes, 300) : 0) * 60000 });
+  return amoRun(path, options);
 }
 
 // AMO renders plain links as HTML in readback. Compare visible text only.
@@ -155,15 +184,22 @@ export async function updateAmoListing(request, description, privacy, { summary,
   const path = `/addons/addon/${AMO_ADDON}/`;
   const listing = { description: { 'en-US': description, ...translations } };
   if (summary) listing.summary = summary;
+  const mismatch = (saved, fields) => {
+    for (const [field, values] of Object.entries(fields)) for (const [locale, value] of Object.entries(values))
+      if (typeof saved?.[field]?.[locale] !== 'string' || storeText(saved[field][locale]) !== storeText(value))
+        return locale === 'en-US' ? field : `${field} (${locale})`;
+    return null;
+  };
+  let changed = false;
   for (const [endpoint, fields] of [[path, listing], [`${path}eula_policy/`, { privacy_policy: { 'en-US': privacy } }]]) {
+    // Reads are free; each write uses Mozilla's shared write limit. Send only what differs.
+    if (!mismatch(await request(endpoint), fields)) continue;
+    changed = true;
     await request(endpoint, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(fields)});
-    const saved = await request(endpoint);
-    for (const [field, values] of Object.entries(fields)) for (const [locale, value] of Object.entries(values)) {
-      const label = locale === 'en-US' ? field : `${field} (${locale})`;
-      if (typeof saved[field]?.[locale] !== 'string' || storeText(saved[field][locale]) !== storeText(value))
-        throw new Error(`AMO ${label} readback did not match the requested copy.`);
-    }
+    const label = mismatch(await request(endpoint), fields);
+    if (label) throw new Error(`AMO ${label} readback did not match the requested copy.`);
   }
+  return changed ? 'updated' : 'unchanged';
 }
 
 // Make AMO screenshots match the repository set, in order. Resumable: previews that already carry a
@@ -210,37 +246,56 @@ export function amoPrivacyText(markdown) {
     .replace(/`([^`\r\n]+)`/g, '$1').trim();
 }
 
-async function submitAmoListing() {
-  requireEnv('AMO_API_KEY', 'AMO_API_SECRET');
-  // Listing copy and images may come from main (OLED_LISTING_ROOT) so listing-only fixes need no new package.
-  const assets = amoListingAssets(process.env.OLED_LISTING_ROOT || root);
-  await updateAmoListing(amoRequest, assets.description, assets.privacy, assets);
-  console.log(`AMO listing and privacy policy: saved and read back successfully (${Object.keys(assets.summary).join(', ')}). No browsing-history log; optional current-domain reports only.`);
-  console.log(`AMO screenshots: ${await syncAmoPreviews(amoRequest, assets.screenshots)} (${assets.screenshots.length}).`);
+export async function syncAmoListing(request, assets, log = console.log) {
+  const listing = await updateAmoListing(request, assets.description, assets.privacy, assets);
+  log(`AMO listing and privacy policy: ${listing === 'updated' ? 'saved and read back successfully' : 'already match the repository; nothing written'} (${Object.keys(assets.summary).join(', ')}). No browsing-history log; optional current-domain reports only.`);
+  log(`AMO screenshots: ${await syncAmoPreviews(request, assets.screenshots)} (${assets.screenshots.length}).`);
 }
 
-async function submitAmo() {
-  requireEnv("AMO_API_KEY", "AMO_API_SECRET");
-  requireFiles("firefox", "source");
+// Submit a version unless Mozilla already has it, so a rerun after a partial run uploads nothing twice.
+export async function submitAmoVersion(request, { version, firefox, source }, wait = delay) {
+  const known = await request(`/addons/addon/${AMO_ADDON}/versions/?filter=all_with_unlisted`);
+  if ((known.results || []).some(entry => entry.version === version)) return 'exists';
   const upload = new FormData();
   upload.set("channel", "listed");
-  upload.set("upload", new Blob([readFileSync(files.firefox)], { type: "application/zip" }), `oled-night-firefox-${version}.zip`);
-  const uploaded = await amoRequest("/addons/upload/", { method: "POST", body: upload });
+  upload.set("upload", new Blob([firefox()], { type: "application/zip" }), `oled-night-firefox-${version}.zip`);
+  const uploaded = await request("/addons/upload/", { method: "POST", body: upload });
   if (!uploaded.uuid) throw new Error("AMO upload did not return a UUID.");
   let detail = uploaded;
   for (let i = 0; !detail.processed && i < 30; i++) {
-    await delay(2000);
-    detail = await amoRequest(`/addons/upload/${encodeURIComponent(uploaded.uuid)}/`);
+    await wait(2000);
+    detail = await request(`/addons/upload/${encodeURIComponent(uploaded.uuid)}/`);
   }
   if (!detail.processed) throw new Error("AMO validation did not finish within 60 seconds; inspect the upload in Developer Hub.");
   if (!detail.valid || detail.version !== version) throw new Error("AMO rejected the package or found the wrong version; inspect validation in Developer Hub.");
   const submission = new FormData();
   submission.set("upload", uploaded.uuid);
-  submission.set("source", new Blob([readFileSync(files.source)], { type: "application/zip" }), `oled-night-source-${version}.zip`);
-  const created = await amoRequest(`/addons/addon/${AMO_ADDON}/versions/`, { method: "POST", body: submission });
+  submission.set("source", new Blob([source()], { type: "application/zip" }), `oled-night-source-${version}.zip`);
+  const created = await request(`/addons/addon/${AMO_ADDON}/versions/`, { method: "POST", body: submission });
   if (created.version !== version) throw new Error("AMO did not confirm the submitted version.");
-  console.log(`AMO ${version}: submitted for review.`);
-  await submitAmoListing();
+  return 'submitted';
+}
+
+// The version goes first: it is the write that matters most when Mozilla's limit is nearly used up.
+export async function submitAmoRelease(request, pkg, assets, log = console.log) {
+  log(await submitAmoVersion(request, pkg) === 'exists'
+    ? `AMO ${pkg.version}: already submitted; nothing uploaded.` : `AMO ${pkg.version}: submitted for review.`);
+  await syncAmoListing(request, assets, log);
+}
+
+// Listing copy and images may come from main (OLED_LISTING_ROOT) so listing-only fixes need no new package.
+const amoAssets = () => amoListingAssets(process.env.OLED_LISTING_ROOT || root);
+
+async function submitAmoListing() {
+  requireEnv('AMO_API_KEY', 'AMO_API_SECRET');
+  await syncAmoListing(amoRequest, amoAssets());
+}
+
+async function submitAmo() {
+  requireEnv("AMO_API_KEY", "AMO_API_SECRET");
+  requireFiles("firefox", "source");
+  await submitAmoRelease(amoRequest,
+    { version, firefox: () => readFileSync(files.firefox), source: () => readFileSync(files.source) }, amoAssets());
 }
 
 async function cwsRequest(path, token, options = {}) {
@@ -326,6 +381,8 @@ try {
   else throw new Error("Use --status, --amo, --amo-listing, --chrome, --chrome-theme, or --both.");
 } catch (error) {
   console.error(error.message);
+  if (error instanceof AmoThrottled && process.env.GITHUB_STEP_SUMMARY)
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### Mozilla Add-ons: write limit used up, nothing further sent\n\n${error.message}\n`);
   process.exitCode = 1;
 }
 }
