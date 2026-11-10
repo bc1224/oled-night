@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Decorative media beside text</title>
+<style>
+  body { margin: 0; font: 16px/1.4 system-ui, sans-serif; background: #fff; color: #061b31; }
+  .hero { position: relative; height: 260px; margin-bottom: 24px; }
+  .hero .art { position: absolute; inset: 0; }
+  .hero .art img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .hero .copy { position: relative; padding: 80px 40px; }
+  .hero h2 { margin: 0; font-size: 40px; color: #061b31; }
+  /* A hidden raster fallback under a transparent canvas (script-drawn wave). */
+  .fallback { opacity: 0; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+  <section class="hero">
+    <div class="art"><div class="fallback"><img alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8+uPnfwAJ0wPdWKq5KgAAAABJRU5ErkJggg=="></div></div>
+    <div class="copy"><h2 id="hiddenFallbackTitle">Hidden fallback image</h2></div>
+  </section>
+  <section class="hero">
+    <div class="art"><img alt="" src="vector-art.svg"></div>
+    <div class="copy"><h2 id="vectorArtTitle">Transparent vector art</h2></div>
+  </section>
+  <section class="hero">
+    <div class="art"><img alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8+uPnfwAJ0wPdWKq5KgAAAABJRU5ErkJggg=="></div>
+    <div class="copy"><h2 id="photoTitle">Real photo backdrop</h2></div>
+  </section>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bright saturated surfaces</title>
+<style>
+  body { margin: 0; padding: 32px; font: 16px/1.4 system-ui, sans-serif; background: #fff; color: #111; }
+  .band { padding: 20px; margin-bottom: 16px; }
+  /* Yellow, lime and sand keep far more luminance than blue or red at the
+     same lightness, so their dark mapping needs extra depth for body text. */
+  .yellow { background: #f2f673; color: #212623; }
+  .lime { background: #ccff00; color: #110e08; }
+  .sand { background: #e7b75f; color: #231e15; }
+  .blue { background: #0b5cff; color: #fff; }
+</style>
+</head>
+<body>
+  <div class="band yellow"><span id="yellowText">Category label on a yellow band</span></div>
+  <div class="band lime"><span id="limeText">Call to action on a lime band</span></div>
+  <div class="band sand"><p id="sandText">Related links on a sand band</p></div>
+  <div class="band blue"><span id="blueText">Text on a blue band</span></div>
+</body>
+</html>

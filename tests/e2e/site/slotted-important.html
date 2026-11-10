@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Slotted important colors</title>
+<style>
+  body { margin: 0; padding: 32px; font: 16px/1.4 system-ui, sans-serif; background: #fff; color: #1d1d1d; }
+  .card { background: #f4f4f6; padding: 24px; border-radius: 12px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <p>Synthetic promo card with a component button.</p>
+    <!-- The component forces its slotted label color with !important from
+         inside its shadow tree, which outranks every outer !important rule. -->
+    <demo-button><a id="slottedCta" href="#">Shop now</a></demo-button>
+    <demo-button><button id="slottedButton" type="button">Learn more</button></demo-button>
+  </div>
+  <script>
+    customElements.define("demo-button", class extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({mode: "open"}).innerHTML = `<style>
+          :host { display: inline-block; margin-right: 12px; }
+          ::slotted(a), ::slotted(button) { display: inline-block; padding: 10px 16px; border: 1px solid #0e1726 !important;
+            border-radius: 8px; background-color: #fff; color: #0e1726 !important; text-decoration: none; font: inherit; }
+        </style><slot></slot>`;
+      }
+    });
+  </script>
+</body>
+</html>

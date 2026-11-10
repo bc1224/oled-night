@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.6.83
+
+A readability pass from an audit of about 140 popular sites, comparing every piece of text with and without OLED Night.
+
+- White buttons with a rounded-corner mask (AlphaSense's "Get Started for Free") no longer keep a white background under lightened text. A gradient mask over an element with content is now treated as a surface, not as icon ink.
+- Buttons whose component forces its slotted label color (Microsoft's "Shop now") get readable labels. The component's own stylesheet outranked every page-level override, so the override now also answers from inside the component.
+- Headings next to hidden or decorative imagery (Stripe, Calendly, Duolingo) no longer stay dark on a black page. Only imagery that is visibly painted, and not a vector file, keeps the text beside it in its original color.
+- Components whose names merely sound like media (Rotten Tomatoes' tile carousels and their Watchlist buttons) are themed when they contain text. Players, lightboxes and embeds are still left alone.
+- Text on yellow, lime and sand bands (CNET, TechCrunch, Mailchimp, Robinhood) clears normal reading contrast; these bands map a little deeper.
+- Sprite icons on bright tinted buttons follow the darkened button and turn light, like icons on white buttons already did.
+- Section photos placed behind the page with a negative z-index (AlphaSense's closing banner) are visible again instead of being buried under the black page, so the dark heading on them is readable.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.82
 
 - Gmail (dark theme): the yellow "New message" bar's Show and Ignore links are readable again. They were turned light gray while the bar kept its yellow. Links and buttons now get light text only when they sit on a light surface they paint themselves, and text that has lost contrast on a tinted light surface is darkened instead.
