@@ -8,6 +8,12 @@ Firefox listing and privacy wording are kept in `store/FIREFOX-LISTING.txt` and 
 
 Create an API key and secret in [Mozilla API Credentials](https://addons.mozilla.org/en-US/developers/addon/api/key/). Store them as GitHub Actions secrets `AMO_API_KEY` and `AMO_API_SECRET` in `bc1224/oled-night`. Do not paste the secret into an issue, chat, or repository file. Mozilla's [external API authentication](https://mozilla.github.io/addons-server/topics/api/auth.html) uses these to sign short-lived JWTs. The uploader sends `dist/oled-night-firefox-<version>.zip` as a listed version of the existing `oled-night` add-on, then includes `dist/oled-night-source-<version>.zip` for review.
 
+## Mozilla write limits
+
+Mozilla counts every version submission, listing edit and screenshot change against one shared limit per account: 3 a minute, 10 an hour and 24 a day. A refused request still counts, so retrying early makes the block longer. The uploader therefore reads before it writes (an unchanged listing, an existing screenshot or an already submitted version costs nothing), submits the version first, spaces writes 21 seconds apart and resends a refused write only once, after the wait Mozilla states.
+
+`AMO_MAX_WAIT_MINUTES` (workflow input `amo_max_wait_minutes`, default 75, at most 300) is the total time one run may spend waiting. If Mozilla asks for longer, the run stops after that single refusal and the log and run summary give the UTC time the limit clears. Do not rerun before that time. To let one run wait out a long block by itself: `gh workflow run submit-stores.yml --repo bc1224/oled-night -f tag=<release-tag> -f store=amo -f amo_max_wait_minutes=300`. The Chrome step runs before the Mozilla step, so a waiting Mozilla step never delays Chrome.
+
 ## One-time Chrome setup
 
 Follow Google's [Chrome Web Store API setup](https://developer.chrome.com/docs/webstore/using-api): enable the API in a Google Cloud project, configure OAuth consent, create an OAuth client, authorize the `https://www.googleapis.com/auth/chromewebstore` scope using the account that owns OLED Night, and get the publisher ID and refresh token. Store `CWS_CLIENT_ID`, `CWS_CLIENT_SECRET`, `CWS_REFRESH_TOKEN`, and `CWS_PUBLISHER_ID` as GitHub Actions secrets. The uploader sends `dist/oled-night-<version>.zip` to Chrome Web Store API v2 and submits it for review with warnings treated as blocking. The existing extension item ID is embedded in the uploader; the companion theme is a separate item and is not resubmitted for extension-only changes.

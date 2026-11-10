@@ -22,6 +22,11 @@ on:
         description: Explicit older Chrome version to replace if still pending review; blank preserves pending reviews
         required: false
         type: string
+      amo_max_wait_minutes:
+        description: Minutes the Mozilla step may wait for its write limit to clear (at most 300)
+        required: false
+        default: '75'
+        type: string
 
 jobs:
   submit:
@@ -62,21 +67,6 @@ jobs:
           name: live-site-smoke-evidence
           path: .store-uploader/dist/lab-results/live-smoke.json
           if-no-files-found: ignore
-      - name: Submit to Mozilla Add-ons
-        if: ${{ github.event_name == 'release' || inputs.store == 'both' || inputs.store == 'amo' || inputs.store == 'amo-listing' }}
-        id: amo
-        continue-on-error: true
-        env:
-          AMO_API_KEY: ${{ secrets.AMO_API_KEY }}
-          AMO_API_SECRET: ${{ secrets.AMO_API_SECRET }}
-          AMO_TARGET: ${{ inputs.store == 'amo-listing' && '--amo-listing' || '--amo' }}
-          OLED_LISTING_ROOT: ${{ github.workspace }}/.store-uploader
-        run: |
-          if [[ -n "$AMO_API_KEY" && -n "$AMO_API_SECRET" ]]; then
-            node tools/submit-stores.mjs "$AMO_TARGET"
-          else
-            echo 'AMO submission skipped: API credentials are not configured.' >> "$GITHUB_STEP_SUMMARY"
-          fi
       - name: Submit to Chrome Web Store
         if: ${{ github.event_name == 'release' || inputs.store == 'both' || inputs.store == 'chrome' || inputs.store == 'chrome-theme' }}
         id: chrome
@@ -103,6 +93,24 @@ jobs:
           path: dist/cws-error.encrypted.json
           if-no-files-found: ignore
           retention-days: 1
+      - name: Submit to Mozilla Add-ons
+        if: ${{ github.event_name == 'release' || inputs.store == 'both' || inputs.store == 'amo' || inputs.store == 'amo-listing' }}
+        id: amo
+        continue-on-error: true
+        env:
+          AMO_API_KEY: ${{ secrets.AMO_API_KEY }}
+          AMO_API_SECRET: ${{ secrets.AMO_API_SECRET }}
+          AMO_TARGET: ${{ inputs.store == 'amo-listing' && '--amo-listing' || '--amo' }}
+          # Mozilla allows 3 writes a minute, 10 an hour and 24 a day. The uploader waits out a refusal
+          # within this allowance and otherwise stops with the time the limit clears. Do not rerun earlier.
+          AMO_MAX_WAIT_MINUTES: ${{ inputs.amo_max_wait_minutes || '75' }}
+          OLED_LISTING_ROOT: ${{ github.workspace }}/.store-uploader
+        run: |
+          if [[ -n "$AMO_API_KEY" && -n "$AMO_API_SECRET" ]]; then
+            node tools/submit-stores.mjs "$AMO_TARGET"
+          else
+            echo 'AMO submission skipped: API credentials are not configured.' >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Report submission failures
         if: ${{ steps.amo.outcome == 'failure' || steps.chrome.outcome == 'failure' }}
         run: exit 1
