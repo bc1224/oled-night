@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Masked surfaces</title>
+<script>if (location.search === "?dark") document.documentElement.className = "dark";</script>
+<style>
+  body { margin: 0; font: 16px/1.4 system-ui, sans-serif; background: #fff; color: #1d1d1d; }
+  .dark body { background: #000; color: #f2f2f2; }
+  .hero { background: #0040ff; color: #fff; padding: 40px; }
+  /* Rounded-corner clip trick: a fully opaque gradient mask hides nothing. */
+  .cta { position: relative; border: 0; border-radius: 8px; padding: 14px 18px; background: #fff; color: #1d1d1d;
+    -webkit-mask-image: radial-gradient(#fff, #000); mask-image: radial-gradient(#fff, #000); font: inherit; }
+  /* Scroll fade: the row's own surface sits behind real text. */
+  .fade { margin: 24px; padding: 12px; background: #fff; color: #1d1d1d; white-space: nowrap; overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, #000 80%, transparent); mask-image: linear-gradient(to right, #000 80%, transparent); }
+  /* A shaped icon still paints its background as ink. */
+  .icon { display: inline-block; width: 20px; height: 20px; background: #1d1d1d;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='8'/%3E%3C/svg%3E") center/contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='8'/%3E%3C/svg%3E") center/contain no-repeat; }
+  .panel { margin: 24px; padding: 12px; background: #fff; color: #1d1d1d; }
+</style>
+</head>
+<body>
+  <section class="hero">
+    <p>Synthetic hero copy on a saturated band.</p>
+    <button class="cta" id="maskedCta"><span id="maskedCtaLabel">Get started for free</span></button>
+  </section>
+  <div class="fade" id="fadeRow"><span id="fadeLabel">Overview</span> <span>Pricing</span> <span>Documentation</span> <span>Changelog</span></div>
+  <div class="panel" id="iconPanel"><span class="icon" id="maskIcon"></span> <span>Icon drawn by a shaped mask</span></div>
+</body>
+</html>

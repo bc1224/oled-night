@@ -162,7 +162,11 @@
     if (c > 0.12 && lum > 0.08) {
       // Flat saturated controls stay dark enough for their text. Gradients
       // also retain the light/dark difference between authored color stops.
-      const base = gradientStop ? Math.round(7 + 30 * hsl.l) : 16;
+// Orange through lime carries several times the luminance of blue or
+      // red at the same lightness; without extra depth light text on those
+      // bands stays just under readable contrast (yellow category chips).
+      const bright = Math.max(0, 1 - Math.max(0, Math.abs(hsl.h - 62) - 18) / 25);
+      const base = gradientStop ? Math.round(7 + 30 * hsl.l) : Math.round(16 - 5 * bright);
       return withAlpha(`hsl(${Math.round(hsl.h)} ${Math.round(Math.min(hsl.s, 0.82) * 100)}% calc(${base}% + 10% * ${STRENGTH}))`, color.a);
     }
     // Pale tints (info/alert/selected rows) keep a hint of their hue, scaled

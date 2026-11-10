@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Section photo behind the page</title>
+<style>
+  /* Only body has a background, so it paints the canvas and a z-index: -1
+     photo stays visible above it. A forced background on BOTH html and body
+     turns body into an ordinary box that covers the photo. */
+  body { margin: 0; font: 16px/1.4 system-ui, sans-serif; background: #fff; color: #1d1d1d; }
+  .cta { position: relative; height: 320px; }
+  .cta img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; }
+  .cta .grid { padding: 80px 40px; }
+  .cta h2 { margin: 0; font-size: 40px; }
+</style>
+</head>
+<body>
+  <div class="cta" id="ctaSection">
+    <img id="sectionPhoto" alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8+uPnfwAJ0wPdWKq5KgAAAABJRU5ErkJggg==">
+    <div class="grid"><h2 id="photoHeading">Heading over a section photo</h2></div>
+  </div>
+  <p id="plainText">Ordinary page text below the section.</p>
+</body>
+</html>

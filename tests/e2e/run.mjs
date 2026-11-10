@@ -695,6 +695,38 @@ try {
 
   // Input-modality classes on <html> (Discord's mouse-mode) must not switch overrides off for the whole
   // document, yet real theme classes must still land on their final colors despite page transitions.
+  // Low-contrast audit 2026-11-09: each root cause found on live sites has a
+  // synthetic page here that failed on the 0.6.82 runtime.
+  const shadowCss = (host, id, prop) => page.eval(`getComputedStyle(document.getElementById(${JSON.stringify(host)}).shadowRoot.getElementById(${JSON.stringify(id)}))[${JSON.stringify(prop)}]`);
+  for (const variant of ["", "?dark"]) {
+    await page.go(site("127.0.0.1", "masked-surfaces.html" + variant));
+    const [ctaBg, ctaInk, fadeBg, fadeInk, iconInk] = [await css("maskedCta", "backgroundColor"), await css("maskedCtaLabel", "color"), await css("fadeRow", "backgroundColor"), await css("fadeLabel", "color"), await css("maskIcon", "backgroundColor")];
+    check(`masks${variant}: a gradient-masked button maps its surface with its label`, ratio(ctaBg, ctaInk) >= 4.5, `${ctaInk} on ${ctaBg}`);
+    check(`masks${variant}: a fade-masked row maps its surface with its text`, ratio(fadeBg, fadeInk) >= 4.5, `${fadeInk} on ${fadeBg}`);
+    if (!variant) check("masks: a shaped url() mask still paints its background as ink", lum(iconInk) > 0.5, iconInk);
+  }
+  await page.go(site("127.0.0.1", "slotted-important.html"));
+  for (const id of ["slottedCta", "slottedButton"]) {
+    const [bg, ink] = [await css(id, "backgroundColor"), await css(id, "color")];
+    check(`slotted: ${id} outranks the component's important slotted color`, ratio(bg, ink) >= 4.5, `${ink} on ${bg}`);
+  }
+  await page.go(site("127.0.0.1", "media-underlay-decor.html"));
+  check("media: a hidden fallback image does not pin dark heading ink", lum(await css("hiddenFallbackTitle", "color")) > 0.3, await css("hiddenFallbackTitle", "color"));
+  check("media: transparent vector art does not pin dark heading ink", lum(await css("vectorArtTitle", "color")) > 0.3, await css("vectorArtTitle", "color"));
+  check("media: a visible photo still keeps the heading's original ink", await css("photoTitle", "color") === "rgb(6, 27, 49)", await css("photoTitle", "color"));
+  await page.go(site("127.0.0.1", "component-names.html"));
+  const [tileBg, tileInk, actionInk] = [await page.eval("getComputedStyle(document.querySelector('.tile')).backgroundColor"), await css("tileTitle", "color"), await shadowCss("tileAction", "inner", "color")];
+  check("components: a text tile named like media is themed", lum(tileBg) < 0.05 && lum(tileInk) > 0.5, `${tileInk} on ${tileBg}`);
+  check("components: its shadow button is themed too", lum(actionInk) > 0.5, actionInk);
+  await page.go(site("127.0.0.1", "bright-surfaces.html"));
+  for (const band of ["yellow", "lime", "sand", "blue"]) {
+    const [bg, ink] = [await page.eval(`getComputedStyle(document.querySelector('.${band}')).backgroundColor`), await css(band + "Text", "color")];
+    check(`bright surfaces: text on the ${band} band clears body contrast`, ratio(bg, ink) >= 4.5, `${ink} on ${bg} = ${ratio(bg, ink).toFixed(2)}`);
+  }
+  await page.go(site("127.0.0.1", "negative-z-media.html"));
+  const [rootBg, bodyBg] = [await page.eval("getComputedStyle(document.documentElement).backgroundColor"), await page.eval("getComputedStyle(document.body).isolation")];
+  check("negative z-index: body stacks its own content so a section photo behind it stays visible", rootBg === "rgb(0, 0, 0)" && bodyBg === "isolate", `html ${rootBg}, body ${bodyBg}`);
+  check("negative z-index: ordinary text stays readable", lum(await css("plainText", "color")) > 0.5, await css("plainText", "color"));
   await page.go(site("127.0.0.1", "scope-dark.html"));
   const scopeDark = await page.eval(`(async () => { const wait = (ms) => new Promise(r => setTimeout(r, ms)); const h = document.documentElement; let rootSwitches = 0;
     const watch = new MutationObserver(r => { rootSwitches += r.filter(x => x.oldValue === null).length; }); watch.observe(h, { attributes: true, attributeOldValue: true, attributeFilter: ['data-oled-night-measure', 'data-oled-night-noanim'] });

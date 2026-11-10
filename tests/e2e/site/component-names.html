@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Components named like media</title>
+<style>
+  body { margin: 0; padding: 32px; font: 16px/1.4 system-ui, sans-serif; background: #fff; color: #171c20; }
+  tiles-carousel, media-info-tile { display: block; }
+  .tile { display: inline-block; width: 180px; padding: 12px; background: #fff; border: 1px solid #ddd; }
+</style>
+</head>
+<body>
+  <!-- Custom elements whose names contain "carousel" or "media" are often
+       ordinary text components, not players. Their text and shadow controls
+       must be themed like the rest of the page. -->
+  <tiles-carousel>
+    <media-info-tile class="tile">
+      <span id="tileTitle">Synthetic title one</span>
+      <action-button id="tileAction"></action-button>
+    </media-info-tile>
+  </tiles-carousel>
+  <script>
+    customElements.define("action-button", class extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({mode: "open"}).innerHTML = `<style>
+          button { background: rgba(255, 255, 255, 0); color: #171c20; border: 1px solid #171c20; border-radius: 16px; padding: 6px 14px; font: inherit; }
+        </style><button id="inner" type="button">Watchlist</button>`;
+      }
+    });
+  </script>
+</body>
+</html>

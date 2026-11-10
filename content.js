@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.82";
+  const VERSION = "0.6.83";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -142,6 +142,7 @@
     return new Map(Array.from(style, name => [name, style.getPropertyValue(name)]));
   })();
   let originalSurface = new WeakMap();
+  const slottedMarked = new Set();
   let mediaCopies = new WeakMap();
   let mediaCopyMeasurements = new WeakSet();
   let textTiers = new WeakMap();
@@ -338,8 +339,21 @@
     return !!form && !!document.querySelector('#captcha-bootstrap, #captcha-provider, script[src*="hcaptcha"], script[src*="recaptcha"], [data-sitekey]');
   }
 
+  // Custom elements named like media ("media-info-tile", "tiles-carousel",
+  // "product-gallery") are usually ordinary text components. Only players and
+  // embeds are protected by name alone; a layout component that carries
+  // readable light-DOM text is themed like the rest of the page. Text never
+  // turns such a component back into media, so only that answer is kept.
+  const textComponents = new WeakSet();
   function isMedia(element) {
-    return colorsApi().isProtectedMediaTag(element.localName) || element.matches(MEDIA_SELECTOR);
+    if (element.matches(MEDIA_SELECTOR)) return true;
+    const tag = element.localName;
+    if (!tag.includes("-") || !colorsApi().isProtectedMediaTag(tag)) return false;
+    if (/player|video|lightbox|embed|canvas/.test(tag)) return true;
+    if (textComponents.has(element)) return false;
+    if (!element.textContent.trim()) return true;
+    textComponents.add(element);
+    return false;
   }
 
   function parentAcrossShadow(node) {
@@ -488,8 +502,19 @@
       if (!underlay.width || !underlay.height || !content.width || !content.height) return false;
       const overlapWidth = Math.max(0, Math.min(underlay.right, content.right) - Math.max(underlay.left, content.left));
       const overlapHeight = Math.max(0, Math.min(underlay.bottom, content.bottom) - Math.max(underlay.top, content.top));
-      return underlay.width >= frame.width * 0.7 && underlay.height >= frame.height * 0.7 &&
-        overlapWidth >= content.width * 0.7 && overlapHeight >= content.height * 0.7;
+      if (!(underlay.width >= frame.width * 0.7 && underlay.height >= frame.height * 0.7 &&
+        overlapWidth >= content.width * 0.7 && overlapHeight >= content.height * 0.7)) return false;
+      // Only imagery that is really painted protects text. A vector file is
+      // decoration with a transparent canvas (Duolingo's floating artwork),
+      // and a faded-out raster is a hidden fallback or an inactive slide
+      // (Stripe's hero wave, Calendly's story cards). The page behind them
+      // goes dark, so pinned dark ink there would be unreadable. Inline data
+      // images stay authored creatives: nothing says they are see-through.
+      if (media.localName === "img" && /^https?:[^?#]*\.svg(?:[?#]|$)/i.test(media.currentSrc || media.src || "")) return false;
+      if (ctx.style(media).visibility !== "visible") return false;
+      for (let node = media; node && node !== sibling.parentElement; node = node.parentElement)
+        if (parseFloat(ctx.style(node).opacity) < 0.1) return false;
+      return true;
     });
   }
 
@@ -509,7 +534,7 @@
       const retained = ctx.retainedAncestors.get(node);
       if (retained && !originalSurface.has(node)) {
         const computed = ctx.style(node);
-        if (surface?.color && computed.backgroundImage === "none" && !paintsInk(computed) &&
+        if (surface?.color && computed.backgroundImage === "none" && !paintsInk(computed, node) &&
             ["r", "g", "b", "a"].every(key => surface.color[key] === retained.color[key])) {
           surface.retained = true;
           surface.mapped = computed.backgroundColor;
@@ -546,31 +571,40 @@
 
   // An element drawn through a mask (icon fonts, logos) or with its background
   // clipped to its text shows its background color AS the icon or the text.
-  function paintsInk(computed) {
+  // A gradient-only mask over real content is a fade or a rounded-corner clip
+  // (AlphaSense buttons use radial-gradient(#fff, #000)); the background is
+  // still the surface behind that text, so it must be mapped with its ink.
+  // Shaped url() masks, and empty gradient-masked elements such as spinner
+  // rings, keep painting their background as the visible ink.
+  function paintsInk(computed, element) {
+    if (/text/.test(computed.webkitBackgroundClip || computed.backgroundClip || "")) return true;
     const mask = computed.maskImage || computed.webkitMaskImage;
-    return (mask && mask !== "none") || /text/.test(computed.webkitBackgroundClip || computed.backgroundClip || "");
+    if (!mask || mask === "none") return false;
+    if (element && !/url\(|image-set\(|element\(/i.test(mask) &&
+        (element.childElementCount || element.textContent.trim())) return false;
+    return true;
   }
 
   const surfaceMappings = new Map();
-  function mapSurface(computed, prefix, mode, found) {
+  function mapSurface(computed, prefix, mode, found, element) {
     // Reuse only pure mappings of complete paint inputs, never element state.
+    const ink = paintsInk(computed, element);
     const key = JSON.stringify([mode, computed.backgroundColor, computed.backgroundImage, computed.boxShadow,
-      computed.maskImage, computed.webkitMaskImage, computed.webkitBackgroundClip, computed.backgroundClip,
-      hasImageBackdrop(computed)]);
+      ink, hasImageBackdrop(computed)]);
     let mapped = surfaceMappings.get(key);
     if (!mapped) {
       mapped = {};
-      computeSurface(computed, "", mode, mapped);
+      computeSurface(computed, "", mode, mapped, ink);
       if (surfaceMappings.size >= 512) surfaceMappings.clear();
       surfaceMappings.set(key, mapped);
     }
     for (const name of Object.keys(mapped)) found[prefix + name] = mapped[name];
   }
 
-  function computeSurface(computed, prefix, mode, found) {
+  function computeSurface(computed, prefix, mode, found, ink = paintsInk(computed)) {
     const colors = colorsApi();
     const original = colors.parseColor(computed.backgroundColor);
-    if (paintsInk(computed)) {
+    if (ink) {
       if (mode !== "oled" && mode !== "soft") return;
       const ink = original && original.a >= 0.08 && colors.luminance(original) < 0.5 && colors.chroma(original) < 0.15 ? colors.mapForeground(original, 1) : null;
       if (ink) found[`${prefix}bg`] = ink;
@@ -655,7 +689,7 @@
   // or extra layout measurements. Ordinary panels and standalone separators
   // do not have this nested thin-track shape.
   function isDataFill(element, computed, ctx, pseudo = false) {
-    if (computed.backgroundImage !== "none" || paintsInk(computed)) return false;
+    if (computed.backgroundImage !== "none" || paintsInk(computed, pseudo ? undefined : element)) return false;
     if (!pseudo && (element.childElementCount || element.textContent.trim())) return false;
     const paint = colorsApi().parseColor(computed.backgroundColor);
     if (!paint || paint.a < .08) return false;
@@ -774,7 +808,7 @@
       ((colors.chroma(nativeBackdrop.color) < 0.1 && (element.childElementCount || element.textContent.trim() || element.shadowRoot?.childElementCount)) ||
         (uiScope && paintsSurfaceWithin(element, uiScope, ctx)));
     const mode = lightIsland ? "oled" : localMode;
-    mapSurface(computed, "", mode, found);
+    mapSurface(computed, "", mode, found, element);
     // A compact logo/avatar tile paints its artwork as a background image over
     // a light plate (Stack Overflow collectives). Its ink is authored for that
     // plate; a black plate hides dark logos. Keep the plate with its image.
@@ -788,7 +822,7 @@
     // Keep that authored depth; crushing both the page and its cards to black
     // removes their boundaries. A text composer's short shell and footer
     // share that depth even before the draft grows to multiple lines.
-    if (mode !== "soft" && found.bg && computed.backgroundImage === "none" && !paintsInk(computed) &&
+    if (mode !== "soft" && found.bg && computed.backgroundImage === "none" && !paintsInk(computed, element) &&
         element !== document.documentElement && element !== document.body &&
         parseFloat(computed.width) >= 120 &&
         (parseFloat(computed.borderTopLeftRadius) >= 4 || computed.boxShadow !== "none")) {
@@ -805,7 +839,7 @@
     // A repeated native paint inside a retained card is the same surface,
     // even when the text wrapper or truncation button is small and square.
     // Keep genuinely different insets, controls and page canvases distinct.
-    if (mode !== "soft" && found.bg && computed.backgroundImage === "none" && !paintsInk(computed)) {
+    if (mode !== "soft" && found.bg && computed.backgroundImage === "none" && !paintsInk(computed, element)) {
       const bg = originalSurface.get(element)?.color;
       if (bg?.a >= .95 && colors.chroma(bg) < .1 && colors.luminance(bg) >= .005 && colors.luminance(bg) < .025) {
         const parent = backdropOf(parentAcrossShadow(element), ctx);
@@ -866,12 +900,12 @@
     // tag checks avoid another selector query during the full-page scan.
     if ((mode === "oled" || mode === "soft") && !found.bg &&
         (element.localName === "a" || element.localName === "button" || interactionSurfaces.has(element)) &&
-        computed.backgroundImage === "none" && !paintsInk(computed))
+        computed.backgroundImage === "none" && !paintsInk(computed, element))
       found.bg = computed.backgroundColor;
     if (mode === "oled" && isPageLayout(element, computed, colors.parseColor(computed.backgroundColor))) found.bg = "#000000";
     // A flat header wrapper and its navigation are one continuous band.
     // Cards, dialogs and control faces remain separate surface decisions.
-    if (mode === 'oled' && computed.backgroundImage === 'none' && !paintsInk(computed) &&
+    if (mode === 'oled' && computed.backgroundImage === 'none' && !paintsInk(computed, element) &&
         !element.matches(CONTROL) && !element.closest('[role="dialog"], dialog, [role="menu"], [role="listbox"]') &&
         parseFloat(computed.borderTopLeftRadius) === 0 &&
         parseFloat(computed.width) >= document.documentElement.clientWidth * .7 &&
@@ -888,7 +922,7 @@
     }
     // Full-width neutral navigation is page chrome, rather than a raised card.
     // Paint it opaque black so translucent flyouts cannot reveal a white page.
-    if (mode === "oled" && !paintsInk(computed) && computed.backgroundImage === "none") {
+    if (mode === "oled" && !paintsInk(computed, element) && computed.backgroundImage === "none") {
       const bg = colors.parseColor(computed.backgroundColor);
       if (bg?.a >= 0.5 && colors.chroma(bg) <= 0.03) {
         const nav = element.closest('nav, [role="navigation"]');
@@ -907,8 +941,8 @@
       found.bg = colors.mapForeground(colors.parseColor(computed.backgroundColor), 1);
     }
     const nativeSurface = originalSurface.get(element);
-    if (nativeSurface) nativeSurface.retained = found.bg === computed.backgroundColor && computed.backgroundImage === "none" && !paintsInk(computed);
-    if (nativeSurface?.color && computed.backgroundImage === "none" && !paintsInk(computed))
+    if (nativeSurface) nativeSurface.retained = found.bg === computed.backgroundColor && computed.backgroundImage === "none" && !paintsInk(computed, element);
+    if (nativeSurface?.color && computed.backgroundImage === "none" && !paintsInk(computed, element))
       nativeSurface.mapped = found.bg || computed.backgroundColor;
     if (element.matches("input, textarea, select")) found.field = "1";
     if (mode === "crush") {
@@ -931,7 +965,7 @@
             element.childElementCount && !element.localName.includes('-') && !element.shadowRoot &&
             !element.assignedSlot && !element.hasAttribute('part') && element.localName !== 'slot' &&
             computed.display !== 'list-item' && !element.matches(CONTROL) &&
-            !element.isContentEditable && !paintsInk(computed) &&
+            !element.isContentEditable && !paintsInk(computed, element) &&
             !Array.from(element.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
           const generated = structural && ['::before', '::after'].some(pseudo => {
             const content = getComputedStyle(element, pseudo).content;
@@ -1274,7 +1308,9 @@
         const backdrop = backdropOf(svg, ctx).color;
         const bg = colors.luminance(backdrop);
         const ink = referencedInk && colors.luminance(referencedInk);
-        const unreadable = referenceFg && ((bg < .2 && (Math.max(bg, ink) + .05) / (Math.min(bg, ink) + .05) < 3) || (bg > .6 && colors.chroma(backdrop) < .1));
+        // Every bright backdrop becomes a dark surface, tinted ones included
+        // (a yellow control maps to deep olive), so dark ink never survives it.
+        const unreadable = referenceFg && ((bg < .2 && (Math.max(bg, ink) + .05) / (Math.min(bg, ink) + .05) < 3) || bg > .6);
         out.push([svg, unreadable ? {fg: referenceFg} : {}]);
         return;
       }
@@ -1535,6 +1571,7 @@
     if (keys.length) {
       const mark = keys.join(" ");
       if (element.getAttribute(MARK) !== mark) element.setAttribute(MARK, mark);
+      if (element.assignedSlot) slottedMarked.add(element);
     } else if (element.hasAttribute(MARK)) element.removeAttribute(MARK);
     applied.set(element, signature);
   }
@@ -2293,6 +2330,15 @@
     for (const node of calmSelf) node.setAttribute(NOANIM_SELF, "");
     for (const node of measured) node.setAttribute(MEASURE, "");
     for (const node of measuredSelf) node.setAttribute(MEASURE_SELF, "");
+    // Slotted overrides answer from inside the component's sheet, where
+    // neither the element switch nor "[measure] *" applies.
+    for (const node of slottedMarked) {
+      if (!node.isConnected) { slottedMarked.delete(node); continue; }
+      if (measuredPseudo.includes(node)) continue;
+      let switched = measuredSelf.includes(node);
+      for (let parent = node; !switched && measured.length && parent; parent = parent.parentElement || parent.getRootNode().host) switched = measured.includes(parent);
+      if (switched) measuredPseudo.push(node);
+    }
     for (const node of measuredPseudo) node.setAttribute(MEASURE_PSEUDO, "");
     if (measuresPolarity) {
       batchPolarity.dark = detectDarkPage();
@@ -3386,6 +3432,7 @@
     // The outer marker still scopes every override; measurement still opts out.
     const on = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}])`;
     const onPseudo = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_PSEUDO}])`;
+    const slotted = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}]):not([${MEASURE_PSEUDO}])`;
     return `
       /* Each paint variable belongs to its marked element (and its pseudos).
          Inheriting thousands of unused values makes updates invalidate and
@@ -3399,6 +3446,15 @@
       [${MARK}~="fg"]${on} { color: var(--oln-fg) !important; }
       [${MARK}~="ink"]${on} { -webkit-text-fill-color: var(--oln-ink) !important; }
       [${MARK}~="caret"]${on} { caret-color: var(--oln-caret) !important; }
+      /* A component can force its slotted children's colors with !important
+         from inside its shadow tree (Microsoft store buttons). For important
+         declarations the inner tree outranks every outer rule and the style
+         attribute, so only the copy of this sheet adopted by that shadow
+         root can answer. These selectors match nothing in the document.
+         Like other pseudo-element rules they use the narrow pseudo switch. */
+      ${[["fg", "color"], ["ink", "-webkit-text-fill-color"], ["bg", "background-color"], ["bt", "border-top-color"], ["br", "border-right-color"],
+        ["bb", "border-bottom-color"], ["bl", "border-left-color"]].map(([key, property]) =>
+        `:host(:not([${MEASURE}])) ::slotted([${MARK}~="${key}"]${slotted}) { ${property}: var(--oln-${key}) !important; }`).join(" ")}
       [${MARK}~="placeholder"]${onPseudo}::placeholder { --oln-placeholder: inherit !important; color: var(--oln-placeholder) !important; -webkit-text-fill-color: var(--oln-placeholder) !important; }
       [${MARK}~="field"]${on} { color-scheme: dark !important; }
       /* Native popup paint may use white for transparent <option> rows even
@@ -3502,6 +3558,11 @@
     sheet.textContent = `
       ${root}:not([data-oled-night-page="none"]), ${root}:not([data-oled-night-page="none"]) body { color-scheme: dark !important; }
       ${surface}:not([data-oled-night-page="none"]), ${surface}:not([data-oled-night-page="none"]) body { background: var(--oled-night-page, #000) !important; }
+      /* With a background on the root, body paints its own as a box, above
+         z-index: -1 content. Its own stacking context keeps a section photo
+         placed there (AlphaSense's closing banner) in front of that box, as
+         it was while the page's body color still propagated to the canvas. */
+      ${root}:not([data-oled-night-page="none"]) body { isolation: isolate !important; }
       ${surface}[data-oled-night-transparent-frame]:not([data-oled-night-page="none"]), ${surface}[data-oled-night-transparent-frame]:not([data-oled-night-page="none"]) body { background: transparent !important; }
       ${overrideRules()}
       html[data-oled-night-root] :focus-visible { outline-color: #66a3ff !important; }
