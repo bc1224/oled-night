@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.85
+
+- YouTube phone verification and other standalone YouTube forms: typed text, labels and placeholders are now light on black instead of dark gray. These pages use generic Polymer text colors that the YouTube palette did not cover.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.84
 
 - Stripe (and other layered cards): card titles no longer turn pale over a white card. A title keeps its original dark ink when the card artwork behind it is a photo in another layer of the card, or a canvas that is actually painted. See-through particle canvases are still treated as empty.

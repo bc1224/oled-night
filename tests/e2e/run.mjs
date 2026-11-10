@@ -163,6 +163,7 @@ try {
   check("YouTube safe mode activates without changing native theme", await page.eval("document.documentElement.hasAttribute('data-oled-night-youtube') && !document.documentElement.hasAttribute('dark') && !document.querySelector('[data-oled-night]')"));
   check("YouTube light masthead and chips become OLED black", (await css("background", "backgroundColor")) === "rgb(0, 0, 0)" && (await css("chips-wrapper", "backgroundColor")) === "rgb(0, 0, 0)");
   check("YouTube renamed and legacy text tokens stay readable", lum(await css("title", "color")) > 0.5 && lum(await css("secondary", "color")) > 0.25 && lum(await css("legacy", "color")) > 0.5);
+  check("YouTube standalone Polymer input ink is readable", lum(await css("verify-input","color")) > 0.5 && lum(await css("verify-label","color")) > 0.25, JSON.stringify([await css("verify-input","color"), await css("verify-label","color")]));
   check("YouTube inverse button retains contrast", lum(await css("subscribe", "backgroundColor")) > 0.5 && lum(await css("subscribe", "color")) < 0.05);
   check("YouTube search button stays dark with a readable label", contrast(await css("search-submit","color"),await css("search-submit","backgroundColor")) >= 4.5 && lum(await css("search-submit","backgroundColor")) < .1);
   check("YouTube collapsed inline description is readable", contrast(await css("snippet","color"),await css("description","backgroundColor")) >= 4.5);
