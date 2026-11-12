@@ -159,7 +159,9 @@
     // Only the darkest surfaces (page and deep panels, including navy-tinted
     // ones) go to true black, so lighter cards keep their outline.
     if (mode === "crush") return c < 0.1 && lum < 0.02 ? withAlpha("#000000", color.a) : null;
-    if (c > 0.12 && lum > 0.08) {
+    // Vivid dark controls (royal navy checkout buttons) keep their hue too;
+    // collapsing them to near black hides the button against the page.
+    if (c > 0.12 && (lum > 0.08 || (c > 0.3 && lum > 0.02))) {
       // Flat saturated controls stay dark enough for their text. Gradients
       // also retain the light/dark difference between authored color stops.
 // Orange through lime carries several times the luminance of blue or
@@ -226,7 +228,9 @@
 
   // Dark monochrome icon strokes/fills become text-colored; colored icons stay.
   function mapIconPaint(color) {
-    if (!color || color.a < 0.08 || chroma(color) > 0.15 || luminance(color) > 0.25) return null;
+    // Dark brand ink (navy wordmarks and icons) vanishes on black like neutral
+    // ink does. Lighten it with its hue; mid-tone brand colors keep their paint.
+    if (!color || color.a < 0.08 || luminance(color) > 0.25 || (chroma(color) > 0.15 && luminance(color) >= 0.05)) return null;
     return mapForeground(color, 1);
   }
 
@@ -286,6 +290,31 @@
     return changed ? out : null;
   }
 
+  // A dark drop shadow is invisible once its surface and page are both near
+  // black. Replace it with a faint light edge plus a glow sized to the
+  // original lift, so the surface itself stays black. Only plain dark outer
+  // shadows qualify; light or inset shadows are not converted.
+  function liftShadow(value) {
+    const text = String(value || "");
+    if (!text || text === "none") return null;
+    let reach = 0, drop = 0, found = false;
+    for (const layer of text.split(/,(?![^(]*\))/)) {
+      if (/\binset\b/.test(layer)) return null;
+      const color = parseColor((layer.match(COLOR_TOKEN) || [])[0] || "");
+      if (!color) return null;
+      if (luminance(color) >= 0.35) return null;
+      if (color.a < 0.05) continue;
+      const [x = 0, y = 0, blur = 0, spread = 0] = (layer.replace(COLOR_TOKEN, "").match(/-?[\d.]+px/g) || []).map(parseFloat);
+      found = true;
+      reach = Math.max(reach, blur + Math.max(0, spread) + Math.abs(x));
+      drop = Math.max(drop, y);
+    }
+    if (!found) return null;
+    const edge = "0 0 0 1px rgb(255 255 255 / .09)";
+    if (reach < 6) return edge;
+    return `${edge}, 0 ${Math.min(4, Math.round(drop))}px ${Math.min(24, Math.max(8, Math.round(reach * 1.5)))}px rgb(255 255 255 / .035)`;
+  }
+
   // Worst case (lightest) opaque-ish color in a gradient, used as a text backdrop.
   function gradientBackdrop(value) {
     let lightest = null;
@@ -327,5 +356,5 @@
     return "";
   }
 
-  scope.OledNightColors = { siteProfile, isAmazonStore, parseColor, luminance, chroma, textTier, mapIconPaint, mapDataPaint, mapBackground, mapForeground, mapBorder, mapGradient, mapShadow, gradientBackdrop, isProtectedMediaTag, usesNativeSafeMode, usesNativeChatTheme };
+  scope.OledNightColors = { siteProfile, isAmazonStore, parseColor, luminance, chroma, textTier, mapIconPaint, mapDataPaint, mapBackground, mapForeground, mapBorder, mapGradient, mapShadow, liftShadow, gradientBackdrop, isProtectedMediaTag, usesNativeSafeMode, usesNativeChatTheme };
 })(globalThis);

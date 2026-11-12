@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Navy brand cart</title>
+<style>
+/* Store cart in a dark navy brand ink on a warm off-white page (DeLonghi). */
+body{margin:0;background:#f0eeeb;color:oklch(0.2261 0.0654 273.71);font:16px sans-serif;transition-property:background-color;transition-duration:.6s}
+header{display:flex;align-items:center;gap:24px;padding:16px 24px;border-bottom:1px solid rgb(225,222,218)}
+header nav a{color:inherit;text-decoration:none}
+.chakra-icon{width:16px;height:16px;display:inline-block}
+.logo{width:77px;height:32px}
+.tools button{background:none;border:0;color:oklch(0.2261 0.0654 273.71);padding:4px}
+.tools .chakra-icon{color:oklch(0.2261 0.0654 273.71)}
+main{display:flex;gap:24px;padding:24px}
+.left{flex:1}
+.notice{background:#e7e5e2;border-radius:12px;padding:20px}
+.review{width:480px;background:#fff;border:1px solid rgb(232,232,232);border-radius:16px;padding:18px}
+.rule{border-top:1px solid rgb(225,225,225);margin:16px 0}
+.checkout{display:block;width:100%;padding:18px;border:0;border-radius:32px;background:rgb(10,38,140);color:#fff;font-size:18px}
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="brand-logo" viewBox="0 0 100 40"><path id="logoPath" style="fill:#082141;fill-opacity:1" d="M0 0h100v40H0z"/></symbol></svg>
+<header>
+  <a href="#" aria-label="Brand Logo"><svg class="chakra-icon logo" id="logo" viewBox="0 0 169 55" role="img" aria-hidden="true"><use href="#brand-logo"/></svg></a>
+  <nav><a href="#">Coffee &amp; Espresso</a> <a href="#">Accessories</a></nav>
+  <span class="tools"><button aria-label="Search"><svg class="chakra-icon" id="searchIcon" viewBox="0 0 16 16"><path id="searchPath" fill="currentColor" d="M1 1h14v14H1z"/></svg></button></span>
+</header>
+<main>
+  <section class="left">
+    <h1>Cart</h1>
+    <div class="notice" id="notice"><svg class="chakra-icon" id="infoIcon" viewBox="0 0 16 16"><path id="infoPath" fill="currentColor" d="M1 1h14v14H1z"/></svg> Free shipping for orders over $40.</div>
+  </section>
+  <aside class="review" id="review">
+    <h2>Order Review</h2>
+    <p>Subtotal $699.95</p>
+    <div class="rule" id="rule"></div>
+    <p>TOTAL $559.96</p>
+    <button class="checkout" id="checkout">Go to Checkout</button>
+  </aside>
+</main>
+</body>
+</html>

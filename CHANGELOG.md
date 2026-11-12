@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.87
+
+- White cards on white pages (rewards pop-ups, sign-in boxes) keep a visible edge. Their dark drop shadow disappeared once the card and page were both black; it now becomes a faint light outline with a soft glow sized to the original shadow. The card itself stays black. Rounded notice panels a shade darker than their page get the same faint outline.
+- DeLonghi and other sites that fade their page background: the light page is no longer mistaken for a dark one. OLED Night read the fade while it was still starting from its own black, so it only deepened blacks and left navy logos, icons and outlines dark.
+- Dark navy icons and wordmarks (including logos drawn from an SVG symbol) are lightened with their hue instead of staying invisible on black. Vivid dark buttons such as a royal navy checkout button keep their color instead of turning near black.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.86
 
 - Gmail (dark theme): text typed in the focused search box is light again. Gmail renamed the classes of its search form, so the box turned white-on-focus with black text that OLED Night then darkened. The search form is now recognized by its role.
