@@ -11,6 +11,15 @@ tr.zA td{padding:8px}tr.zE{background:#23252a;font-weight:700}tr.yO{background:#
     <p id="mailExplicitText" style="color:#222">Message body text using an explicit dark color.</p>
   </td></tr></table></div>
 </div>
+<!-- Current Gmail: renamed header classes; focus swaps in white/black from a cross-origin sheet. -->
+<form class="gb_Rd gb_4e bas" role="search" id="mailSearchRenamed"><input id="mailSearchRenamedInput" value="bop"></form>
+<script>
+// The test server serves a second loopback origin; the static gallery has none.
+if(location.hostname==="127.0.0.1"){const searchCss=document.createElement("link");searchCss.rel="stylesheet";searchCss.href=new URL("gmail-search.css",location.href.replace("//127.0.0.1","//localhost")).href;document.head.append(searchCss);}
+const renamed=document.getElementById("mailSearchRenamed"),renamedInput=document.getElementById("mailSearchRenamedInput");
+renamedInput.addEventListener("focus",()=>setTimeout(()=>renamed.classList.add("gb_Sd")));
+renamedInput.addEventListener("blur",()=>setTimeout(()=>renamed.classList.remove("gb_Sd")));
+</script>
 <form class="gb_Pd gb_2e" id="mailSearch" style="background:#fff;color:#202124"><input id="mailSearchInput" value="settlement" style="color:#202124"></form>
 <div class="gssb_e" id="mailSuggestionOuter" style="background:#fff;padding:8px"><table class="gssb_m" id="mailSuggestions" style="background:#fff"><tr class="gssb_a"><td><span class="asor_b" id="suggestionText" style="color:#000">Search suggestion</span><span class="asor_e" id="suggestionHint" style="color:#5f6368">Secondary detail</span></td></tr></table></div>
 <div class="ajR" role="button" tabindex="0" aria-label="Show trimmed content"><img id="ellipsis" class="ajT" width="24" height="11" alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" style="background:center/20px no-repeat url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2211%22%3E%3Cpath fill=%22black%22 d=%22M2 4h3v3H2zm8 0h3v3h-3zm8 0h3v3h-3z%22/%3E%3C/svg%3E');opacity:.7"></div>

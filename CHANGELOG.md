@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.86
+
+- Gmail (dark theme): text typed in the focused search box is light again. Gmail renamed the classes of its search form, so the box turned white-on-focus with black text that OLED Night then darkened. The search form is now recognized by its role.
+- Email buttons that use a thick border in their own color as padding (Slack and many others) are now one solid surface. Previously the border was lightened like an outline, leaving a dark bar inside a bright frame.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.85
 
 - YouTube phone verification and other standalone YouTube forms: typed text, labels and placeholders are now light on black instead of dark gray. These pages use generic Polymer text colors that the YouTube palette did not cover.
