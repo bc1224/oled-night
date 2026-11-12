@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.85";
+  const VERSION = "0.6.86";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -190,7 +190,8 @@
   const STATE_GROUP = 'tr, [role="row"]';
   const DROPDOWN = 'select, [role="listbox"], [role="menu"], [role="combobox"]';
   const LIGHT_UI = `${CONTROL}, ${STATE_GROUP}, form, [role="dialog"], [role="listbox"], [role="menu"]`;
-  const GMAIL_LIGHT_REGIONS = ".nH.a98.iY, .a3s, .gssb_e, form.gb_Pd.gb_2e";
+  // Gmail renames its obfuscated header classes; the search form keeps its role.
+  const GMAIL_LIGHT_REGIONS = '.nH.a98.iY, .a3s, .gssb_e, form.gb_Pd.gb_2e, form[role="search"]';
   // Open shadow roots (web components) we style and watch. Page stylesheets
   // never reach inside them, so each gets our rules adopted directly.
   const shadowRoots = new Set();
@@ -1065,7 +1066,16 @@
         visibleControlBoundary = (type === "checkbox" || type === "radio" || role === "checkbox" || role === "radio" || role === "switch") &&
           !element.matches(':disabled, [aria-disabled="true"]');
       }
-      const border = colors.mapBorder(colors.parseColor(computed[`border${side}Color`]));
+      const edge = colors.parseColor(computed[`border${side}Color`]);
+      // Email "bulletproof" buttons pad a link with a thick border in its own
+      // surface color. That border is part of the surface, not an outline.
+      const surface = colors.parseColor(computed.backgroundColor);
+      if (edge && surface?.a >= 0.95 && parseFloat(computed[`border${side}Width`]) >= 4 &&
+          ["r", "g", "b", "a"].every(channel => Math.abs(edge[channel] - surface[channel]) < 0.01 + (channel === "a" ? 0 : 1))) {
+        if (found.bg) found[key] = found.bg;
+        continue;
+      }
+      const border = colors.mapBorder(edge);
       if (border) found[key] = border;
       // Small form-control boundaries need stronger contrast than decorative
       // separators. Do not make the page's ordinary borders this bright.

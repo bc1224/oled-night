@@ -1,0 +1,5 @@
+/* Served from another origin, like Gmail's header CSS, so it is not readable. */
+.gb_Rd { background: rgba(255,255,255,.08); border-radius: 24px; padding: 8px 16px; }
+.gb_Rd input { color: rgba(255,255,255,.87); background: transparent; border: 0; font: inherit; }
+.gb_Rd.gb_Sd { background: #fff; }
+.gb_Rd.gb_Sd input { color: #000; }

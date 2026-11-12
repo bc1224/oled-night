@@ -47,7 +47,7 @@ const server = http.createServer((req, res) => {
     res.end(`<!doctype html><html><head><style>body{background:#fff;color:#202124}.row{display:flex;background:#fff;border-bottom:1px solid #eee}.row.hl{background:#f2f6fc}.c{padding:2px 6px;color:#5f6368}</style></head><body><div id="list">${rows}</div></body></html>`);
     return;
   }
-  try { const body = readFileSync(join(SITE, path)); res.writeHead(200, { "content-type": path.endsWith('.svg') ? "image/svg+xml" : "text/html" }); res.end(body); }
+  try { const body = readFileSync(join(SITE, path)); res.writeHead(200, { "content-type": path.endsWith('.svg') ? "image/svg+xml" : path.endsWith('.css') ? "text/css" : "text/html" }); res.end(body); }
   catch { res.writeHead(404); res.end(); }
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
@@ -340,6 +340,10 @@ try {
   check("gmail: dark shell still recolors the white reading pane and mail tables", lum(await css("mailReader", "backgroundColor")) < 0.03 && lum(await css("mailTable", "backgroundColor")) < 0.03);
   check("gmail: WindowText and explicit dark mail text remain visible", lum(mailInk) > 0.5 && lum(explicitInk) > 0.5 && (await css("mailWindowText", "colorScheme")) === "light", `${mailInk} / ${explicitInk}`);
   check("gmail: search field and suggestion surfaces are dark", lum(await css("mailSearch", "backgroundColor")) < 0.03 && lum(await css("mailSuggestionOuter", "backgroundColor")) < 0.03 && lum(await css("mailSuggestions", "backgroundColor")) < 0.03);
+  await page.eval("document.getElementById('mailSearchRenamedInput').focus()"); await sleep(400);
+  const renamedSearch = [await css("mailSearchRenamed", "backgroundColor"), await css("mailSearchRenamedInput", "color")];
+  await page.eval("document.getElementById('mailSearchRenamedInput').blur()"); await sleep(200);
+  check("gmail: focused search with renamed classes keeps readable typed text", lum(renamedSearch[0]) < 0.03 && lum(renamedSearch[1]) > 0.5, JSON.stringify(renamedSearch));
   const suggestionInk = await css("suggestionText", "color"), suggestionHint = await css("suggestionHint", "color"), searchInk = await css("mailSearchInput", "color");
   check("gmail: primary and secondary suggestions are readable", lum(suggestionInk) > 0.5 && lum(suggestionHint) > 0.3 && lum(searchInk) > 0.25, `${suggestionInk} / ${suggestionHint} / ${searchInk}`);
 
@@ -706,6 +710,11 @@ try {
     check(`masks${variant}: a fade-masked row maps its surface with its text`, ratio(fadeBg, fadeInk) >= 4.5, `${fadeInk} on ${fadeBg}`);
     if (!variant) check("masks: a shaped url() mask still paints its background as ink", lum(iconInk) > 0.5, iconInk);
   }
+  // Email "bulletproof" buttons use a thick same-color border as padding.
+  await page.go(site("127.0.0.1", "email-button.html"));
+  const [frameBg, frameEdge, frameInk, outlineEdge] = [await css("borderButton", "backgroundColor"), await css("borderButton", "borderTopColor"), await css("borderButton", "color"), await css("outlinedButton", "borderTopColor")];
+  check("email button: a border used as padding matches the button surface", frameEdge === frameBg && ratio(frameBg, frameInk) >= 4.5, `${frameInk} on ${frameBg}, border ${frameEdge}`);
+  check("email button: a thin accent outline stays visible", lum(outlineEdge) > 0.08, outlineEdge);
   await page.go(site("127.0.0.1", "slotted-important.html"));
   for (const id of ["slottedCta", "slottedButton"]) {
     const [bg, ink] = [await css(id, "backgroundColor"), await css(id, "color")];
