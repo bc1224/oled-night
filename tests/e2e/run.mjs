@@ -715,6 +715,26 @@ try {
   const [frameBg, frameEdge, frameInk, outlineEdge] = [await css("borderButton", "backgroundColor"), await css("borderButton", "borderTopColor"), await css("borderButton", "color"), await css("outlinedButton", "borderTopColor")];
   check("email button: a border used as padding matches the button surface", frameEdge === frameBg && ratio(frameBg, frameInk) >= 4.5, `${frameInk} on ${frameBg}, border ${frameEdge}`);
   check("email button: a thin accent outline stays visible", lum(outlineEdge) > 0.08, outlineEdge);
+  // A white card on a white page keeps its outline once both turn black.
+  await page.go(site("127.0.0.1", "shadow-card.html"));
+  const shadowInk = value => (String(value).match(/rgba?\([^)]*\)/g) || []).map(token => {
+    const [r, g, b, a = "1"] = token.match(/[\d.]+/g);
+    return { lum: lum(`rgb(${r}, ${g}, ${b})`), a: Number(a) };
+  });
+  const [cardBg, cardShadow, flatShadow, ctaShadow] = [await css("shadowCard", "backgroundColor"), await css("shadowCard", "boxShadow"), await css("flatCard", "boxShadow"), await css("shadowCta", "boxShadow")];
+  check("shadow card: the card fill stays near black", lum(cardBg) < 0.03, cardBg);
+  check("shadow card: an invisible dark drop shadow becomes a faint light edge", shadowInk(cardShadow).some(({ lum: l, a }) => l > 0.5 && a >= 0.05 && a <= 0.15), cardShadow);
+  check("shadow card: a card without a shadow gains no edge", flatShadow === "none", flatShadow);
+  check("shadow card: a small control keeps its own shadow", shadowInk(ctaShadow).every(({ lum: l }) => l < 0.5), ctaShadow);
+  // Navy brand ink on an off-white store (DeLonghi cart).
+  await page.go(site("127.0.0.1", "navy-brand-cart.html"));
+  const [logoFill, searchFill, checkoutBg, checkoutInk, noticeShadow] = [await css("logoPath", "fill"), await css("searchPath", "fill"), await css("checkout", "backgroundColor"), await css("checkout", "color"), await css("notice", "boxShadow")];
+  const navyMode = await page.eval("document.documentElement.getAttribute('data-oled-night-mode')");
+  check("navy cart: a light page with a background fade is not read as dark", navyMode === "oled", navyMode);
+  check("navy cart: a navy symbol wordmark is lightened",lum(logoFill) > 0.2, logoFill);
+  check("navy cart: a navy icon in a colored button is lightened", lum(searchFill) > 0.2, searchFill);
+  check("navy cart: a royal navy checkout button keeps its hue", (() => { const [r, g, b] = checkoutBg.match(/\d+/g).map(Number); return b - r > 40 && ratio(checkoutBg, checkoutInk) >= 4.5; })(), `${checkoutInk} on ${checkoutBg}`);
+  check("navy cart: a notice panel a shade darker than its page keeps an edge", shadowInk(noticeShadow).some(({ lum: l, a }) => l > 0.5 && a >= 0.05), noticeShadow);
   await page.go(site("127.0.0.1", "slotted-important.html"));
   for (const id of ["slottedCta", "slottedButton"]) {
     const [bg, ink] = [await css(id, "backgroundColor"), await css(id, "color")];

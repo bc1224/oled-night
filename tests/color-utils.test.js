@@ -45,3 +45,25 @@ assert.equal(colors.siteProfile('maps.google.com'), '');
 assert.equal(colors.siteProfile('docs.google.com'), 'google-docs');
 assert.equal(colors.siteProfile('DOCS.GOOGLE.COM'), 'google-docs');
 assert.equal(colors.siteProfile('docs.google.com.evil.example'), '');
+// Dark drop shadows that vanish on black become a faint light edge, scaled
+// to the original lift. Inset, light or tiny shadows are left to other rules.
+{
+  const lift = colors.liftShadow("rgba(0, 0, 0, 0.15) 0px 2px 10px 0px");
+  assert.match(lift, /^0 0 0 1px rgb\(255 255 255 \/ \.09\), 0 2px 15px rgb\(255 255 255 \/ \.035\)$/);
+  assert.equal(colors.liftShadow("rgba(0, 0, 0, 0.2) 0px 1px 2px 0px"), "0 0 0 1px rgb(255 255 255 / .09)");
+  assert.equal(colors.liftShadow("rgba(0, 0, 0, 0.3) 0px 2px 4px 0px inset"), null);
+  assert.equal(colors.liftShadow("rgb(200, 200, 200) 0px 2px 10px 0px"), null);
+  assert.equal(colors.liftShadow("rgba(0, 0, 0, 0.02) 0px 2px 10px 0px"), null);
+  assert.equal(colors.liftShadow("none"), null);
+  assert.match(colors.liftShadow("rgba(0,0,0,.1) 0px 1px 3px 0px, rgba(0,0,0,.2) 0px 20px 60px -10px"), /, 0 4px 24px rgb\(255 255 255 \/ \.035\)$/);
+}
+// Dark brand ink (navy icons and wordmarks) would vanish on black; lighten it
+// with its hue. Mid-tone brand colors keep their authored paint.
+{
+  const navy = colors.mapIconPaint(colors.parseColor("rgb(8, 33, 65)"));
+  assert.ok(navy, "dark navy icon paint is mapped");
+  assert.equal(colors.mapIconPaint(colors.parseColor("rgb(200, 30, 40)")), null);
+  // A vivid dark control keeps its hue instead of collapsing to near black.
+  assert.match(colors.mapBackground(colors.parseColor("rgb(10, 38, 140)"), "oled"), /^hsl\(22\d /);
+  assert.equal(colors.mapBackground(colors.parseColor("rgb(8, 33, 65)"), "oled"), "#000000");
+}

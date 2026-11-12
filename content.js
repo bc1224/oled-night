@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.86";
+  const VERSION = "0.6.87";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -956,6 +956,26 @@
         computed.backgroundImage === "none" && !paintsInk(computed, element))
       found.bg = computed.backgroundColor;
     if (mode === "oled" && isPageLayout(element, computed, colors.parseColor(computed.backgroundColor))) found.bg = "#000000";
+    // A light card on a light page is separated only by its dark drop shadow
+    // (rewards interstitials, sign-in cards). Once both are dark the shadow is
+    // invisible. Outline it faintly instead of lifting the fill to grey.
+    // A rounded panel a shade darker than its page (notice bars) maps to nearly
+    // the same black; it gets the same faint edge, without a glow.
+    if (mode === "oled" && found.bg && !found.shadow &&
+        element !== document.documentElement && element !== document.body && !element.matches(CONTROL) &&
+        parseFloat(computed.width) >= 120 &&
+        parseFloat(computed.height) + (computed.boxSizing === "border-box" ? 0 : parseFloat(computed.paddingTop) + parseFloat(computed.paddingBottom)) >= 40) {
+      const flat = computed.boxShadow === "none";
+      const edge = flat ? "0 0 0 1px rgb(255 255 255 / .09)" : colors.liftShadow(computed.boxShadow);
+      const outlined = SIDES.some(([side]) => computed[`border${side}Style`] !== "none" && parseFloat(computed[`border${side}Width`]) > 0);
+      const bg = edge && !(flat && (outlined || parseFloat(computed.borderTopLeftRadius) < 6)) &&
+        (originalSurface.get(element)?.color || colors.parseColor(computed.backgroundColor));
+      const parent = bg && backdropOf(parentAcrossShadow(element), ctx);
+      const gap = parent?.color && Math.abs(colors.luminance(bg) - colors.luminance(parent.color));
+      if (parent && !parent.image && bg.a >= .95 && parent.color?.a >= .95 &&
+          colors.chroma(bg) < .1 && colors.chroma(parent.color) < .1 && colors.luminance(bg) > .62 &&
+          colors.luminance(parent.color) > .62 && (flat ? gap >= .03 && gap < .2 : gap < .1)) found.shadow = edge;
+    }
     // A flat header wrapper and its navigation are one continuous band.
     // Cards, dialogs and control faces remain separate surface decisions.
     if (mode === 'oled' && computed.backgroundImage === 'none' && !paintsInk(computed, element) &&
@@ -1488,6 +1508,21 @@
       }
       out.push([part, found]);
     }
+    // A wordmark drawn through <use> from a local <symbol> paints with the
+    // symbol's own fills (DeLonghi's navy logo). Rendered copies mirror the
+    // symbol's attributes, so near-invisible dark paint is mapped there.
+    // Mid-tone and bright brand colors keep their authored paint.
+    if (icon && referenced?.localName === "symbol") {
+      for (const part of referenced.querySelectorAll(ICON_PARTS)) {
+        const computed = getComputedStyle(part), found = {};
+        for (const name of ["fill", "stroke"]) {
+          const paint = colors.parseColor(computed[name]);
+          const mapped = paint && colors.luminance(paint) < .05 ? colors.mapIconPaint(paint) : null;
+          if (mapped) found[name] = mapped;
+        }
+        if (found.fill || found.stroke) out.push([part, found]);
+      }
+    }
   }
 
   // Rendering-only filters can lift neutral ink without reading remote pixels.
@@ -1782,7 +1817,12 @@
     pageColor = { r: 255, g: 255, b: 255, a: 1 };
     for (const node of [document.body, document.documentElement]) {
       if (!node) continue;
-      const background = colors.parseColor(getComputedStyle(node).backgroundColor);
+      // A site fade on the root (Chakra's body background transition) can
+      // still be running from our own black. Its final keyframe is the page's
+      // color; reading the current frame would call a light page dark.
+      const fade = node.getAnimations?.().find(animation => animation.transitionProperty === "background-color");
+      const target = fade?.effect?.getKeyframes?.().at(-1)?.backgroundColor;
+      const background = colors.parseColor(target || getComputedStyle(node).backgroundColor);
       if (background && background.a >= 0.5) { pageColor = background; return colors.luminance(background) < 0.2; }
     }
     return false;
@@ -3625,6 +3665,10 @@
          placed there (AlphaSense's closing banner) in front of that box, as
          it was while the page's body color still propagated to the canvas. */
       ${root}:not([data-oled-night-page="none"]) body { isolation: isolate !important; }
+      /* Measuring the page's own color swaps our black out for one style read.
+         A site fade on the root (Chakra's body background transition) would
+         otherwise start from our black, and a light page would read as dark. */
+      html[data-oled-night-root]:is([${MEASURE}], [${MEASURE_ROOT}]), html[data-oled-night-root]:is([${MEASURE}], [${MEASURE_ROOT}]) body { transition: none !important; }
       ${surface}[data-oled-night-transparent-frame]:not([data-oled-night-page="none"]), ${surface}[data-oled-night-transparent-frame]:not([data-oled-night-page="none"]) body { background: transparent !important; }
       ${overrideRules()}
       html[data-oled-night-root] :focus-visible { outline-color: #66a3ff !important; }
