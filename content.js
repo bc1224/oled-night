@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.88";
+  const VERSION = "0.6.89";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -3785,6 +3785,12 @@
          font weight. Mark unread with an accent bar and full-brightness text,
          and step read rows down to the muted text level. */
       ${root}[data-oled-night-site="gmail"] tr.zA.zE { box-shadow: inset 3px 0 0 #8ab4f8 !important; }
+      /* Gmail's dark theme paints the whole inbox and reader as one 80% grey
+         rounded panel. It is the page canvas, not a raised card: make it black
+         and keep a faint edge so the panel still reads against the sidebar. */
+      ${root}[data-oled-night-site="gmail"][data-oled-night-mode="crush"]:not([data-oled-night-invert]) .bkK > .nH {
+        background-color: #000 !important; box-shadow: 0 0 0 1px rgb(255 255 255 / .09) !important;
+      }
       /* Gmail shows authored HTML mail on its own light canvas. Inheriting our
          dark color scheme resolves system colors such as WindowText to white,
          hiding whole paragraphs in mail with a white background. */

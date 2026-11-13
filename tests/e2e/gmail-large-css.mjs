@@ -14,7 +14,8 @@ body{background:#202124;color:#e8eaed;font:14px Arial}.row{height:24px}.row span
 input{background:#303134;color:#e8eaed} .late{background:#202124;color:#ddd}
 ${rules}
 body.visual-mode .late{background:#fff;color:#111}
-</style></head><body><input id="search" aria-label="Search mail"><div class="late">Late rule</div><div id="history">${rows}</div>
+.bkK>.nH{background-color:rgba(51,51,51,.8);border-radius:16px;margin-bottom:16px}
+</style></head><body><input id="search" aria-label="Search mail"><div class="late">Late rule</div><div class="bkK"><div class="nH" id="panel"><b>Primary</b></div></div><div id="history">${rows}</div>
 <script>let sequence=0;const search=document.getElementById('search');search.addEventListener('input',()=>document.body.classList.toggle('unused-inbox-state',++sequence%2===0));const fieldRule=[...document.styleSheets[18].cssRules].find(rule=>rule.selectorText==='input');search.addEventListener('keydown',event=>{if(event.key==='ArrowUp')fieldRule.style.backgroundColor='#fff'});</script></body></html>`;
 let browser;const results=[];
 try{
@@ -55,6 +56,8 @@ try{
    await page.eval(`document.body.classList.add('visual-mode')`);await wait(700);
    const paint=await page.eval(`(()=>{const s=getComputedStyle(document.querySelector('.late'));return{background:s.backgroundColor,color:s.color}})()`);
    assert.notEqual(paint.background,'rgb(255, 255, 255)','genuine class paint beyond the large stylesheet must still be darkened');
+   const panel=await page.eval(`getComputedStyle(document.getElementById('panel')).backgroundColor`);
+   assert.equal(panel,'rgb(0, 0, 0)','the translucent grey Gmail message panel must become OLED black');
   }
  }
  mkdirSync(join(root,'dist/performance'),{recursive:true});writeFileSync(join(root,'dist/performance/gmail-large-css.json'),JSON.stringify(results,null,2));
