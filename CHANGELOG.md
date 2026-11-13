@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.88
+
+- Sites that switch to their own dark theme after loading (DeepSeek and others using a `data-theme`-style attribute on the page): OLED Night now notices the switch and turns their dark grey into true black, instead of staying in light-page mode with grey surfaces and leftover light-theme colors.
+- Dark Reader running at the same time: OLED Night now uses Dark Reader's documented opt-out tag while it styles a page, so Dark Reader's grey (#181a1b) no longer covers OLED black. Pages where OLED Night is off are left to Dark Reader.
+- Amazon Business in Invert mode: the notification bell in the top bar is visible again. It was flipped back to dark like a photo, on a bar that invert had already made dark.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.87
 
 - White cards on white pages (rewards pop-ups, sign-in boxes) keep a visible edge. Their dark drop shadow disappeared once the card and page were both black; it now becomes a faint light outline with a soft glow sized to the original shadow. The card itself stays black. Rounded notice panels a shade darker than their page get the same faint outline.

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Late dark theme</title>
+<style>
+/* A chat app that loads light, then applies its saved dark theme from script
+   with a data attribute on <html> or a class on <body> (DeepSeek style). */
+:root{--bg:#fff;--bubble:#eff6ff;--ink:#111}
+:root[data-theme="dark"], body.dark{--bg:#151517;--bubble:#2c2c2e;--ink:#f8faff}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px sans-serif}
+header{height:48px;background:var(--bg);display:flex;align-items:center;padding:0 16px}
+.main{background:var(--bg);padding:24px;min-height:500px}
+.bubble{background:var(--bubble);color:var(--ink);border-radius:14px;padding:10px 14px;margin-left:auto;width:fit-content}
+</style></head>
+<body>
+<header>Chat</header>
+<div class="main" id="main"><div class="bubble" id="bubble">hello</div><p id="answer">Answer text here.</p></div>
+</body>
+</html>
