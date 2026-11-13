@@ -6,6 +6,7 @@
 - Dark green, maroon and other dark colored icons are lightened with their hue when they would fall under 3:1 on black. Mid-tone brand colors (a #cc0000 heart, a green check) still keep their own paint.
 - Logos that lazy loaders swap in after a placeholder are checked again when the real image loads, so dark wordmarks no longer stay dark on black.
 - Single-page sites: the logo check budget starts over after each in-app navigation, so logos on later views are still lightened.
+- Smoother Gmail and other long lists: hovering or scrolling over rows does about half the work it did. Each row the pointer crosses was rechecked twice, once right away and again on the next frame; it is now rechecked once.
 - No new permissions; Chrome theme remains 1.0.3.
 
 ## 0.6.89

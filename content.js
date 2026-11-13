@@ -2799,6 +2799,13 @@
     }
     // Descendant rules of changed elements (".row:hover .label") need their subtree.
     const controlChanged = control && (!stop || path.indexOf(control) < path.indexOf(stop));
+    // A row whose state rules were analyzed above already queued exactly what
+    // its state can repaint. Otherwise the whole row is rechecked once: a
+    // pointer crossing has already changed :hover when this runs, so the
+    // repeat at the next frame doubled the work for every row crossed while
+    // hovering or scrolling a list (Gmail rows).
+    const group = path.find(node => node.matches(STATE_GROUP));
+    const groupTree = group && !analyzed.has(group) && (!stop || path.indexOf(group) < path.indexOf(stop));
     if (editing) {
       // Rich replies can include thousands of quoted nodes. Keystrokes change
       // the selection's text, not every quoted message. DOM/style mutations
@@ -2824,7 +2831,8 @@
         // Re-reading its entire subtree for each pointer crossing made
         // scrolling and hovering long articles stall for seconds.
         else if (largeScopes.has(path[0])) queueInteraction(path[0], false, currentPaint);
-        else queueInteraction(path[0], true, currentPaint);
+        // Inside a row that is rechecked whole below, the subtree is covered.
+        else if (!groupTree || !group.contains(path[0])) queueInteraction(path[0], true, currentPaint);
       }
       if (control && !analyzed.has(control)) settleTrees.add(control);
     }
@@ -2834,8 +2842,7 @@
         control?.matches('input[type="checkbox"]')) {
       for (const label of control.labels || []) queueInteraction(label, true, currentPaint);
     }
-    const group = path.find(node => node.matches(STATE_GROUP));
-    if (group && (!stop || path.indexOf(group) < path.indexOf(stop))) queueInteraction(group, true, currentPaint);
+    if (groupTree) queueInteraction(group, true, currentPaint && !/^pointer(?:over|out)$/.test(event.type));
     // Native focus/hover can change inside a frame callback. Waiting for the
     // next rAF exposes its pale state in the current paint. Repair at this
     // microtask checkpoint, then recheck only this path at the next boundary:
