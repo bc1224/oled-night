@@ -21,7 +21,11 @@ const lazy=logo('lazyLogo',BLANK);
 const byUrl=document.createElement('img');byUrl.id='urlLogo';byUrl.width=140;byUrl.height=40;byUrl.src=BLANK;host.append(byUrl);
 // No size attributes: the placeholder is 1px until the real logo loads.
 const tiny=document.createElement('img');tiny.id='tinyLogo';tiny.className='logo';tiny.alt='Partner logo';tiny.src=BLANK;host.append(tiny);
+// A lazy logo inside an open shadow root, as web-component headers ship it.
+const shadowHost=document.createElement('div');shadowHost.id='shadowLogos';host.append(shadowHost);
+const shadowLogo=document.createElement('img');shadowLogo.id='shadowLogo';shadowLogo.className='logo';shadowLogo.alt='Partner logo';shadowLogo.width=140;shadowLogo.height=40;shadowLogo.src=BLANK;
+shadowHost.attachShadow({mode:'open'}).append(shadowLogo);
 // The test swaps the sources once the first pass has classified the placeholders.
-window.swapLazyLogo=()=>{lazy.src=DARK;byUrl.src='acme-logo.svg';tiny.src=DARK};
+window.swapLazyLogo=()=>{lazy.src=DARK;byUrl.src='acme-logo.svg';tiny.src=DARK;shadowLogo.src=DARK};
 </script>
 </body></html>

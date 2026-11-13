@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Known gaps</title>
+<style>
+/* Open findings from the 2026-11-13 audit that no release fixes yet.
+   Gallery only: nothing asserts on this page, so it shows the current
+   behaviour instead of gating a release. */
+body{margin:0;padding:16px;background:#fff;color:#202124;font:16px system-ui,sans-serif}
+section{border-bottom:1px solid #ddd;padding:12px 0}
+h2{font-size:15px;margin:0 0 8px}
+p.note{font-size:13px;color:#5f6368;margin:6px 0 0}
+header{display:flex;gap:24px;align-items:center}
+a.home{display:inline-block}
+#bgLogo{display:inline-block;width:140px;height:40px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='40'%3E%3Ctext x='4' y='29' font-family='sans-serif' font-weight='700' font-size='28' fill='%23111'%3EACME%3C/text%3E%3C/svg%3E") no-repeat}
+#violetRing{display:inline-block;padding:8px 14px;border:2px solid hsl(245 100% 50%);border-radius:6px}
+#errorField{padding:6px;border:2px solid hsl(250 100% 45%);border-radius:4px;font:inherit}
+#blueLink{color:#1a0dab}
+.primary{color:#202124}.secondary{color:#5f6368}.muted{color:#80868b}
+</style></head>
+<body>
+<section>
+  <h2>Unnamed home-link logos (audit B3)</h2>
+  <header>
+    <a class="home" id="homeSvgLink" href="#"><svg id="homeSvg" width="120" height="32" viewBox="0 0 120 32" aria-label="Acme"><path d="M2 28 12 4h4l10 24h-5l-2-6H9l-2 6zm9-10h6l-3-8zM30 16c0-7 5-12 12-12 4 0 7 1 9 4l-3 3c-2-2-4-3-6-3-4 0-7 4-7 8s3 8 7 8c2 0 4-1 6-3l3 3c-2 3-5 4-9 4-7 0-12-5-12-12zm25 12V4h5l7 13 7-13h5v24h-5V13l-6 11h-2l-6-11v15zm32 0V4h16v4H92v6h10v4H92v6h12v4z" fill="#111"/></svg></a>
+    <a class="home" href="#"><img id="homeImg" alt="Acme" width="140" height="40"></a>
+  </header>
+  <p class="note">A dark header wordmark that is not named "logo" stays dark on the black page today.</p>
+</section>
+<section>
+  <h2>CSS background logo over 48px (audit B4)</h2>
+  <a class="home" href="#" aria-label="Acme home"><span id="bgLogo"></span></a>
+  <p class="note">Only 8 to 48px named control assets are lifted; this 140x40 background wordmark is not.</p>
+</section>
+<section>
+  <h2>Pure blue to violet borders (audit A2)</h2>
+  <span id="violetRing">Focus ring</span>
+  <input id="errorField" value="Invalid value" aria-invalid="true">
+  <p class="note">Border lightness is fixed, so hues 240 to 250 land near 2.7:1 on black, under the 3:1 non-text minimum. Common web blues pass.</p>
+</section>
+<section>
+  <h2>Text below the default brightness (audit A2 and A5)</h2>
+  <p><a id="blueLink" href="#">A classic blue link</a></p>
+  <p class="primary" id="primaryText">Primary text tier</p>
+  <p class="secondary" id="secondaryText">Secondary text tier</p>
+  <p class="muted" id="mutedText">Muted text tier</p>
+  <p class="note">Set Brightness to 60 or lower in OLED Night settings to see these. At 60 the blue link falls near 2.5:1; at 40 neutral text can fall under 3:1. Whether the slider floor should rise is an open owner decision.</p>
+</section>
+<script>
+// Dark wordmark PNG on a transparent background, generated so the page needs no assets.
+const c=document.createElement('canvas');c.width=140;c.height=40;const g=c.getContext('2d');g.fillStyle='#111';g.font='bold 28px sans-serif';g.textBaseline='middle';g.fillText('ACME',4,20);
+document.getElementById('homeImg').src=c.toDataURL('image/png');
+</script>
+</body></html>

@@ -791,6 +791,7 @@ try {
   check("late logos: a lazy logo swapped in after its placeholder is lightened", await hasLogoMark("lazyLogo"), await css("lazyLogo", "filter"));
   check("late logos: a logo named only by its loaded file is lightened", await hasLogoMark("urlLogo"), await css("urlLogo", "filter"));
   check("late logos: a logo that loads after a 1px placeholder is lightened", await hasLogoMark("tinyLogo"), await css("tinyLogo", "filter"));
+  check("late logos: a lazy logo inside a shadow root is lightened", await page.eval("(e => e.hasAttribute('data-oled-night-logo') || e.hasAttribute('data-oled-night-logo-ink'))(document.getElementById('shadowLogos').shadowRoot.getElementById('shadowLogo'))"));
   // Logo budget: an in-app navigation gets a fresh sampling budget.
   await page.go(site("127.0.0.1", "logo-budget.html"));
   check("logo budget: the first wall of logos is sampled", await hasLogoMark("logo-0"));
