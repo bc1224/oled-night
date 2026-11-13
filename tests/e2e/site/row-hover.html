@@ -7,6 +7,7 @@ table{border-collapse:collapse;width:100%;table-layout:fixed}
 tr.zA{height:40px;border-bottom:1px solid #2a2a2a;background:#1f1f1f;cursor:pointer}
 tr.zA:hover{box-shadow:inset 1px 0 0 #3c3c3c,0 1px 3px 0 rgba(0,0,0,.6);z-index:2}
 .zA:hover:has(.att) > .meta{color:#fff}
+.zA.hl{background:#f1f3f4}
 .tools{display:none}tr.zA:hover .tools{display:inline-flex}
 td{padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ic{display:inline-block;width:18px;height:18px;border-radius:50%;background:#444;margin:0 2px}
@@ -19,4 +20,8 @@ document.getElementById('rows').innerHTML=Array.from({length:120},(_,i)=>`<tr cl
 <td style="width:180px"><span><span><b>Sender ${i}</b></span></span></td>
 <td><div><span class="lbl">Label</span><span class="lbl">Work</span><span><b>Subject ${i}</b></span><span class="snip"> - snippet text that runs long for row ${i}</span>${i%3?'':'<span class="att">'+icons(3)+'</span>'}</div></td>
 <td style="width:150px" class="meta"><span>Nov ${i%28+1}</span><span class="tools">${icons(6)}</span></td></tr>`).join('');
+// Gmail-style hover paint from a site listener, switched on by the test after counting.
+const rows=document.getElementById('rows');
+rows.addEventListener('mouseover',e=>{if(!window.scriptedHover)return;const row=e.target.closest('tr.zA');if(row)row.classList.add('hl')});
+rows.addEventListener('mouseout',e=>{const row=e.target.closest('tr.zA');if(row&&!row.contains(e.relatedTarget))row.classList.remove('hl')});
 </script></body></html>

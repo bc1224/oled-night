@@ -32,6 +32,17 @@ try {
   await wait(400); const sweep = await decides();
   for (let i = 0; i < 20; i++) { await browser.send("Input.dispatchMouseEvent", { type: "mouseWheel", x, y: 300, deltaX: 0, deltaY: 41 }, S); await wait(60); }
   await wait(400); const scroll = await decides();
+  // A row whose hover paint comes from a site listener (a class added on
+  // mouseover) must still read as dark with light text once it lands.
+  await page.eval("window.scriptedHover = true");
+  await browser.send("Input.dispatchMouseEvent", { type: "mouseMoved", x, y: 200 }, S); await wait(150);
+  await browser.send("Input.dispatchMouseEvent", { type: "mouseMoved", x, y: 245 }, S); await wait(600);
+  const scripted = await page.eval(`(() => { const row = document.querySelector("tr.zA.hl"); if (!row) return null;
+    const ch = value => value.match(/[0-9.]+/g).slice(0, 3).map(Number), lum = rgb => { const [r, g, b] = rgb.map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+    const bg = ch(getComputedStyle(row).backgroundColor), ink = ch(getComputedStyle(row.querySelector("b")).color);
+    const [hi, lo] = [lum(ink), lum(bg)].sort((a, b) => b - a);
+    return { id: row.id, bg: bg.join(","), ink: ink.join(","), contrast: +((hi + 0.05) / (lo + 0.05)).toFixed(2), darkBg: Math.max(...bg) < 80 }; })()`);
+  check("row hover: a row painted by a site hover listener stays dark with readable text", !!scripted && scripted.darkBg && scripted.contrast >= 4.5, JSON.stringify(scripted));
   const info = await page.eval(`({ mode: document.documentElement.getAttribute("data-oled-night-mode"), row: document.getElementById("row5").getElementsByTagName("*").length + 1,
     hovered: [...document.querySelectorAll("tr.zA")].find(row => row.matches(":hover"))?.id || null })`);
   check("row hover: the extension themes the dark inbox", info.mode === "crush", info.mode);
