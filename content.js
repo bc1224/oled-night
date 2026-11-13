@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.89";
+  const VERSION = "0.6.90";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -154,8 +154,12 @@
   let canvasWatch = null;
   let mediaCopyMeasurements = new WeakSet();
   let textTiers = new WeakMap();
-  let logoChecked = new WeakSet();
+  // Each sampled logo remembers the source it was sampled from, so a lazy
+  // loader swapping a placeholder for the real logo gets a second look. The
+  // budget is per page URL: single-page apps keep bringing new views.
+  let logoChecked = new WeakMap();
   let logoBudget = 80;
+  let logoBudgetHref = "";
   const spriteDocuments = new Map();
   const localSpriteWaiters = new Set();
   let inlineStyles = new WeakMap();
@@ -384,6 +388,7 @@
       // same host outside a shadow tree, so those events never reach document.
       // Listen inside every managed root; composed events are handled once.
       for (const type of INTERACTION_EVENTS) root.addEventListener(type, onInteraction, true);
+      root.addEventListener("load", onImageLoad, true);
       // Constructed sheets are not observed by MutationObserver. Some apps
       // replace the whole adoptedStyleSheets array after our initial pass.
       if (!shadowHealthTimer) {
@@ -432,6 +437,7 @@
     for (const root of shadowRoots) {
       if (!root.host.isConnected) {
         for (const type of INTERACTION_EVENTS) root.removeEventListener(type, onInteraction, true);
+        root.removeEventListener("load", onImageLoad, true);
         shadowRoots.delete(root);
       }
     }
@@ -1590,12 +1596,19 @@
       img.removeAttribute(LOGO_INK);
       return;
     }
-    if (logoChecked.has(img) || logoBudget <= 0) return;
-    logoChecked.add(img);
+    const source = img.currentSrc || img.src;
+    if (logoChecked.get(img) === source) return;
+    if (logoBudgetHref !== location.href) { logoBudgetHref = location.href; logoBudget = 80; }
+    if (logoBudget <= 0) return;
+    if (logoChecked.has(img)) { img.removeAttribute(LOGO); img.removeAttribute(LOGO_INK); }
+    logoChecked.set(img, source);
     logoBudget--;
     const checked = logoChecked;
     const run = () => {
       if (!active || checked !== logoChecked || !img.isConnected) return;
+      // Samples whatever finished loading; srcset picks or a swap made before
+      // this load are recorded so the queued recheck does not sample twice.
+      logoChecked.set(img, img.currentSrc || img.src);
       try {
         // Keep the aspect ratio and enough resolution that thin lettering survives.
         const scale = Math.min(1, 96 / Math.max(img.naturalWidth, img.naturalHeight));
@@ -3069,6 +3082,17 @@
     }
   }
 
+  // Image loads do not bubble or cross shadow boundaries; each managed root
+  // listens in the capture phase. Only images sampled from another source
+  // are queued, so ordinary photo loads cost one map lookup.
+  function onImageLoad(event) {
+    const img = event.target;
+    if (!observer || img?.localName !== "img" || !logoChecked.has(img)) return;
+    if (logoChecked.get(img) === (img.currentSrc || img.src)) return;
+    pendingTrees.add(img);
+    schedule();
+  }
+
   function onSheetLoad(event) {
     if (!observer) return;
     const copies = mediaCopies.get(event.target);
@@ -3874,6 +3898,7 @@
     stopYouTubeTheme = null;
     document.removeEventListener("load", onSheetLoad, true);
     document.removeEventListener("loadeddata", onSheetLoad, true);
+    document.removeEventListener("load", onImageLoad, true);
     for (const type of INTERACTION_EVENTS) document.removeEventListener(type, onInteraction, true);
     if (flushHandle !== null) {
       if (flushTimer) clearTimeout(flushHandle); else cancelAnimationFrame(flushHandle);
@@ -3950,11 +3975,11 @@
     root.removeAttribute("data-oled-night-amazon-search");
     for (const name of ["--oled-night-page", "--oled-night-youtube-primary", "--oled-night-youtube-secondary", "--oln-light", "--oln-strength"]) root.style.removeProperty(name);
     document.getElementById("oled-night-sheet")?.remove();
-    logoChecked = new WeakSet();
+    logoChecked = new WeakMap();
     logoBudget = 80;
     for (const scope of [document, ...shadowRoots]) {
       for (const resource of scope.querySelectorAll('[data-oled-night-logo-filter]')) resource.remove();
-      if (scope !== document) for (const type of INTERACTION_EVENTS) scope.removeEventListener(type, onInteraction, true);
+      if (scope !== document) { for (const type of INTERACTION_EVENTS) scope.removeEventListener(type, onInteraction, true); scope.removeEventListener("load", onImageLoad, true); }
       for (const node of scope.querySelectorAll(`[${MEASURE}], [${NOANIM}], [${MEASURE_SELF}], [${NOANIM_SELF}], [${MEASURE_PSEUDO}], [${MEASURE_ROOT}], [${LOGO}], [${LOGO_INK}], [${SHARED_BG}]`)) {
         for (const name of [MEASURE, NOANIM, MEASURE_SELF, NOANIM_SELF, MEASURE_PSEUDO, MEASURE_ROOT, LOGO, LOGO_INK, SHARED_BG]) node.removeAttribute(name);
       }
@@ -4073,6 +4098,7 @@
     document.addEventListener("visibilitychange", scheduleRefresh);
     document.addEventListener("load", onSheetLoad, true);
     document.addEventListener("loadeddata", onSheetLoad, true);
+    document.addEventListener("load", onImageLoad, true);
     for (const type of INTERACTION_EVENTS) document.addEventListener(type, onInteraction, true);
     process([root], [], true);
     observer.takeRecords();

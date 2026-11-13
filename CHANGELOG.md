@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.90
+
+- Pale yellow and lime gradient buttons: the label is readable again. Their mapped gradient was a bright olive or green that left light text at under 2:1; each stop is now kept dark enough for 4.5:1 at any Contrast setting, and darker gradients (blue, red) keep their light-to-dark shading.
+- Dark green, maroon and other dark colored icons are lightened with their hue when they would fall under 3:1 on black. Mid-tone brand colors (a #cc0000 heart, a green check) still keep their own paint.
+- Logos that lazy loaders swap in after a placeholder are checked again when the real image loads, so dark wordmarks no longer stay dark on black.
+- Single-page sites: the logo check budget starts over after each in-app navigation, so logos on later views are still lightened.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.89
 
 - Gmail dark theme: the inbox and message panel, which Gmail now paints as one translucent grey card, is true black with a faint edge instead of staying grey.

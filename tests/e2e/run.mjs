@@ -750,6 +750,30 @@ try {
     if (how.includes("body")) check("dark reader: an active page carries Dark Reader's documented lock", await page.eval("document.head.querySelectorAll('meta[name=\"darkreader-lock\"]').length === 1"));
     check(`late dark theme via ${how}: the native dark canvas is pure black`, lateMain === "rgb(0, 0, 0)" && lum(lateInk) > 0.5, `${lateInk} on ${lateMain}`);
   }
+  // Contrast floors: pale gradient buttons and dark colored icon paint.
+  await page.go(site("127.0.0.1", "contrast-floors.html"));
+  const stops = value => String(value).match(/rgba?\([^)]*\)/g) || [];
+  for (const id of ["paleYellowWhite", "paleYellowDark", "paleLimeWhite", "blueGradient"]) {
+    const [image, ink] = [await css(id, "backgroundImage"), await css(id, "color")];
+    const worst = Math.min(...stops(image).map(stop => ratio(stop, ink)));
+    check(`contrast floors: ${id} label reaches 4.5:1 on every mapped stop`, stops(image).length >= 2 && worst >= 4.5, `${ink} on ${image} (${worst.toFixed(2)})`);
+  }
+  for (const [id, prop] of [["greenIcon", "fill"], ["maroonIcon", "stroke"], ["redIcon", "fill"]]) {
+    const [paint, plate] = [await css(id, prop), await css(`${id}Button`, "backgroundColor")];
+    check(`contrast floors: ${id} reaches 3:1 on its dark button`, ratio(paint, plate) >= 3, `${paint} on ${plate}`);
+  }
+  check("contrast floors: a mid-tone red icon keeps its own paint", (await css("redIcon", "fill")) === "rgb(204, 0, 0)", await css("redIcon", "fill"));
+  // Late logos: a placeholder swapped for a dark wordmark is sampled again.
+  await page.go(site("127.0.0.1", "late-logos.html"));
+  const hasLogoMark = id => page.eval(`(e => e.hasAttribute('data-oled-night-logo') || e.hasAttribute('data-oled-night-logo-ink'))(document.getElementById(${JSON.stringify(id)}))`);
+  check("late logos: a named dark logo present at load is lightened", await hasLogoMark("namedLogo"));
+  await page.eval("swapLazyLogo()"); await sleep(900);
+  check("late logos: a lazy logo swapped in after its placeholder is lightened", await hasLogoMark("lazyLogo"), await css("lazyLogo", "filter"));
+  // Logo budget: an in-app navigation gets a fresh sampling budget.
+  await page.go(site("127.0.0.1", "logo-budget.html"));
+  check("logo budget: the first wall of logos is sampled", await hasLogoMark("logo-0"));
+  await page.eval("navigateApp()"); await sleep(900);
+  check("logo budget: a logo after single-page navigation is still sampled", await hasLogoMark("afterNav"), await css("afterNav", "filter"));
   await page.go(site("127.0.0.1", "slotted-important.html"));
   for (const id of ["slottedCta", "slottedButton"]) {
     const [bg, ink] = [await css(id, "backgroundColor"), await css(id, "color")];
