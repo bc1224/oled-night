@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.89
+
+- Gmail dark theme: the inbox and message panel, which Gmail now paints as one translucent grey card, is true black with a faint edge instead of staying grey.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.88
 
 - Sites that switch to their own dark theme after loading (DeepSeek and others using a `data-theme`-style attribute on the page): OLED Night now notices the switch and turns their dark grey into true black, instead of staying in light-page mode with grey surfaces and leftover light-theme colors.
