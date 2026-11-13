@@ -762,6 +762,8 @@ try {
     const [paint, plate] = [await css(id, prop), await css(`${id}Button`, "backgroundColor")];
     check(`contrast floors: ${id} reaches 3:1 on its dark button`, ratio(paint, plate) >= 3, `${paint} on ${plate}`);
   }
+  const [fillImage, trackBg] = [await css("gradFill", "backgroundImage"), await css("gradTrack", "backgroundColor")];
+  check("contrast floors: an empty yellow gradient bar keeps 3:1 on its dark track", stops(fillImage).length >= 2 && Math.min(...stops(fillImage).map(stop => ratio(stop, trackBg))) >= 3, `${fillImage} on ${trackBg}`);
   check("contrast floors: a mid-tone red icon keeps its own paint", (await css("redIcon", "fill")) === "rgb(204, 0, 0)", await css("redIcon", "fill"));
   // Late logos: a placeholder swapped for a dark wordmark is sampled again.
   await page.go(site("127.0.0.1", "late-logos.html"));
@@ -769,6 +771,8 @@ try {
   check("late logos: a named dark logo present at load is lightened", await hasLogoMark("namedLogo"));
   await page.eval("swapLazyLogo()"); await sleep(900);
   check("late logos: a lazy logo swapped in after its placeholder is lightened", await hasLogoMark("lazyLogo"), await css("lazyLogo", "filter"));
+  check("late logos: a logo named only by its loaded file is lightened", await hasLogoMark("urlLogo"), await css("urlLogo", "filter"));
+  check("late logos: a logo that loads after a 1px placeholder is lightened", await hasLogoMark("tinyLogo"), await css("tinyLogo", "filter"));
   // Logo budget: an in-app navigation gets a fresh sampling budget.
   await page.go(site("127.0.0.1", "logo-budget.html"));
   check("logo budget: the first wall of logos is sampled", await hasLogoMark("logo-0"));

@@ -17,7 +17,11 @@ const host=document.getElementById('logos');
 function logo(id,src){const i=document.createElement('img');i.id=id;i.className='logo';i.alt='Partner logo';i.width=140;i.height=40;i.src=src;host.append(i);return i}
 logo('namedLogo',DARK);
 const lazy=logo('lazyLogo',BLANK);
-// The test swaps the source once the first pass has classified the placeholder.
-window.swapLazyLogo=()=>{lazy.src=DARK};
+// Named only by its real file name: the placeholder carries no logo name.
+const byUrl=document.createElement('img');byUrl.id='urlLogo';byUrl.width=140;byUrl.height=40;byUrl.src=BLANK;host.append(byUrl);
+// No size attributes: the placeholder is 1px until the real logo loads.
+const tiny=document.createElement('img');tiny.id='tinyLogo';tiny.className='logo';tiny.alt='Partner logo';tiny.src=BLANK;host.append(tiny);
+// The test swaps the sources once the first pass has classified the placeholders.
+window.swapLazyLogo=()=>{lazy.src=DARK;byUrl.src='acme-logo.svg';tiny.src=DARK};
 </script>
 </body></html>

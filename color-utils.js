@@ -157,7 +157,7 @@
 
   // Modes: "oled" / "soft" recolor a light page; "crush" only pushes the dark
   // greys of an already-dark page to true black; "none" changes nothing.
-  function mapBackground(color, mode, gradientStop = false) {
+  function mapBackground(color, mode, gradientStop = false, labelled = gradientStop) {
     if (!color || color.a < 0.08 || mode === "none") return null;
     const hsl = rgbToHsl(color);
     const lum = luminance(color);
@@ -178,7 +178,7 @@
       let base = gradientStop ? Math.round(7 + 30 * hsl.l) : Math.round(16 - 5 * bright);
       // Gradient stops keep their authored order, but no stop may get so light
       // that a light label fails 4.5:1 at full contrast (pale yellow buttons).
-      if (gradientStop) while (base > 7 && luminance(hslToRgb(hue, saturation / 100, (base + 10) / 100)) > 0.12) base--;
+      if (labelled) while (base > 7 && luminance(hslToRgb(hue, saturation / 100, (base + 10) / 100)) > 0.12) base--;
       return withAlpha(`hsl(${hue} ${saturation}% calc(${base}% + 10% * ${STRENGTH}))`, color.a);
     }
     // Pale tints (info/alert/selected rows) keep a hint of their hue, scaled
@@ -259,7 +259,7 @@
 
   // Adapt gradient layers independently. A sibling image/texture keeps its
   // exact URL and layer position, including any color-like text inside it.
-  function mapGradient(value, mode) {
+  function mapGradient(value, mode, labelled = true) {
     const text = String(value || "");
     if (!/gradient\(/i.test(text)) return null;
     const layers = [];
@@ -278,7 +278,7 @@
     const out = layers.map(layer => {
       if (!/^\s*(?:repeating-)?(?:linear|radial|conic)-gradient\(/i.test(layer)) return layer;
       return layer.replace(COLOR_TOKEN, token => {
-        const mapped = mapBackground(parseColor(token), mode, true);
+        const mapped = mapBackground(parseColor(token), mode, true, labelled);
         if (!mapped) return token;
         changed = true;
         return mapped;

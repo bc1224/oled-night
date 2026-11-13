@@ -59,4 +59,8 @@ assert.deepEqual(kept, [], `kept icon colors under 3:1 on black:\n${kept.slice(0
 assert.notEqual(colors.mapIconPaint(colors.parseColor("rgb(31, 71, 48)")), null, "dark green icon is lifted");
 // Mid-tone brand colors still keep their own paint.
 for (const brand of ["rgb(204, 0, 0)", "rgb(0, 112, 74)", "rgb(230, 0, 35)"]) assert.equal(colors.mapIconPaint(colors.parseColor(brand)), null, brand);
-console.log("contrast floors: gradient labels and kept icon paint pass");
+// An empty gradient bar has no label, so its stops keep their full brightness.
+const bar = "linear-gradient(90deg, rgb(255, 213, 79), rgb(255, 235, 59))";
+const stopOf = (css) => vividStop(css.match(/hsl\([^()]*\([^()]*\([^()]*\)\)\)/)[0], 0.72);
+assert.ok(stopOf(colors.mapGradient(bar, "oled", false)).base > stopOf(colors.mapGradient(bar, "oled")).base, "unlabelled gradient bars are not capped");
+console.log("contrast floors: gradient labels and kept icon paint and unlabelled bars pass");

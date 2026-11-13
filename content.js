@@ -158,6 +158,9 @@
   // loader swapping a placeholder for the real logo gets a second look. The
   // budget is per page URL: single-page apps keep bringing new views.
   let logoChecked = new WeakMap();
+  // Every image considered as a possible logo, with the source it had then
+  // ("" while still loading). A later load of another source is rechecked.
+  let logoSeen = new WeakMap();
   let logoBudget = 80;
   let logoBudgetHref = "";
   const spriteDocuments = new Map();
@@ -653,19 +656,22 @@
   function mapSurface(computed, prefix, mode, found, element) {
     // Reuse only pure mappings of complete paint inputs, never element state.
     const ink = paintsInk(computed, element);
+    // An empty element (a progress or rating bar) has no label to protect,
+    // so its gradient keeps its full brightness against the dark track.
+    const label = !element || element.hasChildNodes();
     const key = JSON.stringify([mode, computed.backgroundColor, computed.backgroundImage, computed.boxShadow,
-      ink, hasImageBackdrop(computed)]);
+      ink, hasImageBackdrop(computed), label]);
     let mapped = surfaceMappings.get(key);
     if (!mapped) {
       mapped = {};
-      computeSurface(computed, "", mode, mapped, ink);
+      computeSurface(computed, "", mode, mapped, ink, label);
       if (surfaceMappings.size >= 512) surfaceMappings.clear();
       surfaceMappings.set(key, mapped);
     }
     for (const name of Object.keys(mapped)) found[prefix + name] = mapped[name];
   }
 
-  function computeSurface(computed, prefix, mode, found, ink = paintsInk(computed)) {
+  function computeSurface(computed, prefix, mode, found, ink = paintsInk(computed), label = true) {
     const colors = colorsApi();
     const original = colors.parseColor(computed.backgroundColor);
     if (ink) {
@@ -676,7 +682,7 @@
     }
     const alreadyBlack = original && mode !== "soft" && original.r <= 2 && original.g <= 2 && original.b <= 2;
     const background = alreadyBlack ? null : colors.mapBackground(original, mode);
-    const gradient = hasImageBackdrop(computed) ? null : colors.mapGradient(computed.backgroundImage, mode);
+    const gradient = hasImageBackdrop(computed) ? null : colors.mapGradient(computed.backgroundImage, mode, label);
     const shadow = colors.mapShadow(computed.boxShadow, mode);
     if (background) found[`${prefix}bg`] = background;
     if (gradient) found[`${prefix}img`] = gradient;
@@ -1582,6 +1588,7 @@
   // Sample at most 96 pixels per side when permitted. Cross-origin logos use
   // the same paint-only mask, without another request or a canvas read bypass.
   function checkLogo(img, ctx) {
+    logoSeen.set(img, img.complete ? img.currentSrc || img.src : "");
     // Studio wordmarks may be named only by their site's semantic data label.
     const labelledLogo = img.matches('[data-tt$="logo" i], [data-tt$="wordmark" i]');
     const namedLogo = labelledLogo || img.matches('[itemprop~="logo"]') ||
@@ -2538,6 +2545,7 @@
         }
         imageDecisions.push([img, found]);
         if (rect.width >= 12 && rect.height >= 12 && rect.width <= 420 && rect.height <= 160) logoCandidates.push(img);
+        else logoSeen.set(img, img.complete ? img.currentSrc || img.src : "");
       }
     }
     for (const node of measured) node.removeAttribute(MEASURE);
@@ -3083,12 +3091,13 @@
   }
 
   // Image loads do not bubble or cross shadow boundaries; each managed root
-  // listens in the capture phase. Only images sampled from another source
-  // are queued, so ordinary photo loads cost one map lookup.
+  // listens in the capture phase. Only images first seen with another source
+  // or before loading are queued; other loads cost one map lookup.
   function onImageLoad(event) {
     const img = event.target;
-    if (!observer || img?.localName !== "img" || !logoChecked.has(img)) return;
-    if (logoChecked.get(img) === (img.currentSrc || img.src)) return;
+    if (!observer || img?.localName !== "img") return;
+    const seen = logoSeen.get(img);
+    if (seen === undefined || seen === (img.currentSrc || img.src)) return;
     pendingTrees.add(img);
     schedule();
   }
@@ -3976,6 +3985,7 @@
     for (const name of ["--oled-night-page", "--oled-night-youtube-primary", "--oled-night-youtube-secondary", "--oln-light", "--oln-strength"]) root.style.removeProperty(name);
     document.getElementById("oled-night-sheet")?.remove();
     logoChecked = new WeakMap();
+    logoSeen = new WeakMap();
     logoBudget = 80;
     for (const scope of [document, ...shadowRoots]) {
       for (const resource of scope.querySelectorAll('[data-oled-night-logo-filter]')) resource.remove();
