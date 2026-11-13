@@ -2,7 +2,7 @@ const groups = {
   "Interactions": ["compact-switches","oled-components","navigation-work","dropdowns","dark-dropdowns","state-surfaces","shadow-hover","cold-shadow","interaction-layout","media-navigation","frame-mutation","paint-updates","large-updates","text-hover","instagram-radios","reported-controls"],
   "Text & surfaces": ["light","dark","explicit-light","ink","surfaces","scope-light","scope-dark","scope-scheme","svg-outline","bright-surfaces","component-names","email-button","layered-surfaces","masked-surfaces","retained-surfaces","shadow-card","slotted-important","contrast-floors","ink-locality","calendar-fields"],
   "Media & data": ["indicators","chart","canvas","shop","ad-overlays","wide-wordmarks","dark-card-artwork","logo-tiles","app-store-icons","layered-card-media","logo-contrast","media-underlay-decor","negative-z-media","late-logos","logo-budget","known-gaps"],
-  "App reproductions": ["youtube","gmail","email-newsletter","native-banner","booking-form","checkout","chatgpt-controls","chatgpt-streaming","google-sheets-colors","reddit-res","shadow-stability","apple-auth","apple-recovery","dmv-hero-text","consent-banner","growing-frame","apple-ads-controls","calendar-booking","google-analytics","google-docs","navy-brand-cart","youtube-music","amazon-home"],
+  "App reproductions": ["youtube","gmail","email-newsletter","native-banner","booking-form","checkout","chatgpt-controls","chatgpt-streaming","google-sheets-colors","reddit-res","shadow-stability","apple-auth","apple-recovery","dmv-hero-text","consent-banner","growing-frame","apple-ads-controls","calendar-booking","google-analytics","google-docs","navy-brand-cart","youtube-music","amazon-home","row-hover"],
   "Isolation & loading": ["components","protected","challenge","challenge-inline","frame","transparent-frame","slow","efficiency","report-fields","report-preview","generated-style","dark-layout","late-dark-theme","parser-surface"]
 };
 const descriptions = {
@@ -85,6 +85,7 @@ const descriptions = {
   "chart":"SVG chart with gradient stops, a solid fill and a blue line, plus a search box fading to a focus tint. Fills darken, the line keeps rgb(0, 112, 201), and sampled transition colors never flash light. Chrome only. Synthetic.",
   "canvas":"White 2D canvas used by the invert-mode test on localhost: the page is inverted and images flipped back. Gallery only otherwise; no assertion reads the canvas pixels. Chrome only. Synthetic.",
   "shop":"Shop tiles with multiply-blended product photos, picture elements, a photo matte, dark logos and a dark app icon. Photos keep normal blend, matte keeps its color, dark transparent logos flip light, color logos and app icon stay. Chrome and Firefox. Synthetic, Amazon-style.",
+  "row-hover":"Dark Gmail-style inbox of 120 rows with a :has() hover rule, hover-only row tools and a site listener that paints the hovered row light. Hovering or scrolling rechecks each crossed row once and the hovered row stays dark with readable text. Chrome. Synthetic.",
   "gmail":"Dark Gmail shell with unread and read rows, a white reading pane, mail tables, WindowText mail text and a search box with suggestions. Unread rows get an accent bar, white panes turn black, system text stays visible. Chrome and Firefox. Synthetic.",
   "reddit-res":"Reddit Enhancement Suite toolbar: white floater and a data-URI icon on a dark page. In deepen mode the floater turns black and the icon inverts, unrelated white content stays, and disabling restores. Chrome and Firefox. Synthetic.",
   "frame":"Minimal white chat-widget document loaded as an iframe by light.html and components.html. Not standalone; exists to give those pages a child frame. Gallery only; no automated assertion targets it directly.",
@@ -97,6 +98,7 @@ const descriptions = {
   "known-gaps":"Open findings from the 2026-11-13 audit, shown as they render today: unnamed home-link SVG and image logos (B3), a 140x40 CSS background logo (B4), pure blue to violet borders (A2) and a blue link plus text tiers to view below the default brightness (A2, A5)."
 };
 const limits = {
+  "row-hover":"Recheck counts and the scripted row hover are asserted by tests/e2e/row-hover-work.mjs; the gallery shows the static inbox.",
   "known-gaps":"Gallery only, not a regression test: nothing asserts on this page and these findings are not fixed yet. Set Brightness to 60 or lower in settings for the last section.",
   "frame":"Child document embedded by light and components; opened alone it only shows one line.",
   "transparent-frame":"Child document embedded by surfaces; opened alone it is a blank transparent canvas.",
