@@ -679,6 +679,12 @@ try {
   check('broad flat results layout uses black canvas', (await css('largeLayout','backgroundColor')) === 'rgb(0, 0, 0)');
   check('raised card keeps its surface and border', lum(await css('raisedCard','backgroundColor')) > 0 && (await css('raisedCard','borderTopStyle')) === 'solid');
   check('Amazon Business bell and hamburger assets visible', (await css('businessBell','filter')) === 'brightness(0) invert(1)' && (await css('businessMenu','filter')) === 'brightness(0) invert(1)');
+  await setSettings({siteRules:{'127.0.0.1':'invert'}}); await sleep(300);
+  await page.go(site("127.0.0.1", "interaction-layout.html"),1500);
+  check('invert mode: the Amazon Business bell inverts with the page instead of staying dark', (await page.eval("document.documentElement.hasAttribute('data-oled-night-invert')")) && (await css('businessBell','filter')) === 'none', await css('businessBell','filter'));
+  check('invert mode: ordinary content photos are still flipped back', (await css('contentPhoto','filter')).startsWith('invert(1)'), await css('contentPhoto','filter'));
+  await setSettings({siteRules:{}}); await sleep(300);
+  await page.go(site("127.0.0.1", "interaction-layout.html"),2500);
   check('generic external UI image and background sprite gain a light edge', (await css('genericIcon','filter')).includes('drop-shadow') && (await css('genericSprite','filter')).includes('drop-shadow'));
   check('ordinary small content image remains unfiltered', (await css('contentPhoto','filter')) === 'none');
   const largeInteraction = await page.eval(`(async()=>{
@@ -735,6 +741,15 @@ try {
   check("navy cart: a navy icon in a colored button is lightened", lum(searchFill) > 0.2, searchFill);
   check("navy cart: a royal navy checkout button keeps its hue", (() => { const [r, g, b] = checkoutBg.match(/\d+/g).map(Number); return b - r > 40 && ratio(checkoutBg, checkoutInk) >= 4.5; })(), `${checkoutInk} on ${checkoutBg}`);
   check("navy cart: a notice panel a shade darker than its page keeps an edge", shadowInk(noticeShadow).some(({ lum: l, a }) => l > 0.5 && a >= 0.05), noticeShadow);
+  for (const [how, flip] of [["a data-theme attribute on <html>", "document.documentElement.setAttribute('data-theme','dark')"], ["a class on <body>", "document.body.classList.add('dark')"]]) {
+    await page.go(site("127.0.0.1", "late-dark-theme.html"));
+    const before = await page.eval("document.documentElement.getAttribute('data-oled-night-mode')");
+    await page.eval(flip); await sleep(700);
+    const [lateMode, lateMain, lateInk] = [await page.eval("document.documentElement.getAttribute('data-oled-night-mode')"), await css("main", "backgroundColor"), await css("answer", "color")];
+    check(`late dark theme via ${how}: switches to native-dark crush`, before === "oled" && lateMode === "crush", `${before} -> ${lateMode}`);
+    if (how.includes("body")) check("dark reader: an active page carries Dark Reader's documented lock", await page.eval("document.head.querySelectorAll('meta[name=\"darkreader-lock\"]').length === 1"));
+    check(`late dark theme via ${how}: the native dark canvas is pure black`, lateMain === "rgb(0, 0, 0)" && lum(lateInk) > 0.5, `${lateInk} on ${lateMain}`);
+  }
   await page.go(site("127.0.0.1", "slotted-important.html"));
   for (const id of ["slottedCta", "slottedButton"]) {
     const [bg, ink] = [await css(id, "backgroundColor"), await css(id, "color")];

@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.87";
+  const VERSION = "0.6.88";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -77,6 +77,11 @@
   const isTopFrame = (() => { try { return typeof window === "undefined" || window.top === window; } catch { return false; } })();
 
   let observer = null;
+  // Sites apply a saved theme with any attribute on <html>/<body>
+  // (data-theme, data-ds-dark-theme, data-bs-theme). The main observer's
+  // attribute filter cannot list them all, so the two roots get their own.
+  let themeObserver = null;
+  const THEME_ATTRIBUTE = /theme|dark|light|scheme|mode|appearance/i;
   let stopYouTubeTheme = null;
   let challengeTimer = null;
   let active = false;
@@ -3390,6 +3395,34 @@
     for(const root of roots) pendingTrees.add(root);
   }
 
+  // Dark Reader's documented opt-out. Running both left its grey
+  // (#181a1b) painted over our black; while we style the page it stands down.
+  function lockDarkReader(on) {
+    const head = document.head;
+    if (typeof head?.querySelector !== "function") return;
+    const lock = head.querySelector(`meta[name="darkreader-lock"][${MARK}-lock]`);
+    if (!on) { lock?.remove(); return; }
+    if (lock || head.querySelector('meta[name="darkreader-lock"]')) return;
+    const meta = document.createElement("meta");
+    meta.name = "darkreader-lock";
+    meta.setAttribute(`${MARK}-lock`, "");
+    document.head.append(meta);
+  }
+
+  function watchRootTheme() {
+    themeObserver?.disconnect();
+    themeObserver = new MutationObserver((records) => {
+      if (!observer) return;
+      if (records.some(({ attributeName: name, target, oldValue }) => !OBSERVE.attributeFilter.includes(name) &&
+          !name.startsWith(MARK) && THEME_ATTRIBUTE.test(name) && oldValue !== target.getAttribute(name))) {
+        polarityDirty = true;
+        pendingTrees.add(document.documentElement);
+        schedule();
+      }
+    });
+    for (const node of [document.documentElement, document.body]) if (node) themeObserver.observe(node, { attributes: true, attributeOldValue: true });
+  }
+
   function onMutations(records, scheduleBatch = true) {
     const ownBackgrounds = recentBackgroundWrites;
     recentBackgroundWrites = new Map();
@@ -3762,6 +3795,9 @@
       ${root}[data-oled-night-site="gmail"] tr.zA.zE td, ${root}[data-oled-night-site="gmail"] tr.zA.zE td * { color: hsl(0 0% var(--oln-light, 88%)) !important; }
       ${root}[data-oled-night-site="gmail"] tr.zA.yO td, ${root}[data-oled-night-site="gmail"] tr.zA.yO td * { color: hsl(0 0% max(40%, calc(var(--oln-light, 88%) * 0.66))) !important; }
       html[data-oled-night-invert] :is(img, video, iframe, embed, object) { filter: invert(1) hue-rotate(180deg) !important; }
+      /* Amazon's dark line-art UI icons are drawn for its light bar. Flipping
+         them back with the photos left a dark bell on the inverted dark bar. */
+      html[data-oled-night-invert][data-oled-night-site="amazon"] :is(#nav-bell .nav-bell-icon, #abn-hamburger-menu img) { filter: none !important; }
       html[data-oled-night-root][data-oled-night-youtube] body,
       html[data-oled-night-root][data-oled-night-youtube] ytd-app,
       /* #content is also the transparent play overlay on Music thumbnails.
@@ -3872,6 +3908,9 @@
     unresolvedShadowHosts.clear();
     observer?.disconnect();
     observer = null;
+    themeObserver?.disconnect();
+    themeObserver = null;
+    lockDarkReader(false);
     viewportObserver?.disconnect();
     viewportObserver = null;
     deferredPaint.clear();
@@ -4022,6 +4061,8 @@
     observer = new MutationObserver(onMutations);
     for(const node of document.querySelectorAll('style, link[rel~="stylesheet"]')) if(isPageSheet(node)) sheetSnapshots.set(node,{selectors:pageSheetSelectors(node),fingerprint:pageSheetFingerprint(node),opaque:opaqueSheetState(node),scope:document});
     observer.observe(root, OBSERVE);
+    watchRootTheme();
+    lockDarkReader(modeFor() !== "native");
     document.addEventListener("visibilitychange", scheduleShadowDiscovery);
     document.addEventListener("visibilitychange", scheduleRefresh);
     document.addEventListener("load", onSheetLoad, true);
