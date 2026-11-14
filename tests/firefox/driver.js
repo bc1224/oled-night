@@ -358,6 +358,19 @@
     const contrast = (a, b) => { const [x, y] = [lumOf(a), lumOf(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
     check('text inside a white iframe card stays readable', survey[0].themed && contrast(survey[0].ink, survey[0].backdrop) >= 4.5, JSON.stringify(survey[0]));
     check('a frame with no background of its own stays transparent', survey[1].themed && survey[1].transparent && lumOf(survey[1].ink) > .5, JSON.stringify(survey[1]));
+    // Light surface guard: light ink only where the paint behind it is proven dark.
+    const probe = async targets => (await browser.scripting.executeScript({target:{tabId:tab.id}, func:lightSurfaceProbe, args:[targets]}))[0].result;
+    await open('light-surface-guard.html');
+    for (const result of await probe(['imageSetText', 'pseudoText', 'amzGuardText', 'matteText']))
+      check(`light surface guard: ${result.target} reaches 4.5:1`, result.themed && result.ratio >= 4.5, JSON.stringify(result));
+    await open('light-surface-frames.html');
+    await inspect(() => document.getElementById('lateHost').classList.add('card'));
+    await wait(700);
+    const frames = await probe(['colorHost/title', 'gradientHost/title', 'wrappedHost/title', 'lateHost/title', 'clearHost/title']);
+    for (const result of frames.slice(0, 4))
+      check(`light surface guard: frame ${result.target} reaches 4.5:1`, result.themed && result.ratio >= 4.5, JSON.stringify(result));
+    check('light surface guard: a frame over a dark page stays transparent with light ink',
+      frames[4].themed && frames[4].transparentFrame && lumOf(frames[4].ink) > .5, JSON.stringify(frames[4]));
     await open('efficiency.html');
     const efficiency = await inspect(async () => {
  const wait = () => new Promise(r=>setTimeout(r,150));

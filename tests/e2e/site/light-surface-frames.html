@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Light surface frames</title>
+<style>
+/* Same-origin frames with transparent documents. The embedding page never
+   recolors iframe elements or media-named embed wrappers, so whatever light
+   paint they carry stays behind the frame's text. */
+body{margin:0;padding:16px;background:#fff;color:#202124;font:14px Arial,sans-serif}
+.slots{display:flex;flex-wrap:wrap;gap:16px}
+iframe{border:0;width:300px;height:160px;border-radius:16px;display:block}
+/* Google Travel's price survey: the iframe element paints the white card. */
+#colorHost{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+/* The card is painted by a gradient on the iframe element, not its color. */
+#gradientHost{background-image:linear-gradient(#ffffff,#f8f9fa)}
+/* A media-named wrapper paints the card around a transparent iframe. */
+survey-embed{display:block;border-radius:16px;background:#fff}
+/* The card class arrives after the frame has started. */
+#lateHost.card{background:#fff}
+</style></head>
+<body>
+<p>Hotels near the castle</p>
+<div class="slots">
+  <iframe id="colorHost" title="Survey" src="survey-card.html"></iframe>
+  <iframe id="gradientHost" title="Survey" src="survey-card.html"></iframe>
+  <survey-embed><iframe id="wrappedHost" title="Survey" src="survey-card.html"></iframe></survey-embed>
+  <iframe id="lateHost" title="Survey" src="survey-card.html"></iframe>
+  <iframe id="clearHost" title="Embedded note" src="survey-card.html"></iframe>
+</div>
+</body></html>

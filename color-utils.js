@@ -257,11 +257,8 @@
     return withAlpha('rgb(190 190 190)', color.a);
   }
 
-  // Adapt gradient layers independently. A sibling image/texture keeps its
-  // exact URL and layer position, including any color-like text inside it.
-  function mapGradient(value, mode, labelled = true) {
-    const text = String(value || "");
-    if (!/gradient\(/i.test(text)) return null;
+  // Top-level comma-separated background layers.
+  function imageLayers(text) {
     const layers = [];
     let start = 0, depth = 0, quote = "";
     for (let i = 0; i < text.length; i++) {
@@ -274,11 +271,21 @@
       else if (char === "," && depth === 0) { layers.push(text.slice(start, i)); start = i + 1; }
     }
     layers.push(text.slice(start));
+    return layers;
+  }
+
+  // Adapt gradient layers independently. A sibling image/texture keeps its
+  // exact URL and layer position, including any color-like text inside it.
+  // anyLayer also adapts paint layers in forms not listed here (image-set()
+  // or cross-fade() around a gradient); the light surface guard uses it.
+  function mapGradient(value, mode, labelled = true, anyLayer = false) {
+    const text = String(value || "");
+    if (!/gradient\(/i.test(text)) return null;
     let changed = false;
-    const out = layers.map(layer => {
+    const out = imageLayers(text).map(layer => {
       // Chrome keeps -webkit- prefixed gradients prefixed in computed style
       // (older Amazon buttons and divider fades), including -webkit-gradient().
-      if (!/^\s*(?:-webkit-)?(?:(?:repeating-)?(?:linear|radial|conic)-)?gradient\(/i.test(layer)) return layer;
+      if (anyLayer ? /url\(/i.test(layer) : !/^\s*(?:-webkit-)?(?:(?:repeating-)?(?:linear|radial|conic)-)?gradient\(/i.test(layer)) return layer;
       return layer.replace(COLOR_TOKEN, token => {
         const mapped = mapBackground(parseColor(token), mode, true, labelled);
         if (!mapped) return token;
@@ -328,6 +335,34 @@
     return `${edge}, 0 ${Math.min(4, Math.round(drop))}px ${Math.min(24, Math.max(8, Math.round(reach * 1.5)))}px rgb(255 255 255 / .035)`;
   }
 
+  // Light surface guard. Light ink reaches 4.5:1 only on paint at or below
+  // this luminance (seen over black). A paint counts as dark when it is clear,
+  // measured dark, or one of our own mapped colors (they carry --oln-strength
+  // or are pure black). Anything unread is not proven.
+  const DARK_PAINT = 0.13;
+  function provenDarkColor(value) {
+    const text = String(value || "").trim();
+    if (!text || text === "transparent" || /--oln-strength/.test(text)) return true;
+    const hex = /^#([\da-f]{6})$/i.exec(text);
+    const color = hex ? { r: parseInt(hex[1].slice(0, 2), 16), g: parseInt(hex[1].slice(2, 4), 16), b: parseInt(hex[1].slice(4), 16), a: 1 } : parseColor(text);
+    if (!color) return false;
+    return color.a < 0.08 || luminance({ r: color.r * color.a, g: color.g * color.a, b: color.b * color.a }) <= DARK_PAINT;
+  }
+
+  // Every paint layer of a background image is dark: each color it holds is
+  // proven dark, and a paint layer whose colors cannot be read is not proven.
+  // url() layers are imagery, which the backdrop classification judges.
+  function provenDarkImage(value) {
+    const text = String(value || "");
+    if (!text.trim() || text.trim() === "none") return true;
+    return imageLayers(text).every(layer => {
+      if (/url\(/i.test(layer) || !layer.trim() || layer.trim() === "none") return true;
+      const tokens = [...(layer.match(COLOR_TOKEN) || []), ...(layer.match(/#[\da-f]{6}\b/gi) || [])];
+      if (!tokens.length && !/--oln-strength/.test(layer)) return false;
+      return tokens.every(provenDarkColor);
+    });
+  }
+
   // Worst case (lightest) opaque-ish color in a gradient, used as a text backdrop.
   function gradientBackdrop(value) {
     let lightest = null;
@@ -369,5 +404,5 @@
     return "";
   }
 
-  scope.OledNightColors = { siteProfile, isAmazonStore, parseColor, luminance, chroma, textTier, mapIconPaint, mapDataPaint, mapBackground, mapForeground, mapBorder, mapGradient, mapShadow, liftShadow, gradientBackdrop, isProtectedMediaTag, usesNativeSafeMode, usesNativeChatTheme };
+  scope.OledNightColors = { siteProfile, isAmazonStore, parseColor, luminance, chroma, textTier, mapIconPaint, mapDataPaint, mapBackground, mapForeground, mapBorder, mapGradient, mapShadow, liftShadow, gradientBackdrop, provenDarkColor, provenDarkImage, isProtectedMediaTag, usesNativeSafeMode, usesNativeChatTheme };
 })(globalThis);

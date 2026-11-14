@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Light surface guard</title>
+<style>
+/* Text is lightened on the assumption that the surface behind it turns dark.
+   Each case paints a light surface in a form the per-syntax mappers do not
+   know, so only a general check of the final paint keeps the text readable. */
+body{margin:0;padding:16px;background:#fff;color:#202124;font:15px Arial,sans-serif}
+section{margin:12px 0;width:360px}
+.card{padding:12px 14px;border-radius:8px}
+/* image-set() wraps a gradient: the layer does not start with *-gradient(. */
+#imageSetCard{background-image:image-set(linear-gradient(#ffffff,#f4f6f8) 1x)}
+/* The light face is a generated layer under the text. */
+#pseudoCard{position:relative;z-index:0}
+#pseudoCard::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:8px;background-image:image-set(linear-gradient(#fffdf2,#fff6d8) 1x)}
+/* Older Amazon UI: the button face is only a prefixed gradient. */
+.a-button-inner{display:block;border-radius:3px;background:-webkit-linear-gradient(top,#f7dfa5,#f0c14b)}
+.a-button-text{display:block;width:100%;padding:6px 10px;border:0;background:transparent;color:#111;font:13px Arial,sans-serif}
+/* A store tile keeps its pale darken-blended matte above the product photo
+   (Amazon Grocery). A label drawn inside that kept matte must stay dark. */
+.tile{position:relative;width:160px;height:120px}
+.tile img{display:block;width:160px;height:120px}
+.matte{position:absolute;inset:0;background:#fff;mix-blend-mode:darken;display:flex;align-items:flex-end;padding:6px}
+</style></head>
+<body>
+<section><div class="card" id="imageSetCard"><span id="imageSetText">Price alerts are on for this route</span></div></section>
+<section><div class="card" id="pseudoCard"><span id="pseudoText">Free cancellation until Friday</span></div></section>
+<section><span class="a-button-inner" id="amzGuardInner"><button type="submit" class="a-button-text" id="amzGuardText">Continue shopping</button></span></section>
+<section>
+  <div class="tile"><img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='120'%3E%3Crect width='160' height='120' fill='%23e8e0d0'/%3E%3Ccircle cx='80' cy='55' r='35' fill='%23c0392b'/%3E%3C/svg%3E">
+    <div class="matte"><span id="matteText">Fresh tomatoes</span></div></div>
+</section>
+</body></html>

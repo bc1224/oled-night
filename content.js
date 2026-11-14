@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.90";
+  const VERSION = "0.6.91";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -681,8 +681,21 @@
       return;
     }
     const alreadyBlack = original && mode !== "soft" && original.r <= 2 && original.g <= 2 && original.b <= 2;
-    const background = alreadyBlack ? null : colors.mapBackground(original, mode);
-    const gradient = hasImageBackdrop(computed) ? null : colors.mapGradient(computed.backgroundImage, mode, label);
+    let background = alreadyBlack ? null : colors.mapBackground(original, mode);
+    let gradient = hasImageBackdrop(computed) ? null : colors.mapGradient(computed.backgroundImage, mode, label);
+    // Light surface guard: text on this surface is lightened, so the final
+    // paint must be proven dark, not just mapped where its syntax is known.
+    // Paint layers in other forms (image-set() or cross-fade() around a
+    // gradient) are adapted too. A surface that holds content and still
+    // cannot be proven dark becomes the flat mapped color of its lightest stop.
+    if ((mode === "oled" || mode === "soft") && !hasImageBackdrop(computed) &&
+        !colors.provenDarkImage(gradient || computed.backgroundImage)) {
+      gradient = colors.mapGradient(computed.backgroundImage, mode, label, true);
+      if (label && !colors.provenDarkImage(gradient)) {
+        gradient = "none";
+        background ||= colors.mapBackground(colors.gradientBackdrop(computed.backgroundImage) || { r: 255, g: 255, b: 255, a: 1 }, mode);
+      }
+    }
     const shadow = colors.mapShadow(computed.boxShadow, mode);
     if (background) found[`${prefix}bg`] = background;
     if (gradient) found[`${prefix}img`] = gradient;
@@ -845,6 +858,16 @@
 
   // Read-only: decides overrides from original computed styles. No DOM writes
   // happen here, so the whole batch costs a single style recalculation.
+  // Ink for text on a surface that stays light. Ink that reads on that
+  // surface is kept. Ink that does not (often our own lightened ink,
+  // inherited from a wrapper) becomes dark, colored text keeping its hue.
+  function keptInk(computed, surface) {
+    const colors = colorsApi(), text = colors.parseColor(computed.color);
+    const bg = colors.luminance(surface), ink = colors.luminance(text);
+    if ((Math.max(bg, ink) + 0.05) / (Math.min(bg, ink) + 0.05) >= 4.5) return computed.color;
+    return colors.chroma(text) > 0.15 ? `color-mix(in srgb, rgb(${text.r} ${text.g} ${text.b}) 45%, black)` : "rgb(32 33 36)";
+  }
+
   function decide(element, ctx) {
     const colors = colorsApi();
     const computed = ctx.style(element);
@@ -859,7 +882,12 @@
     if (DARKENING_BLENDS.test(computed.mixBlendMode) && computed.position === "absolute") {
       const matte = colors.parseColor(computed.backgroundColor);
       if (matte && matte.a >= 0.5 && colors.luminance(matte) > 0.8 &&
-          element.parentElement?.querySelector(":scope > img, :scope > picture")) return found;
+          element.parentElement?.querySelector(":scope > img, :scope > picture")) {
+        // The kept matte stays light: text inside it must not be lightened.
+        originalSurface.get(element).dark = false;
+        if (element.textContent.trim() && colors.parseColor(computed.color)?.a >= 0.08) found.fg = keptInk(computed, matte);
+        return found;
+      }
     }
     // Document polarity is only a default. A native dark page can still have
     // light hover cells, fields or popups. Decide their surface and inherited
@@ -1034,6 +1062,12 @@
     if (nativeSurface) nativeSurface.retained = found.bg === computed.backgroundColor && computed.backgroundImage === "none" && !paintsInk(computed, element);
     if (nativeSurface?.color && computed.backgroundImage === "none" && !paintsInk(computed, element))
       nativeSurface.mapped = found.bg || computed.backgroundColor;
+    // Light surface guard: record whether this light surface really ends dark
+    // under our final paint. backdropOf hands this record to every text
+    // decision on it, which keeps readable ink where the surface stays light.
+    if (nativeSurface?.color && (mode === "oled" || mode === "soft") && !paintsInk(computed, element))
+      nativeSurface.dark = colors.provenDarkColor(computed.backgroundColor) && colors.provenDarkImage(computed.backgroundImage) ||
+        colors.provenDarkColor(found.bg ?? computed.backgroundColor) && colors.provenDarkImage(found.img ?? computed.backgroundImage);
     if (element.matches("input, textarea, select")) found.field = "1";
     if (mode === "crush") {
       // The parent may have been recolored as a light UI island while this
@@ -1160,7 +1194,7 @@
         const ink = colors.parseColor(pseudoStyle.color);
         if (ink && ink.a >= 0.08 && colors.luminance(ink) < 0.4) {
           const backdrop = backdropOf(element, ctx);
-          if (!backdrop.image && colors.luminance(backdrop.color) > 0.5)
+          if (!backdrop.image && backdrop.dark !== false && colors.luminance(backdrop.color) > 0.5)
             found[`${pseudo}-fg`] = colors.mapForeground(ink, colors.textTier(ink, backdrop.color));
         }
       }
@@ -1168,12 +1202,18 @@
     // Text over real imagery keeps its own color; everything else is
     // lightened, keeping its original primary/secondary/muted emphasis.
     const text = colors.parseColor(computed.color);
+    let kept = false;
     if (text && text.a >= 0.08) {
       const backdrop = backdropOf(element, ctx);
       if (backdrop.image) {
         // Pin original ink too: otherwise a transparent creative inherits
         // the light foreground we applied to its surrounding page container.
         found.fg = computed.color;
+      } else if (backdrop.dark === false) {
+        // Light surface guard: the surface behind this text stays light, so
+        // lightened ink would vanish on it.
+        found.fg = keptInk(computed, backdrop.color);
+        kept = true;
       } else {
         let tier = colors.textTier(text, backdrop.color);
         // Light text on a light original surface is text that inherited our
@@ -1196,7 +1236,7 @@
         computed.display !== 'list-item' && !element.matches(CONTROL) &&
         !element.isContentEditable && !Array.from(element.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim()))
       delete found.fg;
-    if (found.field && found.fg) {
+    if (found.field && found.fg && !kept) {
       const ink = colors.parseColor(computed.webkitTextFillColor);
       if (ink && ink.a >= 0.08) found.ink = colors.mapForeground(ink, textTiers.get(element) ?? 1);
       const caret = colors.parseColor(computed.caretColor);
@@ -1853,20 +1893,69 @@
     return false;
   }
 
+  // A frame document with no background of its own is left see-through, so
+  // its lightened text shows over whatever the embedding page paints behind
+  // it. Measured with our root paint switched off; the host check below can
+  // be repeated later without measuring again.
+  let frameDocumentClear = false;
   function isTransparentFrame() {
     if (isTopFrame || !document.body) return false;
-    // Iframe elements are never recolored by the embedding page. When one
-    // paints a light card itself (Google Travel's price survey), a clear
-    // document would show light ink on that white, so paint this one black.
-    try {
-      const host = window.frameElement && colorsApi().parseColor(getComputedStyle(window.frameElement).backgroundColor);
-      if (host && host.a >= 0.5 && colorsApi().luminance(host) > 0.25) return false;
-    } catch {}
-    return [document.documentElement, document.body].every((node) => {
+    frameDocumentClear = [document.documentElement, document.body].every((node) => {
       const style = getComputedStyle(node);
       const color = colorsApi().parseColor(style.backgroundColor);
       return (!color || color.a < 0.08) && style.backgroundImage === "none";
     });
+    return frameDocumentClear && frameHostDark();
+  }
+
+  // Light surface guard for frames. The embedding page never recolors iframe
+  // elements or media-named embed wrappers, so paint on them stays as
+  // authored behind this document (Google Travel's price survey card). The
+  // frame stays see-through only while that paint is clear or proven dark;
+  // otherwise it gets the normal black canvas. Surfaces above the first
+  // wrapper the embedding page does recolor are its own guard's job. A
+  // cross-origin host cannot be read and keeps the frame see-through.
+  function frameHostDark() {
+    let node;
+    try { node = window.frameElement; } catch { return true; }
+    const colors = colorsApi();
+    for (let depth = 0; node && depth < 8; depth++) {
+      const style = node.ownerDocument.defaultView.getComputedStyle(node);
+      if (!colors.provenDarkImage(style.backgroundImage)) return false;
+      const color = colors.parseColor(style.backgroundColor);
+      if (color && color.a >= 0.5) return colors.provenDarkColor(style.backgroundColor);
+      const parent = node.parentElement || node.getRootNode().host;
+      if (!parent || !isMedia(parent)) return true;
+      node = parent;
+    }
+    return true;
+  }
+
+  // A host's light card can arrive after this frame started (a class or
+  // inline style set by the embedding page's script). Watch the surfaces the
+  // embedding page never recolors; only their attribute changes recheck, at
+  // most once per 120 ms so an animated inline style cannot force a style
+  // read per mutation.
+  let frameHostWatch = null, frameHostTimer = null;
+  function watchFrameHost() {
+    if (isTopFrame || frameHostWatch) return;
+    let node;
+    try { node = window.frameElement; } catch { return; }
+    if (!node) return;
+    frameHostWatch = new MutationObserver(() => {
+      frameHostTimer ??= setTimeout(() => { frameHostTimer = null; recheckFrameHost(); }, 120);
+    });
+    for (let depth = 0; node && depth < 8; depth++) {
+      frameHostWatch.observe(node, { attributes: true, attributeFilter: ["class", "style"] });
+      node = node.parentElement || node.getRootNode().host;
+      if (!node || !isMedia(node)) break;
+    }
+    addEventListener("load", recheckFrameHost, { once: true });
+  }
+
+  function recheckFrameHost() {
+    if (!active || !frameDocumentClear || !document.documentElement.hasAttribute("data-oled-night-root")) return;
+    try { document.documentElement.toggleAttribute("data-oled-night-transparent-frame", frameHostDark()); } catch {}
   }
 
   function modeFor() {
@@ -3914,6 +4003,13 @@
 
   function disable() {
     cancelTuning();
+    if (frameHostWatch) {
+      frameHostWatch.disconnect();
+      frameHostWatch = null;
+      clearTimeout(frameHostTimer);
+      frameHostTimer = null;
+      removeEventListener("load", recheckFrameHost);
+    }
     for (const entry of spriteDocuments.values()) { entry.controller.abort(); entry.waiting.clear(); }
     spriteDocuments.clear();
     localSpriteWaiters.clear();
@@ -4066,6 +4162,7 @@
     root.setAttribute("data-oled-night-root", "");
     root.setAttribute("data-oled-night-version", VERSION);
     if (transparentFrame) root.setAttribute("data-oled-night-transparent-frame", "");
+    watchFrameHost();
     const profile = colorsApi().siteProfile(location.hostname) || colorsApi().siteProfile(hostname());
     if (profile) root.setAttribute("data-oled-night-site", profile);
     applyTuning();
