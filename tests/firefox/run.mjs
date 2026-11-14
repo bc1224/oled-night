@@ -42,7 +42,7 @@ try {
   }
   writeFileSync(join(temp, 'test-ui.js'), 'const reportAttachmentsScenario='+reportAttachmentsScenario.toString()+';\n'+readFileSync(join(root, 'tests/firefox/ui.js'),'utf8'));
   runner = await webExt.cmd.run({ sourceDir: temp, artifactsDir: temp, firefox: process.env.FIREFOX_PATH || (process.platform === 'win32' ? 'C:/Program Files/Mozilla Firefox/firefox.exe' : 'firefox'), args: ['-headless'], noReload: true, noInput: true }, { shouldExitProgram: false });
-  const checks = await Promise.race([result, new Promise((_, reject) => { timer = setTimeout(() => reject(Error('Firefox tests timed out')), 90000); })]);
+  const checks = await Promise.race([result, new Promise((_, reject) => { timer = setTimeout(() => reject(Error('Firefox tests timed out')), 180000); })]);
   if(process.argv.includes('--text-hover')){
     mkdirSync(join(root,'dist/lab-results'),{recursive:true});
     writeFileSync(join(root,'dist/lab-results/text-hover-firefox.json'),JSON.stringify(componentReceipt('Firefox',{

@@ -356,8 +356,8 @@
     }));
     const lumOf = s => { const [r, g, b] = (s.match(/[\d.]+/g) || []).map(Number).map(v => v / 255).map(v => v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return .2126 * r + .7152 * g + .0722 * b; };
     const contrast = (a, b) => { const [x, y] = [lumOf(a), lumOf(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
-    check('text inside a white iframe card stays readable', contrast(survey[0].ink, survey[0].backdrop) >= 4.5, JSON.stringify(survey[0]));
-    check('a frame with no background of its own stays transparent', !survey[1].themed || (survey[1].transparent && lumOf(survey[1].ink) > .5), JSON.stringify(survey[1]));
+    check('text inside a white iframe card stays readable', survey[0].themed && contrast(survey[0].ink, survey[0].backdrop) >= 4.5, JSON.stringify(survey[0]));
+    check('a frame with no background of its own stays transparent', survey[1].themed && survey[1].transparent && lumOf(survey[1].ink) > .5, JSON.stringify(survey[1]));
     await open('efficiency.html');
     const efficiency = await inspect(async () => {
  const wait = () => new Promise(r=>setTimeout(r,150));
