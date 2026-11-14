@@ -16,6 +16,7 @@ import { chromeTestArgs } from '../lab/chrome-launch.mjs';
 import { rowPerformanceDiagnostic, startColdChurnDiagnostic, finishColdChurnDiagnostic } from './row-performance-diagnostic.mjs';
 import { youtubeMusicScenario } from './youtube-music-scenario.mjs';
 import { previewTuningScenario } from './preview-tuning-scenario.mjs';
+import { lightSurfaceProbe } from './light-surface-scenario.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // EXT_PATH lets the suite run against an unzipped release instead of the source tree.
@@ -129,6 +130,31 @@ try {
   check('Google palette: disabling restores authored menu and sample colors',await page.eval(`(${colorPaletteRestored.toString()})()`));
   await resetSettings();
   const css = (id, prop, pseudo) => page.eval(`getComputedStyle(document.getElementById(${JSON.stringify(id)})${pseudo ? `, ${JSON.stringify(pseudo)}` : ""})[${JSON.stringify(prop)}]`);
+
+  // Light surface guard: text is lightened only where the paint behind it is
+  // proven dark. Each surface below is light in a form a per-syntax mapper
+  // does not know; the painted ink must still reach 4.5:1 on every stop.
+  const probe = targets => page.eval(`(${lightSurfaceProbe.toString()})(${JSON.stringify(targets)})`);
+  await page.go(site("127.0.0.1", "light-surface-guard.html"));
+  for (const [target, name] of [["imageSetText", "a gradient wrapped in image-set()"], ["pseudoText", "a generated face painted by image-set()"],
+    ["amzGuardText", "Amazon's prefixed -webkit- gradient button"], ["matteText", "a kept darken-blended white matte"]]) {
+    const [result] = await probe([target]);
+    check(`light surface guard: text on ${name} reaches 4.5:1`, result.ratio >= 4.5, JSON.stringify(result));
+  }
+  // Control: mid-tone brand surfaces (buttons, a vivid darken-blended matte)
+  // are not light surfaces, so their authored white labels stay light.
+  for (const result of await probe(["brandOrange", "brandPurple", "brandTeal", "brandRed", "matteVividText"]))
+    check(`light surface guard: authored white label on ${result.target} stays light`, result.themed && lum(result.ink) > .5, JSON.stringify(result));
+  await page.go(site("127.0.0.1", "light-surface-frames.html"));
+  const hosts = ["colorHost", "gradientHost", "wrappedHost", "lateHost", "clearHost"];
+  for (let i = 0; i < 40 && !(await page.eval(`${JSON.stringify(hosts)}.every(id => document.getElementById(id).contentDocument?.documentElement.hasAttribute("data-oled-night-mode"))`)); i++) await sleep(125);
+  await sleep(300);
+  await page.eval(`document.getElementById("lateHost").classList.add("card")`); await sleep(700);
+  const framed = await probe(hosts.map(id => `${id}/title`));
+  for (const [result, name] of framed.slice(0, 4).map((result, i) => [result, ["a white iframe element (Google Travel survey)", "a gradient-painted iframe element", "a media-named embed wrapper", "a host that turns white after the frame starts"][i]]))
+    check(`light surface guard: frame text on ${name} reaches 4.5:1`, result.themed && result.ratio >= 4.5, JSON.stringify(result));
+  check("light surface guard: a frame over a dark-mapped page stays transparent with light ink", framed[4].themed && framed[4].transparentFrame && lum(framed[4].ink) > .5 && framed[4].ratio >= 4.5, JSON.stringify(framed[4]));
+  if (process.env.OLED_TEST_SCOPE === "guard") break suite;
 
   await page.go(site("127.0.0.1", "indicators.html"));
   const contrast = (a,b) => (Math.max(lum(a),lum(b))+.05)/(Math.min(lum(a),lum(b))+.05);

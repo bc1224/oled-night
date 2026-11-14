@@ -9,6 +9,7 @@ import {textHoverEvents} from '../e2e/text-hover-scenario.mjs';
 import {inkLocalityScenario} from '../e2e/ink-locality-scenario.mjs';
 import {darkLayoutInkScenario} from '../e2e/dark-layout-ink-scenario.mjs';
 import {componentReceipt} from '../lab/component-receipt.mjs';
+import {lightSurfaceProbe} from '../e2e/light-surface-scenario.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const temp = mkdtempSync(join(tmpdir(), 'oled-night-firefox-test-'));
@@ -35,7 +36,8 @@ try {
   manifest.background.scripts.push('test-driver.js');
   writeFileSync(join(temp, 'manifest.json'), JSON.stringify(manifest));
   const driver=process.argv.includes('--text-hover')?'text-hover-driver.js':'driver.js';
-  writeFileSync(join(temp, 'test-driver.js'), `const TEST_ORIGIN = ${JSON.stringify(origin)};\nconst textHoverEvents = ${textHoverEvents.toString()};\n${driver==='text-hover-driver.js'?'const inkLocalityScenario = '+inkLocalityScenario.toString()+';\nconst darkLayoutInkScenario = '+darkLayoutInkScenario.toString()+';\n':''}const colorPaletteScenario = ${colorPaletteScenario.toString()};\nconst colorPaletteRestored = ${colorPaletteRestored.toString()};\n` + readFileSync(join(root, 'tests/firefox',driver), 'utf8'));
+  writeFileSync(join(temp, 'test-driver.js'), `const TEST_ORIGIN = ${JSON.stringify(origin)};\nconst textHoverEvents = ${textHoverEvents.toString()};\n${driver==='text-hover-driver.js'?'const inkLocalityScenario = '+inkLocalityScenario.toString()+';\nconst darkLayoutInkScenario = '+darkLayoutInkScenario.toString()+';\n':''}const lightSurfaceProbe = ${lightSurfaceProbe.toString()};
+const colorPaletteScenario = ${colorPaletteScenario.toString()};\nconst colorPaletteRestored = ${colorPaletteRestored.toString()};\n` + readFileSync(join(root, 'tests/firefox',driver), 'utf8'));
   for (const page of ['options.html', 'popup.html']) {
     const path = join(temp, page);
     writeFileSync(path, readFileSync(path, 'utf8').replace('</body>', '<script src="test-ui.js"></script></body>'));

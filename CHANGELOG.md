@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.91
+
+- Light text is no longer left on a light surface. OLED Night lightens text on the assumption that the surface behind it turns dark; it now checks that it did. When a surface stays light, OLED Night darkens it, or keeps the text dark when the light paint is meant to stay (for example a white matte over a product photo).
+- Gradients the mapper did not recognize are now darkened too, including gradients wrapped in `image-set()` and gradients painted by a card's `::before` or `::after` layer.
+- Embedded frames: a frame stays see-through only when the paint around it is clear or dark. White or gradient cards painted by the iframe element or by an embed wrapper (such as a custom `<survey-embed>` tag) now get a black frame, including when the card style arrives after the frame has loaded. Frames from another site cannot be inspected and stay see-through as before.
+- Amazon search: the size filter buttons (S, M, L and others) are dark with a readable label. They stayed white while their label was lightened.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.90
 
 - Pale yellow and lime gradient buttons: the label is readable again. Their mapped gradient was a bright olive or green that left light text at under 2:1; each stop is now kept dark enough for 4.5:1 at any Contrast setting, and darker gradients (blue, red) keep their light-to-dark shading.
