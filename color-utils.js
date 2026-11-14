@@ -276,7 +276,9 @@
     layers.push(text.slice(start));
     let changed = false;
     const out = layers.map(layer => {
-      if (!/^\s*(?:repeating-)?(?:linear|radial|conic)-gradient\(/i.test(layer)) return layer;
+      // Chrome keeps -webkit- prefixed gradients prefixed in computed style
+      // (older Amazon buttons and divider fades), including -webkit-gradient().
+      if (!/^\s*(?:-webkit-)?(?:(?:repeating-)?(?:linear|radial|conic)-)?gradient\(/i.test(layer)) return layer;
       return layer.replace(COLOR_TOKEN, token => {
         const mapped = mapBackground(parseColor(token), mode, true, labelled);
         if (!mapped) return token;

@@ -12,6 +12,18 @@ assert.match(fade, /^linear-gradient\(rgba\(255, 255, 255, 0\), rgb\(calc\(14 \+
 assert.equal(colors.mapGradient("url(\"a.png\"), linear-gradient(red, blue)", "oled"), null);
 assert.equal(colors.mapGradient("none", "oled"), null);
 
+// Older Amazon pages (the "Continue shopping" check) paint pale buttons and
+// white divider fades with prefixed gradients, which Chrome keeps prefixed.
+for (const prefixed of [
+  "-webkit-linear-gradient(top, rgb(247, 223, 165), rgb(240, 193, 75))",
+  "-webkit-gradient(linear, 0% 0%, 0% 100%, from(rgb(247, 223, 165)), to(rgb(240, 193, 75)))",
+  "-webkit-repeating-linear-gradient(left, rgb(255, 255, 255), rgba(255, 255, 255, 0) 50%)",
+]) {
+  const mapped = colors.mapGradient(prefixed, "oled");
+  assert.ok(mapped, `prefixed gradient adapts: ${prefixed}`);
+  assert.ok(!/rgb\((?:247|255), /.test(mapped), `no pale stop survives: ${mapped}`);
+}
+
 // A decorative image layer must not prevent the surrounding surface gradients
 // from adapting. Image URLs, including CSS-looking data and punctuation, stay
 // byte-for-byte intact.

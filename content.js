@@ -694,7 +694,7 @@
   // that original backdrop; multicolor artwork keeps its normal mapping.
   function mapBackdropFade(computed, backdrop) {
     const image = computed.backgroundImage;
-    if (!backdrop.color || !backdrop.mapped || !/^linear-gradient\(/.test(image) || /url\(/.test(image)) return null;
+    if (!backdrop.color || !backdrop.mapped || !/^(?:-webkit-)?linear-gradient\(/.test(image) || /url\(/.test(image)) return null;
     const tokens = image.match(/rgba?\([^)]*\)/g) || [];
     const colors = tokens.map(token => colorsApi().parseColor(token));
     if (colors.length < 2 || !colors.every(color => color && ["r", "g", "b"].every(key => color[key] === backdrop.color[key])) ||

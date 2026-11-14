@@ -764,6 +764,11 @@ try {
   }
   const [fillImage, trackBg] = [await css("gradFill", "backgroundImage"), await css("gradTrack", "backgroundColor")];
   check("contrast floors: an empty yellow gradient bar keeps 3:1 on its dark track", stops(fillImage).length >= 2 && Math.min(...stops(fillImage).map(stop => ratio(stop, trackBg))) >= 3, `${fillImage} on ${trackBg}`);
+  const [amzImage, amzInk] = [await css("amzInner", "backgroundImage"), await css("amzText", "color")];
+  const amzWorst = Math.min(...stops(amzImage).map(stop => ratio(stop, amzInk)));
+  check("contrast floors: a prefixed -webkit- gradient button is mapped and its label reaches 4.5:1", stops(amzImage).length >= 2 && amzWorst >= 4.5, `${amzInk} on ${amzImage} (${amzWorst.toFixed(2)})`);
+  const fadeStops = stops(await css("amzDivider", "backgroundImage", "::after")).filter(stop => !/,\s*0\)$/.test(stop));
+  check("contrast floors: a prefixed white divider fade is darkened", fadeStops.length >= 2 && fadeStops.every(stop => lum(stop) < .05), fadeStops.join(" "));
   check("contrast floors: a mid-tone red icon keeps its own paint", (await css("redIcon", "fill")) === "rgb(204, 0, 0)", await css("redIcon", "fill"));
   // Late logos: a placeholder swapped for a dark wordmark is sampled again.
   await page.go(site("127.0.0.1", "late-logos.html"));
