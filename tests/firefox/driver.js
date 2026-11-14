@@ -132,8 +132,8 @@
     const wall = await inspect(() => {
       const lum = value => {const c=value.match(/[\d.]+/g).slice(0,3).map(x=>{const v=+x/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return c[0]*.2126+c[1]*.7152+c[2]*.0722};
       const el = id => document.getElementById(id), flipped = id => el(id).hasAttribute('data-oled-night-logo') && /invert/.test(getComputedStyle(el(id)).filter);
-      return {wall: ['wallSparse', 'wallDense', 'wrappedLogo'].every(flipped), kept: ['colorWall', 'cutout', 'lonely'].every(id => getComputedStyle(el(id)).filter === 'none'),
-        home: lum(getComputedStyle(el('homePath')).fill), art: lum(getComputedStyle(el('artPath')).fill)};
+      return {wall: ['wallSparse', 'wallDense', 'wrappedLogo'].every(flipped), kept: ['colorWall', 'cutout', 'lonely', 'glyph'].every(id => getComputedStyle(el(id)).filter === 'none'),
+        home: lum(getComputedStyle(el('homePath')).fill), art: Math.max(lum(getComputedStyle(el('artPath')).fill), lum(getComputedStyle(el('anchorPath')).fill))};
     });
     check('dark brand SVGs in a logo wall are flipped light', wall.wall && wall.kept, JSON.stringify(wall));
     check('a wordmark alone in the home link is lightened', wall.home > .4 && wall.art < .05, JSON.stringify(wall));

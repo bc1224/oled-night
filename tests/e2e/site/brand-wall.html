@@ -20,7 +20,7 @@ body{margin:0;padding:16px;background:#fdfcf8;color:#252525;font:16px system-ui,
 </div>
 <div class="grid" id="wrapped">
   <a href="#a"><img id="wrappedLogo" alt="DoorDash" src="brand-wall-sparse.svg" style="width:108px;height:31px"></a>
-  <a href="#b"><img alt="F1" src="brand-wall-dense.svg" style="width:44px;height:34px"></a>
+  <a href="#b"><img alt="F1" src="brand-wall-sparse.svg" style="width:108px;height:31px"></a>
   <a href="#c"><img alt="M&amp;M's" src="brand-wall-dense.svg" style="width:44px;height:34px"></a>
 </div>
 <!-- Not logo walls: colored marks, raster cutouts, a lone image, a wide drawing. -->
@@ -30,6 +30,14 @@ body{margin:0;padding:16px;background:#fdfcf8;color:#252525;font:16px system-ui,
   <img alt="Red" src="brand-wall-color.svg" style="width:108px;height:31px">
 </div>
 <div class="grid" id="cutouts"></div>
+<!-- Square glyphs (emoji or status dots served as SVG files): dark means something. -->
+<div class="grid">
+  <img id="glyph" alt="Black circle" src="brand-wall-glyph.svg" style="width:24px;height:24px">
+  <img alt="Black circle" src="brand-wall-glyph.svg" style="width:24px;height:24px">
+  <img alt="Black circle" src="brand-wall-glyph.svg" style="width:24px;height:24px">
+  <img alt="Black circle" src="brand-wall-glyph.svg" style="width:24px;height:24px">
+</div>
+<p><a id="anchorLink" href="/#features"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 140 40" style="color:#252525;width:108px;height:31px"><path id="anchorPath" fill="currentColor" d="M4 36L16 4h5l12 32h-6l-3-8H13l-3 8z"/></svg></a></p>
 <p><img id="lonely" alt="Netflix" src="brand-wall-sparse.svg" style="width:108px;height:31px"></p>
 <div><svg id="art" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 140 40" style="color:#252525;width:200px;height:57px"><path id="artPath" fill="currentColor" d="M4 36L16 4h5l12 32h-6l-3-8H13l-3 8z"/></svg></div>
 <script>

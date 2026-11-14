@@ -828,10 +828,11 @@ try {
   const wallInverted = async id => (await page.eval(`document.getElementById(${JSON.stringify(id)}).hasAttribute('data-oled-night-logo')`)) && /invert/.test(await css(id, "filter"));
   for (const id of ["wallSparse", "wallDense", "wrappedLogo"])
     check(`brand wall: dark ${id} in a row of brand SVGs is flipped light`, await wallInverted(id), await css(id, "filter"));
-  for (const id of ["colorWall", "cutout", "lonely"])
+  for (const id of ["colorWall", "cutout", "lonely", "glyph"])
     check(`brand wall: ${id} keeps its original pixels`, (await css(id, "filter")) === "none" && !(await hasLogoMark(id)), await css(id, "filter"));
   check("brand wall: a wordmark alone in the home link is lightened", lum(await css("homePath", "fill")) > .4, await css("homePath", "fill"));
   check("brand wall: a wide drawing outside the home link keeps its paint", lum(await css("artPath", "fill")) < .05, await css("artPath", "fill"));
+  check("brand wall: a drawing in an in-page anchor link keeps its paint", lum(await css("anchorPath", "fill")) < .05, await css("anchorPath", "fill"));
   await page.go(site("127.0.0.1", "slotted-important.html"));
   for (const id of ["slottedCta", "slottedButton"]) {
     const [bg, ink] = [await css(id, "backgroundColor"), await css(id, "color")];

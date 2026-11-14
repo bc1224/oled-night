@@ -1415,7 +1415,7 @@
         // A home link holding nothing but the drawing is the site's wordmark.
         if (owner.matches('[itemprop~="logo"], [aria-label*="logo" i], [data-oled-night-logo]') ||
             /(?:^|[\s_-])logo(?:$|[\s_-])/i.test(`${owner.id} ${owner.getAttribute("class") || ""}`) ||
-            (owner.localName === "a" && owner.pathname === "/" && owner.hostname === location.hostname && !owner.textContent.trim())) {
+            (owner.localName === "a" && owner.href === `${location.origin}/` && !owner.textContent.trim())) {
           compactLogo = true;
           break;
         }
@@ -1631,16 +1631,23 @@
 
   // Customer logo walls name each file by brand only ("netflix.svg", alt
   // "Netflix"). A row of three or more SVG images, bare or each alone in a
-  // wrapper, is that wall. Raster cutouts and lone images do not qualify.
+  // wrapper, with at least two wide wordmarks among them, is that wall. Rows
+  // of square glyphs (emoji, status dots), raster cutouts and lone images do
+  // not qualify. Only the first 12 items are read, so long rows stay cheap.
   const svgImage = node => node?.localName === "img" && /\.svg(?:[?#]|$)/i.test(node.currentSrc || node.src);
   function inLogoWall(img) {
     if (!svgImage(img)) return false;
     for (const item of [img, img.parentElement]) {
       if (!item?.parentElement || (item !== img && item.childElementCount !== 1)) continue;
-      let peers = 0;
-      for (const child of item.parentElement.children)
-        if (svgImage(child.localName === "img" ? child : child.childElementCount === 1 ? child.firstElementChild : null)) peers++;
-      if (peers >= 3) return true;
+      let peers = 0, wide = 0, child = item.parentElement.firstElementChild;
+      for (let read = 0; child && read < 12; child = child.nextElementSibling, read++) {
+        const peer = child.localName === "img" ? child : child.childElementCount === 1 ? child.firstElementChild : null;
+        if (!svgImage(peer)) continue;
+        peers++;
+        const rect = peer.getBoundingClientRect();
+        if (rect.height > 0 && rect.width >= 2 * rect.height) wide++;
+        if (peers >= 3 && wide >= 2) return true;
+      }
     }
     return false;
   }
