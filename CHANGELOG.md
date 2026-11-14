@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.93
+
+- Amazon search: the "+18 other colors/patterns" link under each product's color swatches is readable again. Its link text was turned light blue while the swatch row behind it stayed white (about 1.8:1); the swatch row is now black like the rest of the card, and the swatch colors are unchanged.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.92
 
 - Customer logo walls ("Trusted by" rows such as Netflix, eBay and F1 on contentrewards.com): dark logos are flipped light instead of staying dark on black. OLED Night only lightened images named as a logo; these files are named by brand only. A row of three or more SVG images, at least two of them wide wordmarks, whose pixels are dark and colorless now counts as a logo wall. Colored logos, photos, single images and rows of square icons such as emoji are left alone.
