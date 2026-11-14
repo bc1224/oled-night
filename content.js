@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.91";
+  const VERSION = "0.6.92";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -1412,8 +1412,10 @@
     let compactLogo = false;
     if (rect.width > 64 && rect.width <= 420 && rect.height <= 64) {
       for (let owner = svg, depth = 0; owner && depth < 3; owner = owner.parentElement, depth++) {
+        // A home link holding nothing but the drawing is the site's wordmark.
         if (owner.matches('[itemprop~="logo"], [aria-label*="logo" i], [data-oled-night-logo]') ||
-            /(?:^|[\s_-])logo(?:$|[\s_-])/i.test(`${owner.id} ${owner.getAttribute("class") || ""}`)) {
+            /(?:^|[\s_-])logo(?:$|[\s_-])/i.test(`${owner.id} ${owner.getAttribute("class") || ""}`) ||
+            (owner.localName === "a" && owner.pathname === "/" && owner.hostname === location.hostname && !owner.textContent.trim())) {
           compactLogo = true;
           break;
         }
@@ -1627,6 +1629,22 @@
     (scope === document ? document.body || document.documentElement : scope).append(svg);
   }
 
+  // Customer logo walls name each file by brand only ("netflix.svg", alt
+  // "Netflix"). A row of three or more SVG images, bare or each alone in a
+  // wrapper, is that wall. Raster cutouts and lone images do not qualify.
+  const svgImage = node => node?.localName === "img" && /\.svg(?:[?#]|$)/i.test(node.currentSrc || node.src);
+  function inLogoWall(img) {
+    if (!svgImage(img)) return false;
+    for (const item of [img, img.parentElement]) {
+      if (!item?.parentElement || (item !== img && item.childElementCount !== 1)) continue;
+      let peers = 0;
+      for (const child of item.parentElement.children)
+        if (svgImage(child.localName === "img" ? child : child.childElementCount === 1 ? child.firstElementChild : null)) peers++;
+      if (peers >= 3) return true;
+    }
+    return false;
+  }
+
   // Sample at most 96 pixels per side when permitted. Cross-origin logos use
   // the same paint-only mask, without another request or a canvas read bypass.
   function checkLogo(img, ctx) {
@@ -1635,9 +1653,12 @@
     const labelledLogo = img.matches('[data-tt$="logo" i], [data-tt$="wordmark" i]');
     const namedLogo = labelledLogo || img.matches('[itemprop~="logo"]') ||
       /(?:^|[\s_./#-])(?:logo|wordmark)(?:[\s_./?#-]|$)/i.test(`${img.alt} ${img.className} ${img.id} ${img.currentSrc || img.src}`);
+    // A wall logo needs readable pixels as proof; it never takes the
+    // cross-origin fallback that named logos use.
+    const wallLogo = !namedLogo && !isProductMedia(img) && inLogoWall(img);
     // Pixel shape is supporting evidence, never permission to alter a photo.
     // Dark transparent product cutouts can look exactly like sparse black ink.
-    if (isProductMedia(img) || (!namedLogo && !isControlAsset(img, ctx.style(img), img.currentSrc || img.src))) {
+    if (isProductMedia(img) || (!namedLogo && !wallLogo && !isControlAsset(img, ctx.style(img), img.currentSrc || img.src))) {
       img.removeAttribute(LOGO); img.removeAttribute(LOGO_INK); return;
     }
     if (backdropOf(img, ctx).image) {
@@ -1679,6 +1700,12 @@
           if (max - min > 60) colorful++;
         }
         const total = w * h;
+        // Wall logos are wholly dark, colorless marks on transparency. Dense
+        // marks (filled badges such as CapCut or M&M's) flip with the rest.
+        if (wallLogo) {
+          if (clear / total > 0.1 && solid / total > 0.02 && light / solid < 0.2 && colorful === 0) img.setAttribute(LOGO, "");
+          return;
+        }
         if (clear / total > 0.3 && solid / total > 0.02) {
           // A filled app icon can have transparent rounded corners and a dark
           // face. Inverting its whole bitmap turns that face white. Reserve

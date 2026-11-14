@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.92
+
+- Customer logo walls ("Trusted by" rows such as Netflix, eBay and F1 on contentrewards.com): dark logos are flipped light instead of staying dark on black. OLED Night only lightened images named as a logo; these files are named by brand only. A row of three or more SVG images whose pixels are dark and colorless now counts as a logo wall. Colored logos, photos and single images are left alone.
+- A dark wordmark that is the only content of a site's home link (the header logo) is lightened, even when it is not named as a logo.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.91
 
 - Light text is no longer left on a light surface. OLED Night lightens text on the assumption that the surface behind it turns dark; it now checks that it did. When a surface stays light, OLED Night darkens it, or keeps the text dark when the light paint is meant to stay (for example a white matte over a product photo).

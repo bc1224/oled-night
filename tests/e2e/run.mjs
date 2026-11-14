@@ -823,6 +823,15 @@ try {
   check("logo budget: the first wall of logos is sampled", await hasLogoMark("logo-0"));
   await page.eval("navigateApp()"); await sleep(900);
   check("logo budget: a logo after single-page navigation is still sampled", await hasLogoMark("afterNav"), await css("afterNav", "filter"));
+  // Brand wall (contentrewards.com): dark SVG files named only by brand.
+  await page.go(site("127.0.0.1", "brand-wall.html"), 1200);
+  const wallInverted = async id => (await page.eval(`document.getElementById(${JSON.stringify(id)}).hasAttribute('data-oled-night-logo')`)) && /invert/.test(await css(id, "filter"));
+  for (const id of ["wallSparse", "wallDense", "wrappedLogo"])
+    check(`brand wall: dark ${id} in a row of brand SVGs is flipped light`, await wallInverted(id), await css(id, "filter"));
+  for (const id of ["colorWall", "cutout", "lonely"])
+    check(`brand wall: ${id} keeps its original pixels`, (await css(id, "filter")) === "none" && !(await hasLogoMark(id)), await css(id, "filter"));
+  check("brand wall: a wordmark alone in the home link is lightened", lum(await css("homePath", "fill")) > .4, await css("homePath", "fill"));
+  check("brand wall: a wide drawing outside the home link keeps its paint", lum(await css("artPath", "fill")) < .05, await css("artPath", "fill"));
   await page.go(site("127.0.0.1", "slotted-important.html"));
   for (const id of ["slottedCta", "slottedButton"]) {
     const [bg, ink] = [await css(id, "backgroundColor"), await css(id, "color")];
