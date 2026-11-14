@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.6.92
+## 0.6.93
 
 - Text that a site forces to a dark color from inside a CSS cascade layer is readable again. Sites built with Tailwind 4 mark utilities such as `text-secondary!` as `!important` inside `@layer utilities`, and a layered important rule outranks any unlayered one, so article text stayed dim grey and headings stayed black on black (a Saily blog article, for example). OLED Night's own forced colors now sit in a cascade layer declared before the page's layers, so they win. The same applies to backgrounds and borders forced that way.
 - Forms whose fields have no real border (the outline is a one-pixel ring shadow, as on the Claude Console and many Tailwind or Radix based sites) now keep a visible field outline on black. Text boxes, dropdowns and text areas no longer blend into the page.
@@ -8,6 +8,13 @@
 - Dark-themed components that outline a field with a translucent white ring (Radix Themes "classic" fields, for example) keep that outline instead of having it dimmed away.
 - Colors written with CSS relative color syntax (`hsl(from ...)`, `hwb(...)`) are now understood, so borders, text and shadows that use them are adapted instead of being left dark on dark.
 - Colored state rings (errors, focus), soft drop shadows, wide halos and page-colored gap rings are unchanged.
+- No new permissions; Chrome theme remains 1.0.3.
+
+## 0.6.92
+
+- Customer logo walls ("Trusted by" rows such as Netflix, eBay and F1 on contentrewards.com): dark logos are flipped light instead of staying dark on black. OLED Night only lightened images named as a logo; these files are named by brand only. A row of three or more SVG images, at least two of them wide wordmarks, whose pixels are dark and colorless now counts as a logo wall. Colored logos, photos, single images and rows of square icons such as emoji are left alone.
+- A dark wordmark that is the only content of a site's home link (the header logo) is lightened, even when it is not named as a logo.
+- Profile photos drawn through an SVG mask (Facebook's Marketplace seller card) are no longer dimmed. OLED Night darkened the mask's white circle as if it were a pale shape, and a mask's brightness decides how much of the photo shows. Shapes inside a mask now keep their authored paint, so status cutouts on small avatars also stay intact.
 - No new permissions; Chrome theme remains 1.0.3.
 
 ## 0.6.91

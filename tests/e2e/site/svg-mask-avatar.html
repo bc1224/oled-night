@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Masked SVG avatars</title>
+<style>
+  body { margin: 0; padding: 24px; background: #fff; color: #050505; font: 15px system-ui, sans-serif; }
+  .card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.2); width: 420px; }
+  .ring { fill: none; stroke: rgba(0,0,0,.1); stroke-width: 2; }
+</style>
+</head>
+<body>
+<!-- Facebook's Marketplace seller card draws the profile photo through an SVG
+     mask: a white circle in <mask> decides which part of the photo shows. -->
+<div class="card">
+  <svg id="bigAvatar" role="img" aria-label="Seller photo" width="168" height="168" viewBox="0 0 168 168">
+    <mask id="bigMask"><circle id="bigMaskCircle" cx="84" cy="84" r="84" fill="white"></circle></mask>
+    <g mask="url(#bigMask)">
+      <image id="bigPhoto" x="0" y="0" width="168" height="168" preserveAspectRatio="xMidYMid slice"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='168' height='168'%3E%3Crect width='168' height='168' fill='%2370a0d0'/%3E%3Ccircle cx='84' cy='70' r='34' fill='%23e8c4a0'/%3E%3C/svg%3E"></image>
+      <circle class="ring" cx="84" cy="84" r="83"></circle>
+    </g>
+  </svg>
+  <h2>Sample Seller</h2>
+  <!-- A small avatar with an online-status cutout: the black circle in the
+       mask punches the hole, so it must stay black. -->
+  <svg id="smallAvatar" role="img" aria-label="Small photo" width="40" height="40" viewBox="0 0 40 40">
+    <mask id="smallMask">
+      <circle id="smallMaskCircle" cx="20" cy="20" r="20" fill="white"></circle>
+      <circle id="smallMaskHole" cx="34" cy="34" r="7" fill="black"></circle>
+    </mask>
+    <g mask="url(#smallMask)">
+      <image x="0" y="0" width="40" height="40"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%2370a0d0'/%3E%3C/svg%3E"></image>
+    </g>
+  </svg>
+  <!-- Control: a pale disc outside any mask is visible artwork and is darkened. -->
+  <svg id="paleArt" width="168" height="80" viewBox="0 0 168 80">
+    <circle id="paleArtCircle" cx="40" cy="40" r="36" fill="#f0f2f5"></circle>
+    <rect x="90" y="10" width="70" height="60" fill="#e4e6eb"></rect>
+  </svg>
+</div>
+</body>
+</html>
