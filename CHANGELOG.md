@@ -4,6 +4,7 @@
 
 - Customer logo walls ("Trusted by" rows such as Netflix, eBay and F1 on contentrewards.com): dark logos are flipped light instead of staying dark on black. OLED Night only lightened images named as a logo; these files are named by brand only. A row of three or more SVG images, at least two of them wide wordmarks, whose pixels are dark and colorless now counts as a logo wall. Colored logos, photos, single images and rows of square icons such as emoji are left alone.
 - A dark wordmark that is the only content of a site's home link (the header logo) is lightened, even when it is not named as a logo.
+- Profile photos drawn through an SVG mask (Facebook's Marketplace seller card) are no longer dimmed. OLED Night darkened the mask's white circle as if it were a pale shape, and a mask's brightness decides how much of the photo shows. Shapes inside a mask now keep their authored paint, so status cutouts on small avatars also stay intact.
 - No new permissions; Chrome theme remains 1.0.3.
 
 ## 0.6.91

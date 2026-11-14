@@ -1524,6 +1524,10 @@
     const paleToDark = (color) => (!darkBackdrop && color && color.a >= 0.08 && colors.luminance(color) > 0.6 && colors.chroma(color) < 0.25
       ? colors.mapBackground(color, mode) : null);
     for (const part of [svg, ...svg.querySelectorAll(icon ? ICON_PARTS : CHART_PARTS)]) {
+      // Shapes inside <mask> never paint. Their brightness decides how much of
+      // the masked content shows (Facebook profile photos), so a darkened white
+      // mask hides the photo and a lightened black one fills a cutout.
+      if (part !== svg && part.closest("mask")) continue;
       const computed = getComputedStyle(part);
       const found = {};
       if (icon) {
@@ -1575,6 +1579,7 @@
     // Mid-tone and bright brand colors keep their authored paint.
     if (icon && referenced?.localName === "symbol") {
       for (const part of referenced.querySelectorAll(ICON_PARTS)) {
+        if (part.closest("mask")) continue;
         const computed = getComputedStyle(part), found = {};
         for (const name of ["fill", "stroke"]) {
           const paint = colors.parseColor(computed[name]);
