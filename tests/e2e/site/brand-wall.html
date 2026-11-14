@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Brand wall</title>
+<style>
+/* Customer logo wall as contentrewards.com ships it: same-origin dark SVG
+   files named by brand only, drawn at 40% opacity on a cream page. */
+body{margin:0;padding:16px;background:#fdfcf8;color:#252525;font:16px system-ui,sans-serif}
+.grid{display:grid;grid-template-columns:repeat(4,auto);align-items:center;gap:24px;margin:16px 0}
+.opacity-40{opacity:.4}
+.home{display:flex;align-items:center}
+</style></head>
+<body>
+<header><a id="home" class="home" aria-label="Acme Home" href="/"><svg id="homeMark" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 140 40" style="color:#252525;width:108px;height:31px"><path id="homePath" fill="currentColor" d="M4 36L16 4h5l12 32h-6l-3-8H13l-3 8zM15 23h8l-4-11zM40 4h6v32h-6zM54 4h18v5H60v8h10v5H60v9h12v5H54z"/></svg></a></header>
+<h1>Book a demo</h1>
+<div class="grid">
+  <img id="wallSparse" alt="Netflix" class="opacity-40" src="brand-wall-sparse.svg" style="width:108px;height:31px">
+  <img id="wallDense" alt="CapCut" class="opacity-40" src="brand-wall-dense.svg" style="width:44px;height:34px">
+  <img alt="Coinbase" class="opacity-40" src="brand-wall-sparse.svg" style="width:108px;height:31px">
+  <img alt="eBay" class="opacity-40" src="brand-wall-sparse.svg" style="width:108px;height:31px">
+</div>
+<div class="grid" id="wrapped">
+  <a href="#a"><img id="wrappedLogo" alt="DoorDash" src="brand-wall-sparse.svg" style="width:108px;height:31px"></a>
+  <a href="#b"><img alt="F1" src="brand-wall-sparse.svg" style="width:108px;height:31px"></a>
+  <a href="#c"><img alt="M&amp;M's" src="brand-wall-dense.svg" style="width:44px;height:34px"></a>
+</div>
+<!-- Not logo walls: colored marks, raster cutouts, a lone image, a wide drawing. -->
+<div class="grid">
+  <img id="colorWall" alt="Red" src="brand-wall-color.svg" style="width:108px;height:31px">
+  <img alt="Red" src="brand-wall-color.svg" style="width:108px;height:31px">
+  <img alt="Red" src="brand-wall-color.svg" style="width:108px;height:31px">
+</div>
+<div class="grid" id="cutouts"></div>
+<!-- Square glyphs (emoji or status dots served as SVG files): dark means something. -->
+<div class="grid">
+  <img id="glyph" alt="Black circle" src="brand-wall-glyph.svg" style="width:24px;height:24px">
+  <img alt="Black circle" src="brand-wall-glyph.svg" style="width:24px;height:24px">
+  <img alt="Black circle" src="brand-wall-glyph.svg" style="width:24px;height:24px">
+  <img alt="Black circle" src="brand-wall-glyph.svg" style="width:24px;height:24px">
+</div>
+<p><a id="anchorLink" href="/#features"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 140 40" style="color:#252525;width:108px;height:31px"><path id="anchorPath" fill="currentColor" d="M4 36L16 4h5l12 32h-6l-3-8H13l-3 8z"/></svg></a></p>
+<p><img id="lonely" alt="Netflix" src="brand-wall-sparse.svg" style="width:108px;height:31px"></p>
+<div><svg id="art" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 140 40" style="color:#252525;width:200px;height:57px"><path id="artPath" fill="currentColor" d="M4 36L16 4h5l12 32h-6l-3-8H13l-3 8z"/></svg></div>
+<script>
+// Dark transparent product cutouts (PNG), a row as shop pages list them.
+function cutout(){const c=document.createElement('canvas');c.width=80;c.height=80;const g=c.getContext('2d');g.fillStyle='#1a1a1a';g.beginPath();g.ellipse(40,44,22,30,0,0,7);g.fill();return c.toDataURL('image/png')}
+const box=document.getElementById('cutouts');
+for(let i=0;i<4;i++){const img=document.createElement('img');if(!i)img.id='cutout';img.alt='Headphones';img.width=80;img.height=80;img.src=cutout();box.append(img)}
+</script>
+</body></html>
