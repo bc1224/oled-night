@@ -3837,7 +3837,8 @@
         --oln-amazon-muted: hsl(0 0% max(40%, calc(var(--oln-light, 88%) - 16%)));
         --oln-amazon-panel: color-mix(in srgb, var(--oled-night-page) calc(var(--oln-strength, .72) * 100%), #414247);
       }
-      ${amazon} body, ${amazon} :is(#search, #a-page, .s-result-item, .puis-card-container, .s-card-container, .s-desktop-content, .s-navigation-indent-1, .a-box, .a-box-inner, .a-cardui, .a-section.a-text-center, .a-popover-inner, .a-popover-wrapper, .s-desktop-toolbar) {
+      ${amazon} body, ${amazon} :is(#search, #a-page, .s-result-item, .puis-card-container, .s-card-container, .s-desktop-content, .s-navigation-indent-1, .a-box, .a-box-inner, .a-cardui, .a-section.a-text-center, .a-popover-inner, .a-popover-wrapper, .s-desktop-toolbar,
+          /* White color swatch row behind the "+18 other colors" link. */ .s-color-swatch-container) {
         background-color: var(--oled-night-page) !important; color: var(--oln-amazon-ink) !important;
       }
       ${amazon} :is(#search h1, #search h2, #search h3, .a-color-base, .a-price, .a-list-item, .a-dropdown-prompt, .a-expander-prompt, .a-expander-header) { color: var(--oln-amazon-ink) !important; }
