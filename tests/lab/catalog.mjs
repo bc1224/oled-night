@@ -3,7 +3,7 @@ const groups = {
   "Text & surfaces": ["light","dark","explicit-light","ink","surfaces","scope-light","scope-dark","scope-scheme","svg-outline","bright-surfaces","component-names","email-button","layered-surfaces","masked-surfaces","retained-surfaces","shadow-card","slotted-important","contrast-floors","ink-locality","calendar-fields"],
   "Media & data": ["indicators","chart","canvas","shop","ad-overlays","wide-wordmarks","dark-card-artwork","logo-tiles","app-store-icons","layered-card-media","logo-contrast","media-underlay-decor","negative-z-media","late-logos","logo-budget","known-gaps"],
   "App reproductions": ["youtube","gmail","email-newsletter","native-banner","booking-form","checkout","chatgpt-controls","chatgpt-streaming","google-sheets-colors","reddit-res","shadow-stability","apple-auth","apple-recovery","dmv-hero-text","consent-banner","growing-frame","apple-ads-controls","calendar-booking","google-analytics","google-docs","navy-brand-cart","youtube-music","amazon-home","row-hover"],
-  "Isolation & loading": ["components","protected","challenge","challenge-inline","frame","transparent-frame","slow","efficiency","report-fields","report-preview","generated-style","dark-layout","late-dark-theme","parser-surface"]
+  "Isolation & loading": ["components","protected","challenge","challenge-inline","frame","transparent-frame","slow","efficiency","report-fields","report-preview","generated-style","dark-layout","late-dark-theme","parser-surface","survey-frame","survey-card"]
 };
 const descriptions = {
   "compact-switches":"Small switches with CSS ::before/::after thumbs: both logical states, native Space-key operation, visible focus, actual thumb/track pixels and disable restoration in Chrome and Firefox. Includes decoration and colored-thumb negatives. Based on a screenshot pattern; the original site is unknown",
@@ -68,7 +68,9 @@ const descriptions = {
   "shadow-card":"White card on a white page with a faint drop shadow, plus a flat card and a small CTA. The card stays near black with a faint light edge, the flat card gains none, and the CTA keeps its own shadow. Synthetic. Added in 0.6.87.",
   "slotted-important":"Promo card with a component button whose stylesheet forces an !important slotted label color. The CTA and button must still reach 4.5:1. Synthetic markup based on Microsoft's Shop now button. Added in 0.6.83.",
   "youtube-music":"YouTube Music shell using its own #030303/#212121 tokens, with thumbnail overlays and hover shade. Header, guide, player and bar must be OLED black, artwork uncovered, menus raised, and pause restores. Synthetic. Added in 0.6.77.",
-  "contrast-floors":"Pale yellow, lime and blue gradient buttons, dark green, maroon and red icons on dark buttons, and a gradient bar on a dark track. Labels reach 4.5:1 on every stop, icons 3:1, and the mid-tone red keeps its paint. Synthetic. Added in 0.6.90.",
+  "contrast-floors":"Pale yellow, lime and blue gradient buttons, dark green, maroon and red icons on dark buttons, and a gradient bar on a dark track. Labels reach 4.5:1 on every stop, icons 3:1, and the mid-tone red keeps its paint. An Amazon-style button and divider fade use prefixed -webkit- gradients, which are mapped too. Synthetic. Added in 0.6.90.",
+  "survey-frame":"Two same-origin iframes on a light page. One iframe element paints a white card around a document with no background (Google Travel's price survey); its text must stay readable, so that frame gets a black canvas. The other frame has no background of its own and stays transparent. Synthetic. Added in 0.6.90.",
+  "survey-card":"The survey document loaded inside both survey-frame iframes: a positioned title with no background of its own. Synthetic. Added in 0.6.90.",
   "late-logos":"Dark wordmark PNGs: one named logo at load, a lazy logo swapped in after a placeholder, one named only by its file, one after a 1px placeholder and a lazy logo inside a shadow root. Each must be lightened. Synthetic. Added in 0.6.90.",
   "logo-budget":"Partner wall with more logos than one page's sampling budget, then an in-app navigation. The first wall is sampled and a logo added after navigateApp() is still lightened because the budget resets. Synthetic. Added in 0.6.90.",
   "dropdowns":"Custom menu with an important selected background, aria-checked-only selection and highlighted rows. Selected rows are dark with 4.5:1 text, distinct from unselected, and aria-only changes recolor. Chrome and Firefox. Synthetic, based on a Material-style menu.",
@@ -101,6 +103,7 @@ const limits = {
   "row-hover":"Recheck counts and the scripted row hover are asserted by tests/e2e/row-hover-work.mjs; the gallery shows the static inbox.",
   "known-gaps":"Gallery only, not a regression test: nothing asserts on this page and these findings are not fixed yet. Set Brightness to 60 or lower in settings for the last section.",
   "frame":"Child document embedded by light and components; opened alone it only shows one line.",
+  "survey-card":"Child document embedded twice by survey-frame; opened alone it is an ordinary page with no card.",
   "transparent-frame":"Child document embedded by surfaces; opened alone it is a blank transparent canvas.",
   "parser-surface":"Its slow-script timing needs the local lab server; the static gallery shows only the finished card.",
   "dark-layout":"Performance harness with 28,248 rules; not a visual page. Latency budgets run only in the e2e suites.",
