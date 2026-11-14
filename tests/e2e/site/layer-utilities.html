@@ -1,0 +1,19 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Synthetic layered utility article</title><style>
+/* Models a utility framework that emits its classes inside cascade layers and
+   marks forced utilities !important. A layered important declaration outranks
+   every unlayered important rule, whatever that rule's specificity. */
+@layer theme, base, components, utilities;
+@layer theme{:root{--text-primary:#000;--text-secondary:#4d5761;--surface:#f4f4f5;--line:#d4d4d8}}
+@layer base{*{box-sizing:border-box}body{margin:0;background:#fff;color:#111;font:16px/1.5 Arial}main{width:640px;max-width:92vw;margin:0 0 0 32px;padding:20px 16px}}
+@layer utilities{
+.force-primary *{color:var(--text-primary)!important}
+.force-secondary :not([role="button"]):not(button){color:var(--text-secondary)!important}
+.card\!{padding:12px;border-radius:8px;border:1px solid var(--line)!important;background-color:var(--surface)!important}
+}
+/* An ordinary page preference that the theme's unforced rule must still beat. */
+html{scrollbar-color:#999 #eee}
+</style></head><body><main id="page">
+<h2 class="force-primary" id="heading"><span id="heading-text">Synthetic section heading</span></h2>
+<div class="force-secondary" id="article"><p id="para"><span id="para-text">Synthetic body copy forced to a muted grey by a layered utility.</span> <a href="#more" id="link">Synthetic link</a></p></div>
+<div class="card!" id="card"><span id="card-text">Synthetic card forced light by a layered utility</span></div>
+</main></body></html>

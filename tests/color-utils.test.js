@@ -67,3 +67,13 @@ assert.equal(colors.siteProfile('docs.google.com.evil.example'), '');
   assert.match(colors.mapBackground(colors.parseColor("rgb(10, 38, 140)"), "oled"), /^hsl\(22\d /);
   assert.equal(colors.mapBackground(colors.parseColor("rgb(8, 33, 65)"), "oled"), "#000000");
 }
+
+// Relative color syntax keeps its authored function in computed style:
+// hsl(from #0b0b0b h s l / 10%) is reported as "hsl(none 0% 4.31373% / 0.1)".
+assert.deepEqual(colors.parseColor('hsl(none 0% 4.31373% / 0.1)'), { r: 11, g: 11, b: 11, a: 0.1 });
+assert.deepEqual(colors.parseColor('hsl(210 50% 40%)'), { r: 51, g: 102, b: 153, a: 1 });
+assert.deepEqual(colors.parseColor('hsla(120deg, 100%, 50%, 0.5)'), { r: 0, g: 255, b: 0, a: 0.5 });
+assert.deepEqual(colors.parseColor('hwb(0 0% 0%)'), { r: 255, g: 0, b: 0, a: 1 });
+assert.deepEqual(colors.parseColor('hwb(none 20% 20% / 0.25)'), { r: 204, g: 51, b: 51, a: 0.25 });
+assert.equal(colors.mapBorder(colors.parseColor('hsl(none 0% 4.31373% / 0.2)')), 'rgb(255 255 255 / calc(12% + 18% * var(--oln-strength, 0.72)))');
+console.log('Relative-color hsl()/hwb() computed values are understood');

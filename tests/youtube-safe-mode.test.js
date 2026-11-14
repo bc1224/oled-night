@@ -41,7 +41,7 @@ global.document = {
   addEventListener(type) { assert.equal(type, "load", "Only stylesheet loading is watched"); },
   styleSheets: [],
   documentElement: root,
-  head: { appendChild(node) { nodesById.set(node.id, node); if (node.id === "oled-night-sheet") sheet = node; } },
+  head: { appendChild(node) { nodesById.set(node.id, node); if (node.id === "oled-night-sheet") sheet = node; }, prepend(node) { nodesById.set(node.id, node); } },
   querySelectorAll() { return []; },
   getElementById(id) { return nodesById.get(id) || null; },
   createElement() { return { id: "", textContent: "", remove() { nodesById.delete(this.id); if (sheet === this) sheet = null; } }; },

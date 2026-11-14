@@ -101,7 +101,7 @@
     await browser.scripting.executeScript({target:{tabId:tab.id},files:['lab-audit.js']});
     out.push(...await proof('large-updates',await inspect(largeUpdatesScenario)));
     await inspect(()=>document.querySelector('.row').classList.add('hl'));await sleep(120);
-    out.push({name:'shared background declarations remain bounded',ok:await inspect(()=>{const rules=[...document.getElementById('oled-night-sheet').sheet.cssRules].filter(r=>r.selectorText?.includes('data-oled-night-bg'));return rules.length>0&&rules.length<=128})});
+    out.push({name:'shared background declarations remain bounded',ok:await inspect(()=>{const flat=list=>[...list].flatMap(r=>r.selectorText?[r]:r.cssRules?flat(r.cssRules):[]),rules=flat(document.getElementById('oled-night-sheet').sheet.cssRules).filter(r=>r.selectorText.includes('data-oled-night-bg'));return rules.length>0&&rules.length<=128})});
     await browser.storage.sync.set({extensionEnabled:false});await sleep(500);
     out.push({name:'disable removes shared paint and restores native selected row',ok:await inspect(()=>!document.querySelector('[data-oled-night-bg]')&&getComputedStyle(document.querySelector('.row')).backgroundColor==='rgb(242, 246, 252)')});
     await browser.storage.sync.set({extensionEnabled:true});await sleep(500);
