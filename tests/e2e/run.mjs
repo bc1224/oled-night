@@ -770,6 +770,19 @@ try {
   const fadeStops = stops(await css("amzDivider", "backgroundImage", "::after")).filter(stop => !/,\s*0\)$/.test(stop));
   check("contrast floors: a prefixed white divider fade is darkened", fadeStops.length >= 2 && fadeStops.every(stop => lum(stop) < .05), fadeStops.join(" "));
   check("contrast floors: a mid-tone red icon keeps its own paint", (await css("redIcon", "fill")) === "rgb(204, 0, 0)", await css("redIcon", "fill"));
+  // Survey frame: an iframe element painting a white card around a
+  // transparent document must not end up with light text on that white.
+  await page.go(site("127.0.0.1", "survey-frame.html"));
+  for (let i = 0; i < 40 && !(await page.eval(`["cardFrame", "clearFrame"].every(id => document.getElementById(id).contentDocument?.documentElement.hasAttribute("data-oled-night-mode"))`)); i++) await sleep(125);
+  await sleep(300);
+  const frameRead = id => page.eval(`(() => { const frame = document.getElementById(${JSON.stringify(id)}), doc = frame.contentDocument;
+    const own = getComputedStyle(doc.body).backgroundColor, rootBg = getComputedStyle(doc.documentElement).backgroundColor;
+    const opaque = value => !/rgba\\(.*, 0\\)$|transparent/.test(value);
+    return { ink: getComputedStyle(doc.getElementById("title")).color, backdrop: opaque(own) ? own : opaque(rootBg) ? rootBg : getComputedStyle(frame).backgroundColor,
+      transparent: doc.documentElement.hasAttribute("data-oled-night-transparent-frame") }; })()`);
+  const card = await frameRead("cardFrame"), clear = await frameRead("clearFrame");
+  check("survey frame: text inside a white iframe card stays readable", /^rgb/.test(card.backdrop) && ratio(card.ink, card.backdrop) >= 4.5, JSON.stringify(card));
+  check("survey frame: a frame with no background of its own stays transparent", clear.transparent && lum(clear.ink) > .5, JSON.stringify(clear));
   // Late logos: a placeholder swapped for a dark wordmark is sampled again.
   await page.go(site("127.0.0.1", "late-logos.html"));
   const hasLogoMark = id => page.eval(`(e => e.hasAttribute('data-oled-night-logo') || e.hasAttribute('data-oled-night-logo-ink'))(document.getElementById(${JSON.stringify(id)}))`);

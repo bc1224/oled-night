@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Survey frame</title>
+<style>
+/* A same-origin survey card (Google Travel's price survey) is an iframe whose
+   own element paints the white card, with a transparent document inside. */
+body{margin:0;padding:16px;background:#fff;color:#202124;font:14px Arial,sans-serif}
+.slots{display:flex;gap:16px}
+iframe{border:0;width:300px;height:200px;border-radius:16px}
+#cardFrame{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+</style></head>
+<body>
+<p>Hotels near the castle</p>
+<div class="slots">
+  <iframe id="cardFrame" title="Survey"></iframe>
+  <iframe id="clearFrame" title="Embedded note"></iframe>
+</div>
+<script>
+const survey = '<!doctype html><html><head><style>body{margin:0;overflow:hidden;font:16px Arial}.title{position:absolute;z-index:1;top:16px;left:16px;right:16px;color:#202124}.opt{color:#5f6368}</style></head>' +
+  '<body><sc-survey-survey-manager><div class="title" id="title">Have you experienced any issues with prices on this page today?</div></sc-survey-survey-manager></body></html>';
+for (const id of ["cardFrame", "clearFrame"]) { const doc = document.getElementById(id).contentDocument; doc.open(); doc.write(survey); doc.close(); }
+</script>
+</body></html>

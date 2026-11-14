@@ -1855,6 +1855,13 @@
 
   function isTransparentFrame() {
     if (isTopFrame || !document.body) return false;
+    // Iframe elements are never recolored by the embedding page. When one
+    // paints a light card itself (Google Travel's price survey), a clear
+    // document would show light ink on that white, so paint this one black.
+    try {
+      const host = window.frameElement && colorsApi().parseColor(getComputedStyle(window.frameElement).backgroundColor);
+      if (host && host.a >= 0.5 && colorsApi().luminance(host) > 0.25) return false;
+    } catch {}
     return [document.documentElement, document.body].every((node) => {
       const style = getComputedStyle(node);
       const color = colorsApi().parseColor(style.backgroundColor);
