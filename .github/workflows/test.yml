@@ -39,6 +39,7 @@ jobs:
           node tests/e2e/amazon-search.mjs
           node tests/e2e/head-metadata.mjs
           node tests/e2e/row-hover-work.mjs
+          node tests/e2e/historical-fixes.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
           OLED_TRACE_CHURN: ${{ github.event_name == 'workflow_dispatch' && inputs.trace_churn && '1' || '' }}
