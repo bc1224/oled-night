@@ -363,6 +363,8 @@
     await open('light-surface-guard.html');
     for (const result of await probe(['imageSetText', 'pseudoText', 'amzGuardText', 'matteText']))
       check(`light surface guard: ${result.target} reaches 4.5:1`, result.themed && result.ratio >= 4.5, JSON.stringify(result));
+    for (const result of await probe(['brandOrange', 'brandPurple', 'brandTeal', 'brandRed', 'matteVividText']))
+      check(`light surface guard: authored white label on ${result.target} stays light`, result.themed && lumOf(result.ink) > .5, JSON.stringify(result));
     await open('light-surface-frames.html');
     await inspect(() => document.getElementById('lateHost').classList.add('card'));
     await wait(700);

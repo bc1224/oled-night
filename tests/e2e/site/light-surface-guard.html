@@ -21,6 +21,10 @@ section{margin:12px 0;width:360px}
 .tile{position:relative;width:160px;height:120px}
 .tile img{display:block;width:160px;height:120px}
 .matte{position:absolute;inset:0;background:#fff;mix-blend-mode:darken;display:flex;align-items:flex-end;padding:6px}
+/* Control: vivid brand buttons the mapper keeps, with authored white labels.
+   They are mid-tone, not light surfaces, so their labels stay light. */
+.matte.vivid{background:#f57c00;color:#fff}
+.brand{display:inline-block;padding:8px 14px;border-radius:6px;color:#fff;border:0;font:600 14px Arial,sans-serif}
 </style></head>
 <body>
 <section><div class="card" id="imageSetCard"><span id="imageSetText">Price alerts are on for this route</span></div></section>
@@ -29,5 +33,15 @@ section{margin:12px 0;width:360px}
 <section>
   <div class="tile"><img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='120'%3E%3Crect width='160' height='120' fill='%23e8e0d0'/%3E%3Ccircle cx='80' cy='55' r='35' fill='%23c0392b'/%3E%3C/svg%3E">
     <div class="matte"><span id="matteText">Fresh tomatoes</span></div></div>
+</section>
+<section>
+  <div class="tile"><img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='120'%3E%3Crect width='160' height='120' fill='%23e8e0d0'/%3E%3C/svg%3E">
+    <div class="matte vivid"><span id="matteVividText">Sale</span></div></div>
+</section>
+<section>
+  <button class="brand" id="brandOrange" style="background:#f57c00">Subscribe</button>
+  <button class="brand" id="brandPurple" style="background:#8e24aa">Join</button>
+  <button class="brand" id="brandTeal" style="background:#00897b">Book now</button>
+  <button class="brand" id="brandRed" style="background:#e53935">Live</button>
 </section>
 </body></html>

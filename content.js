@@ -859,12 +859,14 @@
   // Read-only: decides overrides from original computed styles. No DOM writes
   // happen here, so the whole batch costs a single style recalculation.
   // Ink for text on a surface that stays light. Ink that reads on that
-  // surface is kept. Ink that does not (often our own lightened ink,
-  // inherited from a wrapper) becomes dark, colored text keeping its hue.
+  // surface is kept, and so is light ink on a mid-tone surface, where it is
+  // the authored design (a white label on a brand color). Other ink (often
+  // our own lightened ink, inherited from a wrapper) becomes dark, colored
+  // text keeping its hue.
   function keptInk(computed, surface) {
     const colors = colorsApi(), text = colors.parseColor(computed.color);
     const bg = colors.luminance(surface), ink = colors.luminance(text);
-    if ((Math.max(bg, ink) + 0.05) / (Math.min(bg, ink) + 0.05) >= 4.5) return computed.color;
+    if ((Math.max(bg, ink) + 0.05) / (Math.min(bg, ink) + 0.05) >= 4.5 || bg <= 0.5 && ink >= 0.4) return computed.color;
     return colors.chroma(text) > 0.15 ? `color-mix(in srgb, rgb(${text.r} ${text.g} ${text.b}) 45%, black)` : "rgb(32 33 36)";
   }
 
@@ -3807,11 +3809,12 @@
         background-color: var(--oln-amazon-panel) !important; color: var(--oln-amazon-ink) !important;
       }
       ${amazon} :is(.s-suggestion:hover, .a-dropdown-link:hover, .s-pagination-item:hover, .a-expander-header:hover) { background-color: #303137 !important; }
-      ${amazon} :is(.s-background-color-platinum, .puis-status-badge-container, .a-button-base, .a-button-base .a-button-inner,
+      /* .a-button-normal: white size filter toggles, whose labels carry the forced light ink. */
+      ${amazon} :is(.s-background-color-platinum, .puis-status-badge-container, .a-button-base, .a-button-base .a-button-inner, .a-button-normal, .a-button-normal .a-button-inner,
           .nav-assistant, .shortcut-help-container, .nav-search-field, .nav-search-scope, .nav-search-facade, .hmenu, .hmenu-item, .s-carousel-button) {
         color: var(--oln-amazon-ink) !important; background-color: var(--oln-amazon-panel) !important;
       }
-      ${amazon} :is(.a-button-base .a-button-text, .nav-search-label, .nav-signin-tooltip-footer, .nav-flyout .nav-text, .nav-flyout .nav-title) { color: var(--oln-amazon-ink) !important; }
+      ${amazon} :is(.a-button-base .a-button-text, .a-button-normal .a-button-text, .nav-search-label, .nav-signin-tooltip-footer, .nav-flyout .nav-text, .nav-flyout .nav-title) { color: var(--oln-amazon-ink) !important; }
       ${amazon} :is(.nav-flyout a.nav-a, .nav-assistant-link) { color: #8fc5ff !important; }
       ${amazon} :is(.nav-assistant-heading, .shortcut-help-text) { color: var(--oln-amazon-ink) !important; }
       ${amazon} :is(.s-image, .s-image-square-aspect img, .s-product-image-container img) { mix-blend-mode: normal !important; }

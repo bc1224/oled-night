@@ -141,6 +141,10 @@ try {
     const [result] = await probe([target]);
     check(`light surface guard: text on ${name} reaches 4.5:1`, result.ratio >= 4.5, JSON.stringify(result));
   }
+  // Control: mid-tone brand surfaces (buttons, a vivid darken-blended matte)
+  // are not light surfaces, so their authored white labels stay light.
+  for (const result of await probe(["brandOrange", "brandPurple", "brandTeal", "brandRed", "matteVividText"]))
+    check(`light surface guard: authored white label on ${result.target} stays light`, result.themed && lum(result.ink) > .5, JSON.stringify(result));
   await page.go(site("127.0.0.1", "light-surface-frames.html"));
   const hosts = ["colorHost", "gradientHost", "wrappedHost", "lateHost", "clearHost"];
   for (let i = 0; i < 40 && !(await page.eval(`${JSON.stringify(hosts)}.every(id => document.getElementById(id).contentDocument?.documentElement.hasAttribute("data-oled-night-mode"))`)); i++) await sleep(125);
