@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Contrast floors</title>
+<style>
+/* Pale gradient buttons and dark colored icons on a light store page. */
+body{margin:0;padding:16px;background:#fff;color:#222;font:16px system-ui,sans-serif}
+section{margin:12px 0}
+.gbtn{padding:10px 18px;border:0;border-radius:6px;font-weight:600}
+/* Older Amazon UI (the "Continue shopping" check page) uses prefixed
+   gradients, which Chrome keeps prefixed in computed style. */
+.a-button-inner{display:block;border-radius:3px;background:#f3d078;background:-webkit-gradient(linear,left top,left bottom,color-stop(0%,#f7dfa5),color-stop(100%,#f0c14b));background:-webkit-linear-gradient(top,#f7dfa5,#f0c14b)}
+.a-button-text{display:block;width:100%;padding:6px 10px;border:0;background:transparent;color:#111;font:13px Arial,sans-serif}
+.a-divider-inner{height:44px;background:-webkit-linear-gradient(top,rgba(0,0,0,.14),rgba(0,0,0,.03) 3px,rgba(0,0,0,0))}
+.a-divider-inner:after{display:block;height:44px;content:"";background:-webkit-linear-gradient(left,white,rgba(255,255,255,0),white)}
+.icon-btn{background:#fff;border:1px solid #ccc;padding:4px;line-height:0}
+</style></head>
+<body>
+<section>
+  <button class="gbtn" id="paleYellowWhite" style="background:linear-gradient(#ffff99,#ffff66);color:#fff">Pale yellow, white label</button>
+  <button class="gbtn" id="paleYellowDark" style="background:linear-gradient(#ffff99,#ffff66);color:#222">Pale yellow, dark label</button>
+  <button class="gbtn" id="paleLimeWhite" style="background:linear-gradient(#ccff99,#bbff77);color:#fff">Pale lime, white label</button>
+  <button class="gbtn" id="blueGradient" style="background:linear-gradient(#6699ff,#003399);color:#fff">Blue gradient</button>
+</section>
+<section>
+  <button class="icon-btn" id="greenIconButton" aria-label="Done"><svg width="24" height="24" viewBox="0 0 24 24"><path id="greenIcon" d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" fill="rgb(31,71,48)"/></svg></button>
+  <button class="icon-btn" id="maroonIconButton" aria-label="Remove"><svg width="24" height="24" viewBox="0 0 24 24"><path id="maroonIcon" d="M6 6l12 12M18 6L6 18" stroke="rgb(107,46,46)" stroke-width="2.5" fill="none"/></svg></button>
+  <button class="icon-btn" id="redIconButton" aria-label="Favorite"><svg width="24" height="24" viewBox="0 0 24 24"><path id="redIcon" d="M12 21l-1.4-1.3C5.4 15 2 12 2 8.5 2 5.4 4.4 3 7.5 3c1.7 0 3.4.8 4.5 2.1C13.1 3.8 14.8 3 16.5 3 19.6 3 22 5.4 22 8.5c0 3.5-3.4 6.5-8.6 11.2z" fill="rgb(204,0,0)"/></svg></button>
+</section>
+<section style="width:350px">
+  <span class="a-button-inner" id="amzInner"><button type="submit" class="a-button-text" id="amzText">Continue shopping</button></span>
+  <div class="a-divider-inner" id="amzDivider"></div>
+</section>
+<section>
+  <div id="gradTrack" style="width:240px;height:8px;background:#e6e6e6;border-radius:4px"><div id="gradFill" style="width:60%;height:8px;border-radius:4px;background:linear-gradient(90deg,#ffd54f,#ffeb3b)"></div></div>
+</section>
+</body></html>

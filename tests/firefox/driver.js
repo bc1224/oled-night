@@ -334,6 +334,30 @@
     await open('report-fields.html');
     const fieldReport=await browser.tabs.sendMessage(tab.id,{type:'oled-night-report'});
     check('report catches field contrast without private contents',fieldReport.lowContrast.filter(e=>e.element.includes('private')).length===4 && !JSON.stringify(fieldReport).includes('SENTINEL') && !fieldReport.lowContrast.some(e=>e.element.includes('transparentIcon')));
+    await open('contrast-floors.html');
+    const amz = await inspect(() => {
+      const rgb = s => (s.match(/[\d.]+/g) || []).map(Number);
+      const lum = s => { const [r, g, b] = rgb(s).map(v => v / 255).map(v => v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return .2126 * r + .7152 * g + .0722 * b; };
+      const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
+      const stops = image => image.match(/rgba?\([^)]*\)/g) || [];
+      const image = getComputedStyle(document.getElementById('amzInner')).backgroundImage, ink = getComputedStyle(document.getElementById('amzText')).color;
+      const fade = stops(getComputedStyle(document.getElementById('amzDivider'), '::after').backgroundImage).filter(s => !/,\s*0\)$/.test(s));
+      return {image, ink, worst: Math.min(...stops(image).map(s => ratio(s, ink))), count: stops(image).length, fade, fadeDark: fade.length >= 2 && fade.every(s => lum(s) < .05)};
+    });
+    check('prefixed -webkit- gradient button is mapped and its label reaches 4.5:1', amz.count >= 2 && amz.worst >= 4.5, JSON.stringify(amz));
+    check('prefixed white divider fade is darkened', amz.fadeDark, JSON.stringify(amz.fade));
+    await open('survey-frame.html');
+    const survey = await inspect(() => ['cardFrame', 'clearFrame'].map(id => {
+      const frame = document.getElementById(id), doc = frame.contentDocument;
+      const opaque = v => !/rgba\(.*, 0\)$|transparent/.test(v);
+      const own = getComputedStyle(doc.body).backgroundColor, root = getComputedStyle(doc.documentElement).backgroundColor;
+      return {themed: doc.documentElement.hasAttribute('data-oled-night-mode'), ink: getComputedStyle(doc.getElementById('title')).color,
+        backdrop: opaque(own) ? own : opaque(root) ? root : getComputedStyle(frame).backgroundColor, transparent: doc.documentElement.hasAttribute('data-oled-night-transparent-frame')};
+    }));
+    const lumOf = s => { const [r, g, b] = (s.match(/[\d.]+/g) || []).map(Number).map(v => v / 255).map(v => v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return .2126 * r + .7152 * g + .0722 * b; };
+    const contrast = (a, b) => { const [x, y] = [lumOf(a), lumOf(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
+    check('text inside a white iframe card stays readable', survey[0].themed && contrast(survey[0].ink, survey[0].backdrop) >= 4.5, JSON.stringify(survey[0]));
+    check('a frame with no background of its own stays transparent', survey[1].themed && survey[1].transparent && lumOf(survey[1].ink) > .5, JSON.stringify(survey[1]));
     await open('efficiency.html');
     const efficiency = await inspect(async () => {
  const wait = () => new Promise(r=>setTimeout(r,150));

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Late logos</title>
+<style>
+/* Partner logos that lazy loaders swap in after a placeholder. */
+body{margin:0;padding:16px;background:#fff;color:#222;font:16px system-ui,sans-serif}
+img{margin:2px}
+</style></head>
+<body>
+<main id="logos"></main>
+<script>
+// Dark wordmark PNG on a transparent background, generated so the page needs no assets.
+function wordmark(w,h,text){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.fillStyle='#111';g.font='bold '+Math.round(h*.7)+'px sans-serif';g.textBaseline='middle';g.fillText(text,4,h/2);return c.toDataURL('image/png')}
+const DARK=wordmark(140,40,'ACME');
+const BLANK='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+const host=document.getElementById('logos');
+function logo(id,src){const i=document.createElement('img');i.id=id;i.className='logo';i.alt='Partner logo';i.width=140;i.height=40;i.src=src;host.append(i);return i}
+logo('namedLogo',DARK);
+const lazy=logo('lazyLogo',BLANK);
+// Named only by its real file name: the placeholder carries no logo name.
+const byUrl=document.createElement('img');byUrl.id='urlLogo';byUrl.width=140;byUrl.height=40;byUrl.src=BLANK;host.append(byUrl);
+// No size attributes: the placeholder is 1px until the real logo loads.
+const tiny=document.createElement('img');tiny.id='tinyLogo';tiny.className='logo';tiny.alt='Partner logo';tiny.src=BLANK;host.append(tiny);
+// The test swaps the sources once the first pass has classified the placeholders.
+window.swapLazyLogo=()=>{lazy.src=DARK;byUrl.src='acme-logo.svg';tiny.src=DARK};
+</script>
+</body></html>

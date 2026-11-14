@@ -103,6 +103,12 @@
     return value;
   }
 
+  function hslToRgb(h, s, l) {
+    const a = s * Math.min(l, 1 - l);
+    const f = (n) => { const k = (n + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); };
+    return { r: f(0), g: f(8), b: f(4) };
+  }
+
   function computeLuminance({ r, g, b }) {
     const linear = [r, g, b].map((value) => {
       return decode(value / 255);
@@ -151,7 +157,7 @@
 
   // Modes: "oled" / "soft" recolor a light page; "crush" only pushes the dark
   // greys of an already-dark page to true black; "none" changes nothing.
-  function mapBackground(color, mode, gradientStop = false) {
+  function mapBackground(color, mode, gradientStop = false, labelled = gradientStop) {
     if (!color || color.a < 0.08 || mode === "none") return null;
     const hsl = rgbToHsl(color);
     const lum = luminance(color);
@@ -168,8 +174,12 @@
       // red at the same lightness; without extra depth light text on those
       // bands stays just under readable contrast (yellow category chips).
       const bright = Math.max(0, 1 - Math.max(0, Math.abs(hsl.h - 62) - 18) / 25);
-      const base = gradientStop ? Math.round(7 + 30 * hsl.l) : Math.round(16 - 5 * bright);
-      return withAlpha(`hsl(${Math.round(hsl.h)} ${Math.round(Math.min(hsl.s, 0.82) * 100)}% calc(${base}% + 10% * ${STRENGTH}))`, color.a);
+      const hue = Math.round(hsl.h), saturation = Math.round(Math.min(hsl.s, 0.82) * 100);
+      let base = gradientStop ? Math.round(7 + 30 * hsl.l) : Math.round(16 - 5 * bright);
+      // Gradient stops keep their authored order, but no stop may get so light
+      // that a light label fails 4.5:1 at full contrast (pale yellow buttons).
+      if (labelled) while (base > 7 && luminance(hslToRgb(hue, saturation / 100, (base + 10) / 100)) > 0.12) base--;
+      return withAlpha(`hsl(${hue} ${saturation}% calc(${base}% + 10% * ${STRENGTH}))`, color.a);
     }
     // Pale tints (info/alert/selected rows) keep a hint of their hue, scaled
     // by how tinted they are. Barely blue fields (Google Calendar's #f0f4f9)
@@ -229,8 +239,9 @@
   // Dark monochrome icon strokes/fills become text-colored; colored icons stay.
   function mapIconPaint(color) {
     // Dark brand ink (navy wordmarks and icons) vanishes on black like neutral
-    // ink does. Lighten it with its hue; mid-tone brand colors keep their paint.
-    if (!color || color.a < 0.08 || luminance(color) > 0.25 || (chroma(color) > 0.15 && luminance(color) >= 0.05)) return null;
+    // ink does. Lighten it with its hue; mid-tone brand colors keep their paint
+    // once they reach 3:1 against true black (luminance 0.10).
+    if (!color || color.a < 0.08 || luminance(color) > 0.25 || (chroma(color) > 0.15 && luminance(color) >= 0.1)) return null;
     return mapForeground(color, 1);
   }
 
@@ -248,7 +259,7 @@
 
   // Adapt gradient layers independently. A sibling image/texture keeps its
   // exact URL and layer position, including any color-like text inside it.
-  function mapGradient(value, mode) {
+  function mapGradient(value, mode, labelled = true) {
     const text = String(value || "");
     if (!/gradient\(/i.test(text)) return null;
     const layers = [];
@@ -265,9 +276,11 @@
     layers.push(text.slice(start));
     let changed = false;
     const out = layers.map(layer => {
-      if (!/^\s*(?:repeating-)?(?:linear|radial|conic)-gradient\(/i.test(layer)) return layer;
+      // Chrome keeps -webkit- prefixed gradients prefixed in computed style
+      // (older Amazon buttons and divider fades), including -webkit-gradient().
+      if (!/^\s*(?:-webkit-)?(?:(?:repeating-)?(?:linear|radial|conic)-)?gradient\(/i.test(layer)) return layer;
       return layer.replace(COLOR_TOKEN, token => {
-        const mapped = mapBackground(parseColor(token), mode, true);
+        const mapped = mapBackground(parseColor(token), mode, true, labelled);
         if (!mapped) return token;
         changed = true;
         return mapped;

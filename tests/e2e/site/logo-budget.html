@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Logo budget</title>
+<style>
+/* A partner wall with more logos than one page's sampling budget, then an in-app navigation. */
+body{margin:0;padding:16px;background:#fff;color:#222;font:16px system-ui,sans-serif}
+img{margin:2px}
+</style></head>
+<body>
+<main id="logos"></main>
+<script>
+function wordmark(w,h,text){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.fillStyle='#111';g.font='bold '+Math.round(h*.7)+'px sans-serif';g.textBaseline='middle';g.fillText(text,4,h/2);return c.toDataURL('image/png')}
+const DARK=wordmark(140,40,'ACME'),host=document.getElementById('logos');
+window.addLogo=id=>{const i=document.createElement('img');i.id=id;i.className='logo';i.alt='Partner logo';i.width=140;i.height=40;i.src=DARK;host.append(i);return i};
+for(let n=0;n<85;n++)addLogo('logo-'+n);
+// Single-page navigation: the old wall goes, the next view brings a new logo.
+window.navigateApp=()=>{host.replaceChildren();history.pushState({},'','#next');addLogo('afterNav')};
+</script>
+</body></html>

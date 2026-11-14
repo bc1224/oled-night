@@ -750,6 +750,52 @@ try {
     if (how.includes("body")) check("dark reader: an active page carries Dark Reader's documented lock", await page.eval("document.head.querySelectorAll('meta[name=\"darkreader-lock\"]').length === 1"));
     check(`late dark theme via ${how}: the native dark canvas is pure black`, lateMain === "rgb(0, 0, 0)" && lum(lateInk) > 0.5, `${lateInk} on ${lateMain}`);
   }
+  // Contrast floors: pale gradient buttons and dark colored icon paint.
+  await page.go(site("127.0.0.1", "contrast-floors.html"));
+  const stops = value => String(value).match(/rgba?\([^)]*\)/g) || [];
+  for (const id of ["paleYellowWhite", "paleYellowDark", "paleLimeWhite", "blueGradient"]) {
+    const [image, ink] = [await css(id, "backgroundImage"), await css(id, "color")];
+    const worst = Math.min(...stops(image).map(stop => ratio(stop, ink)));
+    check(`contrast floors: ${id} label reaches 4.5:1 on every mapped stop`, stops(image).length >= 2 && worst >= 4.5, `${ink} on ${image} (${worst.toFixed(2)})`);
+  }
+  for (const [id, prop] of [["greenIcon", "fill"], ["maroonIcon", "stroke"], ["redIcon", "fill"]]) {
+    const [paint, plate] = [await css(id, prop), await css(`${id}Button`, "backgroundColor")];
+    check(`contrast floors: ${id} reaches 3:1 on its dark button`, ratio(paint, plate) >= 3, `${paint} on ${plate}`);
+  }
+  const [fillImage, trackBg] = [await css("gradFill", "backgroundImage"), await css("gradTrack", "backgroundColor")];
+  check("contrast floors: an empty yellow gradient bar keeps 3:1 on its dark track", stops(fillImage).length >= 2 && Math.min(...stops(fillImage).map(stop => ratio(stop, trackBg))) >= 3, `${fillImage} on ${trackBg}`);
+  const [amzImage, amzInk] = [await css("amzInner", "backgroundImage"), await css("amzText", "color")];
+  const amzWorst = Math.min(...stops(amzImage).map(stop => ratio(stop, amzInk)));
+  check("contrast floors: a prefixed -webkit- gradient button is mapped and its label reaches 4.5:1", stops(amzImage).length >= 2 && amzWorst >= 4.5, `${amzInk} on ${amzImage} (${amzWorst.toFixed(2)})`);
+  const fadeStops = stops(await css("amzDivider", "backgroundImage", "::after")).filter(stop => !/,\s*0\)$/.test(stop));
+  check("contrast floors: a prefixed white divider fade is darkened", fadeStops.length >= 2 && fadeStops.every(stop => lum(stop) < .05), fadeStops.join(" "));
+  check("contrast floors: a mid-tone red icon keeps its own paint", (await css("redIcon", "fill")) === "rgb(204, 0, 0)", await css("redIcon", "fill"));
+  // Survey frame: an iframe element painting a white card around a
+  // transparent document must not end up with light text on that white.
+  await page.go(site("127.0.0.1", "survey-frame.html"));
+  for (let i = 0; i < 40 && !(await page.eval(`["cardFrame", "clearFrame"].every(id => document.getElementById(id).contentDocument?.documentElement.hasAttribute("data-oled-night-mode"))`)); i++) await sleep(125);
+  await sleep(300);
+  const frameRead = id => page.eval(`(() => { const frame = document.getElementById(${JSON.stringify(id)}), doc = frame.contentDocument;
+    const own = getComputedStyle(doc.body).backgroundColor, rootBg = getComputedStyle(doc.documentElement).backgroundColor;
+    const opaque = value => !/rgba\\(.*, 0\\)$|transparent/.test(value);
+    return { ink: getComputedStyle(doc.getElementById("title")).color, backdrop: opaque(own) ? own : opaque(rootBg) ? rootBg : getComputedStyle(frame).backgroundColor,
+      transparent: doc.documentElement.hasAttribute("data-oled-night-transparent-frame") }; })()`);
+  const card = await frameRead("cardFrame"), clear = await frameRead("clearFrame");
+  check("survey frame: text inside a white iframe card stays readable", /^rgb/.test(card.backdrop) && ratio(card.ink, card.backdrop) >= 4.5, JSON.stringify(card));
+  check("survey frame: a frame with no background of its own stays transparent", clear.transparent && lum(clear.ink) > .5, JSON.stringify(clear));
+  // Late logos: a placeholder swapped for a dark wordmark is sampled again.
+  await page.go(site("127.0.0.1", "late-logos.html"));
+  const hasLogoMark = id => page.eval(`(e => e.hasAttribute('data-oled-night-logo') || e.hasAttribute('data-oled-night-logo-ink'))(document.getElementById(${JSON.stringify(id)}))`);
+  check("late logos: a named dark logo present at load is lightened", await hasLogoMark("namedLogo"));
+  await page.eval("swapLazyLogo()"); await sleep(900);
+  check("late logos: a lazy logo swapped in after its placeholder is lightened", await hasLogoMark("lazyLogo"), await css("lazyLogo", "filter"));
+  check("late logos: a logo named only by its loaded file is lightened", await hasLogoMark("urlLogo"), await css("urlLogo", "filter"));
+  check("late logos: a logo that loads after a 1px placeholder is lightened", await hasLogoMark("tinyLogo"), await css("tinyLogo", "filter"));
+  // Logo budget: an in-app navigation gets a fresh sampling budget.
+  await page.go(site("127.0.0.1", "logo-budget.html"));
+  check("logo budget: the first wall of logos is sampled", await hasLogoMark("logo-0"));
+  await page.eval("navigateApp()"); await sleep(900);
+  check("logo budget: a logo after single-page navigation is still sampled", await hasLogoMark("afterNav"), await css("afterNav", "filter"));
   await page.go(site("127.0.0.1", "slotted-important.html"));
   for (const id of ["slottedCta", "slottedButton"]) {
     const [bg, ink] = [await css(id, "backgroundColor"), await css(id, "color")];

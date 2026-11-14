@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.89";
+  const VERSION = "0.6.90";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -154,8 +154,15 @@
   let canvasWatch = null;
   let mediaCopyMeasurements = new WeakSet();
   let textTiers = new WeakMap();
-  let logoChecked = new WeakSet();
+  // Each sampled logo remembers the source it was sampled from, so a lazy
+  // loader swapping a placeholder for the real logo gets a second look. The
+  // budget is per page URL: single-page apps keep bringing new views.
+  let logoChecked = new WeakMap();
+  // Every image considered as a possible logo, with the source it had then
+  // ("" while still loading). A later load of another source is rechecked.
+  let logoSeen = new WeakMap();
   let logoBudget = 80;
+  let logoBudgetHref = "";
   const spriteDocuments = new Map();
   const localSpriteWaiters = new Set();
   let inlineStyles = new WeakMap();
@@ -384,6 +391,7 @@
       // same host outside a shadow tree, so those events never reach document.
       // Listen inside every managed root; composed events are handled once.
       for (const type of INTERACTION_EVENTS) root.addEventListener(type, onInteraction, true);
+      root.addEventListener("load", onImageLoad, true);
       // Constructed sheets are not observed by MutationObserver. Some apps
       // replace the whole adoptedStyleSheets array after our initial pass.
       if (!shadowHealthTimer) {
@@ -432,6 +440,7 @@
     for (const root of shadowRoots) {
       if (!root.host.isConnected) {
         for (const type of INTERACTION_EVENTS) root.removeEventListener(type, onInteraction, true);
+        root.removeEventListener("load", onImageLoad, true);
         shadowRoots.delete(root);
       }
     }
@@ -647,19 +656,22 @@
   function mapSurface(computed, prefix, mode, found, element) {
     // Reuse only pure mappings of complete paint inputs, never element state.
     const ink = paintsInk(computed, element);
+    // An empty element (a progress or rating bar) has no label to protect,
+    // so its gradient keeps its full brightness against the dark track.
+    const label = !element || element.hasChildNodes();
     const key = JSON.stringify([mode, computed.backgroundColor, computed.backgroundImage, computed.boxShadow,
-      ink, hasImageBackdrop(computed)]);
+      ink, hasImageBackdrop(computed), label]);
     let mapped = surfaceMappings.get(key);
     if (!mapped) {
       mapped = {};
-      computeSurface(computed, "", mode, mapped, ink);
+      computeSurface(computed, "", mode, mapped, ink, label);
       if (surfaceMappings.size >= 512) surfaceMappings.clear();
       surfaceMappings.set(key, mapped);
     }
     for (const name of Object.keys(mapped)) found[prefix + name] = mapped[name];
   }
 
-  function computeSurface(computed, prefix, mode, found, ink = paintsInk(computed)) {
+  function computeSurface(computed, prefix, mode, found, ink = paintsInk(computed), label = true) {
     const colors = colorsApi();
     const original = colors.parseColor(computed.backgroundColor);
     if (ink) {
@@ -670,7 +682,7 @@
     }
     const alreadyBlack = original && mode !== "soft" && original.r <= 2 && original.g <= 2 && original.b <= 2;
     const background = alreadyBlack ? null : colors.mapBackground(original, mode);
-    const gradient = hasImageBackdrop(computed) ? null : colors.mapGradient(computed.backgroundImage, mode);
+    const gradient = hasImageBackdrop(computed) ? null : colors.mapGradient(computed.backgroundImage, mode, label);
     const shadow = colors.mapShadow(computed.boxShadow, mode);
     if (background) found[`${prefix}bg`] = background;
     if (gradient) found[`${prefix}img`] = gradient;
@@ -682,7 +694,7 @@
   // that original backdrop; multicolor artwork keeps its normal mapping.
   function mapBackdropFade(computed, backdrop) {
     const image = computed.backgroundImage;
-    if (!backdrop.color || !backdrop.mapped || !/^linear-gradient\(/.test(image) || /url\(/.test(image)) return null;
+    if (!backdrop.color || !backdrop.mapped || !/^(?:-webkit-)?linear-gradient\(/.test(image) || /url\(/.test(image)) return null;
     const tokens = image.match(/rgba?\([^)]*\)/g) || [];
     const colors = tokens.map(token => colorsApi().parseColor(token));
     if (colors.length < 2 || !colors.every(color => color && ["r", "g", "b"].every(key => color[key] === backdrop.color[key])) ||
@@ -1576,6 +1588,7 @@
   // Sample at most 96 pixels per side when permitted. Cross-origin logos use
   // the same paint-only mask, without another request or a canvas read bypass.
   function checkLogo(img, ctx) {
+    logoSeen.set(img, img.complete ? img.currentSrc || img.src : "");
     // Studio wordmarks may be named only by their site's semantic data label.
     const labelledLogo = img.matches('[data-tt$="logo" i], [data-tt$="wordmark" i]');
     const namedLogo = labelledLogo || img.matches('[itemprop~="logo"]') ||
@@ -1590,12 +1603,19 @@
       img.removeAttribute(LOGO_INK);
       return;
     }
-    if (logoChecked.has(img) || logoBudget <= 0) return;
-    logoChecked.add(img);
+    const source = img.currentSrc || img.src;
+    if (logoChecked.get(img) === source) return;
+    if (logoBudgetHref !== location.href) { logoBudgetHref = location.href; logoBudget = 80; }
+    if (logoBudget <= 0) return;
+    if (logoChecked.has(img)) { img.removeAttribute(LOGO); img.removeAttribute(LOGO_INK); }
+    logoChecked.set(img, source);
     logoBudget--;
     const checked = logoChecked;
     const run = () => {
       if (!active || checked !== logoChecked || !img.isConnected) return;
+      // Samples whatever finished loading; srcset picks or a swap made before
+      // this load are recorded so the queued recheck does not sample twice.
+      logoChecked.set(img, img.currentSrc || img.src);
       try {
         // Keep the aspect ratio and enough resolution that thin lettering survives.
         const scale = Math.min(1, 96 / Math.max(img.naturalWidth, img.naturalHeight));
@@ -1835,6 +1855,13 @@
 
   function isTransparentFrame() {
     if (isTopFrame || !document.body) return false;
+    // Iframe elements are never recolored by the embedding page. When one
+    // paints a light card itself (Google Travel's price survey), a clear
+    // document would show light ink on that white, so paint this one black.
+    try {
+      const host = window.frameElement && colorsApi().parseColor(getComputedStyle(window.frameElement).backgroundColor);
+      if (host && host.a >= 0.5 && colorsApi().luminance(host) > 0.25) return false;
+    } catch {}
     return [document.documentElement, document.body].every((node) => {
       const style = getComputedStyle(node);
       const color = colorsApi().parseColor(style.backgroundColor);
@@ -2525,6 +2552,7 @@
         }
         imageDecisions.push([img, found]);
         if (rect.width >= 12 && rect.height >= 12 && rect.width <= 420 && rect.height <= 160) logoCandidates.push(img);
+        else logoSeen.set(img, img.complete ? img.currentSrc || img.src : "");
       }
     }
     for (const node of measured) node.removeAttribute(MEASURE);
@@ -2778,6 +2806,13 @@
     }
     // Descendant rules of changed elements (".row:hover .label") need their subtree.
     const controlChanged = control && (!stop || path.indexOf(control) < path.indexOf(stop));
+    // A row whose state rules were analyzed above already queued exactly what
+    // its state can repaint. Otherwise the whole row is rechecked once: a
+    // pointer crossing has already changed :hover when this runs, so the
+    // repeat at the next frame doubled the work for every row crossed while
+    // hovering or scrolling a list (Gmail rows).
+    const group = path.find(node => node.matches(STATE_GROUP));
+    const groupTree = group && !analyzed.has(group) && (!stop || path.indexOf(group) < path.indexOf(stop));
     if (editing) {
       // Rich replies can include thousands of quoted nodes. Keystrokes change
       // the selection's text, not every quoted message. DOM/style mutations
@@ -2803,7 +2838,8 @@
         // Re-reading its entire subtree for each pointer crossing made
         // scrolling and hovering long articles stall for seconds.
         else if (largeScopes.has(path[0])) queueInteraction(path[0], false, currentPaint);
-        else queueInteraction(path[0], true, currentPaint);
+        // Inside a row that is rechecked whole below, the subtree is covered.
+        else if (!groupTree || !group.contains(path[0])) queueInteraction(path[0], true, currentPaint);
       }
       if (control && !analyzed.has(control)) settleTrees.add(control);
     }
@@ -2813,8 +2849,7 @@
         control?.matches('input[type="checkbox"]')) {
       for (const label of control.labels || []) queueInteraction(label, true, currentPaint);
     }
-    const group = path.find(node => node.matches(STATE_GROUP));
-    if (group && (!stop || path.indexOf(group) < path.indexOf(stop))) queueInteraction(group, true, currentPaint);
+    if (groupTree) queueInteraction(group, true, currentPaint && !/^pointer(?:over|out)$/.test(event.type));
     // Native focus/hover can change inside a frame callback. Waiting for the
     // next rAF exposes its pale state in the current paint. Repair at this
     // microtask checkpoint, then recheck only this path at the next boundary:
@@ -3067,6 +3102,18 @@
       pendingTrees.add(copy);
       mediaCopyMeasurements.add(copy);
     }
+  }
+
+  // Image loads do not bubble or cross shadow boundaries; each managed root
+  // listens in the capture phase. Only images first seen with another source
+  // or before loading are queued; other loads cost one map lookup.
+  function onImageLoad(event) {
+    const img = event.target;
+    if (!observer || img?.localName !== "img") return;
+    const seen = logoSeen.get(img);
+    if (seen === undefined || seen === (img.currentSrc || img.src)) return;
+    pendingTrees.add(img);
+    schedule();
   }
 
   function onSheetLoad(event) {
@@ -3874,6 +3921,7 @@
     stopYouTubeTheme = null;
     document.removeEventListener("load", onSheetLoad, true);
     document.removeEventListener("loadeddata", onSheetLoad, true);
+    document.removeEventListener("load", onImageLoad, true);
     for (const type of INTERACTION_EVENTS) document.removeEventListener(type, onInteraction, true);
     if (flushHandle !== null) {
       if (flushTimer) clearTimeout(flushHandle); else cancelAnimationFrame(flushHandle);
@@ -3950,11 +3998,12 @@
     root.removeAttribute("data-oled-night-amazon-search");
     for (const name of ["--oled-night-page", "--oled-night-youtube-primary", "--oled-night-youtube-secondary", "--oln-light", "--oln-strength"]) root.style.removeProperty(name);
     document.getElementById("oled-night-sheet")?.remove();
-    logoChecked = new WeakSet();
+    logoChecked = new WeakMap();
+    logoSeen = new WeakMap();
     logoBudget = 80;
     for (const scope of [document, ...shadowRoots]) {
       for (const resource of scope.querySelectorAll('[data-oled-night-logo-filter]')) resource.remove();
-      if (scope !== document) for (const type of INTERACTION_EVENTS) scope.removeEventListener(type, onInteraction, true);
+      if (scope !== document) { for (const type of INTERACTION_EVENTS) scope.removeEventListener(type, onInteraction, true); scope.removeEventListener("load", onImageLoad, true); }
       for (const node of scope.querySelectorAll(`[${MEASURE}], [${NOANIM}], [${MEASURE_SELF}], [${NOANIM_SELF}], [${MEASURE_PSEUDO}], [${MEASURE_ROOT}], [${LOGO}], [${LOGO_INK}], [${SHARED_BG}]`)) {
         for (const name of [MEASURE, NOANIM, MEASURE_SELF, NOANIM_SELF, MEASURE_PSEUDO, MEASURE_ROOT, LOGO, LOGO_INK, SHARED_BG]) node.removeAttribute(name);
       }
@@ -4073,6 +4122,7 @@
     document.addEventListener("visibilitychange", scheduleRefresh);
     document.addEventListener("load", onSheetLoad, true);
     document.addEventListener("loadeddata", onSheetLoad, true);
+    document.addEventListener("load", onImageLoad, true);
     for (const type of INTERACTION_EVENTS) document.addEventListener(type, onInteraction, true);
     process([root], [], true);
     observer.takeRecords();
