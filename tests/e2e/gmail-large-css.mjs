@@ -16,7 +16,7 @@ ${rules}
 body.visual-mode .late{background:#fff;color:#111}
 .bkK>.nH{background-color:rgba(51,51,51,.8);border-radius:16px;margin-bottom:16px}
 </style></head><body><input id="search" aria-label="Search mail"><div class="late">Late rule</div><div class="bkK"><div class="nH" id="panel"><b>Primary</b></div></div><div id="history">${rows}</div>
-<script>let sequence=0;const search=document.getElementById('search');search.addEventListener('input',()=>document.body.classList.toggle('unused-inbox-state',++sequence%2===0));const fieldRule=[...document.styleSheets[18].cssRules].find(rule=>rule.selectorText==='input');search.addEventListener('keydown',event=>{if(event.key==='ArrowUp')fieldRule.style.backgroundColor='#fff'});</script></body></html>`;
+<script>let sequence=0;const search=document.getElementById('search');search.addEventListener('input',()=>document.body.classList.toggle('unused-inbox-state',++sequence%2===0));const fieldRule=[...[...document.styleSheets].filter(sheet=>!sheet.ownerNode?.id?.startsWith('oled-night-'))[18].cssRules].find(rule=>rule.selectorText==='input');search.addEventListener('keydown',event=>{if(event.key==='ArrowUp')fieldRule.style.backgroundColor='#fff'});</script></body></html>`;
 let browser;const results=[];
 try{
  browser=await launchChrome({onEvent:m=>{if(m.method==='Fetch.requestPaused')browser.send('Fetch.fulfillRequest',{requestId:m.params.requestId,responseCode:200,responseHeaders:[{name:'Content-Type',value:'text/html'}],body:Buffer.from(fixture).toString('base64')},m.sessionId).catch(e=>console.error(e.message))}});

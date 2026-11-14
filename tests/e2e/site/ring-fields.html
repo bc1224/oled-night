@@ -1,0 +1,57 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Synthetic design-system form</title><style>
+/* Models a utility design system whose fields have no border: a translucent
+   white fill plus a one-pixel inset ring shadow, with low-alpha neutral
+   borders on option cards and site-drawn radio markers. The neutrals use
+   relative color syntax, which computed style reports as hsl(none ...). */
+:root{--ink:#0b0b0b;--line:hsl(from var(--ink) h s l / 10%);--line-strong:hsl(from var(--ink) h s l / 20%);--field:#ffffff80;--accent:#2c7bd4;--accent-pale:#e7f1fb;--accent-line:#86b6ef}
+*{box-sizing:border-box;border:0 solid}
+body{margin:0;background:#f9f9f7;color:var(--ink);font:16px/1.4 Arial}
+main{display:flex;flex-direction:column;gap:14px;width:640px;max-width:92vw;margin:0 0 0 32px;padding:20px 16px}
+h1{margin:0;font-size:22px}
+.surface{background:#f9f9f7}.group{display:flex;flex-direction:column;gap:8px}
+.card{display:flex;gap:12px;align-items:flex-start;width:100%;padding:10px 12px;border-width:1px;border-color:var(--line);border-radius:8px;background:#fcfcfb;cursor:pointer}
+.card[data-checked]{border-color:var(--accent-line);background:var(--accent-pale)}
+.mark{display:flex;flex:none;align-items:center;justify-content:center;width:16px;height:16px;margin-top:3px;border-width:1px;border-color:var(--line-strong);border-radius:9999px;background:transparent}
+.card[data-checked] .mark{border-width:0;background:var(--accent)}
+.dot{display:none;width:6px;height:6px;border-radius:9999px;background:white}
+.card[data-checked] .dot{display:block}
+.hint{color:#0b0b0ba6;font-size:14px}
+.field{appearance:none;display:block;width:100%;padding:8px 12px;border:0;border-radius:6px;outline:none;font:inherit;color:inherit;background:var(--field);box-shadow:inset 0 0 0 1px var(--line)}
+.field:focus-visible{box-shadow:inset 0 0 0 1px #f9f9f7,0 0 0 1px var(--accent),0 0 6px 1px #2c7bd499}
+.field[data-invalid]{box-shadow:inset 0 0 0 1px #d43c3c}
+textarea.field{height:72px;resize:vertical}
+.trigger{display:flex;justify-content:space-between;align-items:center;text-align:left;cursor:pointer}
+/* A light grey ring is the same boundary in another common dialect. */
+.ring-light{background:white;box-shadow:inset 0 0 0 1px #d1d5db,0 1px 2px 0 #0000000d}
+/* A dark-themed panel outlines its field with a translucent white ring. */
+.night{position:absolute;left:720px;top:20px;width:300px;display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:8px;background:#18191b;color:#edeef0}
+.ring-night{background:transparent;box-shadow:inset 0 0 0 1px #fff3,inset 0 1px 1px #fff3,inset 0 -1px 1px #000000b3}
+/* Decorative depth and page-matched gap rings must stay as they were. */
+.raised{padding:10px;border-radius:8px;background:white;box-shadow:0 1px 2px 0 #0000000d,0 2px 8px 0 #0000001a}
+.glow{padding:10px;border-radius:8px;background:white;box-shadow:0 0 0 6px #0000000d}
+.avatar{display:inline-block;width:28px;height:28px;border-radius:9999px;background:#2c7bd4;box-shadow:0 0 0 2px #f9f9f7}
+.avatar+.avatar{margin-left:-8px;background:#d4722c}
+</style></head><body><main class="surface" id="page">
+<h1>Account type</h1>
+<div class="group" role="radiogroup" aria-label="Account type">
+<span class="card" role="radio" aria-checked="true" data-checked tabindex="0" id="card-checked"><span class="mark" id="mark-checked"><span class="dot" id="dot-checked"></span></span><span><b>Company</b><br><span class="hint">A public or private company.</span></span></span>
+<span class="card" role="radio" aria-checked="false" tabindex="-1" id="card"><span class="mark" id="mark"><span class="dot" id="dot"></span></span><span><b>Individual maintainer</b><br><span class="hint">You maintain an open-source project.</span></span></span>
+<span class="card" role="radio" aria-checked="false" aria-disabled="true" data-disabled tabindex="-1" id="card-disabled"><span class="mark" id="mark-disabled"><span class="dot"></span></span><span><b>Public institution</b><br><span class="hint">Not available for this account.</span></span></span>
+</div>
+<label for="country">Country of residence</label>
+<select class="field" id="country"><option>United States</option><option>Canada</option></select>
+<label id="region-label">Region</label>
+<button type="button" class="field trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="region-label" id="region"><span>Select a region</span><span aria-hidden="true">v</span></button>
+<label for="name">Project name</label>
+<input class="field" id="name" placeholder="Synthetic project">
+<label for="work">Describe the work</label>
+<textarea class="field" id="work"></textarea>
+<label for="invalid">Reference</label>
+<input class="field" id="invalid" data-invalid value="bad value">
+<label for="light-ring">Team</label>
+<input class="field ring-light" id="light-ring" value="Synthetic team">
+<div class="night" id="night"><label for="dark-ring">Dark panel field</label><input class="field ring-night" id="dark-ring" value="Synthetic dark panel"></div>
+<div class="raised" id="raised">Raised summary card</div>
+<div class="glow" id="glow">Soft halo card</div>
+<div id="avatars"><span class="avatar" id="avatar"></span><span class="avatar"></span></div>
+</main></body></html>
