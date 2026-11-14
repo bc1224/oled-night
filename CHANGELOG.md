@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.92
+
+- Text that a site forces to a dark color from inside a CSS cascade layer is readable again. Sites built with Tailwind 4 mark utilities such as `text-secondary!` as `!important` inside `@layer utilities`, and a layered important rule outranks any unlayered one, so article text stayed dim grey and headings stayed black on black (a Saily blog article, for example). OLED Night's own forced colors now sit in a cascade layer declared before the page's layers, so they win. The same applies to backgrounds and borders forced that way.
+- Forms whose fields have no real border (the outline is a one-pixel ring shadow, as on the Claude Console and many Tailwind or Radix based sites) now keep a visible field outline on black. Text boxes, dropdowns and text areas no longer blend into the page.
+- Option cards used as radio buttons or checkboxes: the small round or square marker now has a clear edge, the selected marker keeps its accent color with a light dot, and the card itself keeps a quiet border.
+- Dark-themed components that outline a field with a translucent white ring (Radix Themes "classic" fields, for example) keep that outline instead of having it dimmed away.
+- Colors written with CSS relative color syntax (`hsl(from ...)`, `hwb(...)`) are now understood, so borders, text and shadows that use them are adapted instead of being left dark on dark.
+- Colored state rings (errors, focus), soft drop shadows, wide halos and page-colored gap rings are unchanged.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.91
 
 - Light text is no longer left on a light surface. OLED Night lightens text on the assumption that the surface behind it turns dark; it now checks that it did. When a surface stays light, OLED Night darkens it, or keeps the text dark when the light paint is meant to stay (for example a white matte over a product photo).

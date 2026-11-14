@@ -63,7 +63,8 @@ ${icon}{fill:var(--oled-night-youtube-primary) !important;}`;
     doc.head.appendChild(sheet);
     const refresh = () => {
       timer = null;
-      const text = `${ROOT}{${POLYMER_INK}${palette(doc.styleSheets, value => CSS.supports("color", value))}}\n${literalPaint()}`;
+      // Same cascade layer as the main theme sheet, so their rules keep their order.
+      const text = `@layer oled-night{${ROOT}{${POLYMER_INK}${palette(doc.styleSheets, value => CSS.supports("color", value))}}\n${literalPaint()}}`;
       if (sheet.textContent !== text) sheet.textContent = text;
     };
     const schedule = () => { if (timer === null) timer = setTimeout(refresh, 50); };

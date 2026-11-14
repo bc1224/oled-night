@@ -178,7 +178,7 @@ try {
   await page.eval(readFileSync(join(root,'docs/lab/audit.js'),'utf8'));
   checks.push(...await proof('large-updates',await page.eval(`(${largeUpdatesScenario.toString()})()`)));
   await page.eval(`document.querySelector('.row').classList.add('hl')`);await wait(120);
-  add('shared background declarations remain bounded',await page.eval(`(()=>{const rules=[...document.getElementById('oled-night-sheet').sheet.cssRules].filter(r=>r.selectorText?.includes('data-oled-night-bg'));return rules.length>0&&rules.length<=128})()`));
+  add('shared background declarations remain bounded',await page.eval(`(()=>{const flat=list=>[...list].flatMap(r=>r.selectorText?[r]:r.cssRules?flat(r.cssRules):[]),rules=flat(document.getElementById('oled-night-sheet').sheet.cssRules).filter(r=>r.selectorText.includes('data-oled-night-bg'));return rules.length>0&&rules.length<=128})()`));
   await settings(false);
   add('disable removes shared paint and restores native selected row',await page.eval(`!document.querySelector('[data-oled-night-bg]')&&getComputedStyle(document.querySelector('.row')).backgroundColor==='rgb(242, 246, 252)'`));
   await settings(true);

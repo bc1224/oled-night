@@ -95,3 +95,26 @@ for (const host of ["notreddit.com", "reddit.com.example.org", "idmsa.apple.com.
 // Google Calendar's barely blue fields stay near-neutral instead of navy.
 assert.match(colors.mapBackground(colors.parseColor("rgb(240, 244, 249)"), "oled"), /^hsl\(\d+ 15% calc\(6%/);
 assert.match(colors.mapBackground(colors.parseColor("rgb(233, 238, 246)"), "oled"), /^hsl\(\d+ 21% calc\(6%/);
+
+// A zero-offset, zero-blur hairline shadow is a border drawn as a ring
+// (utility "ring-1", borderless design-system fields). It must stay a
+// visible boundary on a dark surface, like a mapped border.
+const ringEdge = 'rgb(255 255 255 / calc(12% + 18% * var(--oln-strength, 0.72)))';
+assert.equal(colors.mapShadow('hsl(none 0% 4.31373% / 0.1) 0px 0px 0px 1px inset', 'oled'), ringEdge + ' 0px 0px 0px 1px inset');
+assert.equal(colors.mapShadow('rgba(0, 0, 0, 0.2) 0px 0px 0px 1px', 'soft'), ringEdge + ' 0px 0px 0px 1px');
+assert.equal(colors.mapShadow('rgb(209, 213, 219) 0px 0px 0px 1px inset', 'oled'), ringEdge + ' 0px 0px 0px 1px inset');
+assert.equal(colors.mapShadow('rgb(209, 213, 219) 0px 0px 0px 2px inset, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px', 'oled'), ringEdge + ' 0px 0px 0px 2px inset, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px');
+// Rings that are not neutral boundaries keep their existing treatment.
+assert.equal(colors.mapShadow('rgb(212, 60, 60) 0px 0px 0px 1px inset', 'oled'), null);
+assert.equal(colors.mapShadow('rgba(0, 0, 0, 0.05) 0px 0px 0px 1px', 'oled'), null);
+assert.equal(colors.mapShadow('rgba(0, 0, 0, 0.1) 0px 0px 0px 6px', 'oled'), null);
+assert.equal(colors.mapShadow('rgba(0, 0, 0, 0.2) 0px 0px 0px 1px', 'crush'), null);
+assert.match(colors.mapShadow('rgb(255, 255, 255) 0px 0px 0px 2px', 'oled'), /^rgb\(calc\(14 \+ 10 \*/);
+assert.match(colors.mapShadow('rgb(249, 249, 247) 0px 0px 0px 1px inset, rgb(44, 132, 219) 0px 0px 0px 1px', 'oled'), /^rgb\(calc\(14 \+ 10 \*.*\) 0px 0px 0px 1px inset, rgb\(44, 132, 219\) 0px 0px 0px 1px$/);
+// A translucent light ring cannot be a page-matched gap ring. Dark-themed
+// design systems use it as the field boundary, so it stays a boundary.
+assert.equal(colors.mapShadow('rgba(217, 237, 255, 0.25) 0px 0px 0px 1px inset', 'oled'), ringEdge + ' 0px 0px 0px 1px inset');
+assert.match(colors.mapShadow('rgba(255, 255, 255, 0.2) 0px 0px 0px 1px inset, rgba(255, 255, 255, 0.2) 0px 1px 1px 0px inset, rgba(0, 0, 0, 0.7) 0px -1px 1px 0px inset', 'oled'),
+  /^rgb\(255 255 255 \/ calc\(12% \+ 18% \* var\(--oln-strength, 0\.72\)\)\) 0px 0px 0px 1px inset, rgb\(calc\(14 \+ 10 \*.*\/ 0\.2\) 0px 1px 1px 0px inset, rgba\(0, 0, 0, 0\.7\) 0px -1px 1px 0px inset$/);
+assert.match(colors.mapShadow('rgba(255, 255, 255, 0.8) 0px 0px 0px 2px', 'oled'), /^rgb\(calc\(14 \+ 10 \*/);
+console.log('Hairline ring shadows map to visible boundaries');

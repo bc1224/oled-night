@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.91";
+  const VERSION = "0.6.92";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -12,6 +12,13 @@
   const ICON_PARTS = "path, circle, rect, ellipse, polygon, polyline, line, text, use, g";
   const CHART_PARTS = `${ICON_PARTS}, stop`;
   const MARK = "data-oled-night";
+  // Every forced (!important) rule of the theme lives in this cascade layer.
+  // A layered important declaration outranks every unlayered one, and among
+  // layers the first declared wins. Utility frameworks force colors that way
+  // (an important text utility inside "@layer utilities"), which no selector
+  // specificity can answer. Unforced declarations stay outside the layer,
+  // where they keep competing with the page by specificity.
+  const LAYER = "oled-night";
   // Document metadata never paints. Marking it also breaks frameworks that
   // compare head tags by isEqualNode (Next.js re-inserts, so scripts run twice).
   const NON_RENDERED = "head, script, style, link, meta, noscript, template, title, base";
@@ -281,6 +288,8 @@
   let shadowDiscoveryFrame = null;
   let handledInteractions = new WeakSet();
   let shadowSheet = null;
+  let layerOrder = null;
+  let layerRepairs = 0;
   let shadowHealthTimer = null;
 
   const colorsApi = () => globalThis.OledNightColors;
@@ -789,6 +798,32 @@
     return horizontal || vertical;
   }
 
+  // A design system can put role="radio"/"checkbox" on the whole option card
+  // and draw the unchecked marker as a small bordered child. That edge is the
+  // control boundary, not a decorative separator. Geometry is checked first
+  // so ordinary bordered elements never pay for the ancestor lookup.
+  function stateMarkerHost(element, computed) {
+    const width = parseFloat(computed.width), height = parseFloat(computed.height);
+    if (!(width >= 10 && width <= 28) || Math.abs(width - height) > 2 || element.textContent.trim()) return null;
+    const host = element.parentElement?.closest('[role="radio"], [role="checkbox"]');
+    return host && !host.matches(':disabled, [aria-disabled="true"], [data-disabled]') ? host : null;
+  }
+
+  function isStateMarker(element, computed) {
+    const fill = colorsApi().parseColor(computed.backgroundColor);
+    if (fill && fill.a >= 0.5 && colorsApi().luminance(fill) < 0.8) return false;
+    return !!stateMarkerHost(element, computed);
+  }
+
+  // The selected marker's accent fill is state ink with its own light glyph.
+  // Darkened like a surface it disappears into the selected card around it.
+  function checkedStateMarker(element, computed) {
+    const fill = colorsApi().parseColor(computed.backgroundColor);
+    if (!fill || fill.a < 0.5 || colorsApi().chroma(fill) <= 0.15 || computed.backgroundImage !== "none") return false;
+    const luminance = colorsApi().luminance(fill);
+    return luminance >= 0.08 && luminance <= 0.6 && !!stateMarkerHost(element, computed)?.matches('[aria-checked="true"]');
+  }
+
   // Some compact controls draw their icon with thin neutral background bars.
   // Measure authored width/height, so rotating a hamburger into a close glyph
   // does not turn its thin stroke into a square surface. Exclude separators,
@@ -951,6 +986,14 @@
     if (thumb) found.bg = thumb;
     const radioMarker = siblingRadioMarker(element, computed, ctx);
     if (radioMarker) found.bg = radioMarker;
+    if ((mode === "oled" || mode === "soft") && found.bg && checkedStateMarker(element, computed)) found.bg = computed.backgroundColor;
+    // Its light inner dot is the same state ink, not a surface to darken.
+    if ((mode === "oled" || mode === "soft") && found.bg && !element.childElementCount && computed.backgroundImage === "none" &&
+        parseFloat(computed.width) <= 16 && parseFloat(computed.height) <= 16 && !element.textContent.trim()) {
+      const glyph = colors.parseColor(computed.backgroundColor), marker = element.parentElement;
+      if (glyph?.a >= .5 && colors.chroma(glyph) <= .15 && colors.luminance(glyph) > .8 && marker &&
+          checkedStateMarker(marker, ctx.style(marker))) found.bg = colors.mapForeground(glyph, 1);
+    }
     // Apple-style checkboxes hide the native input and paint its label cover.
     // That inset shadow is the control boundary, not a decorative dark shadow.
     if ((mode === "oled" || mode === "soft") && element.classList.contains("form-input__label__cover") &&
@@ -1136,8 +1179,12 @@
       if (computed[`border${side}Width`] === "0px" || computed[`border${side}Style`] === "none") continue;
       if (visibleControlBoundary === undefined) {
         const type = element.localName === "input" ? element.type : null, role = element.getAttribute("role");
-        visibleControlBoundary = (type === "checkbox" || type === "radio" || role === "checkbox" || role === "radio" || role === "switch") &&
-          !element.matches(':disabled, [aria-disabled="true"]');
+        // A role on a whole option card labels the card; its marker child
+        // carries the boundary. Only a compact role element is the control.
+        const compact = parseFloat(computed.width) <= 72 && parseFloat(computed.height) <= 40;
+        visibleControlBoundary = (type === "checkbox" || type === "radio" ||
+          ((role === "checkbox" || role === "radio" || role === "switch") && compact) ||
+          isStateMarker(element, computed)) && !element.matches(':disabled, [aria-disabled="true"]');
       }
       const edge = colors.parseColor(computed[`border${side}Color`]);
       // Email "bulletproof" buttons pad a link with a thick border in its own
@@ -2347,7 +2394,7 @@
     if (!scope || scope.mayAnimate) return;
     const mode = modeFor(), key = `${scope.epoch}:${mode}`;
     if (sharedBackgroundScope === key || !['oled', 'soft'].includes(mode)) return;
-    const sheet = document.getElementById('oled-night-sheet')?.sheet;
+    const sheet = themeLayer();
     if (!sheet) return;
     const colors = colorsApi();
     const candidates = new Map();
@@ -2363,8 +2410,8 @@
       scope.dynamicToken = `c${scope.epoch}`;
       const rows = oldRows || document.createElement('style'); rows.id = 'oled-night-row-paint';
       const on = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}])`;
-      rows.textContent = scope.rules.filter(rule => rule.background).map(rule =>
-        `${rule.selector}[${SHARED_BG}="${scope.dynamicToken}"][${MARK}~="bg"]${on}${rule.priority[0] ? ':is(*, #oled-night-important-bg-priority)' : ''}{background-color:${colors.mapBackground(rule.background, mode)} !important}`).join('\n');
+      rows.textContent = `@layer ${LAYER}{${scope.rules.filter(rule => rule.background).map(rule =>
+        `${rule.selector}[${SHARED_BG}="${scope.dynamicToken}"][${MARK}~="bg"]${on}${rule.priority[0] ? ':is(*, #oled-night-important-bg-priority)' : ''}{background-color:${colors.mapBackground(rule.background, mode)} !important}`).join('\n')}}`;
       if (!oldRows) (document.head || document.documentElement).append(rows);
     } else oldRows?.remove();
     for (const {background} of scope.rules) {
@@ -3562,6 +3609,7 @@
   }
 
   function onMutations(records, scheduleBatch = true) {
+    if (layerOrder) ensureLayerOrder();
     const ownBackgrounds = recentBackgroundWrites;
     recentBackgroundWrites = new Map();
     const ownShared = recentSharedBackgrounds;
@@ -3696,7 +3744,12 @@
     if (scheduleBatch && (pendingTrees.size || pendingSelf.size || polarityDirty)) schedule(!nativeTextInputTurn);
   }
 
-  function overrideRules() {
+  const ACCENT = `input[${MARK}~="bg"], textarea[${MARK}~="bg"], select[${MARK}~="bg"], button[${MARK}~="bg"] { accent-color: #66a3ff; }`;
+  const propertyRules = () => PROPS.map(key => `@property --oln-${key} { syntax: "*"; inherits: false; }`).join("\n");
+
+  // The document copy is wrapped in the theme layer, which holds neither
+  // @property rules nor unforced declarations; a shadow root gets all of it.
+  function overrideRules(layered = false) {
     // Use ID-level specificity without requiring an ID on page elements.
     // Multi-class + tag !important selection rules must not beat our colors.
     // Consent widgets chain up to three IDs with !important (OneTrust's
@@ -3712,7 +3765,7 @@
          retain style data throughout unrelated descendants. Theme controls
          such as --oln-strength still inherit. Generated-paint variables must
          also reach their originating element's before/after/placeholder. */
-      ${PROPS.map(key => `@property --oln-${key} { syntax: "*"; inherits: false; }`).join("\n")}
+      ${layered ? "" : propertyRules()}
       [${MARK}~="bg"]${on} { background-color: var(--oln-bg) !important; }
       [${MARK}~="img"]${on} { background-image: var(--oln-img) !important; }
       [${MARK}~="shadow"]${on} { box-shadow: var(--oln-shadow) !important; }
@@ -3764,7 +3817,8 @@
       [${MARK}~="after-img"]${onPseudo}::after { --oln-after-img: inherit !important; background-image: var(--oln-after-img) !important; }
       [${MARK}~="after-shadow"]${onPseudo}::after { --oln-after-shadow: inherit !important; box-shadow: var(--oln-after-shadow) !important; }
       [${MARK}~="after-fg"]${onPseudo}::after { --oln-after-fg: inherit !important; color: var(--oln-after-fg) !important; }
-      input[${MARK}~="bg"], textarea[${MARK}~="bg"], select[${MARK}~="bg"], button[${MARK}~="bg"] { color-scheme: dark !important; accent-color: #66a3ff; }
+      input[${MARK}~="bg"], textarea[${MARK}~="bg"], select[${MARK}~="bg"], button[${MARK}~="bg"] { color-scheme: dark !important; }
+      ${layered ? "" : ACCENT}
     `;
   }
 
@@ -3792,7 +3846,7 @@
     root.setAttribute("data-oled-night-amazon-search", "");
     const amazon = 'html[data-oled-night-amazon-search]:is(*, #oled-night-profile-priority#oled-night-profile-priority#oled-night-profile-priority#oled-night-profile-priority)';
     const style = document.getElementById("oled-night-sheet");
-    style.appendChild(document.createTextNode(`
+    style.appendChild(document.createTextNode(`@layer ${LAYER} {
       ${amazon} {
         --oln-amazon-ink: hsl(0 0% var(--oln-light, 88%));
         --oln-amazon-muted: hsl(0 0% max(40%, calc(var(--oln-light, 88%) - 16%)));
@@ -3820,7 +3874,7 @@
       ${amazon} :is(.s-image, .s-image-square-aspect img, .s-product-image-container img) { mix-blend-mode: normal !important; }
       ${amazon} :is(.a-button-primary, .a-button-primary .a-button-text, .a-button-primary .a-button-inner, .a-button-primary .a-icon, #nav-search-submit-text) { color: #0f1111 !important; }
       ${amazon} :is(.a-box, .puis-card-border, .s-pagination-item, .a-divider-normal) { border-color: #424449 !important; }
-    `));
+    }`));
   }
 
   function installSheet() {
@@ -3830,6 +3884,8 @@
     const sheet = document.createElement("style");
     sheet.id = "oled-night-sheet";
     sheet.textContent = `
+      ${propertyRules()}
+      @layer ${LAYER} {
       ${root}:not([data-oled-night-page="none"]), ${root}:not([data-oled-night-page="none"]) body { color-scheme: dark !important; }
       ${surface}:not([data-oled-night-page="none"]), ${surface}:not([data-oled-night-page="none"]) body { background: var(--oled-night-page, #000) !important; }
       /* With a background on the root, body paints its own as a box, above
@@ -3842,12 +3898,11 @@
          otherwise start from our black, and a light page would read as dark. */
       html[data-oled-night-root]:is([${MEASURE}], [${MEASURE_ROOT}]), html[data-oled-night-root]:is([${MEASURE}], [${MEASURE_ROOT}]) body { transition: none !important; }
       ${surface}[data-oled-night-transparent-frame]:not([data-oled-night-page="none"]), ${surface}[data-oled-night-transparent-frame]:not([data-oled-night-page="none"]) body { background: transparent !important; }
-      ${overrideRules()}
+      ${overrideRules(true)}
       html[data-oled-night-root] :focus-visible { outline-color: #66a3ff !important; }
       /* Both properties inherit. A descendant-wide highlight rule makes Blink
          maintain highlight paint on every changing row, even with no range
          selected. Set one document highlight and let nested text inherit it. */
-      ${root}:not([data-oled-night-page="none"]) { scrollbar-color: rgb(58 58 66) transparent; }
       ${root}:not([data-oled-night-page="none"])::selection { background: rgb(38 79 140) !important; color: #fff !important; }
       /* Gecko still uses originating-element selection styles. Its prefixed
          alias supplies that fallback without a descendant highlight in Blink. */
@@ -4000,8 +4055,39 @@
       html[data-oled-night-chatgpt]:is([data-theme="dark"], .dark) .codex-docx-preview :is(img, picture, video, canvas, object, embed) {
         filter: invert(1) hue-rotate(180deg) !important;
       }
+      }
+      ${ACCENT}
+      ${root}:not([data-oled-night-page="none"]) { scrollbar-color: rgb(58 58 66) transparent; }
     `;
     (document.head || document.documentElement).appendChild(sheet);
+    layerRepairs = 0;
+    ensureLayerOrder();
+  }
+
+  // The layer statement must come before every page stylesheet, including one
+  // a page later inserts at the top of its head. Bounded, in case a page
+  // insists on being first.
+  function ensureLayerOrder() {
+    const parent = document.head || document.documentElement;
+    if (layerOrder?.parentNode === parent) {
+      let node = layerOrder.previousElementSibling;
+      while (node && (node.id?.startsWith("oled-night-") ||
+          !(node.localName === "style" || (node.localName === "link" && /\bstylesheet\b/i.test(node.rel || ""))))) node = node.previousElementSibling;
+      if (!node) return;
+    }
+    if (layerRepairs++ >= 40) return;
+    if (!layerOrder) {
+      layerOrder = document.createElement("style");
+      layerOrder.id = "oled-night-layer-order";
+      layerOrder.textContent = `@layer ${LAYER};`;
+    }
+    parent.prepend(layerOrder);
+  }
+
+  function themeLayer() {
+    const rules = document.getElementById("oled-night-sheet")?.sheet?.cssRules;
+    if (rules) for (const rule of rules) if (rule.name === LAYER && rule.cssRules) return rule;
+    return null;
   }
 
   function disable() {
@@ -4097,6 +4183,8 @@
     root.removeAttribute("data-oled-night-amazon-search");
     for (const name of ["--oled-night-page", "--oled-night-youtube-primary", "--oled-night-youtube-secondary", "--oln-light", "--oln-strength"]) root.style.removeProperty(name);
     document.getElementById("oled-night-sheet")?.remove();
+    layerOrder?.remove();
+    layerOrder = null;
     logoChecked = new WeakMap();
     logoSeen = new WeakMap();
     logoBudget = 80;

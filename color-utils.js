@@ -3,9 +3,11 @@
 
   // Chrome reports computed colors as rgb()/rgba(), but sites using modern
   // color spaces (oklch, color-mix, display-p3...) come back as color(srgb ...),
-  // oklch(), oklab(), lab() or lch(). All of them must be understood.
-  const COLOR_TOKEN = /(?:rgba?|color|oklch|oklab|lch|lab)\([^()]*\)/gi;
-  const COLOR_FN = /^\s*(rgba?|color|oklch|oklab|lch|lab)\(([^()]*)\)\s*$/i;
+  // oklch(), oklab(), lab() or lch(). Relative color syntax keeps its authored
+  // function, so hsl(from ...) is reported as "hsl(none 0% 4% / 0.1)" and
+  // hwb(from ...) as hwb(). All of them must be understood.
+  const COLOR_TOKEN = /(?:rgba?|hsla?|hwb|color|oklch|oklab|lch|lab)\([^()]*\)/gi;
+  const COLOR_FN = /^\s*(rgba?|hsla?|hwb|color|oklch|oklab|lch|lab)\(([^()]*)\)\s*$/i;
 
   const clamp01 = (value) => Math.max(0, Math.min(1, value));
   const encode = (linear) => {
@@ -19,6 +21,30 @@
     const value = parseFloat(token);
     if (Number.isNaN(value)) return 0;
     return token.endsWith("%") ? (value / 100) * percentScale : value;
+  }
+
+  // Percentages may be written with or without their sign in hsl()/hwb().
+  const percent = (token) => (String(token || "").endsWith("%") ? num(token, 1) : num(token) / 100);
+  function hueDegrees(token) {
+    const value = num(token), unit = String(token || "").toLowerCase();
+    return unit.endsWith("turn") ? value * 360 : unit.endsWith("grad") ? value * 0.9 : unit.endsWith("rad") ? (value * 180) / Math.PI : value;
+  }
+
+  function hslColor(h, s, l, a) {
+    const hue = ((h % 360) + 360) % 360, sat = clamp01(s), light = clamp01(l);
+    const m = sat * Math.min(light, 1 - light);
+    const channel = (n) => {
+      const k = (n + (hue / 30)) % 12;
+      return Math.round((light - (m * Math.max(-1, Math.min(k - 3, 9 - k, 1)))) * 255);
+    };
+    return { r: channel(0), g: channel(8), b: channel(4), a };
+  }
+
+  function hwbToRgb(h, white, black, a) {
+    const w = clamp01(white), k = clamp01(black);
+    if (w + k >= 1) { const grey = Math.round((w / (w + k)) * 255); return { r: grey, g: grey, b: grey, a }; }
+    const pure = hslColor(h, 1, 0.5, a), mix = (value) => Math.round((((value / 255) * (1 - w - k)) + w) * 255);
+    return { r: mix(pure.r), g: mix(pure.g), b: mix(pure.b), a };
   }
 
   function fromLinear(r, g, b, a) {
@@ -69,11 +95,19 @@
     const [body, alphaPart] = match[2].split("/");
     const parts = body.trim().split(/[\s,]+/).filter(Boolean);
     let alphaToken = alphaPart?.trim();
-    if (!alphaToken && (fn === "rgba" || (fn === "rgb" && parts.length === 4))) alphaToken = parts[3];
+    if (!alphaToken && /^(?:rgb|hsl)a?$/.test(fn)) alphaToken = parts[3];
     const a = alphaToken === undefined ? 1 : clamp01(num(alphaToken, 1));
     if (fn === "rgb" || fn === "rgba") {
       if (parts.length < 3) return null;
       return { r: num(parts[0], 255), g: num(parts[1], 255), b: num(parts[2], 255), a };
+    }
+    if (fn === "hsl" || fn === "hsla") {
+      if (parts.length < 3) return null;
+      return hslColor(hueDegrees(parts[0]), percent(parts[1]), percent(parts[2]), a);
+    }
+    if (fn === "hwb") {
+      if (parts.length < 3) return null;
+      return hwbToRgb(hueDegrees(parts[0]), percent(parts[1]), percent(parts[2]), a);
     }
     if (fn === "color") {
       const space = (parts.shift() || "").toLowerCase();
@@ -296,17 +330,37 @@
     return changed ? out : null;
   }
 
+  // A shadow layer with no offset, no blur and a one or two pixel spread is a
+  // border drawn as a ring (utility "ring-1", borderless design-system fields).
+  function isRingLayer(layer, token) {
+    const lengths = layer.replace(token, "").match(/-?[\d.]+(?:e-?\d+)?(?=px)/gi);
+    if (!lengths || lengths.length !== 4) return false;
+    const [x, y, blur, spread] = lengths.map(Number);
+    return x === 0 && y === 0 && blur === 0 && spread > 0 && spread <= 2;
+  }
+
   // Light shadows/glows (e.g. white fades above chat composers) become dark.
+  // Neutral rings become the same faint edge as a mapped border: left dark
+  // (or darkened with the surface) they would erase a field's only outline.
+  // Opaque near-white rings are gaps that match the page (stacked avatars,
+  // focus insets) and colored rings signal state; both keep their treatment.
+  // A translucent light ring cannot match a page: it is the boundary a
+  // dark-themed component draws on its own dark surface.
   function mapShadow(value, mode) {
     const text = String(value || "");
     if (!text || text === "none" || mode === "crush" || mode === "none") return null;
     let changed = false;
-    const out = text.replace(COLOR_TOKEN, (token) => {
+    const out = imageLayers(text).map((layer) => layer.replace(COLOR_TOKEN, (token) => {
       const color = parseColor(token);
-      if (!color || color.a < 0.08 || luminance(color) < 0.35) return token;
+      if (!color || color.a < 0.08) return token;
+      if (chroma(color) <= 0.15 && (luminance(color) <= 0.9 || color.a < 0.6) && isRingLayer(layer, token)) {
+        changed = true;
+        return mapBorder(color);
+      }
+      if (luminance(color) < 0.35) return token;
       changed = true;
       return mapBackground(color, mode);
-    });
+    })).join(",");
     return changed ? out : null;
   }
 
