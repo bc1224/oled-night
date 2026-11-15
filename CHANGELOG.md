@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.95
+
+- Typed text is visible again in text boxes on pages that OLED Night treats as already dark, such as the Bing home page with its photo wallpaper and the Zoom sign-in page. The white search or sign-in box turned dark, but the text inside the box stayed black. A white box counted as a light area to repaint only when it held text or other elements, and an input box holds neither, so its typed text was skipped. Text boxes, text areas and dropdowns now count too, and their typed text, placeholder and cursor turn light with the box.
+- Amazon search: several newer parts of the results page are readable on black.
+  - The Prime "FREE delivery" line no longer shows dark text on black.
+  - The same-day delivery carousel ("Delivered in 39 minutes") is dark, with light product names, ratings and delivery lines. The orange delivery time keeps its color.
+  - Sponsored carousel cards no longer show pale prices and titles on white.
+  - The "Narrow your search" tiles and the sort menu label are readable.
+  - The cart sidebar is dark, with a light subtotal and delivery note. Its quantity control stays white with dark text, so its icons stay visible.
+  - Many of these parts use Amazon's own color settings, which the page leaves unset. OLED Night now sets them, so later Amazon widgets that use the same settings turn dark too.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.94
 
 - Amazon search: the "+18 other colors/patterns" link under each product's color swatches is readable again. Its link text was turned light blue while the swatch row behind it stayed white (about 1.8:1); the swatch row is now black like the rest of the card, and the swatch colors are unchanged.

@@ -10,6 +10,24 @@ const card = `<div class="s-result-item" data-component-type="s-search-result">
   <span class="s-color-swatch-outer-circle"><span class="s-color-swatch-inner-circle-fill" style="background-color:#c0392b"></span></span>
   <div><a aria-label="+18 other colors/patterns" class="a-link-normal s-color-swatch-link" href="#"><u>+18</u></a></div></div></div>
   <span class="a-button a-button-primary"><button class="a-button-text">Add to cart</button></span></div></div>`;
+// Widgets that set their own colors (live search page, November 2026): the
+// Prime delivery line, the same-day carousel, sponsored carousel cards, the
+// "Narrow your search" tiles, a widget on Amazon's color tokens and the cart.
+const widgets = `<div class="s-widget-container"><div id="CardInstanceTest" class="a-section"><div>
+  <div class="a-section a-spacing-none a-padding-none qh-wrap"><div class="a-section qcx_desktopHeaderContainer__x">
+  <div class="qcx_desktopDeliveryTitle__x"><span id="carouselTitle">Delivered in </span><strong class="qcx_minutesFull__x" id="minutes">39 minutes</strong></div></div>
+  <div class="a-cardui-deck qcx_desktopCards__x"><div class="a-cardui qcx_desktopProductCard__x">
+  <span class="qcx_desktopProductNameShortTitle__x" id="deckName">Wireless headphones</span><span class="qcx_desktopRatingValue__x" id="deckRating">4.5</span>
+  <span class="qcx_desktopReviewCount__x" id="deckReviews">(1.3K)</span><span class="a-size-small qcx_desktopProductDeliveryText__x a-text-bold" id="deckDelivery">Delivered in 39 minutes</span>
+  </div></div></div></div></div></div>
+  <div class="s-result-item"><span class="a-icon-wrapper a-icon-prime-with-text"><span class="a-icon-text udm-secondary-delivery-message" id="primeLine">FREE delivery Tomorrow</span></span></div>
+  <ol class="a-carousel"><li class="a-carousel-card"><div class="sp_item" id="spCard"><span class="a-size-small a-color-base" id="spTitle">Sponsored headphones</span>
+  <span class="a-size-small a-color-secondary" id="spMuted">Typical price</span></div></li>
+  <li class="a-carousel-card s-tile"><div class="a-section scx-stt-tile-container" id="tile"><span id="tileLabel">Workout</span></div></li></ol>
+  <div class="token-widget" id="tokenCard"><span id="tokenText">Token colored text</span></div>`;
+const cart = `<div id="nav-flyout-ewc" class="nav-flyout"><div class="nav-flyout-body ewc-beacon"><div id="ewc-compact-body">
+  <span id="ewcSubtotal">Subtotal</span><span class="a-size-base a-color-price a-text-bold" id="ewcPrice">$25.99</span><span id="ewcShip">FREE Same-Day delivery</span>
+  <div class="a-stepper-inner-container" id="ewcStepper"><span id="ewcQty">1</span></div></div></div></div>`;
 const html = `<!doctype html><style>
   body,.puis-card-container{color:#0f1111;background:#fff}
   .a-color-base,.a-price{color:#0f1111!important}.a-color-secondary{color:#565959!important}
@@ -18,11 +36,16 @@ const html = `<!doctype html><style>
   .a-button-normal,.a-button-normal .a-button-inner{background:#fff}
   .s-color-swatch-container{display:flex;background:#fff}.s-color-swatch-inner-circle-fill{display:inline-block;width:12px;height:12px}
   .s-color-swatch-link{color:#2162a1}
-  </style><body><header><input id="twotabsearchtextbox"></header>
+  .qh-wrap,.a-cardui-deck{background:#f5f3ef}.a-cardui{background:#fff}[class*=DeliveryTitle]{color:#0f1111}[class*=minutesFull]{color:#ff6600}
+  [class*=ProductName],[class*=RatingValue],[class*=DeliveryText]{color:#0f1111}[class*=ReviewCount]{color:#565959}
+  .a-icon-prime-with-text{color:#0f1111}.sp_item{background:#fff}.scx-stt-tile-container{background:#f5f5f5;color:#0f1111}
+  .token-widget{background:var(--aok-sfs-color-page-primary-normal-bg,#fff);color:var(--aok-sfs-color-page-primary-normal-fg,#0f1111)}
+  .nav-flyout-body,#ewc-compact-body{background:#fff}.a-color-price{color:#b12704}.a-stepper-inner-container{background:#fff;color:#0f1111}
+  </style><body><header><input id="twotabsearchtextbox">${cart}</header>
   <div id="s-refinements"><ul><li class="s-sprite-grid"><span class="a-list-item"><a class="a-link-normal s-navigation-item">
   <span class="a-button a-button-normal a-button-toggle a-button-small buttonsprite"><span class="a-button-inner">
   <button class="a-button-text"><span class="a-size-base a-color-base" id="sizeLabel">M</span></button></span></span></a></span></li></ul></div>
-  <main id="search">${card.repeat(100)}</main></body>`;
+  <main id="search">${widgets}${card.repeat(100)}</main></body>`;
 const browser = await launchChrome({onEvent(event) {
   if (event.method === "Fetch.requestPaused") browser.send("Fetch.fulfillRequest", {
     requestId:event.params.requestId, responseCode:200,
@@ -66,6 +89,17 @@ try {
   for (const paint of initial.size) assert.ok(ratio(initial.sizeInk,paint)>=4.5,`Size filter label must reach 4.5:1: ${initial.sizeInk} on ${paint}`);
   assert.ok(ratio(initial.swatch.ink,initial.swatch.back)>=4.5,`Color swatch link must reach 4.5:1: ${initial.swatch.ink} on ${initial.swatch.back}`);
   assert.equal(initial.swatch.chip,"rgb(192, 57, 43)","Color swatch chips keep their own color");
+  const widgetInk = () => page.eval(`(() => {
+    const painted = node => { for (let n = node; n; n = n.parentElement) { const c = getComputedStyle(n).backgroundColor;
+      if (c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') return c; } return getComputedStyle(document.documentElement).backgroundColor; };
+    return Object.fromEntries(['carouselTitle','minutes','deckName','deckRating','deckReviews','deckDelivery','primeLine','spTitle','spMuted','tileLabel','tokenText','ewcSubtotal','ewcPrice','ewcShip','ewcQty']
+      .map(id => { const e = document.getElementById(id); return [id, {ink: getComputedStyle(e).color, back: painted(e)}]; }));
+  })()`);
+  const live = await widgetInk();
+  for (const [id, {ink, back}] of Object.entries(live)) assert.ok(ratio(ink, back) >= 4.5, `${id} must reach 4.5:1: ${ink} on ${back}`);
+  for (const id of ["deckName", "primeLine", "spTitle", "tileLabel", "tokenText", "ewcSubtotal"]) assert.ok(lum(live[id].back) < 0.05, `${id} sits on a dark surface: ${live[id].back}`);
+  assert.equal(live.minutes.ink, "rgb(255, 102, 0)", "The orange delivery time keeps its color");
+  assert.equal(live.ewcQty.back, "rgb(255, 255, 255)", "The cart quantity stepper keeps its white face for its dark icons");
   await page.eval(`document.querySelector('#search').insertAdjacentHTML('beforeend',${JSON.stringify(card.repeat(50))})`);
   await wait(150);
   assert.deepEqual(await probe(),initial,"New result cards must get the same palette without a scan");
@@ -78,6 +112,10 @@ try {
   assert.equal(restored.panel,"rgb(255, 255, 255)");
   assert.equal(restored.title,"rgb(15, 17, 17)");
   assert.deepEqual(restored.swatch,{ink:"rgb(33, 98, 161)",back:"rgb(255, 255, 255)",chip:"rgb(192, 57, 43)"});
+  const authored = await widgetInk();
+  assert.deepEqual(authored.tokenText, {ink:"rgb(15, 17, 17)", back:"rgb(255, 255, 255)"}, "Disabling restores Amazon's token fallbacks");
+  assert.deepEqual(authored.primeLine.ink, "rgb(15, 17, 17)");
+  assert.deepEqual(authored.ewcShip.back, "rgb(255, 255, 255)");
   await options.eval("chrome.storage.sync.set({extensionEnabled:true,siteRules:{'www.amazon.com':'invert'}})");
   await wait(250);
   assert.equal(await page.eval("document.documentElement.dataset.oledNightMode"),"invert");

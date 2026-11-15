@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.94";
+  const VERSION = "0.6.95";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -202,6 +202,7 @@
   const interactionSurfaces = new WeakSet();
   const SETTLE_MS = 400;
   const INTERACTION_EVENTS = ["pointerover", "pointerout", "pointerdown", "pointerup", "pointercancel", "focusin", "focusout", "input", "change", "keydown", "keyup"];
+  const TEXT_FIELD = 'textarea, select, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="image"], [type="hidden"], [type="button"], [type="submit"], [type="reset"])';
   const CONTROL = 'a, button, input, textarea, select, option, label, li, [role="option"], [role^="menuitem"], [role="button"], [role="combobox"], [aria-haspopup], [aria-expanded], [data-action], [contenteditable="true"], [tabindex]';
   // A row's hover/focus paints sibling cells, even when the event originates
   // inside a nested button or a checkbox's shadow root. Keep that state unit
@@ -939,8 +940,11 @@
     // A link inside a tinted notice bar (Gmail's yellow message bar) must not
     // take light ink while the bar around it keeps its native light hue.
     const uiScope = nativeBackdrop && element.closest(ctx.recolorLightRegions ? LIGHT_UI : DROPDOWN);
+    // A text field has no child text, yet its typed value is text. Without it
+    // a white search box (Bing) turns dark while its input keeps black ink.
     const lightIsland = nativeBackdrop && !nativeBackdrop.image && colors.luminance(nativeBackdrop.color) > 0.5 &&
-      ((colors.chroma(nativeBackdrop.color) < 0.1 && (element.childElementCount || element.textContent.trim() || element.shadowRoot?.childElementCount)) ||
+      ((colors.chroma(nativeBackdrop.color) < 0.1 && (element.childElementCount || element.textContent.trim() || element.shadowRoot?.childElementCount ||
+        element.matches(TEXT_FIELD))) ||
         (uiScope && paintsSurfaceWithin(element, uiScope, ctx)));
     const mode = lightIsland ? "oled" : localMode;
     mapSurface(computed, "", mode, found, element);
@@ -3890,6 +3894,18 @@
         --oln-amazon-ink: hsl(0 0% var(--oln-light, 88%));
         --oln-amazon-muted: hsl(0 0% max(40%, calc(var(--oln-light, 88%) - 16%)));
         --oln-amazon-panel: color-mix(in srgb, var(--oled-night-page) calc(var(--oln-strength, .72) * 100%), #414247);
+        /* Amazon's shared color tokens. The page leaves them undefined, so newer
+           widgets (same-day carousel, recommendation decks) use light fallbacks. */
+        --aok-sfs-color-page-primary-normal-bg: var(--oled-night-page);
+        --aok-sfs-color-page-secondary-normal-bg: var(--oln-amazon-panel);
+        --aok-sfs-color-page-primary-normal-fg: var(--oln-amazon-ink);
+        --aok-sfs-color-page-secondary-normal-fg: var(--oln-amazon-muted);
+        --aok-sfs-color-page-primary-normal-border: #424449;
+        --aok-sfs-color-page-secondary-normal-border: #424449;
+        --aok-sfs-color-link-normal-fg: #8fc5ff;
+        --aok-sfs-color-interaction-selected-content-hover-bg: #303137;
+        --aok-sfs-color-interaction-unselected-normal-bg: var(--oln-amazon-panel);
+        --aok-sfs-color-interaction-unselected-normal-fg: var(--oln-amazon-ink);
       }
       ${amazon} body, ${amazon} :is(#search, #a-page, .s-result-item, .puis-card-container, .s-card-container, .s-desktop-content, .s-navigation-indent-1, .a-box, .a-box-inner, .a-cardui, .a-section.a-text-center, .a-popover-inner, .a-popover-wrapper, .s-desktop-toolbar,
           /* White color swatch row behind the "+18 other colors" link. */ .s-color-swatch-container) {
@@ -3914,6 +3930,28 @@
       ${amazon} :is(.s-image, .s-image-square-aspect img, .s-product-image-container img) { mix-blend-mode: normal !important; }
       ${amazon} :is(.a-button-primary, .a-button-primary .a-button-text, .a-button-primary .a-button-inner, .a-button-primary .a-icon, #nav-search-submit-text) { color: #0f1111 !important; }
       ${amazon} :is(.a-box, .puis-card-border, .s-pagination-item, .a-divider-normal) { border-color: #424449 !important; }
+      /* Parts that hard-code their own colors: the Prime "FREE delivery" line,
+         the sort dropdown label, sponsored carousel cards, the "Narrow your
+         search" tiles, recommendation decks and the cart sidebar. */
+      ${amazon} :is(.a-icon-prime-with-text, .a-button-dropdown .a-button-text, .a-dropdown-label) { color: var(--oln-amazon-ink) !important; }
+      ${amazon} :is(#search .a-carousel-card > div, #ewc-compact-body, .ewc-compact-head, .ewc-item .ewc-item-quantity, .ewc-multi-cart-dropdown) {
+        background-color: var(--oled-night-page) !important; color: var(--oln-amazon-ink) !important;
+      }
+      ${amazon} :is(.scx-stt-tile-container, .a-cardui-deck) { background-color: var(--oln-amazon-panel) !important; color: var(--oln-amazon-ink) !important; }
+      ${amazon} .scx-stt-tile-container :is(span, a, div) { color: var(--oln-amazon-ink) !important; }
+      /* Same-day delivery carousel ("Delivered in 39 minutes"): a beige wrapper
+         around its header, and text parts named only in module classes. */
+      ${amazon} #search [id^="CardInstance"] .a-section:has(> [class*="HeaderContainer"]) { background-color: var(--oln-amazon-panel) !important; }
+      ${amazon} #search [id^="CardInstance"] :is([class*="ProductName"], [class*="RatingValue"], [class*="DeliveryText"], [class*="DeliveryText"] span, [class*="DeliveryTitle"], [class*="DeliveryTitle"] :not([class*="inutes"])) { color: var(--oln-amazon-ink) !important; }
+      ${amazon} #search [id^="CardInstance"] [class*="ReviewCount"] { color: var(--oln-amazon-muted) !important; }
+      ${amazon} #search [id^="CardInstance"] [class*="ShopNowText"] { color: #8fc5ff !important; }
+      ${amazon} .nav-assistant .plus-sign-color { color: var(--oln-amazon-ink) !important; }
+      /* Cart sidebar body. Its quantity stepper keeps its white face and dark
+         icons, so it gets dark ink instead of the inherited light ink. */
+      ${amazon} #nav-flyout-ewc .nav-flyout-body { background-color: var(--oled-night-page) !important; color: var(--oln-amazon-ink) !important; }
+      ${amazon} #nav-flyout-ewc :is(.a-stepper-inner-container, .a-stepper-inner-container *) { color: #0f1111 !important; }
+      ${amazon} :is(#search [class*="_discountText"], #nav-flyout-ewc .a-color-price) { color: #ff7a8a !important; }
+      ${amazon} .ewc-scroller::-webkit-scrollbar-track { background: var(--oled-night-page) !important; }
     }`));
   }
 

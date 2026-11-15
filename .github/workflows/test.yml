@@ -37,6 +37,7 @@ jobs:
           node tests/e2e/run.mjs
           node tests/e2e/youtube-chat.mjs
           node tests/e2e/amazon-search.mjs
+          node tests/e2e/dark-page-fields.mjs
           node tests/e2e/head-metadata.mjs
           node tests/e2e/row-hover-work.mjs
           node tests/e2e/historical-fixes.mjs
