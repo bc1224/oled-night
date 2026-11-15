@@ -17,6 +17,7 @@ const html = `<!doctype html><style>
   <input id="email" class="plain" type="email" value="person@example.test" placeholder="Email address">
   <input id="password" class="plain" type="password" value="secret-value">
   <textarea id="note" class="plain">typed note</textarea>
+  <select id="pick" class="plain"><option>First option</option><option>Second option</option></select>
   <label><input id="check" type="checkbox" checked> Remember me</label>
   <p id="copy">Body copy stays light.</p></body>`;
 
@@ -56,13 +57,13 @@ try {
     const field = id => { const e = document.getElementById(id), cs = getComputedStyle(e);
       return {ink: cs.webkitTextFillColor, back: painted(e), placeholder: getComputedStyle(e, '::placeholder').color}; };
     return {mode: document.documentElement.getAttribute('data-oled-night-mode'),
-      wrapped: field('wrapped'), email: field('email'), password: field('password'), note: field('note'),
+      wrapped: field('wrapped'), email: field('email'), password: field('password'), note: field('note'), pick: field('pick'),
       check: getComputedStyle(document.getElementById('check')).accentColor,
       copy: {ink: getComputedStyle(document.getElementById('copy')).color, back: painted(document.getElementById('copy'))}};
   })()`);
   const state = await probe();
   assert.equal(state.mode, "crush", "The fixture must run in the already-dark page mode");
-  for (const name of ["wrapped", "email", "password", "note"]) {
+  for (const name of ["wrapped", "email", "password", "note", "pick"]) {
     const {ink, back, placeholder} = state[name];
     assert.ok(ratio(ink, back) >= 4.5, `${name}: typed text must reach 4.5:1, got ${ink} on ${back}`);
     if (name === "wrapped" || name === "email") assert.ok(ratio(placeholder, back) >= 3, `${name}: placeholder must reach 3:1, got ${placeholder} on ${back}`);

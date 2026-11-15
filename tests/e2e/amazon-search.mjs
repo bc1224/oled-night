@@ -24,7 +24,11 @@ const widgets = `<div class="s-widget-container"><div id="CardInstanceTest" clas
   <ol class="a-carousel"><li class="a-carousel-card"><div class="sp_item" id="spCard"><span class="a-size-small a-color-base" id="spTitle">Sponsored headphones</span>
   <span class="a-size-small a-color-secondary" id="spMuted">Typical price</span></div></li>
   <li class="a-carousel-card s-tile"><div class="a-section scx-stt-tile-container" id="tile"><span id="tileLabel">Workout</span></div></li></ol>
-  <div class="token-widget" id="tokenCard"><span id="tokenText">Token colored text</span></div>`;
+  <div class="token-widget" id="tokenCard"><span id="tokenText">Token colored text</span></div>
+  <span class="a-badge"><span class="a-badge-label"><span class="a-badge-text" id="badgeText">Amazon Exclusive</span></span></span>
+  <div class="haul-puis-widget-faceout-container"><a class="a-link-normal haul-puis-widget-product-info-container" href="#">
+  <div class="a-section a-spacing-none a-text-left haul-info"><span class="a-price" id="haulPrice">$9.99</span></div></a></div>
+  <a class="a-link-normal s-link-style" href="#"><span class="a-size-base a-color-link s-underline-text" id="linkSpan">One-time purchase</span></a>`;
 const cart = `<div id="nav-flyout-ewc" class="nav-flyout"><div class="nav-flyout-body ewc-beacon"><div id="ewc-compact-body">
   <span id="ewcSubtotal">Subtotal</span><span class="a-size-base a-color-price a-text-bold" id="ewcPrice">$25.99</span><span id="ewcShip">FREE Same-Day delivery</span>
   <div class="a-stepper-inner-container" id="ewcStepper"><span id="ewcQty">1</span></div></div></div></div>`;
@@ -41,6 +45,8 @@ const html = `<!doctype html><style>
   .a-icon-prime-with-text{color:#0f1111}.sp_item{background:#fff}.scx-stt-tile-container{background:#f5f5f5;color:#0f1111}
   .token-widget{background:var(--aok-sfs-color-page-primary-normal-bg,#fff);color:var(--aok-sfs-color-page-primary-normal-fg,#0f1111)}
   .nav-flyout-body,#ewc-compact-body{background:#fff}.a-color-price{color:#b12704}.a-stepper-inner-container{background:#fff;color:#0f1111}
+  .a-badge-label{background:#fff;border:1px solid #232f3e}.a-badge-text{color:var(--aok-sfs-color-page-primary-normal-fg,#0f1111)}
+  .haul-info{background:#fff}.a-color-link{color:#2162a1}
   </style><body><header><input id="twotabsearchtextbox">${cart}</header>
   <div id="s-refinements"><ul><li class="s-sprite-grid"><span class="a-list-item"><a class="a-link-normal s-navigation-item">
   <span class="a-button a-button-normal a-button-toggle a-button-small buttonsprite"><span class="a-button-inner">
@@ -92,13 +98,14 @@ try {
   const widgetInk = () => page.eval(`(() => {
     const painted = node => { for (let n = node; n; n = n.parentElement) { const c = getComputedStyle(n).backgroundColor;
       if (c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') return c; } return getComputedStyle(document.documentElement).backgroundColor; };
-    return Object.fromEntries(['carouselTitle','minutes','deckName','deckRating','deckReviews','deckDelivery','primeLine','spTitle','spMuted','tileLabel','tokenText','ewcSubtotal','ewcPrice','ewcShip','ewcQty']
+    return Object.fromEntries(['carouselTitle','minutes','deckName','deckRating','deckReviews','deckDelivery','primeLine','spTitle','spMuted','tileLabel','tokenText','badgeText','haulPrice','linkSpan','ewcSubtotal','ewcPrice','ewcShip','ewcQty']
       .map(id => { const e = document.getElementById(id); return [id, {ink: getComputedStyle(e).color, back: painted(e)}]; }));
   })()`);
   const live = await widgetInk();
   for (const [id, {ink, back}] of Object.entries(live)) assert.ok(ratio(ink, back) >= 4.5, `${id} must reach 4.5:1: ${ink} on ${back}`);
   for (const id of ["deckName", "primeLine", "spTitle", "tileLabel", "tokenText", "ewcSubtotal"]) assert.ok(lum(live[id].back) < 0.05, `${id} sits on a dark surface: ${live[id].back}`);
   assert.equal(live.minutes.ink, "rgb(255, 102, 0)", "The orange delivery time keeps its color");
+  assert.equal(live.badgeText.back, "rgb(255, 255, 255)", "A white badge keeps its face and its dark ink");
   assert.equal(live.ewcQty.back, "rgb(255, 255, 255)", "The cart quantity stepper keeps its white face for its dark icons");
   await page.eval(`document.querySelector('#search').insertAdjacentHTML('beforeend',${JSON.stringify(card.repeat(50))})`);
   await wait(150);

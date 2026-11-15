@@ -8,6 +8,8 @@
   - The same-day delivery carousel ("Delivered in 39 minutes") is dark, with light product names, ratings and delivery lines. The orange delivery time keeps its color.
   - Sponsored carousel cards no longer show pale prices and titles on white.
   - The "Narrow your search" tiles and the sort menu label are readable.
+  - "Crazy-good finds" product panels are dark instead of white with pale prices, and blue links such as "One-time purchase" are light blue.
+  - Sale percentages and cart prices use a lighter red that is readable on black.
   - The cart sidebar is dark, with a light subtotal and delivery note. Its quantity control stays white with dark text, so its icons stay visible.
   - Many of these parts use Amazon's own color settings, which the page leaves unset. OLED Night now sets them, so later Amazon widgets that use the same settings turn dark too.
 - No new permissions; Chrome theme remains 1.0.3.

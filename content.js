@@ -3907,6 +3907,8 @@
         --aok-sfs-color-interaction-unselected-normal-bg: var(--oln-amazon-panel);
         --aok-sfs-color-interaction-unselected-normal-fg: var(--oln-amazon-ink);
       }
+      /* Badges ("Amazon Exclusive") keep a fixed white face; keep their ink dark. */
+      ${amazon} .a-badge { --aok-sfs-color-page-primary-normal-fg: #0f1111; --aok-sfs-color-page-secondary-normal-fg: #565959; }
       ${amazon} body, ${amazon} :is(#search, #a-page, .s-result-item, .puis-card-container, .s-card-container, .s-desktop-content, .s-navigation-indent-1, .a-box, .a-box-inner, .a-cardui, .a-section.a-text-center, .a-popover-inner, .a-popover-wrapper, .s-desktop-toolbar,
           /* White color swatch row behind the "+18 other colors" link. */ .s-color-swatch-container) {
         background-color: var(--oled-night-page) !important; color: var(--oln-amazon-ink) !important;
@@ -3934,6 +3936,10 @@
          the sort dropdown label, sponsored carousel cards, the "Narrow your
          search" tiles, recommendation decks and the cart sidebar. */
       ${amazon} :is(.a-icon-prime-with-text, .a-button-dropdown .a-button-text, .a-dropdown-label) { color: var(--oln-amazon-ink) !important; }
+      /* Link-styled text that is not itself a link ("One-time purchase"). */
+      ${amazon} #search .a-color-link { color: #8fc5ff !important; }
+      /* "Crazy-good finds" carousel: a white info panel under each product. */
+      ${amazon} #search .haul-puis-widget-product-info-container > .a-section { background-color: var(--oled-night-page) !important; }
       ${amazon} :is(#search .a-carousel-card > div, #ewc-compact-body, .ewc-compact-head, .ewc-item .ewc-item-quantity, .ewc-multi-cart-dropdown) {
         background-color: var(--oled-night-page) !important; color: var(--oln-amazon-ink) !important;
       }
