@@ -103,7 +103,7 @@ try {
   })()`);
   const live = await widgetInk();
   for (const [id, {ink, back}] of Object.entries(live)) assert.ok(ratio(ink, back) >= 4.5, `${id} must reach 4.5:1: ${ink} on ${back}`);
-  for (const id of ["deckName", "primeLine", "spTitle", "tileLabel", "tokenText", "ewcSubtotal"]) assert.ok(lum(live[id].back) < 0.05, `${id} sits on a dark surface: ${live[id].back}`);
+  for (const id of ["deckName", "primeLine", "spTitle", "tileLabel", "tokenText", "haulPrice", "linkSpan", "ewcSubtotal"]) assert.ok(lum(live[id].back) < 0.05, `${id} sits on a dark surface: ${live[id].back}`);
   assert.equal(live.minutes.ink, "rgb(255, 102, 0)", "The orange delivery time keeps its color");
   assert.equal(live.badgeText.back, "rgb(255, 255, 255)", "A white badge keeps its face and its dark ink");
   assert.equal(live.ewcQty.back, "rgb(255, 255, 255)", "The cart quantity stepper keeps its white face for its dark icons");
