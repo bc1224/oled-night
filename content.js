@@ -3498,9 +3498,11 @@
         // compound must match one of its unchanged ancestors. When one cannot
         // (an editor's absent .ve-loading state), the selector matches nothing
         // before or after this edit. Later ancestor class edits are observed
-        // and proven separately.
-        const leading = parts.slice(0, Math.max(index, 0));
-        if (index > 0 && leading.every(part => !affected.test(part) && /^(?:(?:html|body|:root)?(?:\.[\w-]+|:not\(\.[\w-]+\))+|html|body|:root)$/.test(part))) {
+        // and proven separately. An ancestor whose class changed in this same
+        // delivery is proven against this node's new class, so neither proof
+        // would see the old match: keep the conservative path then.
+        const leading = parts.slice(0, Math.max(index, 0)), batch = scopes.get('classTargets');
+        if (index > 0 && batch && ![...batch].some(other => other !== node && other.contains(node)) && leading.every(part => !affected.test(part) && /^(?:(?:html|body|:root)?(?:\.[\w-]+|:not\(\.[\w-]+\))+|html|body|:root)$/.test(part))) {
           try { if (leading.some(part => !node.parentElement?.closest(part))) continue; }
           catch { return null; }
         }
@@ -3694,6 +3696,7 @@
     const changedRoots = new Set();
     const removed = [];
     const invalidatedAncestors = new Set();
+    backgroundScopes.set('classTargets', new Set(records.filter(record => record.attributeName === 'class').map(record => record.target)));
     // Inspect the complete delivery first: a descendant edit and a row's class
     // toggle can arrive together in either order. Never reuse an earlier ink
     // proof after external styles, content, attributes or children changed.

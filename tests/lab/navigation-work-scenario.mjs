@@ -107,6 +107,11 @@ export async function navigationWorkScenario(){
  articleNode.classList.add('article-editing-qa');await sleep(150);document.documentElement.classList.add('present-editor-qa');await sleep(400);
  const laterSurface=getComputedStyle(articleNode.firstElementChild).backgroundColor,laterLuma=(laterSurface.match(/[\d.]+/g)||[255]).slice(0,3).reduce((a,b)=>a+Number(b),0)/3;
  checks.push({coverage:'surface',name:'an ancestor class added after a skipped container class still repaints the affected row dark',ok:laterLuma<80,detail:laterSurface});
+ // Both classes leave in one task: neither class proof alone sees the rule
+ // stop matching, so the row must still lose its retained surface.
+ articleNode.classList.remove('article-editing-qa');document.documentElement.classList.remove('present-editor-qa');await sleep(400);
+ const releasedSurface=getComputedStyle(articleNode.firstElementChild).backgroundColor,neighborSurface=getComputedStyle(articleNode.children[1]).backgroundColor;
+ checks.push({coverage:'surface',name:'removing the ancestor and container classes together releases the retained row surface',ok:releasedSurface===neighborSurface,detail:JSON.stringify({releasedSurface,neighborSurface})});
  articleNode.classList.remove('article-editing-qa');document.documentElement.classList.remove('present-editor-qa');editorSheet.remove();await sleep(150);
  const late=document.createElement('style'),module=document.createElement('style');
  late.textContent='.client-js body:not(.overlay-open).scrolled .sticky-label{background:#ddd}';document.head.append(late);await sleep(80);
