@@ -747,6 +747,11 @@ try {
   const [frameBg, frameEdge, frameInk, outlineEdge] = [await css("borderButton", "backgroundColor"), await css("borderButton", "borderTopColor"), await css("borderButton", "color"), await css("outlinedButton", "borderTopColor")];
   check("email button: a border used as padding matches the button surface", frameEdge === frameBg && ratio(frameBg, frameInk) >= 4.5, `${frameInk} on ${frameBg}, border ${frameEdge}`);
   check("email button: a thin accent outline stays visible", lum(outlineEdge) > 0.08, outlineEdge);
+  // Inline !important label ink outranks every stylesheet rule; the painted text fill must still be light.
+  const [panelBg, importantFill, mixedFill, childInk, childFill] = [await css("importantPanel", "backgroundColor"), await css("importantButton", "webkitTextFillColor"), await css("importantMixed", "webkitTextFillColor"), await css("importantMixedChild", "color"), await css("importantMixedChild", "webkitTextFillColor")];
+  check("email button: an inline !important black label on a transparent button is readable", ratio(panelBg, importantFill) >= 4.5, `${importantFill} on ${panelBg}`);
+  check("email button: an inline !important link with a colored child is readable", ratio(panelBg, mixedFill) >= 4.5, `${mixedFill} on ${panelBg}`);
+  check("email button: a colored child of an inline !important link keeps its own ink", childFill === childInk && ratio(panelBg, childFill) >= 3, `${childFill} vs ${childInk} on ${panelBg}`);
   // A white card on a white page keeps its outline once both turn black.
   await page.go(site("127.0.0.1", "shadow-card.html"));
   const shadowInk = value => (String(value).match(/rgba?\([^)]*\)/g) || []).map(token => {

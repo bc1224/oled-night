@@ -88,6 +88,31 @@ export async function navigationWorkScenario(){
  Object.defineProperty(CSSStyleRule.prototype,'style',{...styleDescriptor,get(){if(this.selectorText?.startsWith('.unrelated-qa-'))unrelatedStyleReads++;return styleDescriptor.get.call(this)}});
  try{document.documentElement.classList.add('nav-offset');await sleep(120)}finally{Object.defineProperty(CSSStyleRule.prototype,'style',styleDescriptor)}
  checks.push({coverage:'performance',name:'navigation class proof does not enumerate declarations of unrelated rules',ok:unrelatedStyleReads===0,detail:String(unrelatedStyleReads)});document.documentElement.classList.remove('nav-offset');unrelatedSheet.remove();await sleep(100);
+ // An editor marks the article container with a class whose only rules sit
+ // under an ancestor class that is absent (Wikipedia's .ve-loading). Those
+ // rules cannot match, so the container's content must not be walked again.
+ const articleNode=document.getElementById('article'),editorSheet=document.createElement('style');
+ editorSheet.textContent='.absent-editor-qa .article-editing-qa > :not(.editor-toolbar-qa){opacity:.5;pointer-events:none}.absent-editor-qa .article-editing-qa #siteNotice-qa{display:none}.present-editor-qa .article-editing-qa > .row:first-child{background:rgb(250,250,250)}';
+ document.head.append(editorSheet);await sleep(100);
+ const countArticleReads=async action=>{let reads=0;globalThis.getComputedStyle=function(node,...args){if(node.parentElement?.id==='article'||node.parentElement?.parentElement?.id==='article')reads++;return nativeComputed.call(this,node,...args)};try{action();await sleep(150)}finally{globalThis.getComputedStyle=nativeComputed}return reads};
+ const absentReads=await countArticleReads(()=>articleNode.classList.add('article-editing-qa'));
+ checks.push({coverage:'performance',name:'a container class used only under an absent ancestor class does not reread the article',ok:absentReads===0,detail:String(absentReads)});
+ articleNode.classList.remove('article-editing-qa');await sleep(150);document.documentElement.classList.add('present-editor-qa');await sleep(150);
+ const presentReads=await countArticleReads(()=>articleNode.classList.add('article-editing-qa'));
+ const editedSurface=getComputedStyle(articleNode.firstElementChild).backgroundColor,editedLuma=(editedSurface.match(/[\d.]+/g)||[255]).slice(0,3).reduce((a,b)=>a+Number(b),0)/3;
+ checks.push({coverage:'surface',name:'a container class under a present ancestor class still repaints the affected row dark',ok:presentReads>0&&editedLuma<80,detail:JSON.stringify({presentReads,editedSurface})});
+ // The editor's real order: the container class arrives first (and is
+ // skipped), then the ancestor state class makes the rule match.
+ articleNode.classList.remove('article-editing-qa');document.documentElement.classList.remove('present-editor-qa');await sleep(150);
+ articleNode.classList.add('article-editing-qa');await sleep(150);document.documentElement.classList.add('present-editor-qa');await sleep(400);
+ const laterSurface=getComputedStyle(articleNode.firstElementChild).backgroundColor,laterLuma=(laterSurface.match(/[\d.]+/g)||[255]).slice(0,3).reduce((a,b)=>a+Number(b),0)/3;
+ checks.push({coverage:'surface',name:'an ancestor class added after a skipped container class still repaints the affected row dark',ok:laterLuma<80,detail:laterSurface});
+ // Both classes leave in one task: neither class proof alone sees the rule
+ // stop matching, so the row must still lose its retained surface.
+ articleNode.classList.remove('article-editing-qa');document.documentElement.classList.remove('present-editor-qa');await sleep(400);
+ const releasedSurface=getComputedStyle(articleNode.firstElementChild).backgroundColor,neighborSurface=getComputedStyle(articleNode.children[1]).backgroundColor;
+ checks.push({coverage:'surface',name:'removing the ancestor and container classes together releases the retained row surface',ok:releasedSurface===neighborSurface,detail:JSON.stringify({releasedSurface,neighborSurface})});
+ articleNode.classList.remove('article-editing-qa');document.documentElement.classList.remove('present-editor-qa');editorSheet.remove();await sleep(150);
  const late=document.createElement('style'),module=document.createElement('style');
  late.textContent='.client-js body:not(.overlay-open).scrolled .sticky-label{background:#ddd}';document.head.append(late);await sleep(80);
  for(let i=0;i<12;i++){

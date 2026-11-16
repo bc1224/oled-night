@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.95";
+  const VERSION = "0.6.96";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -1297,7 +1297,27 @@
       const placeholder = colors.parseColor(getComputedStyle(element, "::placeholder").color);
       if (placeholder && placeholder.a >= 0.08) found.placeholder = colors.mapForeground(placeholder, 0.8);
     }
+    // An inline !important color outranks every stylesheet rule, ours too
+    // (order emails force black button labels this way). Paint the text fill
+    // instead. The fill inherits, so text inside such an element paints its
+    // own fill too, rather than the ancestor's. A page's own fill is kept.
+    if (found.fg && !found.ink && computed.webkitTextFillColor === computed.color && importantInk(element, ctx)) found.ink = found.fg;
     return found;
+  }
+
+  // Whether this element or an ancestor forces its color inline with
+  // !important. Memoized per batch: a long message thread shares ancestors.
+  function importantInk(element, ctx) {
+    const memo = ctx.importantInk ??= new Map(), chain = [];
+    let node = element, result = false;
+    for (; node instanceof HTMLElement; node = node.parentElement) {
+      if (memo.has(node)) { result = memo.get(node); break; }
+      chain.push(node);
+      if (node.style.getPropertyPriority("color") === "important" && !node.style.getPropertyValue("-webkit-text-fill-color")) { result = true; break; }
+      if (node === document.body) break;
+    }
+    for (const visited of chain) memo.set(visited, result);
+    return result;
   }
 
   // Inspect only the artwork already referenced by a compact control. Never
@@ -3494,6 +3514,18 @@
         // Only a plain ancestor compound followed by a descendant selector:
         // no :has(), sibling effects, nesting, or changed subject state.
         const parts = selector.trim().split(/\s+/), index = parts.findLastIndex(part => affected.test(part));
+        // Only this node's class changed, so a plain descendant-chain ancestor
+        // compound must match one of its unchanged ancestors. When one cannot
+        // (an editor's absent .ve-loading state), the selector matches nothing
+        // before or after this edit. Later ancestor class edits are observed
+        // and proven separately. An ancestor whose class changed in this same
+        // delivery is proven against this node's new class, so neither proof
+        // would see the old match: keep the conservative path then.
+        const leading = parts.slice(0, Math.max(index, 0)), batch = scopes.get('classTargets');
+        if (index > 0 && batch && ![...batch].some(other => other !== node && other.contains(node)) && leading.every(part => !affected.test(part) && /^(?:(?:html|body|:root)?(?:\.[\w-]+|:not\(\.[\w-]+\))+|html|body|:root)$/.test(part))) {
+          try { if (leading.some(part => !node.parentElement?.closest(part))) continue; }
+          catch { return null; }
+        }
         if (index < 0 || index === parts.length - 1 || !parts.slice(0,index+1).every(part => /^(?:(?:html|body|:root)?(?:\.[\w-]+|:not\(\.[\w-]+\))+|html|body|:root)$/.test(part))) return null;
         const suffix = parts.slice(index+1).join(' ');
         if (/^[>+~]|:has\(|&|::part|::slotted/.test(suffix)) return null;
@@ -3684,6 +3716,7 @@
     const changedRoots = new Set();
     const removed = [];
     const invalidatedAncestors = new Set();
+    backgroundScopes.set('classTargets', new Set(records.filter(record => record.attributeName === 'class').map(record => record.target)));
     // Inspect the complete delivery first: a descendant edit and a row's class
     // toggle can arrive together in either order. Never reuse an earlier ink
     // proof after external styles, content, attributes or children changed.

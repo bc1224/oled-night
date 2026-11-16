@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.96
+
+- Buttons in emails are readable again when the email forces the button text to black, such as the "Track Your Shipment" button in an order email in Gmail. The button and its outline turned dark, but the text stayed black on black because the email's own color setting outranked OLED Night's. The text is now light.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.95
 
 - Typed text is visible again in text boxes on pages that OLED Night treats as already dark, such as the Bing home page with its photo wallpaper and the Zoom sign-in page. The white search or sign-in box turned dark, but the text inside the box stayed black. A white box counted as a light area to repaint only when it held text or other elements, and an input box holds neither, so its typed text was skipped. Text boxes, text areas and dropdowns now count too, and their typed text, placeholder and cursor turn light with the box.
