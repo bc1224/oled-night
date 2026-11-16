@@ -3494,6 +3494,16 @@
         // Only a plain ancestor compound followed by a descendant selector:
         // no :has(), sibling effects, nesting, or changed subject state.
         const parts = selector.trim().split(/\s+/), index = parts.findLastIndex(part => affected.test(part));
+        // Only this node's class changed, so a plain descendant-chain ancestor
+        // compound must match one of its unchanged ancestors. When one cannot
+        // (an editor's absent .ve-loading state), the selector matches nothing
+        // before or after this edit. Later ancestor class edits are observed
+        // and proven separately.
+        const leading = parts.slice(0, Math.max(index, 0));
+        if (index > 0 && leading.every(part => !affected.test(part) && /^(?:(?:html|body|:root)?(?:\.[\w-]+|:not\(\.[\w-]+\))+|html|body|:root)$/.test(part))) {
+          try { if (leading.some(part => !node.parentElement?.closest(part))) continue; }
+          catch { return null; }
+        }
         if (index < 0 || index === parts.length - 1 || !parts.slice(0,index+1).every(part => /^(?:(?:html|body|:root)?(?:\.[\w-]+|:not\(\.[\w-]+\))+|html|body|:root)$/.test(part))) return null;
         const suffix = parts.slice(index+1).join(' ');
         if (/^[>+~]|:has\(|&|::part|::slotted/.test(suffix)) return null;
