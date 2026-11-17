@@ -553,6 +553,8 @@
       // goes dark, so pinned dark ink there would be unreadable. Inline data
       // images stay authored creatives: nothing says they are see-through.
       if (media.localName === "img" && /^https?:[^?#]*\.svg(?:[?#]|$)/i.test(media.currentSrc || media.src || "")) return false;
+      // The same holds for a vector drawn as an empty layer's cover image.
+      if (!media.matches("img, video, canvas") && /\.svg(?:[?#"')]|$)|image\/svg/i.test(ctx.style(media).backgroundImage)) return false;
       if (ctx.style(media).visibility !== "visible") return false;
       // A canvas may be an opaque painted backdrop (Stripe's card artwork) or
       // see-through particles over the page. Only its pixels can tell, and a
