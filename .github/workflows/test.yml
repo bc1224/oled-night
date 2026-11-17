@@ -148,6 +148,11 @@ jobs:
         run: node tests/lab/run-chrome.mjs ${{ inputs.candidates && '--candidates' || '' }}
         env:
           CHROME_PATH: /usr/bin/google-chrome
+      - name: Late page stylesheets match a page that had them from the start
+        if: ${{ matrix.browser == 'Chrome' }}
+        run: node tests/lab/run-late-sheet.mjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
       - name: Component states and performance in Firefox
         if: ${{ matrix.browser == 'Firefox' }}
         run: npm run test:lab:firefox

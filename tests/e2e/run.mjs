@@ -856,6 +856,8 @@ try {
   await page.go(site("127.0.0.1", "layered-card-media.html"), 1800);
   check("layered card: a photo in a non-adjacent layer keeps the title's original ink", await css("photoCardTitle", "color") === "rgb(6, 27, 49)", await css("photoCardTitle", "color"));
   check("layered card: an opaque painted canvas keeps the title's original ink", await css("paintedCanvasTitle", "color") === "rgb(6, 27, 49)", await css("paintedCanvasTitle", "color"));
+  check("layered card: an empty cover-image layer keeps the coupon text's original ink", await css("couponLine", "color") === "rgb(77, 77, 77)", await css("couponLine", "color"));
+  check("layered card: an empty vector-image layer does not pin dark text", lum(await css("vectorCouponLine", "color")) > 0.3, await css("vectorCouponLine", "color"));
   check("layered card: a see-through canvas does not pin dark title ink", lum(await css("clearCanvasTitle", "color")) > 0.3, await css("clearCanvasTitle", "color"));
   await page.go(site("127.0.0.1", "component-names.html"));
   const [tileBg, tileInk, actionInk] = [await page.eval("getComputedStyle(document.querySelector('.tile')).backgroundColor"), await css("tileTitle", "color"), await shadowCss("tileAction", "inner", "color")];

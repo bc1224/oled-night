@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Late stylesheet</title>
+<style>
+body{margin:0;font:14px sans-serif;background:#fff;color:#202122}
+.hdr{display:flex;gap:8px;padding:8px}
+.row{display:flex;gap:6px;padding:2px 6px;border-bottom:1px solid #eee}
+.tag{background:#eaecf0;padding:0 4px}
+.btn{border:1px solid #a2a9b1;padding:2px 6px;background:transparent}
+</style>
+<script>
+// Like a wiki skin loader: a script inserts the skin sheet, and the server
+// answers after ?ms= milliseconds. ?ms=ref links the sheet before any content.
+const ms = new URLSearchParams(location.search).get("ms");
+if (ms === "ref") document.write('<link rel="stylesheet" href="/late-sheet.css">');
+else if (ms !== null) {
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = "/delay/" + ms + "/late-sheet.css";
+  document.head.append(link);
+}
+</script>
+</head>
+<body>
+<header class="hdr"><a href="#">Main menu</a><span class="title">Late stylesheet</span><button class="btn">Search</button></header>
+<x-note id="note"></x-note>
+<script>
+// A component's shadow style is present when the component is found and
+// removed later. Its text must return to the unstyled page's ink.
+const note = document.getElementById("note").attachShadow({mode: "open"});
+note.innerHTML = '<style>.panel{background:#ffffff;color:#101418;padding:4px}</style><div class="panel">Shadow note</div>';
+setTimeout(() => note.querySelector("style").remove(), 900);
+// A banner inserts and removes a working style while it builds.
+const scratch = document.createElement("style");
+scratch.textContent = "@font-face{font-family:x;src:local(Arial)} .row span{color:#ff0000}";
+document.head.append(scratch); scratch.remove();
+</script>
+<!-- A streaming server pauses here, like a long article still arriving. -->
+<!--stall-->
+<main id="rows"></main>
+<script>
+let html = "";
+for (let i = 0, rows = +(new URLSearchParams(location.search).get("rows") || 3000); i < rows; i++) html += `<div class="row"><a href="#">Link ${i}</a><span>Text ${i}</span><span class="tag">tag</span><button class="btn">Edit</button></div>`;
+document.getElementById("rows").innerHTML = html;
+</script>
+</body>
+</html>

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.97
+
+- Text on picture cards is readable again when the picture sits in its own empty layer behind the text, such as the light "Add $X more to get an extra $25 coupon" card in the Bambu Lab store cart. OLED Night only recognized pictures drawn as images, so it turned the text light on top of a light picture. The text now keeps its original dark color over the picture.
+- Long Wikipedia articles load faster. When Wikipedia's skin styles arrived after the article, OLED Night started over and recolored the whole page. It now rechecks only what it had already colored before those styles arrived. On a long article this cut the browser's busy time during page load by about 40% in testing (from about 6.1 to 3.5 seconds). The fundraising banner also no longer makes it recolor the whole page.
+- No new permissions; Chrome theme remains 1.0.3.
+
 ## 0.6.96
 
 - Buttons in emails are readable again when the email forces the button text to black, such as the "Track Your Shipment" button in an order email in Gmail. The button and its outline turned dark, but the text stayed black on black because the email's own color setting outranked OLED Night's. The text is now light.
