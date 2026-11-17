@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Layered cards with artwork backdrops</title>
 <style>
-  body { margin: 0; padding: 24px; font: 16px/1.4 system-ui, sans-serif; background: #fff; color: #061b31; display: flex; gap: 24px; }
+  body { margin: 0; padding: 24px; font: 16px/1.4 system-ui, sans-serif; background: #fff; color: #061b31; display: flex; flex-wrap: wrap; gap: 24px; }
   /* A card stacks an action, its title, a border and the artwork as layers. */
   .card { position: relative; width: 340px; height: 300px; border: 0; padding: 0; background: none; text-align: left; font: inherit; }
   .entry { position: absolute; top: 12px; right: 12px; width: 24px; height: 24px; z-index: 3; }
@@ -16,6 +16,10 @@
   .graphic { z-index: 1; padding: 90px 20px 0; }
   .graphic p { margin: 0 0 4px; font-size: 12px; }
   .backdrop img, .backdrop canvas { display: block; width: 100%; height: 100%; }
+  /* A store coupon card paints its artwork on an empty cover layer. */
+  .coupon { position: relative; display: flex; align-items: center; width: 600px; height: 74px; padding: 8px 16px; overflow: hidden; border-radius: 4px; }
+  .coupon .art { position: absolute; inset: 0; background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8+uPnfwAJ0wPdWKq5KgAAAABJRU5ErkJggg==") center / cover no-repeat; }
+  .coupon .copy { position: relative; color: #4d4d4d; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -40,6 +44,11 @@
     <div class="border"></div>
     <div class="inner"><div class="content"><div class="backdrop"><canvas id="clearCanvas" width="340" height="300"></canvas></div></div></div>
   </button>
+  <div class="coupon">
+    <span class="art"></span>
+    <div class="copy"><div id="couponLine">Add <strong>$10</strong> more to get a coupon</div><div>For larger orders.</div></div>
+    <div class="copy">$90 / $100</div>
+  </div>
 <script>
   const painted = document.getElementById("paintedCanvas").getContext("2d");
   painted.fillStyle = "#f4f6f8"; painted.fillRect(0, 0, 340, 300);

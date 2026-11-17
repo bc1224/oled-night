@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.96";
+  const VERSION = "0.6.97";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -79,6 +79,13 @@
   const STATE_ATTRIBUTES = ["aria-selected", "aria-checked", "aria-expanded", "aria-disabled", "data-state", "data-highlighted", "selected", "disabled", "open", "hidden"];
   const classSnapshots = new WeakMap();
   const sheetSnapshots = new WeakMap();
+  // Linked sheets observed before their CSSOM existed. Only elements decided
+  // while a sheet was still missing can hold paint its load makes stale.
+  const unavailableSheets = new Map();
+  // Recorded elements are decided again on their own. Descendants decided
+  // later read their surface, tier and ink; a changed one rescans its subtree.
+  const sheetRechecks = new Map();
+  let measuredElements = 0;
   const largeScopes = new WeakSet();
   const OBSERVE = { childList: true, characterData: true, subtree: true, attributes: true, attributeOldValue: true, attributeFilter: ["class", "style", "href", "media", MARK, SHARED_BG, ...STATE_ATTRIBUTES] };
   const isTopFrame = (() => { try { return typeof window === "undefined" || window.top === window; } catch { return false; } })();
@@ -397,6 +404,10 @@
     if (!shadowRoots.has(root)) {
       shadowRoots.add(root);
       observer?.observe(root, OBSERVE);
+      // Record the sheets already inside, so removing one later rechecks this
+      // host instead of looking like a sheet no decision ever saw.
+      for (const node of root.querySelectorAll('style, link[rel~="stylesheet"]'))
+        if (isPageSheet(node) && !sheetSnapshots.has(node)) sheetSnapshots.set(node, {selectors: null, fingerprint: null, opaque: opaqueSheetState(node), scope: root});
       // Moving between children retargets target and relatedTarget to the
       // same host outside a shadow tree, so those events never reach document.
       // Listen inside every managed root; composed events are handled once.
@@ -509,7 +520,8 @@
       // local walk so an overlay beside a large application tree stays cheap.
       // Breadth first: a card's backdrop layer is shallow, and must not be
       // starved by a deep product mock-up that happens to come before it.
-      const pending = [sibling];
+      const pending = sibling.hasChildNodes() || sibling.matches("img, video, canvas") ? [sibling] : [];
+      if (!pending.length && hasImageBackdrop(ctx.style(sibling))) candidates.push(sibling);
       for (let visited = 0; pending.length && visited < 48; visited++) {
         const node = pending.shift();
         if (node.matches("img, video, canvas")) candidates.push(node);
@@ -625,7 +637,9 @@
         if (sibling === node) continue;
         // Most text siblings contain no media. Avoid style/layout reads for
         // them on every streaming update.
-        if (!sibling || (!sibling.matches("img, video, canvas") && !sibling.childElementCount)) continue;
+        // An empty layer can paint the artwork itself as a CSS cover image
+        // (a store's coupon card). It has no child nodes at all, unlike text.
+        if (!sibling || (!sibling.matches("img, video, canvas") && !sibling.childElementCount && sibling.hasChildNodes())) continue;
         const directMedia = sibling?.matches("img, picture, video") || sibling?.firstElementChild?.matches("img, picture, video");
         if (!sibling || (node.parentElement?.childElementCount > 4 && !directMedia) ||
             !(directMedia || ctx.style(node).position === "absolute" || ctx.style(sibling).position === "absolute")) continue;
@@ -2494,6 +2508,17 @@
   }
 
   function processBatch(list, trees, selves, ancestorMeasurement = false) {
+    measuredElements += list.length + (list.icons?.size || 0) + (list.images?.size || 0);
+    const arrivedSheets = [];
+    for (const [link, pending] of unavailableSheets) {
+      if (!link.isConnected) { unavailableSheets.delete(link); continue; }
+      if (pending.applied || !pending.elements) continue;
+      if (link.sheet) { arrivedSheets.push(pending); continue; }
+      for (const node of list) pending.elements.add(node);
+      for (const node of list.icons || []) pending.elements.add(node);
+      for (const node of list.images || []) pending.elements.add(node);
+      if (pending.elements.size > 4096) pending.elements = null;
+    }
     // Ordinary already-styled buttons/menus need no scope analysis. Pay for
     // this proof only for repeated containers or unstyled text leaves.
     const mayReusePaint = list.some(node => paintContainers.has(node) ||
@@ -2656,6 +2681,14 @@
       node.style.setProperty("--oln-motion", transition);
       node.setAttribute(MOTION, "");
     }
+    // A page sheet missing at startup is now applied: read the page color it
+    // sets before deciding this batch, so its later load event need not
+    // restart the whole document. A flip is left to the next flush.
+    // A batch that returned early above decided nothing; the next one does this.
+    const ownPolarity = arrivedSheets.length > 0 && !batchPolarity;
+    if (ownPolarity) batchPolarity = { dark: null };
+    else if (arrivedSheets.length) batchPolarity.dark = null;
+    for (const pending of arrivedSheets) pending.applied = true;
     const measuresPolarity = batchPolarity && batchPolarity.dark === null;
     if (measuresPolarity) {
       document.documentElement.setAttribute(MEASURE_ROOT, "");
@@ -2678,6 +2711,10 @@
     if (measuresPolarity) {
       batchPolarity.dark = detectDarkPage();
       document.documentElement.toggleAttribute("data-oled-night-transparent-frame", isTransparentFrame());
+      if (ownPolarity) {
+        if (batchPolarity.dark !== darkPage) { polarityDirty = true; schedule(); }
+        batchPolarity = null;
+      }
     }
     const styles = new Map(), generatedScopes = new Map();
     const ctx = {
@@ -2859,11 +2896,21 @@
     const selves = [...pendingSelf];
     pendingTrees.clear();
     pendingSelf.clear();
+    const rechecks = [...sheetRechecks];
+    sheetRechecks.clear();
     process(trees, selves);
     const nowDark = batchPolarity?.dark;
     batchPolarity = null;
     if (nowDark !== null && nowDark !== undefined && nowDark !== darkPage &&
         !["recolor", "deepen"].includes(currentSiteMode())) { enable(); return; }
+    // Elements decided before a page sheet existed were decided again on
+    // their own, with the page color it sets. The record holds every element
+    // decided before then, so a changed page color needs no whole-document
+    // walk; a changed decision can stale its own subtree. Descendant
+    // backdrops stop at <html>/<body>, so those two stay self-only.
+    for (const [node, before] of rechecks)
+      if (node.isConnected && node !== document.documentElement && node !== document.body && recheckSignature(node) !== before) pendingTrees.add(node);
+    if (pendingTrees.size) schedule();
     observer.takeRecords();
     recentBackgroundWrites.clear();
     recentSharedBackgrounds.clear();
@@ -3435,8 +3482,10 @@
     const properties = Array.from(style || []);
     // Scroll target offsets affect the destination of native scrolling, not
     // layout boxes or authored paint. Keep real top/padding/geometry rules.
+    // z-index only reorders painted boxes; no decision here reads it, and a
+    // banner's `.mw-body { z-index: auto }` must not refresh a whole article.
     return properties.length > 0 && properties.every(property =>
-      /^(?:pointer-events|cursor|touch-action|(?:-(?:webkit|moz)-)?user-select|overscroll-behavior(?:-[xy])?|scroll-behavior|scroll-(?:padding|margin)(?:-(?:top|right|bottom|left|block|inline)(?:-(?:start|end))?)?)$/.test(property));
+      /^(?:z-index|pointer-events|cursor|touch-action|(?:-(?:webkit|moz)-)?user-select|overscroll-behavior(?:-[xy])?|scroll-behavior|scroll-(?:padding|margin)(?:-(?:top|right|bottom|left|block|inline)(?:-(?:start|end))?)?)$/.test(property));
   }
 
   // A sticky-header class on the page does not necessarily restyle its article.
@@ -3542,6 +3591,10 @@
     let count = 0, length = 0, keyframes = false; const selectors = [];
     const inspect = rules => {for(const rule of rules) {
       if (++count > 512 || rule.type === 3) throw Error('Unbounded or indirect sheet');
+      // A font face defines glyphs for a family name. It applies no color and
+      // no selector; nothing here reads fonts. Other global definitions such
+      // as @property can set colors and keep the conservative path below.
+      if (rule.type === 5) continue;
       if (rule.type === 7) {
         // Popup modules append opacity/transform entry keyframes repeatedly.
         // These properties remain native, just like compositor-only inline
@@ -3624,8 +3677,18 @@
     } catch { return null; }
   }
 
+  function recheckSignature(node) {
+    return JSON.stringify([node.getAttribute(MARK), node.getAttribute('style'), applied.get(node) ?? null,
+      originalSurface.get(node) ?? null, textTiers.get(node) ?? null, nativeInk.get(node) ?? null]);
+  }
+
   function queuePageSheet(node, loaded = false, nativeLoad = false) {
     const before = sheetSnapshots.get(node), scope = node.isConnected ? node.getRootNode() : before?.scope;
+    // Every decision runs in its own task after mutation delivery, and enable()
+    // and adoptShadowRoot() record the sheets already present. A sheet first
+    // seen disconnected was inserted and removed between two deliveries, so no
+    // decision ever saw it (a banner inserts and removes styles while building).
+    if (!node.isConnected && before === undefined) { unavailableSheets.delete(node); return; }
     const opaque = opaqueSheetState(node);
     if (loaded && !nativeLoad && opaque && before?.opaque?.sheet === opaque.sheet && before.opaque.key === opaque.key) return;
     if (scope instanceof ShadowRoot) {
@@ -3639,13 +3702,43 @@
     // opaque linked sheets use the identity and state proof above.
     const fingerprint = pageSheetFingerprint(node);
     if (loaded && fingerprint !== null && before?.fingerprint === fingerprint) return;
-    const after = node.isConnected ? pageSheetSelectors(node) : before === undefined ? null : [];
+    const after = node.isConnected ? pageSheetSelectors(node) : [];
     const previous = before?.selectors;
     if(node.isConnected) sheetSnapshots.set(node,{selectors:after,fingerprint,opaque,scope}); else sheetSnapshots.delete(node);
     const full = () => {polarityDirty = true;pendingTrees.add(document.documentElement)};
+    const pending = unavailableSheets.get(node);
+    if (!node.isConnected) unavailableSheets.delete(node);
+    else if (node.localName === 'link' && !node.sheet) {
+      // Only a sheet missing since before the first measurement has a
+      // complete record. Content decided before a later link was inserted
+      // is not in it, so that sheet keeps the whole-document path.
+      if (!measuredElements && (!pending || pending.applied)) unavailableSheets.set(node, {elements: new Set(), applied: false});
+      else if (measuredElements && pending?.applied) unavailableSheets.delete(node);
+    }
+    // A linked sheet observed before its CSSOM existed. Every batch since
+    // then either measured with the sheet applied or recorded its elements.
+    // Its native load is redundant for the former: decide only the recorded
+    // elements again. Imports can finish after the parent sheet exists, and
+    // an unreadable or overflowing record keeps the whole-document path.
+    else if (pending && loaded && nativeLoad && previous?.length === 0) {
+      unavailableSheets.delete(node);
+      let direct = pending.elements !== null;
+      try { if (direct) for (const rule of node.sheet.cssRules) if (rule.type === 3) { direct = false; break; } }
+      catch { direct = false; }
+      if (direct) {
+        polarityDirty = true;
+        for (const element of pending.elements) {
+          if (!element.isConnected) continue;
+          if (isMedia(element) || element.closest(MEDIA_SELECTOR) || preservesColor(element)) { pendingTrees.add(element); continue; }
+          if (!sheetRechecks.has(element)) sheetRechecks.set(element, recheckSignature(element));
+          pendingSelf.add(element);
+        }
+        return;
+      }
+    }
     // Document selectors cannot pierce a shadow boundary. Matching hosts are
     // scanned with their roots; ::part/:host/::slotted remain uncertain above.
-    if (after === null || previous === null || (!node.isConnected && before === undefined)) {full();return;}
+    if (after === null || previous === null) {full();return;}
     const roots = new Set();
     try {for(const selector of new Set([...(previous || []),...(after || [])])) {
       for(const target of document.querySelectorAll(selector)) {
@@ -4419,7 +4512,11 @@
     schemeSensitive = ["r", "g", "b", "a"].some((channel) => pageColor[channel] !== original[channel]);
     pageColor = original;
     observer = new MutationObserver(onMutations);
-    for(const node of document.querySelectorAll('style, link[rel~="stylesheet"]')) if(isPageSheet(node)) sheetSnapshots.set(node,{selectors:pageSheetSelectors(node),fingerprint:pageSheetFingerprint(node),opaque:opaqueSheetState(node),scope:document});
+    unavailableSheets.clear();
+    for(const node of document.querySelectorAll('style, link[rel~="stylesheet"]')) if(isPageSheet(node)) {
+      sheetSnapshots.set(node,{selectors:pageSheetSelectors(node),fingerprint:pageSheetFingerprint(node),opaque:opaqueSheetState(node),scope:document});
+      if (!measuredElements && node.localName === 'link' && !node.sheet) unavailableSheets.set(node, {elements: new Set(), applied: false});
+    }
     observer.observe(root, OBSERVE);
     watchRootTheme();
     lockDarkReader(modeFor() !== "native");
