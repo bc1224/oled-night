@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Financial site controls</title>
+<script>
+  const profile = new URLSearchParams(location.search).get('profile') || 'robinhood';
+  document.documentElement.dataset.fixtureProfile = profile;
+</script>
+<style>
+  body { background: white; color: #201747; padding: 24px; font: 16px system-ui; }
+  html[data-fixture-profile="robinhood"], html[data-fixture-profile="robinhood"] body { background: #101112; color: white; }
+  .stack { display: grid; justify-items: start; gap: 16px; }
+  a, button { border: 0; border-radius: 20px; padding: 10px 24px; }
+  a { display: inline-flex; gap: 8px; background: #cf0; }
+  a span, svg { color: black; }
+  button { background: #fff; color: #101112; }
+  button:disabled { background: currentColor; color: #626c70; }
+  button:disabled .caption { color: #1e2124; }
+  .es-fields-number { border: 1px solid rgba(32, 23, 71, .2); padding: 8px; }
+  .es-fields-number:focus-within { border-color: #00a2c7; }
+  .search { background: white; padding: 8px; border-radius: 18px; box-shadow: 0 2px 10px #0002; }
+  input { border: 0; outline: none; background: transparent; color: #201747; }
+</style>
+<main class="stack">
+  <a href="/legend?source=nav"><span>Legend</span><svg aria-hidden="true" width="16" height="16"><path fill="currentColor" d="M4 3h9v9h-2V6L4 13l-1-1 7-7H4z"/></svg></a>
+  <button disabled><span><span class="caption">Review</span></span></button>
+  <label class="es-fields-number">Amount <input type="text" inputmode="decimal" value="100" aria-label="Amount"></label>
+  <label class="search"><input type="search" placeholder="Search topics" aria-label="Search topics"></label>
+</main>
+</html>

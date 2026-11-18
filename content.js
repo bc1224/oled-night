@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.97";
+  const VERSION = "0.6.98";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -922,6 +922,13 @@
     return colors.chroma(text) > 0.15 ? `color-mix(in srgb, rgb(${text.r} ${text.g} ${text.b}) 45%, black)` : "rgb(32 33 36)";
   }
 
+  function preservesRobinhoodControl(element, ctx) {
+    // A disabled button's face follows currentColor. Keep it paired with
+    // its separate native label, and keep the Legend link's lime and black.
+    return ctx.robinhood && ctx.mode === "crush" &&
+      element.closest('button:disabled, a[href="/legend"], a[href^="/legend?"]');
+  }
+
   function decide(element, ctx) {
     const colors = colorsApi();
     const computed = ctx.style(element);
@@ -929,7 +936,7 @@
     else nativeInk.delete(element);
     const found = {};
     originalSurface.set(element, surfaceInfo(computed));
-    if (ctx.mode === "none") return found;
+    if (ctx.mode === "none" || preservesRobinhoodControl(element, ctx)) return found;
     // Some stores paint a pale, darken-blended matte *above* a product photo.
     // Turning that matte black hides a fully loaded image (Amazon Grocery).
     // Keep the store's original matte and blend; the image remains untouched.
@@ -1318,6 +1325,19 @@
     // instead. The fill inherits, so text inside such an element paints its
     // own fill too, rather than the ancestor's. A page's own fill is kept.
     if (found.fg && !found.ink && computed.webkitTextFillColor === computed.color && importantInk(element, ctx)) found.ink = found.fg;
+    // SoFi's calculator uses the same muted navy for body ink and its
+    // translucent resting border. Its opaque cyan focus border is separate.
+    if (ctx.sofi && element.matches(".es-fields-number")) {
+      for (const [side, key] of SIDES) {
+        if (found[key] && computed[`border${side}Color`] === "rgba(32, 23, 71, 0.2)")
+          found[key] = "rgb(110 110 118)";
+      }
+    }
+    if (ctx.sofi && found.field && found.fg && !kept && element.closest(".es-fields-number") &&
+        computed.color === "rgb(32, 23, 71)" && computed.webkitTextFillColor === computed.color &&
+        !element.matches(":disabled, [aria-disabled=true]")) {
+      found.ink = found.fg = "hsl(0 0% var(--oln-light, 88%))";
+    }
     return found;
   }
 
@@ -1481,6 +1501,11 @@
   // and gradient stops (App Store Connect sparklines) are darkened instead,
   // while colored lines and bars keep their color.
   function decideSvg(svg, ctx, out) {
+    if (preservesRobinhoodControl(svg, ctx)) {
+      out.push([svg, {}]);
+      for (const child of svg.querySelectorAll(`[${MARK}]`)) out.push([child, {}]);
+      return;
+    }
     const mode = modeForElement(svg, ctx);
     // Read-only indicators (for example review stars) need the same neutral
     // ink repair as clickable icons. The compact/neutral checks below still
@@ -2726,6 +2751,8 @@
       recolorLightRegions: currentSiteMode() !== "deepen",
       pageColor,
       gmail: document.documentElement.getAttribute("data-oled-night-site") === "gmail",
+      robinhood: document.documentElement.getAttribute("data-oled-night-site") === "robinhood",
+      sofi: document.documentElement.getAttribute("data-oled-night-site") === "sofi",
       backdrop: new Map(),
       retainedAncestors,
       media: new Map(),
@@ -4112,6 +4139,9 @@
       ${surface}[data-oled-night-transparent-frame]:not([data-oled-night-page="none"]), ${surface}[data-oled-night-transparent-frame]:not([data-oled-night-page="none"]) body { background: transparent !important; }
       ${overrideRules(true)}
       html[data-oled-night-root] :focus-visible { outline-color: #66a3ff !important; }
+      ${root}[data-oled-night-site="sofi-help"]:is([data-oled-night-mode="oled"], [data-oled-night-mode="soft"]) :has(> input[type="search"]:focus-visible) {
+        outline: 2px solid #66a3ff !important; outline-offset: 2px !important;
+      }
       /* Both properties inherit. A descendant-wide highlight rule makes Blink
          maintain highlight paint on every changing row, even with no range
          selected. Set one document highlight and let nested text inherit it. */

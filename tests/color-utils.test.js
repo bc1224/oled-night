@@ -34,6 +34,12 @@ assert.deepEqual(colors.parseColor('rgb(12, 34, 56)'),cachedColor);
 assert.equal(colors.parseColor('invalid'),null);
 console.log('Color cache preserves correctness after eviction and mutable inputs');
 
+assert.equal(colors.siteProfile('robinhood.com'), 'robinhood');
+assert.equal(colors.siteProfile('www.robinhood.com'), 'robinhood');
+assert.equal(colors.siteProfile('robinhood.com.example'), '');
+assert.equal(colors.siteProfile('www.sofi.com'), 'sofi');
+assert.equal(colors.siteProfile('support.sofi.com'), 'sofi-help');
+assert.equal(colors.siteProfile('test.sofi.com'), '');
 assert.equal(colors.siteProfile('www.amazon.com'), 'amazon');
 assert.equal(colors.siteProfile('amazon.com.evil.example'), '');
 for (const host of ['www.amazon.ca', 'www.amazon.co.uk', 'www.amazon.de', 'www.amazon.co.jp', 'www.amazon.com.au']) assert.equal(colors.siteProfile(host), 'amazon', host);
