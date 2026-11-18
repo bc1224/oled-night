@@ -20,12 +20,13 @@ import {googleDocsPaint} from './google-docs-paint.mjs';
 import {ringFieldsScenario,ringFieldsProbe,ringFieldsRestored} from './ring-fields-scenario.mjs';
 import {ringFieldsPaint} from './ring-fields-paint.mjs';
 import {layerUtilitiesScenario,layerUtilitiesRestored} from './layer-utilities-scenario.mjs';
+import {financeControlsScenario} from './finance-controls-scenario.mjs';
 const root=resolve(import.meta.dirname,'../..'),temp=mkdtempSync(join(tmpdir(),'oled-reported-controls-'));
 let receive,runner,timer;const result=new Promise(r=>receive=r);
 const server=createServer((req,res)=>{
   if(req.method==='POST'&&req.url==='/result'){let body='';req.on('data',c=>body+=c);req.on('end',()=>{try{receive(JSON.parse(body));res.end('ok')}catch{res.writeHead(400);res.end()}});return}
   const path=new URL(req.url,'http://localhost').pathname;
-  if(!['/google-docs.html','/apple-ads-controls.html','/ring-fields.html','/layer-utilities.html','/app-store-icons.html','/google-analytics.html','/reported-controls.html','/calendar-booking.html','/retained-surfaces.html','/layered-surfaces.html','/logo-contrast.html','/logo-contrast.svg','/logo-contrast-white.svg','/logo-contrast-badge.svg'].includes(path)){res.writeHead(404);res.end();return}
+  if(!['/google-docs.html','/apple-ads-controls.html','/ring-fields.html','/finance-controls.html','/layer-utilities.html','/app-store-icons.html','/google-analytics.html','/reported-controls.html','/calendar-booking.html','/retained-surfaces.html','/layered-surfaces.html','/logo-contrast.html','/logo-contrast.svg','/logo-contrast-white.svg','/logo-contrast-badge.svg'].includes(path)){res.writeHead(404);res.end();return}
   res.setHeader('content-type',path.endsWith('.svg')?'image/svg+xml':'text/html');res.end(readFileSync(join(root,'tests/e2e/site',path.slice(1))));
 });
 let report={engine:'Firefox',checks:[]};
@@ -33,12 +34,19 @@ try{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${server.address().port}`;
   cpSync(join(root,'dist/firefox'),temp,{recursive:true});
   const manifest=JSON.parse(readFileSync(join(temp,'manifest.json')));manifest.background.scripts.push('reported-driver.js');writeFileSync(join(temp,'manifest.json'),JSON.stringify(manifest));
-  writeFileSync(join(temp,'reported-driver.js'),`const scenario=${reportedControlsScenario.toString()},restored=${reportedControlsRestored.toString()},booking=${bookingSurfacesScenario.toString()},bookingRestored=${bookingSurfacesRestored.toString()},retained=${retainedSurfacesScenario.toString()},layered=${layeredSurfacesScenario.toString()},layeredRestored=${layeredSurfacesRestored.toString()},logoProbe=${logoContrastProbe.toString()},logoRestored=${logoContrastRestored.toString()},ga=${googleAnalyticsScenario.toString()},gaProbe=${googleAnalyticsProbe.toString()},gaRestored=${googleAnalyticsRestored.toString()},appStoreProbe=${appStoreIconsProbe.toString()},appStoreRestored=${appStoreIconsRestored.toString()},appStoreToggle=${appStoreIconsToggle.toString()},appleAds=${appleAdsControlsScenario.toString()},appleAdsProbe=${appleAdsControlsProbe.toString()},appleAdsRestored=${appleAdsControlsRestored.toString()},docs=${googleDocsScenario.toString()},docsProbe=${googleDocsProbe.toString()},docsRestored=${googleDocsRestored.toString()},ringFields=${ringFieldsScenario.toString()},ringFieldsProbe=${ringFieldsProbe.toString()},ringFieldsRestored=${ringFieldsRestored.toString()},layerUtilities=${layerUtilitiesScenario.toString()},layerUtilitiesRestored=${layerUtilitiesRestored.toString()};
+  writeFileSync(join(temp,'reported-driver.js'),`const scenario=${reportedControlsScenario.toString()},restored=${reportedControlsRestored.toString()},booking=${bookingSurfacesScenario.toString()},bookingRestored=${bookingSurfacesRestored.toString()},retained=${retainedSurfacesScenario.toString()},layered=${layeredSurfacesScenario.toString()},layeredRestored=${layeredSurfacesRestored.toString()},logoProbe=${logoContrastProbe.toString()},logoRestored=${logoContrastRestored.toString()},ga=${googleAnalyticsScenario.toString()},gaProbe=${googleAnalyticsProbe.toString()},gaRestored=${googleAnalyticsRestored.toString()},appStoreProbe=${appStoreIconsProbe.toString()},appStoreRestored=${appStoreIconsRestored.toString()},appStoreToggle=${appStoreIconsToggle.toString()},appleAds=${appleAdsControlsScenario.toString()},appleAdsProbe=${appleAdsControlsProbe.toString()},appleAdsRestored=${appleAdsControlsRestored.toString()},docs=${googleDocsScenario.toString()},docsProbe=${googleDocsProbe.toString()},docsRestored=${googleDocsRestored.toString()},ringFields=${ringFieldsScenario.toString()},ringFieldsProbe=${ringFieldsProbe.toString()},ringFieldsRestored=${ringFieldsRestored.toString()},layerUtilities=${layerUtilitiesScenario.toString()},layerUtilitiesRestored=${layerUtilitiesRestored.toString()},finance=${financeControlsScenario.toString()};
   (async()=>{
     const out=[],captures=[],sleep=ms=>new Promise(r=>setTimeout(r,ms));let tab,completed=false;
     const inspect=async func=>(await browser.scripting.executeScript({target:{tabId:tab.id},func}))[0].result;
     try{
       await browser.storage.sync.clear();
+      await browser.storage.sync.set({extensionEnabled:true,globalEnabled:true,brightness:88,contrast:72,siteRules:{}});
+      for(const profile of ['robinhood','sofi','sofi-help']){
+        tab=await browser.tabs.create({url:${JSON.stringify(origin)}+'/finance-controls.html?profile='+profile});
+        await sleep(1200);
+        out.push(...await inspect(finance));
+        await browser.tabs.remove(tab.id);tab=null;
+      }
       for(const mode of ['auto','recolor']){
         await browser.storage.sync.set({extensionEnabled:true,globalEnabled:true,brightness:88,contrast:72,dimImages:false,siteRules:mode==='auto'?{}:{'127.0.0.1':'recolor'}});
         tab=await browser.tabs.create({url:${JSON.stringify(origin)}+'/reported-controls.html'+(mode==='recolor'?'?light':'')});await sleep(1200);
@@ -149,7 +157,7 @@ try{
   delete report.captures;
 }catch(e){report={engine:'Firefox',completed:false,checks:[{name:'Firefox reported control runner',ok:false,detail:String(e)}]}}
 finally{clearTimeout(timer);await runner?.exit();await new Promise(r=>server.close(r));rmSync(temp,{recursive:true,force:true})}
-mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-firefox.json'),JSON.stringify(componentReceipt('Firefox',{...report,fixtures:['google-docs.html','apple-ads-controls.html','ring-fields.html','layer-utilities.html','app-store-icons.html','google-analytics.html','reported-controls.html','calendar-booking.html','retained-surfaces.html','layered-surfaces.html','logo-contrast.html'],modes:['auto','recolor','soft','deepen','invert']}),null,2));
+mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-firefox.json'),JSON.stringify(componentReceipt('Firefox',{...report,fixtures:['finance-controls.html','google-docs.html','apple-ads-controls.html','ring-fields.html','layer-utilities.html','app-store-icons.html','google-analytics.html','reported-controls.html','calendar-booking.html','retained-surfaces.html','layered-surfaces.html','logo-contrast.html'],modes:['auto','recolor','soft','deepen','invert']}),null,2));
 for(const c of report.checks.filter(c=>!c.ok))console.log('FAIL '+c.name+': '+c.detail);
 console.log(report.checks.filter(c=>c.ok).length+'/'+report.checks.length+' Firefox reported control checks passed');
 if(!report.completed||report.checks.some(c=>!c.ok))process.exitCode=1;

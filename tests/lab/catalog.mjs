@@ -2,7 +2,7 @@ const groups = {
   "Interactions": ["compact-switches","oled-components","navigation-work","dropdowns","dark-dropdowns","state-surfaces","shadow-hover","cold-shadow","interaction-layout","media-navigation","frame-mutation","paint-updates","large-updates","text-hover","instagram-radios","reported-controls"],
   "Text & surfaces": ["light","dark","explicit-light","ink","surfaces","scope-light","scope-dark","scope-scheme","svg-outline","bright-surfaces","component-names","email-button","layered-surfaces","masked-surfaces","retained-surfaces","shadow-card","slotted-important","contrast-floors","ink-locality","calendar-fields","ring-fields","layer-utilities"],
   "Media & data": ["indicators","chart","canvas","shop","ad-overlays","wide-wordmarks","dark-card-artwork","logo-tiles","app-store-icons","layered-card-media","logo-contrast","media-underlay-decor","negative-z-media","late-logos","logo-budget","brand-wall","svg-mask-avatar","known-gaps"],
-  "App reproductions": ["youtube","gmail","email-newsletter","native-banner","booking-form","checkout","chatgpt-controls","chatgpt-streaming","google-sheets-colors","reddit-res","shadow-stability","apple-auth","apple-recovery","dmv-hero-text","consent-banner","growing-frame","apple-ads-controls","calendar-booking","google-analytics","google-docs","navy-brand-cart","youtube-music","amazon-home","row-hover"],
+  "App reproductions": ["youtube","gmail","email-newsletter","native-banner","finance-controls","booking-form","checkout","chatgpt-controls","chatgpt-streaming","google-sheets-colors","reddit-res","shadow-stability","apple-auth","apple-recovery","dmv-hero-text","consent-banner","growing-frame","apple-ads-controls","calendar-booking","google-analytics","google-docs","navy-brand-cart","youtube-music","amazon-home","row-hover"],
   "Isolation & loading": ["components","protected","challenge","challenge-inline","frame","transparent-frame","slow","efficiency","report-fields","report-preview","generated-style","dark-layout","late-dark-theme","parser-surface","survey-frame","survey-card"]
 };
 const descriptions = {
@@ -26,6 +26,7 @@ const descriptions = {
   "cold-shadow":"Roots attached after their hosts were scanned: resting nested controls become readable without hover or focus",
   "email-newsletter":"Gmail-style dark reader: authored HTML headings, paragraphs, nested light panels and preserved artwork",
   "text-hover":"Inherited paragraph, control, shadow and vector ink stays stable across pointer crossings, focus and small updates",
+  "finance-controls":"Synthetic finance controls with site profiles for Robinhood Legend and disabled Review, SoFi numeric field borders and Help Center search focus",
   "native-banner":"Robinhood-style native dark application with a light onboarding banner and tour controls",
   "booking-form":"SynXis-style filled fields, placeholders, focus outlines, colored hotel logo and back icon",
   "frame-mutation":"Navigation replaced or focused inside an animation callback: dark surfaces and readable native-dark focus ink before another frame",

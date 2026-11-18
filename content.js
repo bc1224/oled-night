@@ -1318,6 +1318,19 @@
     // instead. The fill inherits, so text inside such an element paints its
     // own fill too, rather than the ancestor's. A page's own fill is kept.
     if (found.fg && !found.ink && computed.webkitTextFillColor === computed.color && importantInk(element, ctx)) found.ink = found.fg;
+    // SoFi's calculator uses the same muted navy for body ink and its
+    // translucent resting border. Its opaque cyan focus border is separate.
+    if (ctx.sofi && element.matches(".es-fields-number")) {
+      for (const [side, key] of SIDES) {
+        if (found[key] && computed[`border${side}Color`] === "rgba(32, 23, 71, 0.2)")
+          found[key] = "rgb(110 110 118)";
+      }
+    }
+    if (ctx.sofi && found.field && found.fg && !kept && element.closest(".es-fields-number") &&
+        computed.color === "rgb(32, 23, 71)" && computed.webkitTextFillColor === computed.color &&
+        !element.matches(":disabled, [aria-disabled=true]")) {
+      found.ink = found.fg = "hsl(0 0% var(--oln-light, 88%))";
+    }
     return found;
   }
 
@@ -2726,6 +2739,7 @@
       recolorLightRegions: currentSiteMode() !== "deepen",
       pageColor,
       gmail: document.documentElement.getAttribute("data-oled-night-site") === "gmail",
+      sofi: document.documentElement.getAttribute("data-oled-night-site") === "sofi",
       backdrop: new Map(),
       retainedAncestors,
       media: new Map(),
@@ -3927,8 +3941,13 @@
     // "#banner #group button#handler"), so every priority token repeats four
     // IDs. Color, profile and logo tokens rise together to keep their order.
     // The outer marker still scopes every override; measurement still opts out.
-    const on = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}])`;
-    const onPseudo = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_PSEUDO}])`;
+    // Robinhood paints disabled button faces with currentColor and supplies a
+    // separate label color. Its Legend link pairs a lime face with dark ink.
+    const nativeControl = ':is(button:disabled, a[href="/legend"], a[href^="/legend?"])';
+    const nativeSelector = `html[data-oled-night-site="robinhood"][data-oled-night-mode="crush"] ${nativeControl}`;
+    const keepNative = layered ? `:not(:where(${nativeSelector}, ${nativeSelector} *))` : "";
+    const on = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}])${keepNative}`;
+    const onPseudo = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_PSEUDO}])${keepNative}`;
     const slotted = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}]):not([${MEASURE_PSEUDO}])`;
     return `
       /* Each paint variable belongs to its marked element (and its pseudos).
@@ -4112,6 +4131,9 @@
       ${surface}[data-oled-night-transparent-frame]:not([data-oled-night-page="none"]), ${surface}[data-oled-night-transparent-frame]:not([data-oled-night-page="none"]) body { background: transparent !important; }
       ${overrideRules(true)}
       html[data-oled-night-root] :focus-visible { outline-color: #66a3ff !important; }
+      ${root}[data-oled-night-site="sofi-help"]:is([data-oled-night-mode="oled"], [data-oled-night-mode="soft"]) :has(> input[type="search"]:focus-visible) {
+        outline: 2px solid #66a3ff !important; outline-offset: 2px !important;
+      }
       /* Both properties inherit. A descendant-wide highlight rule makes Blink
          maintain highlight paint on every changing row, even with no range
          selected. Set one document highlight and let nested text inherit it. */

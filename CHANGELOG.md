@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.98
+
+- Robinhood's native dark theme keeps the lime Legend link and the readable gray disabled Review button.
+- SoFi Help Center search has a visible keyboard focus outline. SoFi's loan calculator uses neutral number-field text and resting borders with cyan focus feedback.
+
 ## 0.6.97
 
 - Text on picture cards is readable again when the picture sits in its own empty layer behind the text, such as the light "Add $X more to get an extra $25 coupon" card in the Bambu Lab store cart. OLED Night only recognized pictures drawn as images, so it turned the text light on top of a light picture. The text now keeps its original dark color over the picture.

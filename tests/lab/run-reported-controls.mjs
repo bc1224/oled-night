@@ -21,11 +21,17 @@ import {googleDocsPaint} from './google-docs-paint.mjs';
 import {ringFieldsScenario,ringFieldsProbe,ringFieldsRestored} from './ring-fields-scenario.mjs';
 import {ringFieldsPaint} from './ring-fields-paint.mjs';
 import {layerUtilitiesScenario,layerUtilitiesRestored} from './layer-utilities-scenario.mjs';
+import {financeControlsScenario} from './finance-controls-scenario.mjs';
 const root=resolve(import.meta.dirname,'../..'),output=join(root,'dist/reported-controls');mkdirSync(output,{recursive:true});
 const server=await serveLab(join(root,'tests/e2e/site'));let browser;const checks=[];
 try{
   browser=await launchChrome();const {id}=await browser.send('Extensions.loadUnpacked',{path:join(root,'dist/chrome')});
   const options=await browser.open(`chrome-extension://${id}/options.html`),page=await browser.open();
+  await options.eval('chrome.storage.sync.set({extensionEnabled:true,globalEnabled:true,brightness:88,contrast:72,siteRules:{}})');
+  for(const profile of ['robinhood','sofi','sofi-help']){
+    await page.go(`${server.origin}/finance-controls.html?profile=${profile}`);
+    checks.push(...await page.eval(`(${financeControlsScenario.toString()})()`));
+  }
   for(const mode of ['auto','recolor']){
     await options.eval(`chrome.storage.sync.set({extensionEnabled:true,globalEnabled:true,brightness:88,contrast:72,dimImages:false,siteRules:${mode==='auto'?'{}':"{'127.0.0.1':'recolor'}"}})`);await wait(450);
     await page.go(`${server.origin}/reported-controls.html${mode==='recolor'?'?light':''}`);await wait(700);
@@ -168,5 +174,5 @@ try{
   checks.push(...(await page.eval(`(${retainedSurfacesScenario.toString()})()`)).map(c=>({...c,name:'deepen / '+c.name})));
 }finally{await browser?.close();await server.close()}
 writeFileSync(join(output,'results.json'),JSON.stringify(checks,null,2));for(const c of checks)console.log((c.ok?'PASS ':'FAIL ')+c.name+' '+c.detail);
-mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-chrome.json'),JSON.stringify(componentReceipt('Chrome',{fixtures:['google-docs.html','apple-ads-controls.html','ring-fields.html','layer-utilities.html','app-store-icons.html','google-analytics.html','reported-controls.html','calendar-booking.html','retained-surfaces.html','layered-surfaces.html','logo-contrast.html'],modes:['auto','recolor','soft','deepen','invert'],checks}),null,2));
+mkdirSync(join(root,'dist/lab-results'),{recursive:true});writeFileSync(join(root,'dist/lab-results/reported-controls-chrome.json'),JSON.stringify(componentReceipt('Chrome',{fixtures:['finance-controls.html','google-docs.html','apple-ads-controls.html','ring-fields.html','layer-utilities.html','app-store-icons.html','google-analytics.html','reported-controls.html','calendar-booking.html','retained-surfaces.html','layered-surfaces.html','logo-contrast.html'],modes:['auto','recolor','soft','deepen','invert'],checks}),null,2));
 if(checks.some(c=>!c.ok))process.exitCode=1;

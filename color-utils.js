@@ -452,6 +452,9 @@
     if (host === "mail.google.com") return "gmail";
     if (host === "analytics.google.com") return "google-analytics";
     if (host === "docs.google.com") return "google-docs";
+    if (host === "robinhood.com" || host === "www.robinhood.com") return "robinhood";
+    if (host === "support.sofi.com") return "sofi-help";
+    if (host === "www.sofi.com") return "sofi";
     if (isAmazonStore(host)) return "amazon";
     if (/^(idmsa|appleid|appstoreconnect)\.apple\.com$/.test(host)) return "apple-auth";
     if (/(^|\.)reddit\.com$/.test(host)) return "reddit";
