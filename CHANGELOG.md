@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.99
+
+- Twitch stream titles, uptime, About headings and bios stay readable on dark panels when a channel uses a bright accent color.
+
 ## 0.6.98
 
 - Robinhood's native dark theme keeps the lime Legend link and the readable gray disabled Review button.

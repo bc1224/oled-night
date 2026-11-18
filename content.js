@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.98";
+  const VERSION = "0.6.99";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -1145,10 +1145,19 @@
       // The parent may have been recolored as a light UI island while this
       // descendant still sits over artwork. Pin its authored ink here too.
       if (nativeBackdrop?.image) found.fg = computed.color;
+      const text = colors.parseColor(computed.color);
+      // A dark panel inside a bright channel accent must keep its own
+      // readable ink when the parent gets a darker foreground for contrast.
+      if (ctx.recolorLightRegions && nativeSurface?.color?.a >= 0.95 &&
+          computed.backgroundImage === "none" && text?.a >= 0.95 &&
+          colors.luminance(nativeSurface.color) < 0.2 &&
+          (colors.luminance(text) + 0.05) / (colors.luminance(nativeSurface.color) + 0.05) >= 4.5) {
+        const outside = backdropOf(parentAcrossShadow(element), ctx);
+        if (outside.color && colors.luminance(outside.color) > 0.5) found.fg = computed.color;
+      }
       // Native dark readers sometimes replace the message canvas while
       // leaving explicit dark HTML ink. Repair only unreadable neutral ink
       // on a solid dark backdrop; keep readable native text and imagery.
-      const text = colors.parseColor(computed.color);
       if (ctx.recolorLightRegions && nativeBackdrop && !nativeBackdrop.image && text?.a >= 0.95 &&
           colors.chroma(text) < 0.1 && colors.luminance(text) < 0.2) {
         const bg = colors.luminance(nativeBackdrop.color), ink = colors.luminance(text);
