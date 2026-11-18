@@ -19,7 +19,15 @@ const html = `<!doctype html><style>
   <textarea id="note" class="plain">typed note</textarea>
   <select id="pick" class="plain"><option>First option</option><option>Second option</option></select>
   <label><input id="check" type="checkbox" checked> Remember me</label>
-  <p id="copy">Body copy stays light.</p></body>`;
+  <p id="copy">Body copy stays light.</p>
+  <!-- Twitch uses a channel accent behind dark stream details and About panels. -->
+  <div style="background:gold;padding:12px"><span id="highlight">Channel highlight</span>
+    <div><section style="background:#0e0e10;padding:12px">
+      <p id="title">Stream title</p><span id="uptime">1:23:45</span>
+      <h3 id="about">About the channel</h3>
+      <div style="background:#18181b;padding:12px"><p id="bio">Channel bio</p></div>
+    </section></div>
+  </div></body>`;
 
 const browser = await launchChrome({onEvent(event) {
   if (event.method === "Fetch.requestPaused") browser.send("Fetch.fulfillRequest", {
@@ -59,7 +67,11 @@ try {
     return {mode: document.documentElement.getAttribute('data-oled-night-mode'),
       wrapped: field('wrapped'), email: field('email'), password: field('password'), note: field('note'), pick: field('pick'),
       check: getComputedStyle(document.getElementById('check')).accentColor,
-      copy: {ink: getComputedStyle(document.getElementById('copy')).color, back: painted(document.getElementById('copy'))}};
+      copy: {ink: getComputedStyle(document.getElementById('copy')).color, back: painted(document.getElementById('copy'))},
+      channel: ['highlight', 'title', 'uptime', 'about', 'bio'].map(id => {
+        const node = document.getElementById(id);
+        return {id, ink: getComputedStyle(node).webkitTextFillColor, back: painted(node)};
+      })};
   })()`);
   const state = await probe();
   assert.equal(state.mode, "crush", "The fixture must run in the already-dark page mode");
@@ -69,6 +81,9 @@ try {
     if (name === "wrapped" || name === "email") assert.ok(ratio(placeholder, back) >= 3, `${name}: placeholder must reach 3:1, got ${placeholder} on ${back}`);
   }
   assert.ok(ratio(state.copy.ink, state.copy.back) >= 4.5, "Page copy stays readable");
+  for (const {id, ink, back} of state.channel) {
+    assert.ok(ratio(ink, back) >= 4.5, `Channel ${id} must reach 4.5:1, got ${ink} on ${back}`);
+  }
 
   await options.eval("chrome.storage.sync.set({extensionEnabled:false})"); await wait(300);
   const restored = await probe();
