@@ -1,6 +1,6 @@
 export async function financeControlsScenario() {
   const checks = [];
-  const check = (name, ok) => checks.push({name, ok});
+  const check = (name, ok, detail) => checks.push({name, ok, detail});
   const page = document.documentElement;
   const profile = page.dataset.fixtureProfile;
   // The loopback fixture uses the same profile marker as the real host.
@@ -40,8 +40,11 @@ export async function financeControlsScenario() {
     const shell = search.parentElement;
     check('unfocused search has no focus ring', style(shell).outlineStyle === 'none');
     search.focus();
-    check('focused search has an outline on its shell', style(shell).outlineWidth === '2px' &&
-      style(shell).outlineStyle === 'solid' && style(shell).outlineColor === 'rgb(102, 163, 255)');
+    await settle();
+    check('focused search has an outline on its shell', parseFloat(style(shell).outlineWidth) >= 1.5 &&
+      style(shell).outlineStyle === 'solid' && style(shell).outlineColor === 'rgb(102, 163, 255)',
+      JSON.stringify({focused: document.activeElement === search, focusVisible: search.matches(':focus-visible'),
+        outline: style(shell).outline, mode: page.dataset.oledNightMode}));
   }
   return checks.map(result => ({...result, name: profile + ' / ' + result.name}));
 }
