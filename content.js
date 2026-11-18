@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.99";
+  const VERSION = "0.6.100";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -97,6 +97,9 @@
   let themeObserver = null;
   const THEME_ATTRIBUTE = /theme|dark|light|scheme|mode|appearance/i;
   let stopYouTubeTheme = null;
+  let stopNativeChat = null;
+  let earlyChatSheet = null;
+  const EMPTY_CHAT = 'html:not(:has(main, [role="main"], form, [role="dialog"], #challenge-stage))';
   let challengeTimer = null;
   let active = false;
   let darkPage = false;
@@ -4035,9 +4038,21 @@
     // Its paint cannot be classified before <body> and stylesheets exist.
     if (!isTopFrame) return;
     if (Settings.prefersNativeColors(hostname())) return;
-    if (colorsApi().usesNativeChatTheme(hostname())) return;
     // Wait for the parsed form/provider on auth URLs before touching the page.
     if (AUTH_PATH.test(location.pathname)) return;
+    if (colorsApi().usesNativeChatTheme(hostname())) {
+      // Either document-start script can run first. As soon as both are
+      // present the browser has the saved color, without a storage round trip.
+      globalThis.applyOledChatStartup = () => {
+        const color = globalThis.oledChatStartupSurface;
+        if (!color || earlyChatSheet) return;
+        earlyChatSheet = new CSSStyleSheet();
+        earlyChatSheet.replaceSync(`@layer ${LAYER} { ${EMPTY_CHAT}, ${EMPTY_CHAT} body { background-color: ${color} !important; } }`);
+        document.adoptedStyleSheets = [...document.adoptedStyleSheets, earlyChatSheet];
+      };
+      globalThis.applyOledChatStartup();
+      return;
+    }
     if (document.getElementById("oled-night-early")) return;
     const early = document.createElement("style");
     early.id = "oled-night-early";
@@ -4047,6 +4062,11 @@
 
   function removeEarly() {
     document.getElementById("oled-night-early")?.remove();
+    delete globalThis.applyOledChatStartup;
+    if (earlyChatSheet) {
+      document.adoptedStyleSheets = document.adoptedStyleSheets.filter(item => item !== earlyChatSheet);
+      earlyChatSheet = null;
+    }
   }
 
   function styleAmazonSearch(root) {
@@ -4123,6 +4143,119 @@
       ${amazon} :is(#search [class*="_discountText"], #nav-flyout-ewc .a-color-price) { color: #ff7a8a !important; }
       ${amazon} .ewc-scroller::-webkit-scrollbar-track { background: var(--oled-night-page) !important; }
     }`));
+  }
+
+  function startNativeChat() {
+    // A sheet owned by the document survives ChatGPT replacing its root or
+    // reconciling its head. Keep the app's authored light theme and controls.
+    const surface = resolvedAppearance(settings) === "soft" ? "#101014" : "#000";
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(`@layer ${LAYER} {
+      /* Native ChatGPT tokens (current app shell and legacy web UI). Only its
+         dark theme's base surfaces change: code, dialogs, controls, selection,
+         photographic media and inherited native ink retain their own palette. */
+      html:is([data-theme="dark"], .dark) {
+        --app-color-background-surface: ${surface} !important;
+        --app-color-background-surface-under: ${surface} !important;
+        --main-surface-primary: ${surface} !important;
+        --bg-primary: ${surface} !important;
+      }
+      html:is([data-theme="dark"], .dark),
+      html:is([data-theme="dark"], .dark) body {
+        background-color: ${surface} !important;
+      }
+      /* ChatGPT's file preview draws spreadsheet cells on a canvas and keeps a
+         light grid even in the dark theme, marking it data-popcorn-dark-mode="false".
+         Canvas pixels cannot be recolored, so invert only that grid (hue-rotate
+         keeps the selection blue). Its own dark mode and the light theme stay native. */
+      html:is([data-theme="dark"], .dark) [data-testid="popcorn-viewport-host"][data-popcorn-dark-mode="false"] {
+        filter: invert(1) hue-rotate(180deg) !important;
+      }
+      /* DOCX and PDF file previews render as white paper pages (PDF pages on
+         canvas) in the dark theme too. Invert the page; flip DOCX images back. */
+      html:is([data-theme="dark"], .dark) :is(.codex-docx-preview, [data-artifact-pdf-page="true"]),
+      html:is([data-theme="dark"], .dark) .codex-docx-preview :is(img, picture, video, canvas, object, embed) {
+        filter: invert(1) hue-rotate(180deg) !important;
+      }
+      html[data-oled-night-dim] :is(img, video) { filter: brightness(0.78) !important; }
+      html :focus-visible { outline-color: #66a3ff !important; }
+    }`);
+
+    let root, previousTheme, rememberedDark, savedDark;
+    let starting = isTopFrame && !AUTH_PATH.test(location.pathname);
+    let guardIndex = -1, guardColor, stopped = false, storageReady = false;
+    const markers = {"data-oled-night-root": "", "data-oled-night-chatgpt": "",
+      "data-oled-night-page": "none", "data-oled-night-mode": "native", "data-oled-night-version": VERSION};
+    const watch = new MutationObserver(() => sync());
+
+    function sync(recheck = false) {
+      if (stopped || !document.documentElement) return;
+      if (!document.adoptedStyleSheets.includes(sheet)) {
+        document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+      }
+      if (root !== document.documentElement) {
+        root = document.documentElement;
+        previousTheme = undefined;
+        watch.disconnect();
+        watch.observe(document, {childList: true});
+        watch.observe(root, {attributes: true, attributeFilter: ["class", "data-theme", ...Object.keys(markers)]});
+      }
+      let restored = false;
+      for (const [key, value] of Object.entries(markers)) {
+        if (root.getAttribute(key) === value) continue;
+        root.setAttribute(key, value);
+        restored = true;
+      }
+      if (restored) {
+        root.style.setProperty("--oled-night-page", surface);
+        applyTuning();
+      }
+      if (!isTopFrame) return;
+      const theme = root.matches('.dark, [data-theme="dark"]') ? "dark" :
+        root.matches('.light, [data-theme="light"]') ? "light" : "";
+      if (!recheck && previousTheme === theme) return;
+      previousTheme = theme;
+      // The loading screen can advertise light immediately before mounting
+      // a dark app. Only an actual chat page can replace the saved preference.
+      if (theme && document.querySelector('main, [role="main"]')) {
+        rememberedDark = theme === "dark";
+        if (storageReady && savedDark !== rememberedDark) {
+          savedDark = rememberedDark;
+          chrome.storage.local.set({oledChatDark: savedDark}).catch(() => {});
+        }
+      } else if (theme === "dark") rememberedDark = true;
+      const nextColor = starting && (rememberedDark ?? (globalThis.oledChatStartupSurface || prefersDark())) ? surface : null;
+      if (guardColor === nextColor) return;
+      guardColor = nextColor;
+      if (guardIndex >= 0) sheet.deleteRule(guardIndex);
+      guardIndex = guardColor ? sheet.insertRule(`@layer ${LAYER} { ${EMPTY_CHAT}, ${EMPTY_CHAT} body { background-color: ${guardColor} !important; } }`, sheet.cssRules.length) : -1;
+    }
+    globalThis.applyOledChatStartup = () => sync(true);
+    sync();
+    if (isTopFrame) chrome.storage.local.get("oledChatDark").then(value => {
+      if (stopped) return;
+      storageReady = true;
+      savedDark = value.oledChatDark;
+      rememberedDark ??= savedDark;
+      sync(true);
+    }).catch(() => {});
+    // A light page without a main landmark must not keep the startup color.
+    let finishTimer;
+    function loaded() {
+      sync(true);
+      finishTimer = setTimeout(() => { starting = false; sync(true); }, 5000);
+    }
+    if (isTopFrame) {
+      if (document.readyState === "complete") loaded();
+      else addEventListener("load", loaded, {once: true});
+    }
+    return () => {
+      stopped = true;
+      watch.disconnect();
+      clearTimeout(finishTimer);
+      removeEventListener("load", loaded);
+      document.adoptedStyleSheets = document.adoptedStyleSheets.filter(item => item !== sheet);
+    };
   }
 
   function installSheet() {
@@ -4280,32 +4413,6 @@
         --ytmusic-general-background-c: var(--oled-night-page) !important;
         --ytmusic-color-black4: var(--oled-night-page) !important;
       }
-      /* Native ChatGPT tokens (current app shell and legacy web UI). Only its
-         dark theme's base surfaces change: code, dialogs, controls, selection,
-         photographic media and inherited native ink retain their own palette. */
-      html[data-oled-night-chatgpt]:is([data-theme="dark"], .dark) {
-        --app-color-background-surface: var(--oled-night-page, #000) !important;
-        --app-color-background-surface-under: var(--oled-night-page, #000) !important;
-        --main-surface-primary: var(--oled-night-page, #000) !important;
-        --bg-primary: var(--oled-night-page, #000) !important;
-      }
-      html[data-oled-night-chatgpt]:is([data-theme="dark"], .dark),
-      html[data-oled-night-chatgpt]:is([data-theme="dark"], .dark) body {
-        background-color: var(--oled-night-page, #000) !important;
-      }
-      /* ChatGPT's file preview draws spreadsheet cells on a canvas and keeps a
-         light grid even in the dark theme, marking it data-popcorn-dark-mode="false".
-         Canvas pixels cannot be recolored, so invert only that grid (hue-rotate
-         keeps the selection blue). Its own dark mode and the light theme stay native. */
-      html[data-oled-night-chatgpt]:is([data-theme="dark"], .dark) [data-testid="popcorn-viewport-host"][data-popcorn-dark-mode="false"] {
-        filter: invert(1) hue-rotate(180deg) !important;
-      }
-      /* DOCX and PDF file previews render as white paper pages (PDF pages on
-         canvas) in the dark theme too. Invert the page; flip DOCX images back. */
-      html[data-oled-night-chatgpt]:is([data-theme="dark"], .dark) :is(.codex-docx-preview, [data-artifact-pdf-page="true"]),
-      html[data-oled-night-chatgpt]:is([data-theme="dark"], .dark) .codex-docx-preview :is(img, picture, video, canvas, object, embed) {
-        filter: invert(1) hue-rotate(180deg) !important;
-      }
       }
       ${ACCENT}
       ${root}:not([data-oled-night-page="none"]) { scrollbar-color: rgb(58 58 66) transparent; }
@@ -4353,6 +4460,8 @@
     for (const entry of spriteDocuments.values()) { entry.controller.abort(); entry.waiting.clear(); }
     spriteDocuments.clear();
     localSpriteWaiters.clear();
+    stopNativeChat?.();
+    stopNativeChat = null;
     stopYouTubeTheme?.();
     stopYouTubeTheme = null;
     document.removeEventListener("load", onSheetLoad, true);
@@ -4498,7 +4607,7 @@
     const transparentFrame = isTransparentFrame();
     const nativeChat = colorsApi().usesNativeChatTheme(hostname());
     darkPage = !nativeChat && !colorsApi().usesNativeSafeMode(hostname()) && detectDarkPage();
-    installSheet();
+    if (!nativeChat || site === "invert") installSheet();
     active = true;
     const root = document.documentElement;
     root.setAttribute("data-oled-night-root", "");
@@ -4520,10 +4629,7 @@
     // never enter per-element measurement, mutation or interaction processing.
     // CSS follows its authored theme; light mode and raised surfaces stay native.
     if (nativeChat) {
-      root.setAttribute('data-oled-night-mode', 'native');
-      root.setAttribute('data-oled-night-chatgpt', '');
-      root.setAttribute('data-oled-night-page', 'none');
-      root.style.setProperty('--oled-night-page', resolvedAppearance(settings) === 'soft' ? '#101014' : '#000');
+      stopNativeChat = startNativeChat();
       return;
     }
     const mode = modeFor();
@@ -4600,7 +4706,8 @@
     if (wait !== null) scheduleTimer = setTimeout(() => applySettings(settings), wait + 500);
     const enabled = isEnabled(settings);
     if (!enabled) { disable(); return; }
-    if (!domReady) return; // enable() runs on DOMContentLoaded; the early sheet covers until then
+    // Native chat can protect the empty canvas as soon as settings arrive.
+    if (!domReady && !(isTopFrame && colorsApi().usesNativeChatTheme(hostname()) && currentSiteMode() !== "invert")) return;
     // A body may appear before the auth form and its CAPTCHA bootstrap. Do not
     // enable from the asynchronous settings callback until parsing finishes.
     if (AUTH_PATH.test(location.pathname) && document.readyState === "loading") return;
@@ -4720,7 +4827,7 @@
       if (domReady) return;
       domReady = true;
       bodyWatch.disconnect();
-      if (isEnabled(settings) && revision > 0 && !AUTH_PATH.test(location.pathname)) enable();
+      if (!active && isEnabled(settings) && revision > 0 && !AUTH_PATH.test(location.pathname)) enable();
     };
     const bodyWatch = new MutationObserver(() => { if (document.body) start(); });
     bodyWatch.observe(document.documentElement, { childList: true });

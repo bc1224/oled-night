@@ -17,6 +17,7 @@ const attributeValues = new Map();
 
 global.location = { hostname: "www.youtube.com" };
 global.matchMedia = () => ({ matches: true });
+global.removeEventListener = () => {};
 global.Element = class Element {};
 global.NodeFilter = { SHOW_ELEMENT: 1 };
 global.Node = { ELEMENT_NODE: 1 };
@@ -25,8 +26,15 @@ global.MutationObserver = class MutationObserver {
   observe(target) { observedTarget = target; }
 };
 global.CSS = { supports() { return true; } };
+global.CSSStyleSheet = class {
+  replaceSync() {}
+  cssRules = [];
+  insertRule(rule) { return this.cssRules.push(rule) - 1; }
+  deleteRule(index) { this.cssRules.splice(index, 1); }
+};
 
 const root = {
+  matches() { return false; },
   setAttribute(name, value = "") { attributes.add(name); attributeValues.set(name, value); },
   getAttribute(name) { return attributeValues.get(name) ?? null; },
   removeAttribute(name) { attributes.delete(name); attributeValues.delete(name); },
@@ -37,6 +45,8 @@ const root = {
 };
 
 global.document = {
+  readyState: "complete",
+  adoptedStyleSheets: [],
   removeEventListener() {},
   addEventListener(type) { assert.equal(type, "load", "Only stylesheet loading is watched"); },
   styleSheets: [],
@@ -51,6 +61,7 @@ global.document = {
 global.chrome = {
   runtime: { onMessage: { addListener(listener) { messageListener = listener; } } },
   storage: {
+    local: { get: async () => ({}) },
     sync: { get(defaults, callback) { callback({ ...defaults, ...stored }); } },
     onChanged: { addListener(listener) { storageListener = listener; } }
   }
@@ -82,4 +93,7 @@ storageListener({ extensionEnabled: { newValue: true } }, "sync");
 assert.equal(attributes.has("data-oled-night-chatgpt"), true);
 assert.equal(styleValues.has("--oled-night-youtube-primary"), false, "Other sites do not inherit unused YouTube palette values");
 assert.equal(styleValues.has("--oled-night-youtube-secondary"), false, "Other sites do not inherit unused YouTube secondary values");
+stored.extensionEnabled = false;
+storageListener({ extensionEnabled: { newValue: false } }, "sync");
+assert.equal(document.adoptedStyleSheets.length, 0, "Pausing removes the native ChatGPT sheet");
 console.log("youtube-safe-mode: safety and cleanup assertions passed");
