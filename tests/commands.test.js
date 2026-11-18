@@ -10,7 +10,7 @@ const context = vm.createContext({
   OledNightSettings: S, URL, console,
   chrome: {
     commands: { onCommand: { addListener(fn) { listener = fn; } } },
-    storage: { sync: {
+    storage: { onChanged: { addListener() {} }, sync: {
       async get(defaults) { return { ...defaults, ...structuredClone(config) }; },
       async set(patch) { writes.push(patch); config = { ...config, ...structuredClone(patch) }; }
     } },

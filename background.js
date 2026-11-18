@@ -41,6 +41,44 @@ function queueCommand(command) {
 }
 chrome.commands.onCommand.addListener(queueCommand);
 
+// Advertise the last confirmed dark chat color before the next document
+// paints. The registration passes the color into our isolated content script.
+const chatStartupId = "oled-night-chat-startup";
+let chatStartupUpdates = Promise.resolve();
+async function updateChatStartup() {
+  const [config, saved, [existing]] = await Promise.all([
+    load(), chrome.storage.local.get("oledChatDark"),
+    chrome.scripting.getRegisteredContentScripts({ids: [chatStartupId]})
+  ]);
+  // A schedule can expire with the worker asleep. Scheduled pages use the
+  // content script's current-time check before applying any startup color.
+  const hosts = ["chatgpt.com", "www.chatgpt.com", "chat.openai.com"];
+  const matches = saved.oledChatDark && !config.schedule.enabled ? hosts
+    .filter(host => Settings.isEnabled(config, host) && Settings.siteMode(config, host) !== "invert")
+    .map(host => `https://${host}/*`) : [];
+  if (!matches.length) {
+    if (existing) await chrome.scripting.unregisterContentScripts({ids: [chatStartupId]});
+    return;
+  }
+  const js = [`chat-startup-${config.appearance}.js`];
+  const registration = {id:chatStartupId, matches, js, runAt:"document_start"};
+  if (!existing) await chrome.scripting.registerContentScripts([registration]);
+  else if (existing.js?.[0] !== js[0] || existing.matches?.slice().sort().join() !== matches.slice().sort().join())
+    await chrome.scripting.updateContentScripts([registration]);
+}
+function queueChatStartup() {
+  chatStartupUpdates = chatStartupUpdates.then(updateChatStartup).catch(() => {
+    console.warn("OLED Night could not update the saved ChatGPT startup color.");
+  });
+  return chatStartupUpdates;
+}
+chrome.storage.onChanged.addListener((changes, area) => {
+  if ((area === "local" && changes.oledChatDark) || (area === "sync" &&
+      ["extensionEnabled","globalEnabled","appearance","schedule","siteRules"].some(key => changes[key]))) return queueChatStartup();
+});
+chrome.runtime.onInstalled.addListener(queueChatStartup);
+chrome.runtime.onStartup.addListener(queueChatStartup);
+
 // Up to 0.6.14 the experimental closed-component option registered a page-world
 // script that replaced Element.prototype.attachShadow. Bot checks such as
 // Cloudflare Turnstile treat that as tampering, so content.js now reads closed

@@ -5,6 +5,11 @@ export async function chatStreamingScenario(){
  check('performance','streaming regression loads the full 180-message conversation',document.querySelectorAll('#messages > article').length===180);
  check('performance','native chat uses CSS only without per-element paint markers',root.hasAttribute('data-oled-night-chatgpt')&&root.getAttribute('data-oled-night-mode')==='native'&&!document.querySelector('[data-oled-night]'));
  check('surface','native chat primary surface is OLED black',bg(document.querySelector('main'))==='rgb(0, 0, 0)',bg(document.querySelector('main')));
+ for(const attribute of [...root.attributes]) {
+   if(attribute.name.startsWith('data-oled-night') || attribute.name==='style') root.removeAttribute(attribute.name);
+ }
+ await new Promise(resolve=>requestAnimationFrame(resolve));
+ check('surface','chat hydration preserves the active dark canvas',root.getAttribute('data-oled-night-mode')==='native'&&bg(document.querySelector('main'))==='rgb(0, 0, 0)');
  check('surface','native chat composer, code and dialog keep authored raised surfaces',['form','pre','dialog'].every(s=>bg(document.querySelector(s))==='rgb(33, 33, 33)'));
  const sheetFilter=id=>getComputedStyle(document.getElementById(id)).filter;
  check('surface','light canvas spreadsheet preview is inverted to a black grid in native dark theme with hues kept',/invert\(1\)/.test(sheetFilter('sheet-light'))&&/hue-rotate\(180deg\)/.test(sheetFilter('sheet-light')),sheetFilter('sheet-light'));

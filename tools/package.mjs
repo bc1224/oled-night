@@ -17,6 +17,7 @@ const LOCALES = readdirSync(join(root, "_locales")).sort().map((locale) => `_loc
 
 // Runtime files only: manifest, scripts, pages, styles and the toolbar icons.
 const RUNTIME = ["manifest.json", "settings.js", "color-utils.js", "youtube-theme.js", "content.js", "background.js",
+  "chat-startup-oled.js", "chat-startup-soft.js", "chat-startup-auto.js",
   "popup.html", "popup.css", "popup.js", "report-utils.js", "options.html", "options.css", "options.js", "welcome.html", "welcome.css", "welcome.js",
   ...LOCALES,
   "assets/icon-16.png", "assets/icon-32.png", "assets/icon-48.png", "assets/icon-128.png", "INSTALL.md", "LICENSE"];

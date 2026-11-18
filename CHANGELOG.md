@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.100
+
+- ChatGPT keeps its OLED background when it rebuilds the page. The empty loading screen uses the last confirmed chat theme to prevent a white flash for dark-theme users. Switching to ChatGPT's light theme still works.
+
 ## 0.6.99
 
 - Twitch stream titles, uptime, About headings and bios stay readable on dark panels when a channel uses a bright accent color.
