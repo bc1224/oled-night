@@ -5,12 +5,15 @@ export async function financeControlsScenario() {
   const profile = page.dataset.fixtureProfile;
   // The loopback fixture uses the same profile marker as the real host.
   page.dataset.oledNightSite = profile;
+  const settle = () => new Promise(resolve => setTimeout(resolve, 300));
+  const controls = document.querySelector('main');
+  controls.replaceWith(controls.cloneNode(true));
+  await settle();
   const button = document.querySelector('button');
   const legend = document.querySelector('a');
   const style = element => getComputedStyle(element);
   const reviewPaint = () => style(button).backgroundColor === 'rgb(98, 108, 112)' &&
     style(button.querySelector('.caption')).color === 'rgb(30, 33, 36)';
-  const settle = () => new Promise(resolve => setTimeout(resolve, 300));
   check('extension is active', page.hasAttribute('data-oled-night-root'));
   if (profile === 'robinhood') {
     check('native dark canvas is black', style(document.body).backgroundColor === 'rgb(0, 0, 0)');
@@ -27,8 +30,6 @@ export async function financeControlsScenario() {
   } else if (profile === 'sofi') {
     const input = document.querySelector('[inputmode="decimal"]');
     const shell = input.parentElement;
-    shell.classList.add('mounted');
-    await settle();
     check('number field has bright neutral ink and a neutral resting border',
       style(input).color === 'rgb(224, 224, 224)' && style(shell).borderTopColor === 'rgb(110, 110, 118)');
     input.focus();

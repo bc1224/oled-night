@@ -922,6 +922,13 @@
     return colors.chroma(text) > 0.15 ? `color-mix(in srgb, rgb(${text.r} ${text.g} ${text.b}) 45%, black)` : "rgb(32 33 36)";
   }
 
+  function preservesRobinhoodControl(element, ctx) {
+    // A disabled button's face follows currentColor. Keep it paired with
+    // its separate native label, and keep the Legend link's lime and black.
+    return ctx.robinhood && ctx.mode === "crush" &&
+      element.closest('button:disabled, a[href="/legend"], a[href^="/legend?"]');
+  }
+
   function decide(element, ctx) {
     const colors = colorsApi();
     const computed = ctx.style(element);
@@ -929,7 +936,7 @@
     else nativeInk.delete(element);
     const found = {};
     originalSurface.set(element, surfaceInfo(computed));
-    if (ctx.mode === "none") return found;
+    if (ctx.mode === "none" || preservesRobinhoodControl(element, ctx)) return found;
     // Some stores paint a pale, darken-blended matte *above* a product photo.
     // Turning that matte black hides a fully loaded image (Amazon Grocery).
     // Keep the store's original matte and blend; the image remains untouched.
@@ -1494,6 +1501,11 @@
   // and gradient stops (App Store Connect sparklines) are darkened instead,
   // while colored lines and bars keep their color.
   function decideSvg(svg, ctx, out) {
+    if (preservesRobinhoodControl(svg, ctx)) {
+      out.push([svg, {}]);
+      for (const child of svg.querySelectorAll(`[${MARK}]`)) out.push([child, {}]);
+      return;
+    }
     const mode = modeForElement(svg, ctx);
     // Read-only indicators (for example review stars) need the same neutral
     // ink repair as clickable icons. The compact/neutral checks below still
@@ -2739,6 +2751,7 @@
       recolorLightRegions: currentSiteMode() !== "deepen",
       pageColor,
       gmail: document.documentElement.getAttribute("data-oled-night-site") === "gmail",
+      robinhood: document.documentElement.getAttribute("data-oled-night-site") === "robinhood",
       sofi: document.documentElement.getAttribute("data-oled-night-site") === "sofi",
       backdrop: new Map(),
       retainedAncestors,
@@ -3941,13 +3954,8 @@
     // "#banner #group button#handler"), so every priority token repeats four
     // IDs. Color, profile and logo tokens rise together to keep their order.
     // The outer marker still scopes every override; measurement still opts out.
-    // Robinhood paints disabled button faces with currentColor and supplies a
-    // separate label color. Its Legend link pairs a lime face with dark ink.
-    const nativeControl = ':is(button:disabled, a[href="/legend"], a[href^="/legend?"])';
-    const nativeSelector = `html[data-oled-night-site="robinhood"][data-oled-night-mode="crush"] ${nativeControl}`;
-    const keepNative = layered ? `:not(:where(${nativeSelector}, ${nativeSelector} *))` : "";
-    const on = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}])${keepNative}`;
-    const onPseudo = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_PSEUDO}])${keepNative}`;
+    const on = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}])`;
+    const onPseudo = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_PSEUDO}])`;
     const slotted = `:is([${MARK}], #oled-night-color-priority#oled-night-color-priority#oled-night-color-priority#oled-night-color-priority):not([${MEASURE}]):not([${MEASURE_PSEUDO}])`;
     return `
       /* Each paint variable belongs to its marked element (and its pseudos).
