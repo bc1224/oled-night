@@ -20,7 +20,7 @@ Follow Google's [Chrome Web Store API setup](https://developer.chrome.com/docs/w
 
 ## Current release
 
-Use the [latest GitHub release](https://github.com/bc1224/oled-night/releases/latest) for current source and download assets, and [CHANGELOG.md](CHANGELOG.md) for release summaries. Version 0.6.70 coalesces parser-script updates before painting and avoids repeated whole-page measurements from duplicate notifications for unchanged cross-origin stylesheets. Completed parser layout rechecks only unfinished native dark cards, preserving their surfaces without starting another whole-page inbox refresh. Animation-frame updates during loading, genuine resource loads, stylesheet replacements, CSSOM media changes and disabled-state changes still repaint promptly. It includes the earlier native-dark Gmail layout, stable-hover, Google Docs canvas, icon, control and private-reporting fixes. Companion Chrome theme remains 1.0.3. Store approval and installed-browser updates are separate; check the public listing before claiming a version is available there.
+Use the [latest GitHub release](https://github.com/bc1224/oled-night/releases/latest) for current source and download assets, and [CHANGELOG.md](../CHANGELOG.md) for release summaries. Version 0.6.70 coalesces parser-script updates before painting and avoids repeated whole-page measurements from duplicate notifications for unchanged cross-origin stylesheets. Completed parser layout rechecks only unfinished native dark cards, preserving their surfaces without starting another whole-page inbox refresh. Animation-frame updates during loading, genuine resource loads, stylesheet replacements, CSSOM media changes and disabled-state changes still repaint promptly. It includes the earlier native-dark Gmail layout, stable-hover, Google Docs canvas, icon, control and private-reporting fixes. Companion Chrome theme remains 1.0.3. Store approval and installed-browser updates are separate; check the public listing before claiming a version is available there.
 
 Chrome description source is `store/LISTING.md`; Firefox description is `store/FIREFOX-LISTING.txt`. Both describe optional reviewed screenshots, private report contents and generic public tracking issues. Updating these descriptions does not require uploading a new extension package. Preserve pending package reviews. Deploy and verify the private reporter before releasing packages or copy that promises private intake. See [PRIVATE_REPORTS.md](PRIVATE_REPORTS.md).
 
@@ -41,14 +41,14 @@ Version **0.6.38** batches frame-created surfaces before paint and includes site
 
 ## Previous build: 0.6.37 (prerelease; stores blocked)
 
-Version **0.6.37** fixes discovery of nested shadow roots attached after scanning and restores replaced component stylesheets on interaction. No new permissions; theme remains 1.0.3. See [the late-root audit](AUDIT-2026-10-13-LATE-SHADOW.md).
+Version **0.6.37** fixes discovery of nested shadow roots attached after scanning and restores replaced component stylesheets on interaction. No new permissions; theme remains 1.0.3. See [the late-root audit](audits/AUDIT-2026-10-13-LATE-SHADOW.md).
 
 - Local validation: 22 unit files, Chrome 257/257, Firefox 99/99, Chrome lab 1221/1221, Firefox lab 826/826, CVS stress 33/33, Firefox lint zero findings. Live CVS 20 hovers, Apple 5 and Amazon 4 passed; Reddit remains unverified because of its challenge. Reviewed Linux screenshots and exact-source CI remain required before publishing.
 - Mozilla API credentials are now configured as encrypted GitHub Actions secrets, activated with explicit approval. Tests 38498056800 passed the component suite and reviewed Linux images, but recorded a live CVS pale frame. Store run 38498662829 blocked both uploads before their API steps. GitHub 0.6.37 is a prerelease; neither store received it.
 - Owner Chrome reload remains unverified; canonical unpacked files are 0.6.37, but browser policy has blocked extension management. Do not equate local files with a running owner-browser version.
 
 ## Previous release: 0.6.36
-Version **0.6.36** fixes missed hover/focus events inside nested web components, including CVS navigation. Shared shadow-root listeners deduplicate composed events and clean up on disable or root removal. No new permissions; theme remains 1.0.3. See [the interaction audit](AUDIT-2026-10-13-SHADOW-HOVER.md).
+Version **0.6.36** fixes missed hover/focus events inside nested web components, including CVS navigation. Shared shadow-root listeners deduplicate composed events and clean up on disable or root removal. No new permissions; theme remains 1.0.3. See [the interaction audit](audits/AUDIT-2026-10-13-SHADOW-HOVER.md).
 
 - Source/tag: `500168f20ea4f368f71917e29cb3e4d599299911`, [v0.6.36 release](https://github.com/bc1224/oled-night/releases/tag/v0.6.36). All seven asset digests match `D:\Temp\oled-release-0636\dist`. Chrome ZIP uses clean Git archive bytes. Firefox ZIP uses tested canonical runtime bytes; nine unchanged files differ from Git archive only by newline encoding. Clean reviewer source verifies this equivalence and reproduces Firefox SHA-256 `3e8ead3972da7710746d80b8abc22fa48af4f19410316311efaa6ecb2114e72f`. No unrelated working-tree files were included.
 - [Tests 38476973035](https://github.com/bc1224/oled-night/actions/runs/38476973035) passed: **258 Chrome checks, 99 Firefox checks, all 11 unit files, lint zero findings**. [Pages 38476972180](https://github.com/bc1224/oled-night/actions/runs/38476972180) deployed the exact source. Final local Chrome was 256/257 with one churn timing failure; focused sequential baseline/candidate comparisons both passed the unchanged threshold. This failure remains recorded in the audit. Exact staged Chrome package passed 5/5 live CVS hover checks (`D:\Temp\oled-0636-live-cvs-final.log`).
@@ -58,7 +58,7 @@ Version **0.6.36** fixes missed hover/focus events inside nested web components,
 
 ## Previous release: 0.6.35
 
-Version **0.6.35** fixes shared surface measurement, row interaction states, responsive media ink and menu paint/animation handling. No new permissions; companion theme remains 1.0.3. See [the surface audit](AUDIT-2026-10-13-SURFACES.md).
+Version **0.6.35** fixes shared surface measurement, row interaction states, responsive media ink and menu paint/animation handling. No new permissions; companion theme remains 1.0.3. See [the surface audit](audits/AUDIT-2026-10-13-SURFACES.md).
 
 - Source/tag: `1e4cbbcbc12dde26db0d569f0bbac08ed4c6227c`, [v0.6.35 release](https://github.com/bc1224/oled-night/releases/tag/v0.6.35). All seven clean-archive assets published; SHA-256 digests match staged files at `D:\Temp\oled-release-0635\dist`.
 - [Tests 38465607917](https://github.com/bc1224/oled-night/actions/runs/38465607917) passed: 254 Chrome checks, 96 Firefox checks, all 11 unit files, Firefox lint zero errors/notices/warnings. Local Chrome 253/253 and Firefox 96/96 passed. [Pages 38465605300](https://github.com/bc1224/oled-night/actions/runs/38465605300) deployed the source successfully. Exact staged package passed 10 live Apple checks in an isolated profile: readable native heading/logo ink, black navigation and no white menu frames during 700 ms (95 sampled frames). Pale image backdrops remain inside unchanged photos; this release does not remove them.
@@ -68,7 +68,7 @@ Version **0.6.35** fixes shared surface measurement, row interaction states, res
 
 ## Previous release: 0.6.34
 
-Version **0.6.34** fixes original text and CTA ink over nested image creatives, including the Ralphs sponsored yellow/orange ads. No new permissions; companion theme remains 1.0.3. See [the overlay audit](AUDIT-2026-10-12-OVERLAYS.md).
+Version **0.6.34** fixes original text and CTA ink over nested image creatives, including the Ralphs sponsored yellow/orange ads. No new permissions; companion theme remains 1.0.3. See [the overlay audit](audits/AUDIT-2026-10-12-OVERLAYS.md).
 
 - Source/tag: `77cd2bf796c8bc6f662d10daa3308ffde29c44f9`, [v0.6.34 release](https://github.com/bc1224/oled-night/releases/tag/v0.6.34). All seven clean-archive assets published; SHA-256 digests match local staged files at `D:\Temp\oled-release-0634\dist`.
 - [Tests 38272755647](https://github.com/bc1224/oled-night/actions/runs/38272755647) passed: 236 Chrome checks, 90 Firefox checks, all 11 unit files, Firefox lint zero findings. Local final serial Chrome 235/235 and Firefox 90/90; desktop/mobile bright/dark creative examples inspected. [Pages 38272754886](https://github.com/bc1224/oled-night/actions/runs/38272754886) deployed the exact source successfully. Live candidate Ralphs navigation failed with a connection error; the actual component structure was inspected on the user's existing 0.6.33 tab.
@@ -79,7 +79,7 @@ Version **0.6.34** fixes original text and CTA ink over nested image creatives, 
 
 ## Previous release: 0.6.33
 
-Version **0.6.33** fixes YouTube inline description/animation paint and search/chapter-link contrast. No new permissions; companion theme remains 1.0.3. See [the audit](AUDIT-2026-10-12-YOUTUBE.md).
+Version **0.6.33** fixes YouTube inline description/animation paint and search/chapter-link contrast. No new permissions; companion theme remains 1.0.3. See [the audit](audits/AUDIT-2026-10-12-YOUTUBE.md).
 
 - Source/tag: `62d4e926e3d62b3fcc79c4cca4bf9b6929e72d68`, [v0.6.33 release](https://github.com/bc1224/oled-night/releases/tag/v0.6.33). All seven assets published from a clean archive of the tagged source; release SHA-256 digests match local staged files.
 - [Tests 38208189848](https://github.com/bc1224/oled-night/actions/runs/38208189848) passed: 228 Chrome checks, 85 Firefox checks, all 11 unit files, Firefox lint zero findings. Local Chrome 227/227 and Firefox 85/85; the actual public PCMag video loaded 0.6.33 and showed readable expanded descriptions and search controls. Desktop/mobile fixtures inspected. [Pages 38208189620](https://github.com/bc1224/oled-night/actions/runs/38208189620) deployed the exact source successfully.
@@ -89,7 +89,7 @@ Version **0.6.33** fixes YouTube inline description/animation paint and search/c
 
 ## Previous release: 0.6.32
 
-Version **0.6.32** reduces global interaction recoloring work, fixes external monochrome Amazon Business controls, improves small interactive asset visibility, and distinguishes black page layouts from raised cards. Theme **1.0.3** improves active-tab separation and removes ignored color keys. No new permissions. See [the interaction audit](AUDIT-2026-10-11-INTERACTIONS.md).
+Version **0.6.32** reduces global interaction recoloring work, fixes external monochrome Amazon Business controls, improves small interactive asset visibility, and distinguishes black page layouts from raised cards. Theme **1.0.3** improves active-tab separation and removes ignored color keys. No new permissions. See [the interaction audit](audits/AUDIT-2026-10-11-INTERACTIONS.md).
 
 - Source/tag: `45e26355c29d91f5742630f187cb5f4b26987bd4`, [v0.6.32 release](https://github.com/bc1224/oled-night/releases/tag/v0.6.32), all seven versioned/stable assets and reviewer source published. Published asset SHA-256 digests match the four local versioned archives.
 - [Tests 38167450762](https://github.com/bc1224/oled-night/actions/runs/38167450762) passed: **218 Chrome checks, 81 Firefox checks**, all 11 unit test files, Firefox lint zero errors/warnings. [Pages deployment 38167450171](https://github.com/bc1224/oled-night/actions/runs/38167450171) succeeded. The first CI run failed only an asynchronous YouTube palette assertion; a bounded wait for the same color condition resolved it. Local serial Chrome passed 217 checks (CI adds the system-theme branch). Heavy-page churn retained 82% of the page-only update rate locally, with a worst frame interval of 35 ms.
@@ -101,7 +101,7 @@ Version **0.6.32** reduces global interaction recoloring work, fixes external mo
 
 ## Previous release: 0.6.31
 
-Version **0.6.31** fixes the global rating/progress fill classification failure observed on App Store Connect, preserves labeled SVG chart marks and labels, adds graphic contrast diagnostics, and skips unnecessary transition guards during page updates. No new permissions; theme 1.0.2 is unchanged. See [the audit](AUDIT-2026-10-11.md).
+Version **0.6.31** fixes the global rating/progress fill classification failure observed on App Store Connect, preserves labeled SVG chart marks and labels, adds graphic contrast diagnostics, and skips unnecessary transition guards during page updates. No new permissions; theme 1.0.2 is unchanged. See [the audit](audits/AUDIT-2026-10-11.md).
 
 - Source/tag: `8a955ddc8d142967eb472be92c21d44267d86c61`, [v0.6.31 release](https://github.com/bc1224/oled-night/releases/tag/v0.6.31), all seven versioned/stable assets and reviewer source published.
 - [Tests 38162702533](https://github.com/bc1224/oled-night/actions/runs/38162702533) passed: 210 Chrome checks, 78 Firefox checks, all 11 unit test files, Firefox lint zero findings. [Pages deployment 38162702415](https://github.com/bc1224/oled-night/actions/runs/38162702415) succeeded. Local Chrome passed 208 checks before the final narrow-bar addition; CI validates the exact tagged source, including that case and the system-theme branch.
@@ -145,6 +145,6 @@ Version 0.6.27 is tagged and published on [GitHub Releases](https://github.com/b
 
 As of October 1, [Firefox 0.6.27 is approved and listed on Mozilla Add-ons](https://addons.mozilla.org/en-US/firefox/addon/oled-night/). The Firefox ZIP and source archive were uploaded through the Mozilla developer dashboard; [version management](https://addons.mozilla.org/en-US/developers/addon/oled-night/versions/6533105) shows the source attachment and approved listed version. Chrome 0.6.27 was submitted through [the successful store workflow](https://github.com/bc1224/oled-night/actions/runs/36937944066); the Chrome Web Store API reported `PENDING_REVIEW`. Chrome approval and publication are still pending. Google Cloud OAuth is in production, and the four Chrome GitHub Actions secrets are configured with a production refresh token. The older OAuth client secret is disabled.
 
-Mozilla API credentials are still not configured in GitHub Actions. A fresh email confirmation was opened, but Mozilla rate limited key generation. Future automated Firefox submissions need `AMO_API_KEY` and `AMO_API_SECRET`; the dashboard upload completed this version without them. Local Chrome and Firefox checks are documented in [the audit](AUDIT-2026-10-01.md).
+Mozilla API credentials are still not configured in GitHub Actions. A fresh email confirmation was opened, but Mozilla rate limited key generation. Future automated Firefox submissions need `AMO_API_KEY` and `AMO_API_SECRET`; the dashboard upload completed this version without them. Local Chrome and Firefox checks are documented in [the audit](audits/AUDIT-2026-10-01.md).
 
 For future releases, once the Mozilla secrets are configured, run `gh workflow run submit-stores.yml --repo bc1224/oled-night -f tag=<release-tag> -f store=amo` to submit Firefox only. The workflow rebuilds packages from that exact tag, so no manual ZIP selection is needed. Do not rerun it for v0.6.27, which is already listed.

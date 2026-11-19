@@ -30,7 +30,7 @@ function requireFiles(...names) {
 
 function requireEnv(...names) {
   const missing = names.filter(name => !process.env[name]);
-  if (missing.length) throw new Error(`Missing credentials: ${missing.join(", ")}. See STORE_SUBMISSION.md.`);
+  if (missing.length) throw new Error(`Missing credentials: ${missing.join(", ")}. See maintenance/STORE_SUBMISSION.md.`);
 }
 
 function saveEncryptedDiagnostic(result, label) {

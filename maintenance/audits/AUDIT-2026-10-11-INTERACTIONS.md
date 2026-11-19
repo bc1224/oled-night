@@ -32,4 +32,4 @@ Theme 1.0.3 raises the active tab/toolbar from #202024 to #303036 while retainin
 
 ## Release verification
 
-Provider receipts and exact-source integration results are recorded in STORE_SUBMISSION.md after submission. Upload, review submission, public availability and the version running in the user's Chrome are separate checks.
+Provider receipts and exact-source integration results are recorded in [STORE_SUBMISSION.md](../STORE_SUBMISSION.md) after submission. Upload, review submission, public availability and the version running in the user's Chrome are separate checks.

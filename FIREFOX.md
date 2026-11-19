@@ -39,4 +39,4 @@ npm run lint:firefox
 npm run test:firefox
 ```
 
-The tests use temporary browser profiles and local fixtures, not your browsing profile or real accounts. Set `FIREFOX_PATH` if needed. See [STORE_SUBMISSION.md](STORE_SUBMISSION.md) for signed-release submission and metadata updates. Store review and public rollout are separate from publishing a GitHub release.
+The tests use temporary browser profiles and local fixtures, not your browsing profile or real accounts. Set `FIREFOX_PATH` if needed. See [STORE_SUBMISSION.md](maintenance/STORE_SUBMISSION.md) for signed-release submission and metadata updates. Store review and public rollout are separate from publishing a GitHub release.

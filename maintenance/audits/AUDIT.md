@@ -21,7 +21,7 @@ Runtime packaging uses explicit file allowlists; diagnostic reports, test profil
 
 Live Maps and FlightAware evidence established the symptoms and FlightAware selector. Regressions reproduce the shared failure patterns in isolated browsers; the release has not been installed into the user's live tabs. Refresh existing tabs after updating. Autofill coverage uses simulated native states, not saved credentials. Inline-important site styles and unusual drawing/custom controls can still need reports. No universal no-flash claim: browser navigation paint and late CSS remain outside some content-script timing paths.
 
-Performance: see PERFORMANCE.md and raw benchmark JSON. OLED Night was approximately twice the browser CPU cost of Dark Reader on the synthetic high-churn case; do not market it as lighter. Figma native-color protection avoids recoloring work.
+Performance: see [PERFORMANCE.md](../../PERFORMANCE.md) and raw benchmark JSON. OLED Night was approximately twice the browser CPU cost of Dark Reader on the synthetic high-churn case; do not market it as lighter. Figma native-color protection avoids recoloring work.
 
 Validation: all unit suites passed; Chrome 95/95; Firefox 42/42; Firefox lint zero errors, warnings or notices. Bounded color-cache correctness includes eviction and mutable-input coverage.
 
@@ -33,4 +33,4 @@ Late stylesheet DOM changes/load events trigger a full refresh. Direct CSSOM ins
 
 No faster/accurate toggle was added: safe optimizations apply automatically, and existing per-site modes remain available.
 
-0.6.11 validation: Chrome103/103, Firefox49/49, Firefox lint zero errors/warnings/notices. Sequential class and transform benchmarks recorded in PERFORMANCE.md.
+0.6.11 validation: Chrome103/103, Firefox49/49, Firefox lint zero errors/warnings/notices. Sequential class and transform benchmarks recorded in [PERFORMANCE.md](../../PERFORMANCE.md).
