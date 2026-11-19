@@ -14,7 +14,7 @@ The public lab contains 43 synthetic cases, including `email-newsletter`, `nativ
 
 Focused command: `node tests/lab/run-mixed-surfaces.mjs`. Full gates: unit tests, original Chrome and Firefox regressions, Firefox lint, both lab adapters, reviewed visual baselines and CVS synthetic/live checks. No test thresholds or visual baselines were relaxed.
 
-Local evidence is retained under `D:/Temp/oled-0639-*.log`, including red failures, green reproductions and final suite results. Exact source CI and store receipts are recorded in `STORE_SUBMISSION.md` after release.
+Local evidence is retained under `D:/Temp/oled-0639-*.log`, including red failures, green reproductions and final suite results. Exact source CI and store receipts are recorded in [STORE_SUBMISSION.md](../STORE_SUBMISSION.md) after release.
 
 ## Evidence limits
 

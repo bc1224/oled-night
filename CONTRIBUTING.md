@@ -7,7 +7,7 @@ Bug reports and pull requests are welcome.
 2. Add optional notes. If useful, choose **Screenshot this page**, paste, drop or select an image. Review it and choose **Use screenshot**.
 3. Choose **Submit report** to send the report privately to the maintainer through the reporting service. No GitHub account is required. The public tracking issue shows the site domain and problem type only if you pick one. Firefox asks for optional sharing consent; declining keeps dark mode working. Nothing is uploaded before submission.
 
-Automatic diagnostics omit page text, field values, URL paths, query strings, identifiers and cookies. Reports include the current domain, previewed diagnostics and any notes or screenshot you choose. Review them before sharing with the maintainer. Details and screenshots are stored privately for up to 30 days. GitHub receives a tracking ID, plus the domain and a fixed problem type only if you pick one. Your notes are never published. Anything you manually post to GitHub issues or comments is public. See the [privacy policy](store/PRIVACY.md) and [maintainer retrieval instructions](PRIVATE_REPORTS.md).
+Automatic diagnostics omit page text, field values, URL paths, query strings, identifiers and cookies. Reports include the current domain, previewed diagnostics and any notes or screenshot you choose. Review them before sharing with the maintainer. Details and screenshots are stored privately for up to 30 days. GitHub receives a tracking ID, plus the domain and a fixed problem type only if you pick one. Your notes are never published. Anything you manually post to GitHub issues or comments is public. See the [privacy policy](store/PRIVACY.md) and [maintainer retrieval instructions](maintenance/PRIVATE_REPORTS.md).
 
 **Save full report locally** is a separate download. It can contain short visible text snippets and element identifiers. Review it before sharing; never attach private account data or screenshots of sensitive pages. Normal recoloring stays local, with no analytics or tracking.
 
@@ -27,7 +27,11 @@ Unpacked development needs no build step. Use Node.js 22 or newer and Chrome; `n
 Please keep changes focused, and explain what site or behavior they fix.
 
 ## Release downloads
-Run `node tools/package.mjs` for a new release and publish the versioned Chrome extension, Firefox extension, companion theme and reviewer source ZIPs, plus stable aliases `oled-night.zip`, `oled-night-firefox.zip` and `oled-night-theme.zip`. The website and README follow GitHub's latest release through those aliases. Keep every published version's assets immutable and do not bump an unchanged theme. Exact-source tests and store submission requirements are in [STORE_SUBMISSION.md](STORE_SUBMISSION.md). Store submission, approval and installed-browser updates are separate steps.
+Run `node tools/package.mjs` for a new release and publish the versioned Chrome extension, Firefox extension, companion theme and reviewer source ZIPs, plus stable aliases `oled-night.zip`, `oled-night-firefox.zip` and `oled-night-theme.zip`. The website and README follow GitHub's latest release through those aliases. Keep every published version's assets immutable and do not bump an unchanged theme. Exact-source tests and store submission requirements are in [STORE_SUBMISSION.md](maintenance/STORE_SUBMISSION.md). Store submission, approval and installed-browser updates are separate steps.
 
 ## Firefox
 Use the [Mozilla Add-ons listing](https://addons.mozilla.org/en-US/firefox/addon/oled-night/) for normal installation. See [FIREFOX.md](FIREFOX.md) for temporary development installs. Run Firefox lint and runtime checks in addition to Chrome checks when changing shared code. Do not present an unsigned Firefox ZIP as a permanent installer.
+
+## Maintenance
+
+The [report workflow](maintenance/AUTOMATED_REPORTS.md) covers issue intake and release checks. [Past audits](maintenance/audits/) contain the findings and validation records for earlier releases.

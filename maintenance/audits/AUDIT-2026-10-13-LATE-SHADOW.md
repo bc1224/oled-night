@@ -22,7 +22,7 @@ Superseded runs on the same branch are canceled, npm dependencies are cached and
 
 ## Publishing
 
-Mozilla credentials were activated with explicit approval and stored as encrypted repository Actions secrets `AMO_API_KEY` and `AMO_API_SECRET`. Values were not placed in files, chat, logs or source. Both store submissions use APIs. The unchanged Chrome theme remains 1.0.3. Provider receipts and exact source are recorded in STORE_SUBMISSION.md and Project Memory after submission.
+Mozilla credentials were activated with explicit approval and stored as encrypted repository Actions secrets `AMO_API_KEY` and `AMO_API_SECRET`. Values were not placed in files, chat, logs or source. Both store submissions use APIs. The unchanged Chrome theme remains 1.0.3. Provider receipts and exact source are recorded in [STORE_SUBMISSION.md](../STORE_SUBMISSION.md) and Project Memory after submission.
 
 ## 0.6.38 follow-on: frame scheduling
 
@@ -32,5 +32,5 @@ A deterministic frame-created surface test failed in all three Chrome viewports:
 
 The browsable lab includes a frame-created navigation case; Chrome and Firefox exercise five replacements in each tested theme/viewport. Observed live CVS failures now fail the exact-source release gate while their public diagnostic receipt remains visible. Budgets and reviewed image baselines remain unchanged.
 
-Validation and provider outcomes are recorded in STORE_SUBMISSION.md after the required checks finish.
-Final 0.6.38 evidence: Tests 38500407825 passed all gates, including 2,049 Linux component checks, 33 CVS synthetic checks and 25 live CVS hovers. Reviewed screenshots changed 0.000%; the unchanged performance gate passed with median throughput ratio 0.992 and worst active stall 25 ms. The published 37-case lab was verified with the actual release package, including native hover in its frame-created header case. Store workflow 38501035415 passed its independent live gate and both API submissions; Mozilla review and Chrome PENDING_REVIEW do not establish public availability. Amazon and Reddit remained unavailable in that store gate. Details and local teardown caveat are retained in STORE_SUBMISSION.md.
+Validation and provider outcomes are recorded in [STORE_SUBMISSION.md](../STORE_SUBMISSION.md) after the required checks finish.
+Final 0.6.38 evidence: Tests 38500407825 passed all gates, including 2,049 Linux component checks, 33 CVS synthetic checks and 25 live CVS hovers. Reviewed screenshots changed 0.000%; the unchanged performance gate passed with median throughput ratio 0.992 and worst active stall 25 ms. The published 37-case lab was verified with the actual release package, including native hover in its frame-created header case. Store workflow 38501035415 passed its independent live gate and both API submissions; Mozilla review and Chrome PENDING_REVIEW do not establish public availability. Amazon and Reddit remained unavailable in that store gate. Details and local teardown caveat are retained in [STORE_SUBMISSION.md](../STORE_SUBMISSION.md).
