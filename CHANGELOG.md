@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.101
+
+- Opaque illustrations labelled as logos keep their original dark details, including the Glimbo portrait on Discord Bot List.
+
 ## 0.6.100
 
 - ChatGPT keeps its OLED background when it rebuilds the page. The empty loading screen uses the last confirmed chat theme to prevent a white flash for dark-theme users. Switching to ChatGPT's light theme still works.

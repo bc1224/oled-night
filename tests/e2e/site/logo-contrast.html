@@ -13,6 +13,10 @@ for(const [id,src,product] of [
  ['transparent-badge-logo',data('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="80"><path fill="#181818" d="M30 10h180v60H30z"/></svg>')],
  ['product-image',data(transparent),true]
 ]){const section=document.createElement('section'),img=document.createElement('img');img.id=id;img.width=240;img.height=80;img.alt=product?'Product photo logo':'Example logo';img.src=src;if(product)section.setAttribute('itemtype','https://schema.org/Product');img.setAttribute('itemprop','logo');section.append(img,document.createTextNode(id));document.querySelector('main').append(section)}
+const avatar=document.createElement('img');
+avatar.id='mascot';avatar.alt='Team logo';
+avatar.src=location.origin.replace('127.0.0.1','localhost')+'/logo-contrast-portrait.svg';
+document.getElementById('remote-logo').parentElement.append(avatar);
 const host=document.createElement('div');host.id='shadow-logo-host';document.querySelector('main').append(host);const shadow=host.attachShadow({mode:'open'});shadow.innerHTML='<style>img{display:block;width:240px;height:80px}</style><img id="shadow-logo" width="240" height="80" itemprop="logo" alt="Example logo">';shadow.querySelector('img').src=data(transparent);
 const small=document.createElement('img');small.className='icon-logo';small.itemProp='logo';small.alt='Example logo';small.style.cssText='width:32px;height:32px';small.src=data(transparent);shadow.append(small);
 const remote=document.getElementById('remote-logo');const verifyRead=()=>{let blocked=false;try{const c=document.createElement('canvas'),ctx=c.getContext('2d');ctx.drawImage(remote,0,0);ctx.getImageData(0,0,1,1)}catch(error){blocked=error.name==='SecurityError'}remote.dataset.pageCanvasBlocked=String(blocked)};if(remote.complete)verifyRead();else remote.addEventListener('load',verifyRead,{once:true});

@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.100";
+  const VERSION = "0.6.101";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -1739,7 +1739,12 @@
     // has none. Expand any surviving interior to veto the entire image lift.
     add('feMorphology', {in:'neutralPaint', operator:'erode', radius:'.04 .24', result:'plateCore'});
     add('feMorphology', {in:'plateCore', operator:'dilate', radius:'1', result:'plate'});
-    add('feColorMatrix', {in:'plate', type:'matrix', values:'0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1 1', result:'sparse'});
+    add('feColorMatrix', {in:'plate', type:'matrix', values:'0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1 1', result:'noPlate'});
+    // An opaque illustration carries its own background, including when its
+    // colors leave no broad neutral plate. Only lift ink on transparent art.
+    add('feColorMatrix', {in:'SourceAlpha', type:'matrix', values:'0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1 1', result:'gaps'});
+    add('feMorphology', {in:'gaps', operator:'dilate', radius:'1', result:'hasGaps'});
+    add('feComposite', {in:'noPlate', in2:'hasGaps', operator:'in', result:'sparse'});
     add('feColorMatrix', {in:'SourceGraphic', type:'matrix', values:'0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.2756 -4.2912 -.4332 0 2', result:'dark'});
     add('feComposite', {in:'dark', in2:'neutralPaint', operator:'in', result:'ink'});
     add('feComposite', {in:'ink', in2:'sparse', operator:'in', result:'eligible'});

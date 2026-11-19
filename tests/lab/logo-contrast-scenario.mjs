@@ -23,6 +23,8 @@ export function logoContrastPaint(bytes,probe){
     checks.push({name:id+' transparent edge and gaps have no halo',ok:gaps.every(p=>near(p,at(id,5,5))),detail:JSON.stringify(gaps)});
   }
   for(const [id,bg] of [['white-logo',[255,255,255]],['badge-logo',[24,24,24]],['remote-white-logo',[255,255,255]],['remote-badge-logo',[24,24,24]]])checks.push({name:id+' opaque plate and dark ink stay original',ok:near(at(id,5,5),bg)&&near(at(id,24,40),[24,24,24]),detail:JSON.stringify({plate:at(id,5,5),ink:at(id,24,40)})});
+  const portraitInk=at('mascot',24,40);
+  checks.push({name:'A remote opaque illustration labelled as a logo keeps its dark details',ok:near(portraitInk,[24,24,24]),detail:JSON.stringify(portraitInk)});
   checks.push({name:'Product media stays original',ok:near(at('product-image',24,40),[24,24,24])&&probe.points['product-image'].filter==='none',detail:JSON.stringify(at('product-image',24,40))});
   checks.push({name:'Wide solid badge with transparent margins keeps its dark plate',ok:near(at('transparent-badge-logo',40,40),[24,24,24]),detail:JSON.stringify(at('transparent-badge-logo',40,40))});
   checks.push({name:'Small shadow logo ink filter wins over generic UI icon glow',ok:probe.smallFilter.includes('oled-night-logo-ink')&&!probe.smallFilter.includes('drop-shadow'),detail:probe.smallFilter});

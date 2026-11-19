@@ -26,7 +26,7 @@ let receive,runner,timer;const result=new Promise(r=>receive=r);
 const server=createServer((req,res)=>{
   if(req.method==='POST'&&req.url==='/result'){let body='';req.on('data',c=>body+=c);req.on('end',()=>{try{receive(JSON.parse(body));res.end('ok')}catch{res.writeHead(400);res.end()}});return}
   const path=new URL(req.url,'http://localhost').pathname;
-  if(!['/google-docs.html','/apple-ads-controls.html','/ring-fields.html','/finance-controls.html','/layer-utilities.html','/app-store-icons.html','/google-analytics.html','/reported-controls.html','/calendar-booking.html','/retained-surfaces.html','/layered-surfaces.html','/logo-contrast.html','/logo-contrast.svg','/logo-contrast-white.svg','/logo-contrast-badge.svg'].includes(path)){res.writeHead(404);res.end();return}
+  if(!['/google-docs.html','/apple-ads-controls.html','/ring-fields.html','/finance-controls.html','/layer-utilities.html','/app-store-icons.html','/google-analytics.html','/reported-controls.html','/calendar-booking.html','/retained-surfaces.html','/layered-surfaces.html','/logo-contrast.html','/logo-contrast.svg','/logo-contrast-white.svg','/logo-contrast-badge.svg','/logo-contrast-portrait.svg'].includes(path)){res.writeHead(404);res.end();return}
   res.setHeader('content-type',path.endsWith('.svg')?'image/svg+xml':'text/html');res.end(readFileSync(join(root,'tests/e2e/site',path.slice(1))));
 });
 let report={engine:'Firefox',checks:[]};
