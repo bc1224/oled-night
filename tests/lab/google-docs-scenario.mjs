@@ -4,6 +4,7 @@ export async function googleDocsScenario(){
   await new Promise(r=>setTimeout(r,100));
   const filter=id=>getComputedStyle(document.getElementById(id)).filter;
   check('Docs document canvas receives dark display paint',filter('document').includes('invert(1)'),{filter:filter('document')});
+  check('Sheets applies display paint to the cell grid only',filter('sheet').includes('invert(1)') && filter('sheet-overlay') === 'none');
   check('Docs toolbar, unrelated canvas and preserved colors stay unfiltered',filter('toolbar')==='none'&&filter('unrelated')==='none'&&filter('preserved')==='none');
   const source=document.getElementById('document').getContext('2d').getImageData(40,98,1,1).data;
   check('Docs display treatment does not edit saved canvas pixels',source[0]===0&&source[1]===0&&source[2]===0,{source:[...source]});
@@ -18,9 +19,10 @@ export async function googleDocsScenario(){
 }
 export function googleDocsProbe(){
   const point=(id,x,y)=>{const r=document.getElementById(id).getBoundingClientRect();return {x:(r.x+x)*devicePixelRatio,y:(r.y+y)*devicePixelRatio}};
-  return {background:point('document',10,10),ink:point('document',40,98),unrelated:point('unrelated',10,10),preserved:point('preserved',10,10)};
+  return {background:point('document',10,10),ink:point('document',40,98),unrelated:point('unrelated',10,10),preserved:point('preserved',10,10),cell:point('sheet',8,8),cellInk:point('sheet',25,22)};
 }
 export function googleDocsRestored(){
   const filter=getComputedStyle(document.getElementById('document')).filter;
-  return {name:'Docs disable restores native document display',ok:filter==='none',detail:JSON.stringify({filter})};
+  const sheetFilter=getComputedStyle(document.getElementById('sheet')).filter;
+  return {name:'Docs and Sheets restore native canvas display',ok:filter==='none' && sheetFilter==='none',detail:JSON.stringify({filter,sheetFilter})};
 }

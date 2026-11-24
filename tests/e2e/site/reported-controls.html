@@ -30,4 +30,15 @@ document.addEventListener('DOMContentLoaded',()=>{const shadow=document.getEleme
 .profile-distinct{background:#111;color:#eee;padding:8px}.profile-more:hover,.profile-more:focus-visible{background:#454545}
 </style>
 <section class="profile-card" id="profile-card"><div><div><div><a href="#profile-card"><div><div class="profile-heading" id="profile-heading"><div><p>People Operations Manager</p><p>Synthetic company · Full-time</p></div></div></div></a></div></div></div><p class="profile-description">A synthetic professional history with a truncated description.<button type="button" class="profile-more" id="profile-more">… more</button></p><div class="profile-distinct" id="profile-distinct">Separate inset panel</div></section>
+<style>
+  #guild-rail { background:#141418; padding:12px; width:72px }
+  #guild-rail .listItem_sample { position:relative; height:40px }
+  #guild-rail [aria-hidden] { display:flex; align-items:center; position:absolute; overflow:hidden; height:40px; width:8px }
+  #guild-rail .item_sample { width:8px; height:8px; flex:none; margin-inline-start:-4px; border-radius:0 4px 4px 0; background:#fbfbfb; opacity:0 }
+  #guild-rail .visible_sample { opacity:1 }
+</style>
+<nav id="guild-rail" aria-label="Servers"><div role="tree" tabindex="0" data-list-id="guildsnav">
+  <div class="listItem_sample"><div aria-hidden="true"><span id="guild-unread" class="item_sample visible_sample"></span></div><div role="treeitem" aria-label="First server"></div></div>
+  <div class="listItem_sample"><div aria-hidden="true"><span id="guild-read" class="item_sample"></span></div><div role="treeitem" aria-label="Second server"></div></div>
+</div></nav>
 </body></html>

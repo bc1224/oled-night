@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.102
+
+- Google Sheets now shows light text on a dark cell grid in OLED and Soft Dark. The colors saved in the spreadsheet stay intact.
+- Discord's unread server indicators stay visible against the dark sidebar.
+
 ## 0.6.101
 
 - Opaque illustrations labelled as logos keep their original dark details, including the Glimbo portrait on Discord Bot List.

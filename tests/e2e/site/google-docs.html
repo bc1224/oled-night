@@ -4,8 +4,14 @@
 <div class="kix-page-paginated"><canvas id="document" class="kix-canvas-tile-content" width="640" height="260"></canvas></div>
 <canvas id="unrelated" width="80" height="40"></canvas>
 <div data-oled-night-preserve-colors><canvas id="preserved" class="kix-canvas-tile-content" width="80" height="40"></canvas></div>
+<div id="waffle-grid-container"><div class="grid-container"><div id="0-grid-table-container">
+  <canvas id="sheet" width="220" height="60"></canvas>
+</div></div><canvas id="sheet-overlay" width="80" height="40"></canvas></div>
 <script>
 function drawDocument(canvas){const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#000';ctx.font='32px Arial';ctx.fillText('Readable document text',32,68);ctx.fillRect(32,92,40,12);ctx.fillStyle='#1a73e8';ctx.fillRect(110,92,40,12)}
 drawDocument(document.getElementById('document'));
+const sheet = document.getElementById('sheet').getContext('2d');
+sheet.fillStyle = '#fff'; sheet.fillRect(0, 0, 220, 60);
+sheet.fillStyle = '#000'; sheet.fillRect(20, 20, 32, 6);
 for(const id of ['unrelated','preserved']){const c=document.getElementById(id),ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height)}
 </script></body></html>
