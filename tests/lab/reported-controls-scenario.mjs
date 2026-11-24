@@ -8,6 +8,14 @@ export async function reportedControlsScenario(){
   const composite=(a,b)=>{const values=(a.match(/[\d.]+/g)||[]).map(Number),alpha=values[3]??1,base=rgb(b);return 'rgb('+values.slice(0,3).map((v,i)=>Math.round(v*alpha+base[i]*(1-alpha))).join(', ')+')'};
   const backdrop=element=>{for(let node=element;node;node=node.parentElement||node.getRootNode()?.host){const bg=getComputedStyle(node).backgroundColor;if((bg.match(/[\d.]+/g)||[]).length===3||Number((bg.match(/[\d.]+/g)||[])[3])>=.99)return bg}return 'rgb(0, 0, 0)'};
   const out=[],check=(name,ok,detail)=>out.push({name,ok,detail:JSON.stringify(detail)});
+  document.documentElement.setAttribute('data-oled-night-site','discord');
+  const marker = document.getElementById('guild-unread');
+  const markerStyle = getComputedStyle(marker);
+  const rail = getComputedStyle(document.getElementById('guild-rail')).backgroundColor;
+  const markerContrast = ratio(markerStyle.backgroundColor, rail);
+  check('Discord unread server indicator contrasts with the rail', markerContrast >= 3 && markerStyle.opacity === '1', {markerContrast, rail, ink:markerStyle.backgroundColor});
+  check('Discord read server indicator stays hidden', getComputedStyle(document.getElementById('guild-read')).opacity === '0');
+  document.documentElement.removeAttribute('data-oled-night-site');
   const parsedCheck=document.getElementById('ads-grid').shadowRoot.getElementById('campaign-check'),parsedPaint=getComputedStyle(parsedCheck);
   const parsedRatio=Math.max(ratio(parsedPaint.borderTopColor,backdrop(parsedCheck.parentElement)),ratio(parsedPaint.backgroundColor,backdrop(parsedCheck.parentElement)));
   check('Ordinary shadow root attached during DOMContentLoaded has a visible unchecked control before interaction',!parsedCheck.checked&&parsedRatio>=3,{ratio:parsedRatio,bg:parsedPaint.backgroundColor,border:parsedPaint.borderTopColor});

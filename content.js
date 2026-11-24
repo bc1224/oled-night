@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.101";
+  const VERSION = "0.6.102";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -4310,10 +4310,15 @@
       ${root}[data-oled-night-site="google-analytics"]:is([data-oled-night-mode="oled"], [data-oled-night-mode="soft"]) ga-geo-chart-simple canvas:not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) {
         filter: invert(1) hue-rotate(180deg) !important;
       }
-      /* Docs draws the page and its text into one bitmap. Change display paint
-         only; document/export pixels remain native. Deepen keeps native colors. */
-      ${root}[data-oled-night-site="google-docs"]:is([data-oled-night-mode="oled"], [data-oled-night-mode="soft"]) canvas.kix-canvas-tile-content:not([data-oled-night-preserve-colors], [data-oled-night-preserve-colors] *):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) {
+      /* Docs pages and Sheets cell grids draw their paper and ink together.
+         Filter the bitmap on display so the document keeps its source pixels. */
+      ${root}[data-oled-night-site="google-docs"]:is([data-oled-night-mode="oled"], [data-oled-night-mode="soft"]) :is(canvas.kix-canvas-tile-content, .grid-container > [id$="-grid-table-container"] > canvas):not([data-oled-night-preserve-colors], [data-oled-night-preserve-colors] *):not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) {
         filter: invert(1) hue-rotate(180deg) brightness(var(--oln-light, 88%)) !important;
+      }
+      /* Discord paints the unread and selected marks as small backgrounds
+         inside its focusable server tree. Their opacity and size carry state. */
+      ${root}[data-oled-night-site="discord"] [data-list-id="guildsnav"][role="tree"] [aria-hidden="true"] > span:is([class^="item_"], [class*=" item_"])[${MARK}~="bg"]:not([${MEASURE}], [${MEASURE}] *):not([${MEASURE_SELF}]) {
+        background-color: hsl(0 0% var(--oln-light, 88%)) !important;
       }
       /* Apple's auth widget paints autofill with an inset shadow and explicit
          text-fill, independently of color. Cover UA autofill/preview paint in

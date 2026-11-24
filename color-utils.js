@@ -452,6 +452,7 @@
     if (host === "mail.google.com") return "gmail";
     if (host === "analytics.google.com") return "google-analytics";
     if (host === "docs.google.com") return "google-docs";
+    if (host === "discord.com") return "discord";
     if (host === "robinhood.com" || host === "www.robinhood.com") return "robinhood";
     if (host === "support.sofi.com") return "sofi-help";
     if (host === "www.sofi.com") return "sofi";

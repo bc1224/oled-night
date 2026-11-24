@@ -49,6 +49,8 @@ assert.equal(colors.siteProfile('ANALYTICS.GOOGLE.COM'), 'google-analytics');
 assert.equal(colors.siteProfile('analytics.google.com.evil.example'), '');
 assert.equal(colors.siteProfile('maps.google.com'), '');
 assert.equal(colors.siteProfile('docs.google.com'), 'google-docs');
+assert.equal(colors.siteProfile('discord.com'), 'discord');
+assert.equal(colors.siteProfile('notdiscord.com'), '');
 assert.equal(colors.siteProfile('DOCS.GOOGLE.COM'), 'google-docs');
 assert.equal(colors.siteProfile('docs.google.com.evil.example'), '');
 // Dark drop shadows that vanish on black become a faint light edge, scaled
