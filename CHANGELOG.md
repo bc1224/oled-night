@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.103
+
+- Short tagline images under a site logo (for example an 11px slogan strip) are readable on dark pages.
+
 ## 0.6.102
 
 - Google Sheets now shows light text on a dark cell grid in OLED and Soft Dark. The colors saved in the spreadsheet stay intact.

@@ -17,6 +17,10 @@ const avatar=document.createElement('img');
 avatar.id='mascot';avatar.alt='Team logo';
 avatar.src=location.origin.replace('127.0.0.1','localhost')+'/logo-contrast-portrait.svg';
 document.getElementById('remote-logo').parentElement.append(avatar);
+// Short wide tagline strip under a wordmark, 11px tall.
+const tagline=document.createElement('img');tagline.id='tagline-logo';tagline.className='site-logo-tagline';tagline.alt='The Free Encyclopedia';tagline.width=140;tagline.height=11;tagline.style.cssText='width:140px;height:11px';
+tagline.src=data('<svg xmlns="http://www.w3.org/2000/svg" width="140" height="11"><g fill="#202122">'+Array.from({length:14},(_,i)=>'<path d="M'+(i*10+4)+' 1h3v9h-3z"/>').join('')+'</g></svg>');
+{const section=document.createElement('section');section.append(tagline,document.createTextNode('tagline-logo'));document.querySelector('main').append(section)}
 const host=document.createElement('div');host.id='shadow-logo-host';document.querySelector('main').append(host);const shadow=host.attachShadow({mode:'open'});shadow.innerHTML='<style>img{display:block;width:240px;height:80px}</style><img id="shadow-logo" width="240" height="80" itemprop="logo" alt="Example logo">';shadow.querySelector('img').src=data(transparent);
 const small=document.createElement('img');small.className='icon-logo';small.itemProp='logo';small.alt='Example logo';small.style.cssText='width:32px;height:32px';small.src=data(transparent);shadow.append(small);
 const remote=document.getElementById('remote-logo');const verifyRead=()=>{let blocked=false;try{const c=document.createElement('canvas'),ctx=c.getContext('2d');ctx.drawImage(remote,0,0);ctx.getImageData(0,0,1,1)}catch(error){blocked=error.name==='SecurityError'}remote.dataset.pageCanvasBlocked=String(blocked)};if(remote.complete)verifyRead();else remote.addEventListener('load',verifyRead,{once:true});
