@@ -2,7 +2,7 @@
   "use strict";
   const chrome = globalThis.browser || globalThis.chrome;
 
-  const VERSION = "0.6.102";
+  const VERSION = "0.6.103";
   const Settings = globalThis.OledNightSettings;
   const DEFAULTS = Settings.DEFAULTS;
   const MEDIA_SELECTOR = "img, picture, video, canvas, svg, iframe, object, embed, shreddit-player, shreddit-async-loader, shreddit-media-lightbox, zoomable-img";
@@ -2835,7 +2835,7 @@
           if (!backdrop.image && colorsApi().luminance(backdrop.color) > 0.65) found["faded-icon"] = "1";
         }
         imageDecisions.push([img, found]);
-        if (rect.width >= 12 && rect.height >= 12 && rect.width <= 420 && rect.height <= 160) logoCandidates.push(img);
+        if (rect.width >= 12 && rect.height >= (rect.width >= 64 ? 8 : 12) && rect.width <= 420 && rect.height <= 160) logoCandidates.push(img);
         else logoSeen.set(img, img.complete ? img.currentSrc || img.src : "");
       }
     }
