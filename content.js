@@ -2835,9 +2835,6 @@
           if (!backdrop.image && colorsApi().luminance(backdrop.color) > 0.65) found["faded-icon"] = "1";
         }
         imageDecisions.push([img, found]);
-        // Wide tagline strips under a wordmark can be shorter than an icon
-        // (an 11px tagline strip, for example). Still only named
-        // logos or control assets pass checkLogo.
         if (rect.width >= 12 && rect.height >= (rect.width >= 64 ? 8 : 12) && rect.width <= 420 && rect.height <= 160) logoCandidates.push(img);
         else logoSeen.set(img, img.complete ? img.currentSrc || img.src : "");
       }
